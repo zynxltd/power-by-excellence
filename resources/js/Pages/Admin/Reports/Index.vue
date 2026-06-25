@@ -7,6 +7,7 @@ import LineChart from '@/Components/UI/LineChart.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -46,40 +47,50 @@ watch(() => props.days, (d) => { selectedDays.value = d; });
 const kpis = computed(() => props.summary?.kpis ?? {});
 const delivery = computed(() => props.summary?.delivery ?? {});
 
-const volumeCards = computed(() => [
-    { label: `Leads (${props.days}d)`, value: formatNumber(props.summary?.leads_period), href: route('leads.index'), cls: '' },
-    { label: 'Sold', value: formatNumber(props.summary?.sold_period), href: route('leads.index', { status: 'sold' }), cls: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Unsold', value: formatNumber(props.summary?.unsold_period), href: route('leads.index', { status: 'unsold' }), cls: 'text-amber-600 dark:text-amber-400' },
-    { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: route('leads.index', { status: 'rejected' }), cls: 'text-rose-600 dark:text-rose-400' },
-    { label: 'Quarantined', value: formatNumber(props.summary?.quarantined_period), href: route('quarantine.index'), cls: 'text-orange-600 dark:text-orange-400' },
-    { label: 'Revenue', value: formatMoney(props.summary?.revenue_period, { decimals: 0 }), href: route('billing.index'), cls: 'text-cyan-600 dark:text-cyan-400' },
-    { label: 'Payout', value: formatMoney(props.summary?.payout_period, { decimals: 0 }), href: route('finance.index'), cls: 'text-amber-600 dark:text-amber-400' },
-    { label: 'Margin', value: formatMoney(props.summary?.margin_period, { decimals: 0 }), href: route('finance.index'), cls: 'text-violet-600 dark:text-violet-400' },
+const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : 0);
+
+const payoutSharePct = computed(() => pct(props.summary?.payout_period ?? 0, props.summary?.revenue_period ?? 0));
+const netPerLead = computed(() => {
+    const leads = props.summary?.leads_period ?? 0;
+    return leads > 0 ? (props.summary?.margin_period ?? 0) / leads : 0;
+});
+const quarantineRate = computed(() => pct(props.summary?.quarantined_period ?? 0, props.summary?.leads_period ?? 0));
+const pingFailRate = computed(() => pct(delivery.value.rejections ?? 0, delivery.value.attempts ?? 0));
+
+const kpiColumns = 8;
+
+const volumeStrip = computed(() => [
+    { label: `Leads (${props.days}d)`, value: formatNumber(props.summary?.leads_period), href: route('leads.index') },
+    { label: 'Sold', value: formatNumber(props.summary?.sold_period), href: route('leads.index', { status: 'sold' }), accent: 'emerald' },
+    { label: 'Unsold', value: formatNumber(props.summary?.unsold_period), href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
+    { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
+    { label: 'Quarantined', value: formatNumber(props.summary?.quarantined_period), href: route('quarantine.index'), accent: 'orange' },
+    { label: 'Revenue', value: formatMoney(props.summary?.revenue_period, { decimals: 0 }), href: route('billing.index'), accent: 'cyan' },
+    { label: 'Payout', value: formatMoney(props.summary?.payout_period, { decimals: 0 }), href: route('finance.index'), accent: 'amber' },
+    { label: 'Margin', value: formatMoney(props.summary?.margin_period, { decimals: 0 }), href: route('finance.index'), accent: 'violet' },
 ]);
 
-const economicsCards = computed(() => [
-    { label: 'EPL (sold)', hint: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.epl), cls: 'text-cyan-600 dark:text-cyan-400' },
-    { label: 'EPC (ingest)', hint: 'Revenue ÷ leads received', value: formatMoney(kpis.value.epc), cls: 'text-indigo-600 dark:text-indigo-400' },
-    { label: 'CPA (payout)', hint: 'Payout ÷ sold leads', value: formatMoney(kpis.value.cpa), cls: 'text-amber-600 dark:text-amber-400' },
-    { label: 'CPL (buyer)', hint: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.cpl), cls: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'MPL (margin)', hint: 'Margin ÷ sold leads', value: formatMoney(kpis.value.mpl), cls: 'text-violet-600 dark:text-violet-400' },
-    { label: 'Margin %', hint: 'Margin ÷ revenue', value: (kpis.value.margin_pct ?? 0) + '%', cls: 'text-violet-600 dark:text-violet-400' },
+const economicsStrip = computed(() => [
+    { label: 'EPL (sold)', title: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.epl), accent: 'cyan' },
+    { label: 'EPC (ingest)', title: 'Revenue ÷ leads received', value: formatMoney(kpis.value.epc), accent: 'indigo' },
+    { label: 'CPA (payout)', title: 'Payout ÷ sold leads', value: formatMoney(kpis.value.cpa), accent: 'amber' },
+    { label: 'CPL (buyer)', title: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.cpl), accent: 'emerald' },
+    { label: 'MPL (margin)', title: 'Margin ÷ sold leads', value: formatMoney(kpis.value.mpl), accent: 'violet' },
+    { label: 'Margin %', title: 'Margin ÷ revenue', value: `${kpis.value.margin_pct ?? 0}%`, accent: 'violet' },
+    { label: 'Pay share', title: 'Payout ÷ revenue', value: `${payoutSharePct.value}%`, accent: 'amber' },
+    { label: 'Net / lead', title: 'Margin ÷ leads received', value: formatMoney(netPerLead.value), accent: 'violet' },
 ]);
 
-const rateCards = computed(() => [
-    { label: 'Conversion', hint: 'Sold ÷ received', value: (props.summary?.conversion ?? 0) + '%' },
-    { label: 'Sell-through', hint: 'Sold ÷ (sold + unsold)', value: (props.summary?.sell_through ?? 0) + '%' },
-    { label: 'Reject rate', hint: 'Rejected ÷ received', value: (props.summary?.reject_rate ?? 0) + '%' },
-    { label: 'Ping success', hint: 'Successful delivery attempts', value: (delivery.value.success_rate ?? 0) + '%' },
-    { label: 'Outbid rate', hint: 'Outbid ÷ delivery attempts', value: (delivery.value.outbid_rate ?? 0) + '%' },
-    { label: 'Avg latency', hint: 'Mean delivery duration', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—' },
+const rateStrip = computed(() => [
+    { label: 'Conversion', title: 'Sold ÷ received', value: `${props.summary?.conversion ?? 0}%` },
+    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold)', value: `${props.summary?.sell_through ?? 0}%` },
+    { label: 'Reject rate', title: 'Rejected ÷ received', value: `${props.summary?.reject_rate ?? 0}%`, accent: 'rose' },
+    { label: 'Quarantine', title: 'Quarantined ÷ received', value: `${quarantineRate.value}%`, accent: 'orange' },
+    { label: 'Ping success', title: 'Successful delivery attempts', value: `${delivery.value.success_rate ?? 0}%`, accent: 'emerald' },
+    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts', value: `${delivery.value.outbid_rate ?? 0}%`, accent: 'amber' },
+    { label: 'Ping fail', title: 'Failed/skipped ÷ delivery attempts', value: `${pingFailRate.value}%`, accent: 'rose' },
+    { label: 'Avg latency', title: 'Mean delivery duration', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—' },
 ]);
-
-const methodLabels = { direct_post: 'Direct API', ping_post: 'Ping Post', store_lead: 'Store', email: 'Email', sms: 'SMS' };
-const successRate = (row) => (!row.attempts ? '—' : `${Math.round((row.successes / row.attempts) * 100)}%`);
-const winRate = (row) => (!row.attempts ? '—' : `${Math.round((row.wins / row.attempts) * 100)}%`);
-const conversionRate = (row) => (!row.received ? '—' : `${Math.round((row.sold / row.received) * 100)}%`);
-const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.sold));
 
 const deliveryLogFilter = (params = {}) => route('logs.delivery', { days: props.days, ...params });
 
@@ -94,6 +105,24 @@ const statusLabels = {
     quarantined: 'Quarantined',
     returned: 'Returned',
 };
+
+const leadStatusStrip = computed(() => Object.entries(props.leadStatusBreakdown ?? {}).map(([status, count]) => ({
+    label: statusLabels[status] ?? status,
+    value: formatNumber(count),
+    href: route('leads.index', { status }),
+})));
+
+const deliveryOutcomeStrip = computed(() => Object.entries(props.distributionOutcome ?? {}).map(([status, count]) => ({
+    label: status,
+    value: formatNumber(count),
+    href: deliveryLogFilter({ status }),
+})));
+
+const methodLabels = { direct_post: 'Direct API', ping_post: 'Ping Post', store_lead: 'Store', email: 'Email', sms: 'SMS' };
+const successRate = (row) => (!row.attempts ? '—' : `${Math.round((row.successes / row.attempts) * 100)}%`);
+const winRate = (row) => (!row.attempts ? '—' : `${Math.round((row.wins / row.attempts) * 100)}%`);
+const conversionRate = (row) => (!row.received ? '—' : `${Math.round((row.sold / row.received) * 100)}%`);
+const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.sold));
 </script>
 
 <template>
@@ -116,55 +145,22 @@ const statusLabels = {
 
         <TenantContextBanner />
 
-        <section class="mb-6">
-            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Volume</h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-                <Link
-                    v-for="card in volumeCards"
-                    :key="card.label"
-                    :href="card.href"
-                    class="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:from-slate-900 dark:to-slate-950"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ card.label }}</p>
-                    <p :class="['mt-1 text-2xl font-bold text-slate-900 dark:text-white', card.cls]">{{ card.value }}</p>
-                </Link>
-            </div>
+        <section class="mb-4">
+            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Volume</h2>
+            <CompactStatStrip :items="volumeStrip" :columns="kpiColumns" />
         </section>
 
-        <section class="mb-6">
-            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Unit economics</h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div
-                    v-for="card in economicsCards"
-                    :key="card.label"
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
-                    :title="card.hint"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ card.label }}</p>
-                    <p :class="['mt-1 text-2xl font-bold text-slate-900 dark:text-white', card.cls]">{{ card.value }}</p>
-                    <p class="mt-1 text-xs text-slate-400">{{ card.hint }}</p>
-                </div>
-            </div>
-            <p class="mt-2 text-xs text-slate-500">
-                <strong>EPC (ingest)</strong> uses leads received as the click proxy until dedicated click tracking is enabled.
-                <strong>EPL (sold)</strong> is revenue per converted lead.
+        <section class="mb-4">
+            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Unit economics</h2>
+            <CompactStatStrip :items="economicsStrip" :columns="kpiColumns" />
+            <p class="mt-1.5 text-[10px] text-slate-500">
+                Hover for formulas. EPC uses leads received as click proxy; EPL is revenue per sold lead.
             </p>
         </section>
 
         <section class="mb-6">
-            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Rates &amp; delivery health</h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div
-                    v-for="card in rateCards"
-                    :key="card.label"
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center dark:border-slate-800 dark:bg-slate-900"
-                    :title="card.hint"
-                >
-                    <p class="text-xs font-semibold uppercase text-slate-500">{{ card.label }}</p>
-                    <p class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ card.value }}</p>
-                    <p class="mt-1 text-xs text-slate-400">{{ card.hint }}</p>
-                </div>
-            </div>
+            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Rates &amp; delivery health</h2>
+            <CompactStatStrip :items="rateStrip" :columns="kpiColumns" />
         </section>
 
         <div class="grid gap-6 lg:grid-cols-2">
@@ -202,34 +198,14 @@ const statusLabels = {
             </Panel>
         </div>
 
-        <div v-if="leadStatusBreakdown && Object.keys(leadStatusBreakdown).length" class="mt-6">
-            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Lead status breakdown</h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <Link
-                    v-for="(count, status) in leadStatusBreakdown"
-                    :key="status"
-                    :href="route('leads.index', { status })"
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center transition hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <p class="text-xs font-semibold uppercase text-slate-500">{{ statusLabels[status] ?? status }}</p>
-                    <p class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ count }}</p>
-                </Link>
-            </div>
+        <div v-if="leadStatusStrip.length" class="mt-6">
+            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Lead status breakdown</h2>
+            <CompactStatStrip :items="leadStatusStrip" />
         </div>
 
-        <div v-if="distributionOutcome && Object.keys(distributionOutcome).length" class="mt-6">
-            <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Delivery log outcomes</h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <Link
-                    v-for="(count, status) in distributionOutcome"
-                    :key="status"
-                    :href="deliveryLogFilter({ status })"
-                    class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center transition hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <p class="text-xs font-semibold uppercase text-slate-500">{{ status }}</p>
-                    <p class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ count }}</p>
-                </Link>
-            </div>
+        <div v-if="deliveryOutcomeStrip.length" class="mt-4">
+            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Delivery log outcomes</h2>
+            <CompactStatStrip :items="deliveryOutcomeStrip" />
         </div>
 
         <Panel class="mt-6">

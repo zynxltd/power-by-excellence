@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { hasEntryFilters, routingModeLabel, ROUTING_MODE_STYLES } from '@/utils/routingModes';
+import { rulesSummaryText } from '@/utils/ruleFormat';
 
 const props = defineProps({
     groups: { type: Array, default: () => [] },
@@ -83,13 +84,15 @@ const modeClass = (mode) => ROUTING_MODE_STYLES[mode] ?? ROUTING_MODE_STYLES.wat
                             <span v-else class="text-slate-400">—</span>
                         </td>
                         <td class="px-3 py-2.5 text-right">
-                            <span
-                                v-if="hasEntryFilters(group.rules)"
-                                class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                            >
-                                Yes
-                            </span>
-                            <span v-else class="text-xs text-slate-400">—</span>
+                            <div v-if="hasEntryFilters(group.rules)" class="text-right">
+                                <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                    Filtered
+                                </span>
+                                <p class="mt-1 max-w-[14rem] text-[11px] leading-snug text-slate-600 dark:text-slate-400">
+                                    {{ rulesSummaryText(group.rules) }}
+                                </p>
+                            </div>
+                            <span v-else class="text-xs text-slate-400">All leads</span>
                         </td>
                     </tr>
                 </tbody>

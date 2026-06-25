@@ -5,7 +5,7 @@ import Panel from '@/Components/UI/Panel.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     supplier: Object,
@@ -15,7 +15,7 @@ const props = defineProps({
     currency: { type: String, default: 'GBP' },
 });
 
-const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currency] ?? props.currency + ' '));
+const { formatMoney, currency: displayCurrency } = useMoneyFormat(props.currency);
 </script>
 
 <template>
@@ -35,7 +35,7 @@ const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currenc
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard label="Leads Submitted Today" :value="stats.leads_today" accent="indigo" />
             <StatCard label="Sold Today" :value="stats.sold_today" accent="emerald" />
-            <StatCard :label="`Payout Today (${currency})`" :value="symbol + Number(stats.revenue_today).toFixed(2)" accent="cyan" />
+            <StatCard :label="`Payout Today (${displayCurrency})`" :value="formatMoney(stats.revenue_today)" accent="cyan" />
         </div>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
@@ -48,8 +48,8 @@ const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currenc
                     ]"
                 />
             </Panel>
-            <Panel :title="`Payout — Last 7 Days (${currency})`">
-                <BarChart :labels="charts.labels" :datasets="[{ label: `Payout (${symbol.trim()})`, data: charts.payout, color: '#06b6d4' }]" />
+            <Panel :title="`Payout — Last 7 Days (${displayCurrency})`">
+                <BarChart :labels="charts.labels" :datasets="[{ label: `Payout (${displayCurrency})`, data: charts.payout, color: '#06b6d4' }]" />
             </Panel>
         </div>
 

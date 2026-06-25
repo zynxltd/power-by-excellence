@@ -13,6 +13,7 @@ import EligibilityRulesEditor from '@/Components/UI/EligibilityRulesEditor.vue';
 import ScheduleEditor from '@/Components/UI/ScheduleEditor.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -26,6 +27,7 @@ const props = defineProps({
     methodGuides: Object,
     routingModes: Array,
     revenueTypes: Array,
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const steps = [
@@ -108,6 +110,9 @@ const selectedGuide = computed(() => props.methodGuides?.[form.method]);
 const selectedRevenueHelp = computed(() => props.revenueTypes?.find((r) => r.value === form.revenue_type)?.help);
 const selectedRoutingHelp = computed(() => props.routingModes?.find((r) => r.value === form.routing_mode)?.help);
 const selectedCampaign = computed(() => props.campaigns?.find((c) => c.id === form.campaign_id));
+
+const { formatMoney, currency } = useMoneyFormat();
+const pricingCurrency = computed(() => selectedCampaign.value?.currency ?? currency.value);
 const workflowCampaign = computed(() => {
     if (props.campaignContext) {
         return {
@@ -171,10 +176,12 @@ const submit = () => {
         </PageHeader>
 
         <CampaignWorkflowNav
-            v-if="workflowCampaign"
-            :campaign="workflowCampaign"
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
             current="deliveries"
-            :distribution-config-id="campaignContext?.active_distribution_config_id"
+            class="mb-6"
         />
 
         <Panel v-if="campaignContext" title="Where this delivery fits" class="mb-6">
@@ -254,7 +261,7 @@ const submit = () => {
                             <select v-model="form.campaign_id" class="form-select w-full" required>
                                 <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.vertical_label }} — {{ c.name }}</option>
                             </select>
-                            <p v-if="selectedCampaign" class="mt-1 text-xs text-slate-500">Floor £{{ selectedCampaign.floor_price }} · {{ selectedCampaign.bidding_mode?.replace(/_/g, ' ') }}</p>
+                            <p v-if="selectedCampaign" class="mt-1 text-xs text-slate-500">Floor {{ formatMoney(selectedCampaign.floor_price, { currency: selectedCampaign.currency }) }} · {{ selectedCampaign.bidding_mode?.replace(/_/g, ' ') }}</p>
                         </div>
                         <div>
                             <InputLabel value="Buyer" />
@@ -384,7 +391,11 @@ const submit = () => {
                         Optional field rules — only leads matching these conditions will be pinged/posted to this buyer API.
                         Tier-level filters can also be set on the <Link :href="campaignContext?.active_distribution_config_id ? route('distribution.edit', campaignContext.active_distribution_config_id) : route('distribution.index')" class="text-indigo-600 hover:underline">ping tree</Link>.
                     </p>
-                    <EligibilityRulesEditor v-model="form.eligibility_rules" :field-options="filterFieldOptions ?? []" />
+                    <EligibilityRulesEditor
+                        v-model="form.eligibility_rules"
+                        scope="delivery"
+                        :field-options="filterFieldOptions ?? []"
+                    />
                     <div class="mt-6 grid gap-4 md:grid-cols-3">
                         <div>
                             <InputLabel value="Include states (comma-separated)" />
@@ -442,8 +453,8 @@ const submit = () => {
                         <div><InputLabel value="Monthly cap" /><TextInput v-model="form.caps.monthly" type="number" class="mt-1 w-full" placeholder="Unlimited" /></div>
                     </div>
                     <div class="mt-6 grid max-w-3xl grid-cols-2 gap-4 md:grid-cols-4">
-                        <div><InputLabel value="Min bid (£)" /><TextInput v-model="form.caps.min_bid" type="number" step="0.01" class="mt-1 w-full" placeholder="Floor" /></div>
-                        <div><InputLabel value="Max bid (£)" /><TextInput v-model="form.caps.max_bid" type="number" step="0.01" class="mt-1 w-full" placeholder="Ceiling" /></div>
+                        <div><InputLabel :value="`Min bid (${pricingCurrency})`" /><TextInput v-model="form.caps.min_bid" type="number" step="0.01" class="mt-1 w-full" placeholder="Floor" /></div>
+                        <div><InputLabel :value="`Max bid (${pricingCurrency})`" /><TextInput v-model="form.caps.max_bid" type="number" step="0.01" class="mt-1 w-full" placeholder="Ceiling" /></div>
                         <div><InputLabel value="Daily spend cap" /><TextInput v-model="form.caps.daily_spend_cap" type="number" step="0.01" class="mt-1 w-full" placeholder="Unlimited" /></div>
                         <div><InputLabel value="Monthly spend cap" /><TextInput v-model="form.caps.monthly_spend_cap" type="number" step="0.01" class="mt-1 w-full" placeholder="Unlimited" /></div>
                     </div>

@@ -32,4 +32,46 @@ class RuleEngineTest extends TestCase
         $this->assertTrue($engine->matches($rules, ['state' => 'CA']));
         $this->assertFalse($engine->matches($rules, ['state' => 'NY']));
     }
+
+    public function test_in_operator_accepts_comma_separated_string(): void
+    {
+        $engine = new RuleEngine;
+
+        $rules = ['field' => 'state', 'op' => 'in', 'value' => 'CA, TX, FL'];
+
+        $this->assertTrue($engine->matches($rules, ['state' => 'TX']));
+        $this->assertFalse($engine->matches($rules, ['state' => 'NY']));
+    }
+
+    public function test_first_failing_condition(): void
+    {
+        $engine = new RuleEngine;
+
+        $rules = [
+            'operator' => 'and',
+            'conditions' => [
+                ['field' => 'state', 'op' => 'eq', 'value' => 'CA'],
+                ['field' => 'loan_amount', 'op' => 'gte', 'value' => 5000],
+            ],
+        ];
+
+        $failed = $engine->firstFailingCondition($rules, ['state' => 'TX', 'loan_amount' => 10000]);
+
+        $this->assertSame('state', $failed['field']);
+        $this->assertStringContainsString('TX', $engine->describeCondition($failed, ['state' => 'TX', 'loan_amount' => 10000]));
+    }
+
+    public function test_summarize_rules(): void
+    {
+        $engine = new RuleEngine;
+
+        $summary = $engine->summarizeRules([
+            'operator' => 'and',
+            'conditions' => [
+                ['field' => 'state', 'op' => 'in', 'value' => 'CA,TX'],
+            ],
+        ]);
+
+        $this->assertSame(['state is one of: CA, TX'], $summary);
+    }
 }

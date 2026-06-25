@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
+use App\Support\Campaign\CampaignFieldCatalog;
 use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Services\Delivery\DeliveryAnalyticsService;
+use App\Support\Admin\CampaignWorkflow;
 use App\Support\Tenancy\AccountContext;
 use App\Support\VerticalCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -79,6 +81,7 @@ class DeliveryController extends Controller
                 'statuses' => ['active', 'inactive', 'saved'],
             ],
             'view' => $request->input('view', 'cards'),
+            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
         ]);
     }
 
@@ -112,12 +115,13 @@ class DeliveryController extends Controller
             'stats' => $analytics->statsFor($delivery),
             'pingTreeLinks' => $analytics->pingTreeLinks($delivery),
             'performance' => $performance,
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($delivery->campaign),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Admin/Deliveries/Form', $this->formData(null));
+        return Inertia::render('Admin/Deliveries/Form', $this->formData(null, $request));
     }
 
     public function store(Request $request): RedirectResponse
@@ -174,12 +178,14 @@ class DeliveryController extends Controller
         return back()->with('success', 'Test delivery executed. Check Live Operations or lead detail for logs.');
     }
 
-    protected function formData(?Delivery $delivery): array
+    protected function formData(?Delivery $delivery, ?Request $request = null): array
     {
         $campaignContext = null;
-        if ($delivery?->campaign_id) {
+        $campaignId = $delivery?->campaign_id ?? ($request?->filled('campaign_id') ? $request->integer('campaign_id') : null);
+
+        if ($campaignId) {
             $campaign = Campaign::with(['distributionConfigs' => fn ($q) => $q->where('is_active', true)])
-                ->find($delivery->campaign_id);
+                ->find($campaignId);
             if ($campaign) {
                 $activeConfig = $campaign->distributionConfigs->first();
                 $campaignContext = [
@@ -189,7 +195,7 @@ class DeliveryController extends Controller
                     'use_advanced_distribution' => $campaign->use_advanced_distribution,
                     'active_distribution_config_id' => $activeConfig?->id,
                     'active_distribution_config_name' => $activeConfig?->name,
-                    'tier_in_config' => $this->tierForDelivery($activeConfig, $delivery->id),
+                    'tier_in_config' => $delivery ? $this->tierForDelivery($activeConfig, $delivery->id) : null,
                 ];
             }
         }
@@ -197,7 +203,8 @@ class DeliveryController extends Controller
         return [
             'delivery' => $delivery,
             'campaignContext' => $campaignContext,
-            'filterFieldOptions' => $this->filterFieldOptions($delivery?->campaign_id),
+            'campaignWorkflow' => CampaignWorkflow::fromId($campaignId),
+            'filterFieldOptions' => CampaignFieldCatalog::forCampaignId($delivery?->campaign_id),
             'campaigns' => VerticalCatalog::decorateCampaigns(
                 Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id', 'floor_price', 'bidding_mode'])
             ),
@@ -352,39 +359,5 @@ class DeliveryController extends Controller
         }
 
         return $delivery;
-    }
-
-    /**
-     * @return list<array{name: string, label: string}>
-     */
-    protected function filterFieldOptions(?int $campaignId): array
-    {
-        if (! $campaignId) {
-            return [];
-        }
-
-        $campaign = Campaign::with('fields')->find($campaignId);
-        if (! $campaign) {
-            return [];
-        }
-
-        $fields = $campaign->fields->map(fn ($f) => [
-            'name' => $f->name,
-            'label' => $f->label ?: $f->name,
-        ])->values()->all();
-
-        $apiFields = collect($campaign->api_spec['fields'] ?? [])
-            ->map(fn ($f) => [
-                'name' => $f['name'] ?? '',
-                'label' => ($f['label'] ?? $f['name'] ?? '').' (API)',
-            ])
-            ->filter(fn ($f) => $f['name'] !== '')
-            ->values()
-            ->all();
-
-        return collect(array_merge($fields, $apiFields))
-            ->unique('name')
-            ->values()
-            ->all();
     }
 }

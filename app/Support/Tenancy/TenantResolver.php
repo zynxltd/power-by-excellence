@@ -87,6 +87,15 @@ class TenantResolver
         return $scheme.'://'.self::portalHost($account).$path;
     }
 
+    public static function centralUrl(string $path = '/'): string
+    {
+        $scheme = request()->getScheme() ?: 'https';
+        $host = self::centralHosts()[0] ?? self::baseDomain();
+        $path = '/'.ltrim($path, '/');
+
+        return $scheme.'://'.$host.$path;
+    }
+
     public static function apiBaseUrl(?Account $account = null): string
     {
         if ($account) {

@@ -7,6 +7,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     campaigns: Array,
@@ -19,6 +20,9 @@ const props = defineProps({
 const selectedCampaign = computed(() =>
     props.campaigns?.find((c) => c.id === Number(form.campaign_id))
 );
+
+const { formatMoney } = useMoneyFormat();
+const simCurrency = computed(() => selectedCampaign.value?.currency ?? props.simulation?.campaign?.currency);
 
 const form = useForm({
     campaign_id: props.simulationInput?.campaign_id ?? props.filters?.campaign_id ?? '',
@@ -219,7 +223,7 @@ watch(() => props.simulation, (sim) => {
                                 </div>
                                 <div class="text-right text-xs text-slate-500">
                                     <p class="capitalize">{{ modeLabel(tier.mode) }}</p>
-                                    <p v-if="tier.floor_price" class="text-emerald-600 dark:text-emerald-400">Floor £{{ tier.floor_price }}</p>
+                                    <p v-if="tier.floor_price" class="text-emerald-600 dark:text-emerald-400">Floor {{ formatMoney(tier.floor_price, { currency: simCurrency }) }}</p>
                                     <p v-if="tier.would_win" class="font-semibold text-emerald-600">Winner tier</p>
                                 </div>
                             </div>
@@ -249,7 +253,7 @@ watch(() => props.simulation, (sim) => {
                                                 {{ step.eligible ? 'eligible' : 'skipped' }}
                                             </span>
                                             <p class="mt-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400">
-                                                Est. £{{ step.estimated_revenue?.toFixed(2) }}
+                                                Est. {{ formatMoney(step.estimated_revenue ?? 0, { currency: simCurrency }) }}
                                             </p>
                                         </div>
                                     </div>

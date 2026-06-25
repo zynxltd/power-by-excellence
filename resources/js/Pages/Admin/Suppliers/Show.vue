@@ -9,6 +9,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ManagementHubNav from '@/Components/UI/ManagementHubNav.vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({
@@ -17,6 +18,8 @@ defineProps({
     leadStats: Object,
     portalUser: Object,
 });
+
+const { formatMoney } = useMoneyFormat();
 </script>
 
 <template>
@@ -84,7 +87,7 @@ defineProps({
                     <td class="px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 10) }}…</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ lead.campaign?.name }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>
-                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">£{{ lead.financials?.payout ?? 0 }}</td>
+                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.payout ?? 0) }}</td>
                     <td class="px-6 py-4"><FormattedDate :value="lead.received_at" format="relative" /></td>
                 </ClickableTableRow>
             </DataTable>

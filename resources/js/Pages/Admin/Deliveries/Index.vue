@@ -8,8 +8,10 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     deliveries: Array,
@@ -18,7 +20,10 @@ const props = defineProps({
     filters: Object,
     filterOptions: Object,
     view: { type: String, default: 'cards' },
+    campaignWorkflow: { type: Object, default: null },
 });
+
+const { formatMoney } = useMoneyFormat();
 
 const localFilters = ref({ ...props.filters, view: props.view });
 
@@ -88,6 +93,15 @@ watch(() => props.view, (v) => {
                 <AppButton :href="route('deliveries.create')">New Delivery</AppButton>
             </template>
         </PageHeader>
+
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="deliveries"
+            class="mb-6"
+        />
 
         <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             <div
@@ -215,7 +229,7 @@ watch(() => props.view, (v) => {
                                 <DeliveryMethodBadge :method="methodValue(d)" />
                                 <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                     {{ d.revenue_type?.replace(/_/g, ' ') }}
-                                    <span v-if="d.revenue_type === 'fixed'" class="text-emerald-600 dark:text-emerald-400">£{{ d.revenue_amount }}</span>
+                                    <span v-if="d.revenue_type === 'fixed'" class="text-emerald-600 dark:text-emerald-400">{{ formatMoney(d.revenue_amount, { currency: d.campaign?.currency }) }}</span>
                                 </span>
                             </div>
 

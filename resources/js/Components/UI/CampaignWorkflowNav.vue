@@ -32,7 +32,7 @@ const links = computed(() => [
             ? route('distribution.show', props.distributionConfigId)
             : route('distribution.create') + '?campaign_id=' + props.campaign.id,
     },
-    { key: 'operations', label: 'Live ops', icon: 'activity', href: route('operations.index') },
+    { key: 'operations', label: 'Live ops', icon: 'activity', href: route('operations.index', { campaign_id: props.campaign.id }) },
 ]);
 
 const linkClass = (active) => [

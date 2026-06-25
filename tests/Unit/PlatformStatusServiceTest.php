@@ -26,6 +26,9 @@ class PlatformStatusServiceTest extends TestCase
         $ops->shouldReceive('run')->andReturn([
             ['key' => 'database', 'label' => 'Database', 'status' => 'critical', 'message' => 'Down', 'hint' => null, 'command' => null],
         ]);
+        $ops->shouldReceive('herdLinkStatus')->andReturn([
+            'linked' => [], 'missing' => [], 'commands' => [], 'shell_script' => '', 'needs_linking' => false,
+        ]);
 
         $processing = Mockery::mock(ProcessingMetrics::class);
         $processing->shouldReceive('avgProcessingMs')->andReturn(100);
@@ -45,6 +48,9 @@ class PlatformStatusServiceTest extends TestCase
         $ops = Mockery::mock(PlatformOpsCheck::class);
         $ops->shouldReceive('run')->andReturn([
             ['key' => 'queue', 'label' => 'Queue', 'status' => 'warning', 'message' => 'Failed jobs', 'hint' => null, 'command' => null],
+        ]);
+        $ops->shouldReceive('herdLinkStatus')->andReturn([
+            'linked' => [], 'missing' => [], 'commands' => [], 'shell_script' => '', 'needs_linking' => false,
         ]);
 
         $processing = Mockery::mock(ProcessingMetrics::class);

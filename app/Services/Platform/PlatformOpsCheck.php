@@ -219,11 +219,19 @@ class PlatformOpsCheck
      */
     protected function checkRedis(): array
     {
-        $usesRedis = in_array('redis', [
-            config('cache.default'),
-            config('queue.default'),
-            config('session.driver') === 'redis' ? 'redis' : null,
-        ], true);
+        if (config('platform.queue.fallback_active')) {
+            return $this->result(
+                'redis',
+                'Redis',
+                'warning',
+                'Unavailable — database queue fallback active',
+                'Start Redis for Horizon throughput, or keep scheduler running for database queue',
+                null,
+                'infrastructure',
+            );
+        }
+
+        $usesRedis = $this->queueExpectsRedis();
 
         if (! $usesRedis) {
             return $this->result(
@@ -246,7 +254,7 @@ class PlatformOpsCheck
                 'redis',
                 'Redis',
                 strtoupper((string) $payload) === 'PONG' || $pong === true ? 'ok' : 'warning',
-                'Ping successful — queues & cache backend',
+                'Ping successful — Horizon & redis queues',
                 null,
                 null,
                 'infrastructure',
@@ -258,10 +266,50 @@ class PlatformOpsCheck
                 'critical',
                 'Connection failed',
                 $e->getMessage(),
-                'Start Redis or update QUEUE_CONNECTION / CACHE_STORE',
+                'Start Redis, or enable QUEUE_REDIS_FALLBACK=true for database queue',
                 'infrastructure',
             );
         }
+    }
+
+    protected function queueExpectsRedis(): bool
+    {
+        $preferred = (string) config('platform.queue.preferred_connection', config('queue.default'));
+
+        return in_array($preferred, ['redis', 'failover'], true);
+    }
+
+    protected function horizonInstalled(): bool
+    {
+        return class_exists(\Laravel\Horizon\Horizon::class);
+    }
+
+    protected function isHorizonRunning(): bool
+    {
+        if (! $this->horizonInstalled() || config('queue.default') !== 'redis') {
+            return false;
+        }
+
+        try {
+            $masters = app(\Laravel\Horizon\Contracts\MasterSupervisorRepository::class)->all();
+
+            return ! empty($masters);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    protected function recommendedQueueCommand(): string
+    {
+        if (config('queue.default') === 'redis' && $this->horizonInstalled()) {
+            return 'php artisan horizon';
+        }
+
+        if (config('queue.default') === 'database') {
+            return 'php artisan schedule:work';
+        }
+
+        return 'php artisan queue:work';
     }
 
     /**
@@ -276,14 +324,49 @@ class PlatformOpsCheck
             $failed = (int) DB::table('failed_jobs')->count();
         }
 
+        $queueCommand = $this->recommendedQueueCommand();
+
         if ($driver === 'sync' && app()->environment('production')) {
             return $this->result(
                 'queue',
                 'Queue worker',
                 'warning',
                 'Sync driver in production — leads process inline only',
-                'Use redis or database queue with a worker in production',
-                'php artisan queue:work',
+                'Use redis + Horizon or database queue with scheduler',
+                $queueCommand,
+                'infrastructure',
+            );
+        }
+
+        if ($driver === 'redis' && $this->horizonInstalled()) {
+            $horizonRunning = $this->isHorizonRunning();
+
+            return $this->result(
+                'queue',
+                'Horizon',
+                $failed > 0 ? 'warning' : ($horizonRunning ? 'ok' : 'warning'),
+                ($horizonRunning ? 'Horizon running' : 'Horizon inactive')." · driver: {$driver}"
+                    .($failed > 0 ? " · {$failed} failed job(s)" : ''),
+                $horizonRunning
+                    ? ($failed > 0 ? 'Retry or flush failed jobs' : 'Supervise with php artisan horizon in production')
+                    : 'Start Horizon to process async leads',
+                $failed > 0 ? 'php artisan queue:retry all' : $queueCommand,
+                'infrastructure',
+            );
+        }
+
+        if ($driver === 'database') {
+            $fallbackNote = config('platform.queue.fallback_active')
+                ? ' · Redis fallback (scheduler drains queue each minute)'
+                : ' · scheduler runs queue:work each minute';
+
+            return $this->result(
+                'queue',
+                'Queue worker',
+                $failed > 0 ? 'warning' : 'ok',
+                "Driver: {$driver}{$fallbackNote}".($failed > 0 ? " · {$failed} failed job(s)" : ''),
+                'Run schedule:work locally, or cron * * * * * php artisan schedule:run in production',
+                $failed > 0 ? 'php artisan queue:retry all' : $queueCommand,
                 'infrastructure',
             );
         }
@@ -294,7 +377,7 @@ class PlatformOpsCheck
             $failed > 0 ? 'warning' : 'ok',
             "Driver: {$driver}".($failed > 0 ? " · {$failed} failed job(s)" : ''),
             $failed > 0 ? 'Retry or flush failed jobs' : 'Ensure a worker is running in production',
-            $failed > 0 ? 'php artisan queue:retry all' : 'php artisan queue:work',
+            $failed > 0 ? 'php artisan queue:retry all' : $queueCommand,
             'infrastructure',
         );
     }
@@ -410,21 +493,35 @@ class PlatformOpsCheck
                 'horizon',
                 'Horizon',
                 'ok',
-                'Not required (queue not on redis)',
+                config('platform.queue.fallback_active')
+                    ? 'Using database queue fallback — Horizon not required'
+                    : 'Not required (queue not on redis)',
                 null,
                 null,
                 'infrastructure',
             );
         }
 
-        if (! class_exists(\Laravel\Horizon\Horizon::class)) {
+        if (! $this->horizonInstalled()) {
             return $this->result(
                 'horizon',
                 'Horizon',
                 'ok',
-                'Horizon not installed',
+                'Not installed — use queue:work',
                 null,
+                'php artisan queue:work',
+                'infrastructure',
+            );
+        }
+
+        if ($this->isHorizonRunning()) {
+            return $this->result(
+                'horizon',
+                'Horizon',
+                'ok',
+                'Running — supervises redis queue workers',
                 null,
+                'php artisan horizon',
                 'infrastructure',
             );
         }
@@ -433,9 +530,9 @@ class PlatformOpsCheck
             return $this->result(
                 'horizon',
                 'Horizon',
-                'ok',
-                'Local — use queue:work or horizon as needed',
-                null,
+                'warning',
+                'Inactive — start Horizon to process async leads',
+                'composer run dev includes Horizon, or run php artisan horizon',
                 'php artisan horizon',
                 'infrastructure',
             );
@@ -445,7 +542,7 @@ class PlatformOpsCheck
             'horizon',
             'Horizon',
             'warning',
-            'Production redis queue — ensure Horizon is supervised',
+            'Inactive — production redis queue needs a supervised Horizon process',
             'Supervisor should keep horizon running',
             'php artisan horizon',
             'infrastructure',

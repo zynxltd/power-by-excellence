@@ -6,8 +6,11 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 defineProps({ log: Object });
+
+const { formatMoney } = useMoneyFormat();
 </script>
 
 <template>
@@ -36,7 +39,7 @@ defineProps({ log: Object });
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase text-slate-500">Revenue</p>
-                <p class="mt-2 text-2xl font-bold text-emerald-600">£{{ log.revenue ?? '0.00' }}</p>
+                <p class="mt-2 text-2xl font-bold text-emerald-600">{{ formatMoney(log.revenue ?? 0) }}</p>
             </div>
         </div>
 

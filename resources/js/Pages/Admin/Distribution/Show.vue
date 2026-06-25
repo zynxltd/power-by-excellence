@@ -6,8 +6,10 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
 import PingTreeTierTable from '@/Components/UI/PingTreeTierTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { routingModeLabel } from '@/utils/routingModes';
+import { hasActiveRules, rulesSummaryText } from '@/utils/ruleFormat';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -15,6 +17,7 @@ const props = defineProps({
     config: Object,
     tiers: Array,
     campaign: Object,
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const { formatMoney } = useMoneyFormat(props.campaign?.currency);
@@ -42,6 +45,15 @@ const tierGroups = computed(() =>
                 <AppButton :href="route('distribution.edit', config.id)">Edit</AppButton>
             </template>
         </PageHeader>
+
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="ping-tree"
+            class="mb-6"
+        />
 
         <div class="mb-6 grid gap-4 sm:grid-cols-3">
             <Panel class="!p-4">
@@ -125,6 +137,18 @@ const tierGroups = computed(() =>
                             </div>
                         </div>
 
+                        <div
+                            v-if="hasActiveRules(tier.rules)"
+                            class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-950/30"
+                        >
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                                Entry filter
+                            </p>
+                            <p class="mt-0.5 text-sm text-amber-900 dark:text-amber-100">
+                                {{ rulesSummaryText(tier.rules) }}
+                            </p>
+                        </div>
+
                         <div class="space-y-2">
                             <Link
                                 v-for="(d, di) in tier.deliveries"
@@ -159,7 +183,7 @@ const tierGroups = computed(() =>
                     <div v-if="ti < tiers.length - 1" class="my-2 flex flex-col items-center">
                         <div class="h-6 w-0.5 bg-slate-300 dark:bg-slate-600" />
                         <span class="my-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            fallback
+                            {{ hasActiveRules(tiers[ti + 1]?.rules) ? 'if filter fails' : 'fallback' }}
                         </span>
                         <div class="h-6 w-0.5 bg-slate-300 dark:bg-slate-600" />
                     </div>

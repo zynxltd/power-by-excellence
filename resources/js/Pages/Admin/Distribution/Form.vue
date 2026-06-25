@@ -11,6 +11,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import EligibilityRulesEditor from '@/Components/UI/EligibilityRulesEditor.vue';
+import { fieldOptionsFromCampaign } from '@/utils/campaignFields';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -19,6 +20,8 @@ const props = defineProps({
     config: Object,
     campaigns: Array,
     routingModes: Array,
+    filterFieldOptions: { type: Array, default: () => [] },
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const steps = [
@@ -59,7 +62,29 @@ const selectedCampaign = computed(() =>
     props.campaigns.find((c) => String(c.id) === String(form.campaign_id))
 );
 
+const navWorkflow = computed(() => {
+    if (props.campaignWorkflow?.campaign) {
+        return props.campaignWorkflow;
+    }
+
+    const c = selectedCampaign.value;
+    if (!c) {
+        return null;
+    }
+
+    return {
+        campaign: { id: c.id, name: c.name, reference: c.reference },
+        distributionConfigId: props.config?.id ?? null,
+        tenantHub: null,
+    };
+});
+
 const availableDeliveries = computed(() => selectedCampaign.value?.deliveries ?? []);
+
+const tierFilterFieldOptions = computed(() => {
+    const fromCampaign = fieldOptionsFromCampaign(selectedCampaign.value);
+    return fromCampaign.length ? fromCampaign : (props.filterFieldOptions ?? []);
+});
 
 const addGroup = () => {
     form.groups.push({
@@ -100,10 +125,12 @@ const submit = () => {
         />
 
         <CampaignWorkflowNav
-            v-if="selectedCampaign"
-            :campaign="{ id: selectedCampaign.id, name: selectedCampaign.name, reference: selectedCampaign.reference }"
+            v-if="navWorkflow"
+            :campaign="navWorkflow.campaign"
+            :distribution-config-id="navWorkflow.distributionConfigId"
+            :tenant-hub="navWorkflow.tenantHub"
             current="ping-tree"
-            :distribution-config-id="config?.id"
+            class="mb-6"
         />
 
         <FormSetupLayout :steps="steps" :current-step="currentStep" :step-status="stepStatus" @go="goStep">
@@ -209,8 +236,13 @@ const submit = () => {
                             </div>
                             <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
                                 <InputLabel value="Tier entry filters" />
-                                <p class="mb-2 text-xs text-slate-500">Leads must match these rules to enter this tier.</p>
-                                <EligibilityRulesEditor v-model="group.rules" />
+                                <div class="mt-2">
+                                    <EligibilityRulesEditor
+                                        v-model="group.rules"
+                                        scope="tier"
+                                        :field-options="tierFilterFieldOptions"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </Panel>

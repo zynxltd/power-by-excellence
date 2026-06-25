@@ -4,15 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Live stats polling interval (seconds)
+    | Queue resilience
     |--------------------------------------------------------------------------
     |
-    | How often the admin UI refreshes operational counters on each page.
+    | Prefer Redis + Horizon in production. When Redis is unreachable at boot,
+    | the app falls back to the database driver and the scheduler drains the
+    | queue each minute (see bootstrap/app.php).
     |
     */
 
-    'live_stats_interval' => (int) env('LIVE_STATS_INTERVAL', 15),
-
-    'max_repost_attempts' => (int) env('MAX_REPOST_ATTEMPTS', 3),
+    'queue' => [
+        'preferred_connection' => env('QUEUE_CONNECTION', 'database'),
+        'fallback_connection' => env('QUEUE_FALLBACK_CONNECTION', 'database'),
+        'redis_fallback' => env('QUEUE_REDIS_FALLBACK', true),
+        'fallback_active' => false,
+    ],
 
 ];

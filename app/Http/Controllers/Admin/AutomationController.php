@@ -10,6 +10,7 @@ use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Models\DistributionConfig;
 use App\Models\EventAlert;
+use App\Models\EventAlertFire;
 use App\Services\Automation\BulkSmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,10 @@ class AutomationController extends Controller
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
             ],
             'alertChannels' => ['email', 'sms', 'webhook', 'slack'],
-            'recentAlertFires' => \App\Models\EventAlertFire::orderByDesc('created_at')->limit(10)->get(),
+            'recentAlertFires' => EventAlertFire::with(['alert:id,name', 'account:id,name'])
+                ->orderByDesc('created_at')
+                ->limit(25)
+                ->get(),
         ]);
     }
 

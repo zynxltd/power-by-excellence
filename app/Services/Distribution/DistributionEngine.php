@@ -62,7 +62,7 @@ class DistributionEngine
         $sells = 0;
         $soldBuyers = [];
 
-        foreach ($groups as $group) {
+        foreach ($groups as $tierIndex => $group) {
             if (! empty($group['hybrid_rule_group_id'])) {
                 $rules = \App\Models\HybridRuleGroup::find($group['hybrid_rule_group_id'])?->rules;
                 if ($rules && ! $this->ruleEngine->matches($rules, $lead->allFields())) {
@@ -72,8 +72,30 @@ class DistributionEngine
                 }
             }
 
-            if (! empty($group['rules']) && ! $this->ruleEngine->matches($group['rules'], $lead->allFields())) {
-                continue;
+            if (! empty($group['rules'])) {
+                $fields = $lead->allFields();
+                $failed = $this->ruleEngine->firstFailingCondition($group['rules'], $fields);
+
+                if ($failed !== null) {
+                    $tierName = $group['name'] ?? 'Tier '.($tierIndex + 1);
+                    $description = $this->ruleEngine->describeCondition($failed, $fields);
+
+                    PlatformLogger::leadEvent(
+                        $lead,
+                        'distribution.tier_filtered',
+                        "Skipped {$tierName}: {$description}",
+                        [
+                            'tier' => $tierName,
+                            'tier_index' => $tierIndex + 1,
+                            'failed_condition' => $failed,
+                            'filter_summary' => $this->ruleEngine->summarizeRules($group['rules']),
+                            'lead_field' => $failed['field'] ?? null,
+                            'lead_value' => isset($failed['field']) ? data_get($fields, $failed['field']) : null,
+                        ],
+                    );
+
+                    continue;
+                }
             }
 
             $deliveryIds = $group['delivery_ids'] ?? [];

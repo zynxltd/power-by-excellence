@@ -55,7 +55,7 @@ const drillHref = (status) => {
             <Link
                 v-if="drilldownRoute"
                 :href="drilldownRoute"
-                class="relative h-28 w-28 shrink-0 transition hover:opacity-90"
+                class="relative h-36 w-36 shrink-0 transition hover:opacity-90 sm:h-40 sm:w-40"
                 title="View all leads"
             >
                 <div class="h-full w-full rounded-full" :style="{ background: gradient }" />
@@ -64,7 +64,7 @@ const drillHref = (status) => {
                     <span class="text-[10px] text-slate-500">{{ periodDays }} days</span>
                 </div>
             </Link>
-            <div v-else class="relative h-28 w-28 shrink-0">
+            <div v-else class="relative h-36 w-36 shrink-0 sm:h-40 sm:w-40">
                 <div class="h-full w-full rounded-full" :style="{ background: gradient }" />
                 <div class="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white dark:bg-slate-900">
                     <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ total }}</span>

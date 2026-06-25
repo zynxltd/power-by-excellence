@@ -10,6 +10,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     leads: Object,
@@ -22,6 +23,8 @@ const localFilters = ref({ ...props.filters });
 const applyFilters = () => router.get(route('portal.supplier.leads'), localFilters.value, { preserveState: true, replace: true });
 const clearFilters = () => { localFilters.value = {}; applyFilters(); };
 watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
+
+const { formatMoney } = useMoneyFormat();
 </script>
 
 <template>
@@ -74,7 +77,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     <td class="px-6 py-4 text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
                     <td class="px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.sid }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>
-                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">£{{ lead.financials?.payout ?? 0 }}</td>
+                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.payout ?? 0) }}</td>
                     <td class="px-6 py-4"><FormattedDate :value="lead.received_at" /></td>
                 </tr>
             </DataTable>

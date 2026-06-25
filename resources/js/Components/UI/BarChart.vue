@@ -1,38 +1,71 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { chartXTicks, shortenChartLabel } from '@/utils/chartTicks';
 
 const props = defineProps({
     title: { type: String, default: '' },
     labels: { type: Array, default: () => [] },
     datasets: { type: Array, default: () => [] },
-    height: { type: Number, default: 200 },
+    height: { type: Number, default: 260 },
     valueFormatter: { type: Function, default: null },
     drilldownRoute: { type: String, default: '' },
     showLegend: { type: Boolean, default: true },
+    scrollable: { type: Boolean, default: null },
 });
 
-const LABEL_AREA_PX = 28;
+const LABEL_AREA_PX = 32;
+const Y_AXIS_WIDTH_PX = 36;
+const GROUP_MIN_WIDTH_PX = 28;
 
 const hover = ref(null);
 
 const toNumber = (value) => Number(value) || 0;
 
-const plotHeight = computed(() => Math.max(props.height - LABEL_AREA_PX, 40));
+const shouldScroll = computed(() => {
+    if (props.scrollable !== null) {
+        return props.scrollable;
+    }
+
+    return props.labels.length > 14;
+});
+
+const groupWidth = computed(() => (
+    shouldScroll.value
+        ? GROUP_MIN_WIDTH_PX
+        : Math.max(GROUP_MIN_WIDTH_PX, Math.floor(600 / Math.max(props.labels.length, 1)))
+));
+
+const plotMinWidth = computed(() => props.labels.length * groupWidth.value);
+
+const niceMax = (peak) => {
+    if (peak <= 0) {
+        return 1;
+    }
+
+    const padded = peak * 1.08;
+    const exp = Math.floor(Math.log10(padded));
+    const base = 10 ** exp;
+    const fraction = padded / base;
+
+    let niceFraction = 10;
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+
+    return niceFraction * base;
+};
 
 const maxValue = computed(() => {
     const all = props.datasets.flatMap((d) => (d.data ?? []).map(toNumber));
     const peak = all.length ? Math.max(...all) : 0;
-    if (peak === 0) {
-        return 1;
-    }
 
-    const magnitude = Math.pow(10, Math.floor(Math.log10(peak)));
-    return Math.ceil(peak / magnitude) * magnitude;
+    return niceMax(peak);
 });
 
 const gridLines = computed(() => {
     const lines = 4;
+
     return Array.from({ length: lines + 1 }, (_, i) => ({
         position: (i / lines) * 100,
         value: Math.round(maxValue.value * (1 - i / lines)),
@@ -41,13 +74,13 @@ const gridLines = computed(() => {
 
 const formatValue = (v) => (props.valueFormatter ? props.valueFormatter(v) : v);
 
-const barHeightPx = (value) => {
+const barHeightPct = (value) => {
     const v = toNumber(value);
     if (v <= 0) {
         return 0;
     }
 
-    return Math.max(4, Math.round((v / maxValue.value) * plotHeight.value));
+    return Math.max(4, (v / maxValue.value) * 100);
 };
 
 const barBackground = (dataset) => {
@@ -58,9 +91,13 @@ const barBackground = (dataset) => {
     return dataset.color;
 };
 
-const barWidthClass = computed(() => (
-    props.datasets.length === 1 ? 'w-9 sm:w-10' : 'min-w-[3px] flex-1'
-));
+const barWidthStyle = computed(() => {
+    if (props.datasets.length === 1) {
+        return { width: '65%', maxWidth: '36px' };
+    }
+
+    return { width: '42%', maxWidth: '18px' };
+});
 
 const onBarEnter = (index) => {
     hover.value = index;
@@ -96,23 +133,36 @@ const periodTotal = computed(() => (
         sum + (dataset.data ?? []).reduce((inner, value) => inner + toNumber(value), 0)
     ), 0)
 ));
+
+const labelTicks = computed(() => new Set(chartXTicks(props.labels, 7).map((t) => t.index)));
+
+const displayLabel = (label, index) => {
+    if (shouldScroll.value || props.labels.length <= 10) {
+        return shortenChartLabel(label, props.labels.length);
+    }
+
+    return labelTicks.value.has(index) ? shortenChartLabel(label, props.labels.length) : '';
+};
 </script>
 
 <template>
-    <div class="relative">
+    <div class="relative w-full">
         <p v-if="title" class="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">{{ title }}</p>
 
-        <div class="relative" :style="{ height: `${height}px` }">
-            <div class="pointer-events-none absolute inset-x-0 bottom-7 left-8 top-0 flex flex-col justify-between">
+        <div class="relative w-full" :style="{ height: `${height}px` }">
+            <div
+                class="pointer-events-none absolute inset-y-0 left-0 z-10 flex flex-col justify-between"
+                :style="{ width: `${Y_AXIS_WIDTH_PX}px`, bottom: `${LABEL_AREA_PX}px` }"
+            >
                 <div
                     v-for="(line, index) in gridLines"
                     :key="index"
-                    class="relative border-t border-slate-100 dark:border-slate-800/80"
-                    :style="{ opacity: index === gridLines.length - 1 ? 0 : 1 }"
+                    class="relative flex items-center"
+                    :style="{ height: index === gridLines.length - 1 ? '0' : `${100 / (gridLines.length - 1)}%` }"
                 >
                     <span
                         v-if="index < gridLines.length - 1"
-                        class="absolute -left-8 -top-2 w-7 text-right text-[9px] tabular-nums text-slate-400"
+                        class="w-full pr-1 text-right text-[10px] tabular-nums leading-none text-slate-400"
                     >
                         {{ formatValue(line.value) }}
                     </span>
@@ -121,7 +171,7 @@ const periodTotal = computed(() => (
 
             <div
                 v-if="tooltip"
-                class="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 text-xs shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+                class="pointer-events-none absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 text-xs shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
             >
                 <p class="font-semibold text-slate-900 dark:text-white">{{ tooltip.label }}</p>
                 <p v-for="row in tooltip.rows" :key="row.label" class="mt-0.5 font-medium" :style="{ color: row.color }">
@@ -130,46 +180,70 @@ const periodTotal = computed(() => (
             </div>
 
             <div
-                class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-1 pl-8 sm:gap-2"
-                :style="{ height: `${plotHeight + LABEL_AREA_PX}px` }"
+                class="absolute inset-0 flex flex-col"
+                :style="{ paddingLeft: `${Y_AXIS_WIDTH_PX}px` }"
             >
                 <div
-                    v-for="(label, i) in labels"
-                    :key="`${label}-${i}`"
-                    class="group flex h-full flex-1 flex-col items-center justify-end"
-                    @mouseenter="onBarEnter(i)"
-                    @mouseleave="onBarLeave"
-                    @click="onBarClick(i)"
+                    class="relative min-h-0 flex-1"
+                    :class="shouldScroll ? 'overflow-x-auto overflow-y-hidden' : 'overflow-hidden'"
                 >
                     <div
-                        class="flex w-full items-end justify-center gap-1"
-                        :style="{ height: `${plotHeight}px` }"
+                        class="relative h-full"
+                        :style="{ minWidth: shouldScroll ? `${plotMinWidth}px` : '100%' }"
                     >
                         <div
-                            v-for="(dataset, di) in datasets"
-                            :key="di"
-                            :class="[
-                                barWidthClass,
-                                'rounded-t-lg transition-all duration-200',
-                                hover === i ? 'opacity-100 shadow-md' : 'opacity-90',
-                                drilldownRoute ? 'cursor-pointer' : '',
-                            ]"
-                            :style="{
-                                height: `${barHeightPx(dataset.data[i])}px`,
-                                background: barBackground(dataset),
-                                transform: hover === i ? 'translateY(-2px)' : 'translateY(0)',
-                                boxShadow: hover === i ? `0 8px 20px -8px ${dataset.color}88` : 'none',
-                            }"
-                        />
+                            class="pointer-events-none absolute inset-0 flex flex-col justify-between"
+                        >
+                            <div
+                                v-for="(line, index) in gridLines"
+                                :key="`grid-${index}`"
+                                class="border-t border-slate-100 dark:border-slate-800/80"
+                                :style="{ opacity: index === gridLines.length - 1 ? 0 : 1 }"
+                            />
+                        </div>
+
+                        <div class="absolute inset-0 flex items-stretch justify-between gap-0.5 px-1">
+                            <div
+                                v-for="(label, i) in labels"
+                                :key="`${label}-${i}`"
+                                class="group flex h-full min-w-0 flex-col"
+                                :style="{ width: shouldScroll ? `${groupWidth}px` : undefined, flex: shouldScroll ? '0 0 auto' : '1 1 0' }"
+                                @mouseenter="onBarEnter(i)"
+                                @mouseleave="onBarLeave"
+                                @click="onBarClick(i)"
+                            >
+                                <div class="flex min-h-0 flex-1 items-end justify-center gap-0.5">
+                                    <div
+                                        v-for="(dataset, di) in datasets"
+                                        :key="di"
+                                        :class="[
+                                            'rounded-t-md transition-all duration-200',
+                                            hover === i ? 'opacity-100 shadow-md' : 'opacity-90',
+                                            drilldownRoute ? 'cursor-pointer' : '',
+                                        ]"
+                                        :style="{
+                                            height: `${barHeightPct(dataset.data[i])}%`,
+                                            ...barWidthStyle,
+                                            background: barBackground(dataset),
+                                            transform: hover === i ? 'translateY(-2px)' : 'translateY(0)',
+                                            boxShadow: hover === i ? `0 8px 20px -8px ${dataset.color}88` : 'none',
+                                        }"
+                                    />
+                                </div>
+                                <span
+                                    :class="[
+                                        'mt-1 shrink-0 text-center text-[10px] font-medium leading-tight transition',
+                                        hover === i ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400',
+                                        displayLabel(label, i) ? '' : 'invisible',
+                                        shouldScroll ? 'w-full truncate' : '',
+                                    ]"
+                                    :title="label"
+                                >
+                                    {{ displayLabel(label, i) }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <span
-                        :class="[
-                            'mt-1 text-center text-[10px] font-medium leading-tight transition',
-                            hover === i ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400',
-                        ]"
-                    >
-                        {{ label }}
-                    </span>
                 </div>
             </div>
         </div>

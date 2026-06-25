@@ -45,10 +45,10 @@ Each row is one `Account` with:
 - **Visit** — Enter [god mode](./god-mode.md) on the tenant subdomain
 - **Portal URL** — Open tenant dashboard in a new tab (after visit/handoff)
 
-## Recent events & alerts
+## Recent events
 
-- **Lead events** — Last 30 platform-wide lifecycle events
-- **Event alert fires** — Threshold alerts that fired recently (from tenant-configured `EventAlert` rules)
+- **Lead events** — Last 30 platform-wide lifecycle events (sold, ingested, rejected, etc.)
+- **Event alert fires** — See **Automation → Event Alerts** for threshold alert history when rules fire
 
 ## Ops checks
 

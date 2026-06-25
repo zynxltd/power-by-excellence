@@ -10,9 +10,12 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({ supplier: Object, portalUser: Object });
+
+const { currency } = useMoneyFormat();
 
 const steps = [
     { id: 'basics', label: 'Basics', num: 1 },
@@ -169,7 +172,7 @@ const submit = () => {
                         </div>
                         <div class="flex items-end gap-2">
                             <div class="flex-1">
-                                <InputLabel value="Payout override (£)" />
+                                <InputLabel :value="`Payout override (${currency})`" />
                                 <TextInput v-model="source.payout_override" type="number" step="0.01" min="0" class="mt-1 w-full" placeholder="Campaign default" />
                             </div>
                             <button v-if="form.sources.length > 1" type="button" class="pb-2 text-sm text-rose-500" @click="removeSource(i)">×</button>

@@ -6,6 +6,8 @@ use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\DistributionConfig;
+use App\Support\Admin\CampaignWorkflow;
+use App\Support\Campaign\CampaignFieldCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,6 +46,7 @@ class DistributionController extends Controller
             'filterOptions' => [
                 'campaigns' => Campaign::orderBy('name')->get(['id', 'name']),
             ],
+            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
         ]);
     }
 
@@ -61,6 +64,7 @@ class DistributionController extends Controller
                 'name' => $group['name'] ?? 'Tier '.($index + 1),
                 'mode' => $group['mode'] ?? 'waterfall',
                 'floor_price' => $group['floor_price'] ?? null,
+                'rules' => $group['rules'] ?? null,
                 'deliveries' => collect($deliveryIds)->map(function ($id) use ($deliveriesById) {
                     $d = $deliveriesById->get($id);
 
@@ -81,15 +85,18 @@ class DistributionController extends Controller
             'config' => $distribution,
             'tiers' => $tiers,
             'campaign' => $campaign->only(['id', 'name', 'reference', 'use_advanced_distribution', 'floor_price']),
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Admin/Distribution/Form', [
             'config' => null,
-            'campaigns' => Campaign::with('deliveries')->orderBy('name')->get(),
+            'campaigns' => Campaign::with(['deliveries', 'fields'])->orderBy('name')->get(),
             'routingModes' => $this->routingModes(),
+            'filterFieldOptions' => CampaignFieldCatalog::forCampaignId($request->integer('campaign_id') ?: null),
+            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
         ]);
     }
 
@@ -108,8 +115,10 @@ class DistributionController extends Controller
 
         return Inertia::render('Admin/Distribution/Form', [
             'config' => $distribution,
-            'campaigns' => Campaign::with('deliveries')->orderBy('name')->get(),
+            'campaigns' => Campaign::with(['deliveries', 'fields'])->orderBy('name')->get(),
             'routingModes' => $this->routingModes(),
+            'filterFieldOptions' => CampaignFieldCatalog::forCampaign($campaign),
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
         ]);
     }
 

@@ -11,6 +11,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
@@ -25,6 +26,8 @@ const localFilters = ref({ ...props.filters });
 const applyFilters = () => router.get(route('portal.buyer.leads'), localFilters.value, { preserveState: true, replace: true });
 const clearFilters = () => { localFilters.value = {}; applyFilters(); };
 watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
+
+const { formatMoney } = useMoneyFormat();
 
 const feedbackForm = useForm({ lead_uuid: '', status: 'contacted', converted: false, notes: '' });
 const returnForm = useForm({ lead_uuid: '', reason: '' });
@@ -84,7 +87,7 @@ const submitReturn = () => returnForm.post(route('portal.buyer.returns'), { onSu
                     <td class="px-6 py-4 text-slate-900 dark:text-white">{{ lead.field_data?.firstname }} {{ lead.field_data?.lastname }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ lead.field_data?.email }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>
-                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">£{{ lead.financials?.revenue ?? 0 }}</td>
+                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
                     <td class="px-6 py-4"><FormattedDate :value="lead.distributed_at" /></td>
                 </tr>
             </DataTable>

@@ -7,8 +7,10 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     delivery: Object,
@@ -18,7 +20,10 @@ const props = defineProps({
     stats: Object,
     pingTreeLinks: Array,
     performance: Object,
+    campaignWorkflow: { type: Object, default: null },
 });
+
+const { formatMoney } = useMoneyFormat(props.delivery?.campaign?.currency);
 
 const activeTab = ref('overview');
 const expandedLogId = ref(null);
@@ -73,6 +78,15 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
             </template>
         </PageHeader>
 
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="deliveries"
+            class="mb-6"
+        />
+
         <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Panel class="!p-4">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Method</p>
@@ -91,7 +105,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
             <Panel class="!p-4">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Today revenue</p>
                 <p class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    £{{ Number(performance?.today?.revenue ?? 0).toFixed(2) }}
+                    {{ formatMoney(performance?.today?.revenue ?? 0) }}
                 </p>
             </Panel>
             <Panel class="!p-4">
@@ -157,7 +171,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                             <dd class="mt-1 text-sm text-slate-700 dark:text-slate-300">
                                 <span class="capitalize">{{ delivery.revenue_type?.replace(/_/g, ' ') }}</span>
                                 <span v-if="delivery.revenue_type === 'fixed'" class="ml-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                                    £{{ delivery.revenue_amount }}
+                                    {{ formatMoney(delivery.revenue_amount) }}
                                 </span>
                             </dd>
                         </div>
@@ -187,7 +201,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Avg revenue</dt>
-                        <dd class="mt-1 text-lg font-bold text-slate-900 dark:text-white">£{{ stats?.avg_revenue ?? '0.00' }}</dd>
+                        <dd class="mt-1 text-lg font-bold text-slate-900 dark:text-white">{{ formatMoney(stats?.avg_revenue ?? 0) }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Avg duration</dt>
@@ -232,7 +246,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                                 </Link>
                             </td>
                             <td class="px-6 py-4"><StatusBadge :status="log.status" /></td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">£{{ log.revenue ?? '0.00' }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ log.revenue ? formatMoney(log.revenue) : '—' }}</td>
                             <td class="px-6 py-4 text-xs text-slate-500">{{ log.duration_ms ? `${log.duration_ms}ms` : '—' }}</td>
                         </tr>
                         <tr v-if="expandedLogId === log.id" class="bg-slate-50 dark:bg-slate-800/30">

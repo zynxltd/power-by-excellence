@@ -23,6 +23,7 @@ const props = defineProps({
     premadeTemplates: { type: Array, default: () => [] },
     tenantHost: { type: String, default: '' },
     tenantHub: { type: Object, default: null },
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const activeTab = ref('overview');
@@ -154,10 +155,11 @@ const save = () => {
         </div>
 
         <CampaignWorkflowNav
-            :campaign="campaign"
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
             current="api-spec"
-            :distribution-config-id="activeDistributionConfigId"
-            :tenant-hub="tenantHub"
             class="mb-6"
         />
 

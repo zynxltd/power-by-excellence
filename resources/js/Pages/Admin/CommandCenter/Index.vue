@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
-import StatusBadge from '@/Components/UI/StatusBadge.vue';
+import OpsCheckStrip from '@/Components/UI/OpsCheckStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -16,7 +16,6 @@ const props = defineProps({
     currentAccountId: Number,
     tenants: Array,
     recentEvents: Array,
-    recentAlerts: Array,
     opsChecks: Array,
     platformStatus: Object,
 });
@@ -41,6 +40,10 @@ const copyText = async (text, key) => {
     setTimeout(() => { copied.value = ''; }, 2000);
 };
 
+const issueChecks = computed(() =>
+    (props.opsChecks ?? []).filter((c) => c.status !== 'ok'),
+);
+
 const overallHealth = computed(() => {
     if (props.healthSummary?.critical > 0) return { label: 'Critical issues', class: 'text-rose-600' };
     if (props.healthSummary?.warning > 0) return { label: 'Some warnings', class: 'text-amber-600' };
@@ -60,9 +63,9 @@ const checkStatusLabel = (status) => ({
 }[status] ?? status);
 
 const opsCategories = [
-    { id: 'infrastructure', title: 'Infrastructure', description: 'Tenancy, database, cache, queue, storage, and scheduler.' },
-    { id: 'speed', title: 'Speed', description: 'Lead pipeline latency vs platform target.' },
-    { id: 'quality', title: 'Quality', description: 'Post success and platform-side delivery errors.' },
+    { id: 'infrastructure', title: 'Infrastructure' },
+    { id: 'speed', title: 'Speed' },
+    { id: 'quality', title: 'Quality' },
 ];
 
 const checksForCategory = (categoryId) => (props.opsChecks ?? []).filter((c) => c.category === categoryId);
@@ -163,52 +166,50 @@ const platformStatItems = computed(() => {
         <CompactStatStrip :items="platformStatItems" class="mb-6" />
 
         <Panel title="Platform operations" class="mb-6">
-            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                Infrastructure, speed, and quality gates for the whole network.
-                Checks are cached for 60s; DNS lookups for 5m. Status snapshots every 15 minutes.
-                <span v-if="platformStatus?.checked_at" class="block mt-1 text-xs text-slate-500">
-                    Last status refresh: <FormattedDate :value="platformStatus.checked_at" />
-                    · <Link :href="route('status.index')" class="text-indigo-600 hover:underline">Public status page</Link>
-                </span>
-                Run <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-indigo-600 dark:bg-slate-800">php artisan platform:check</code> for a fresh CLI report.
-            </p>
-
-            <div v-for="cat in opsCategories" :key="cat.id" class="mb-6 last:mb-0">
-                <div class="mb-3">
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ cat.title }}</h3>
-                    <p class="text-xs text-slate-500">{{ cat.description }}</p>
-                </div>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <div
-                        v-for="check in checksForCategory(cat.id)"
-                        :key="check.key"
-                        class="flex min-h-[7rem] flex-col rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-800/40"
-                    >
-                        <div class="flex items-start justify-between gap-2">
-                            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ check.label }}</p>
-                            <span class="shrink-0 text-xs font-semibold uppercase" :class="checkStatusClass(check.status)">
-                                {{ checkStatusLabel(check.status) }}
-                            </span>
-                        </div>
-                        <p class="mt-2 flex-1 text-sm text-slate-600 dark:text-slate-400">{{ check.message }}</p>
-                        <p v-if="check.hint" class="mt-2 text-xs text-slate-500">{{ check.hint }}</p>
-                        <button
-                            v-if="check.command"
-                            type="button"
-                            class="mt-3 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-left font-mono text-[10px] text-indigo-600 hover:bg-indigo-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
-                            @click="copyText(check.command, check.key)"
-                        >
-                            {{ copied === check.key ? '✓ Copied' : check.command }}
-                        </button>
-                    </div>
-                </div>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <p>
+                    Cached 60s · snapshots every 15m
+                    <span v-if="platformStatus?.checked_at" class="ml-1">
+                        · <FormattedDate :value="platformStatus.checked_at" />
+                    </span>
+                </p>
+                <p>
+                    <Link :href="route('status.index')" class="text-indigo-600 hover:underline">Status page</Link>
+                    ·
+                    <Link :href="route('live-feed.index')" class="text-indigo-600 hover:underline">Live feed</Link>
+                    ·
+                    <Link :href="route('notifications.admin.index')" class="text-indigo-600 hover:underline">Notifications</Link>
+                </p>
             </div>
 
-            <p class="mt-4 text-xs text-slate-500">
-                <Link :href="route('live-feed.index')" class="text-indigo-600 hover:underline">Open live feed →</Link>
-                ·
-                <Link :href="route('notifications.admin.index')" class="text-indigo-600 hover:underline">Notifications →</Link>
-            </p>
+            <div v-for="cat in opsCategories" :key="cat.id" class="mb-4 last:mb-0">
+                <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ cat.title }}</h3>
+                <OpsCheckStrip :checks="checksForCategory(cat.id)" />
+            </div>
+
+            <div v-if="issueChecks.length" class="mt-4 space-y-2 rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">Needs attention</p>
+                <div
+                    v-for="check in issueChecks"
+                    :key="check.key"
+                    class="flex flex-wrap items-start justify-between gap-2 border-t border-amber-200/60 pt-2 text-xs first:border-0 first:pt-0 dark:border-amber-900/30"
+                >
+                    <div class="min-w-0 flex-1">
+                        <span class="font-semibold text-slate-800 dark:text-slate-200">{{ check.label }}</span>
+                        <span class="ml-2 font-medium" :class="checkStatusClass(check.status)">{{ checkStatusLabel(check.status) }}</span>
+                        <p class="mt-0.5 text-slate-600 dark:text-slate-400">{{ check.message }}</p>
+                        <p v-if="check.hint" class="mt-0.5 text-slate-500">{{ check.hint }}</p>
+                    </div>
+                    <button
+                        v-if="check.command"
+                        type="button"
+                        class="shrink-0 rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[10px] text-indigo-600 hover:bg-indigo-50 dark:border-slate-600 dark:bg-slate-900"
+                        @click="copyText(check.command, check.key)"
+                    >
+                        {{ copied === check.key ? '✓ Copied' : check.command }}
+                    </button>
+                </div>
+            </div>
         </Panel>
 
         <Panel title="Tenant overview" class="mt-6" :padding="false">
@@ -314,34 +315,22 @@ const platformStatItems = computed(() => {
             </DataTable>
         </Panel>
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-2">
-            <Panel title="Recent platform events" :padding="false">
-                <div v-if="!recentEvents?.length" class="p-6 text-sm text-slate-500">No events yet.</div>
-                <div v-for="e in recentEvents" :key="e.id" class="border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800">
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ e.event_type }}</p>
-                            <p class="text-sm text-slate-600 dark:text-slate-400">{{ e.message }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ e.tenant }} · <Link v-if="e.lead_id" :href="route('leads.show', e.lead_id)" class="text-indigo-600 hover:underline">{{ e.lead_uuid?.slice(0, 8) }}</Link></p>
-                        </div>
-                        <FormattedDate :value="e.created_at" class="shrink-0 text-xs" />
+        <Panel title="Recent platform events" class="mt-6" :padding="false">
+            <div v-if="!recentEvents?.length" class="p-6 text-sm text-slate-500">No events yet.</div>
+            <div v-for="e in recentEvents" :key="e.id" class="border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ e.event_type }}</p>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">{{ e.message }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ e.tenant }} · <Link v-if="e.lead_id" :href="route('leads.show', e.lead_id)" class="text-indigo-600 hover:underline">{{ e.lead_uuid?.slice(0, 8) }}</Link></p>
                     </div>
+                    <FormattedDate :value="e.created_at" class="shrink-0 text-xs" />
                 </div>
-            </Panel>
-
-            <Panel title="Recent alert fires" :padding="false">
-                <div v-if="!recentAlerts?.length" class="p-6 text-sm text-slate-500">No alerts fired.</div>
-                <div v-for="a in recentAlerts" :key="a.id" class="border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800">
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <p class="text-sm font-medium">{{ a.alert?.name ?? 'Alert' }}</p>
-                            <p class="text-xs text-slate-500">{{ a.account?.name }} · {{ a.metric }} = {{ a.value }}</p>
-                        </div>
-                        <StatusBadge :status="a.status" />
-                    </div>
-                    <FormattedDate :value="a.created_at" class="mt-1 text-xs" />
-                </div>
-            </Panel>
-        </div>
+            </div>
+            <p class="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
+                Threshold alert history lives under
+                <Link :href="route('automation.index', { tab: 'alerts' })" class="font-medium text-indigo-600 hover:underline">Automation → Event Alerts</Link>.
+            </p>
+        </Panel>
     </AuthenticatedLayout>
 </template>

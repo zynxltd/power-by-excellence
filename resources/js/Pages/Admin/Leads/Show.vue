@@ -13,11 +13,11 @@ import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     lead: Object,
-    workflowNav: Object,
     pipelineStages: Array,
     outcomeDetail: Object,
     processingMs: Number,
     navigation: Object,
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const activeTab = ref('overview');
@@ -56,6 +56,9 @@ const eventLabels = {
     distributed: 'Sent to buyer delivery',
     unsold: 'No buyer accepted',
     'auto_responder.sent': 'Auto responder sent',
+    'distribution.tier_filtered': 'Tier entry filter',
+    'delivery.filter_rejected': 'Delivery filter',
+    'distribution.skipped_group': 'Hybrid rule skipped',
 };
 
 const formatEvent = (type) => eventLabels[type] ?? type?.replace(/[._]/g, ' ') ?? type;
@@ -121,7 +124,14 @@ const stageLabel = (stage) => {
             </template>
         </PageHeader>
 
-        <CampaignWorkflowNav v-if="workflowNav" :campaign="workflowNav" current="leads" class="mb-6" />
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="leads"
+            class="mb-6"
+        />
 
         <Panel title="Pipeline progress" class="mb-6">
             <div class="flex flex-wrap items-stretch gap-2 sm:gap-4">
@@ -253,6 +263,12 @@ const stageLabel = (stage) => {
                 <div class="min-w-0 flex-1">
                     <span class="font-semibold text-slate-900 dark:text-white">{{ formatEvent(e.event_type) }}</span>
                     <span class="text-slate-600 dark:text-slate-400"> — {{ e.message }}</span>
+                    <p v-if="e.payload?.filter_summary?.length" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                        Filters: {{ e.payload.filter_summary.join(' · ') }}
+                    </p>
+                    <p v-else-if="e.payload?.filter_rejection?.summary" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                        {{ e.payload.filter_rejection.summary }}
+                    </p>
                     <p v-if="e.payload?.duration_ms" class="mt-1 text-xs text-slate-500">{{ e.payload.duration_ms }}ms</p>
                 </div>
             </div>

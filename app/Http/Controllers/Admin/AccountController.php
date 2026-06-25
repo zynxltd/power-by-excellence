@@ -51,6 +51,20 @@ class AccountController extends Controller
         return back()->with('success', 'Switched partner platform.');
     }
 
+    public function clear(Request $request): RedirectResponse
+    {
+        $this->authorizeSuperAdmin($request);
+
+        $request->session()->forget(['current_account_id', 'god_mode']);
+
+        if (! TenantResolver::isCentralHost($request->getHost())) {
+            return redirect()->away(TenantResolver::centralUrl('/dashboard'))
+                ->with('success', 'Returned to central admin — all platforms visible.');
+        }
+
+        return back()->with('success', 'Returned to central admin — all platforms visible.');
+    }
+
     public function visit(Request $request, int $accountId): RedirectResponse|HttpResponse
     {
         $this->authorizeSuperAdmin($request);

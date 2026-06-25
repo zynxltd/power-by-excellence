@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\DeliveryLog;
-use App\Models\EventAlertFire;
 use App\Models\Lead;
 use App\Models\LeadEvent;
 use App\Models\User;
@@ -105,10 +104,6 @@ class CommandCenterController extends Controller
             'currentAccountId' => session('current_account_id'),
             'tenants' => $tenants,
             'recentEvents' => $this->recentLeadEvents(30),
-            'recentAlerts' => EventAlertFire::with(['alert:id,name', 'account:id,name'])
-                ->orderByDesc('created_at')
-                ->limit(15)
-                ->get(),
             'opsChecks' => $opsCheck->run(),
             'platformStatus' => app(PlatformStatusService::class)->publicPayload(),
         ]);

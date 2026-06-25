@@ -1,10 +1,12 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const page = usePage();
 const account = computed(() => page.props.auth.account);
 const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
+
+const clearTenantContext = () => router.post(route('accounts.clear'));
 </script>
 
 <template>
@@ -35,12 +37,20 @@ const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
             <span v-if="!isSuperAdmin" class="text-indigo-700 dark:text-indigo-300"> — buyers and suppliers are scoped to this platform.</span>
             <span v-else class="text-indigo-700 dark:text-indigo-300"> — manage buyers and suppliers for this platform below, or switch tenant.</span>
         </p>
-        <Link
-            v-if="isSuperAdmin"
-            :href="route('accounts.index')"
-            class="shrink-0 text-sm font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white"
-        >
-            Switch platform →
-        </Link>
+        <div v-if="isSuperAdmin" class="flex shrink-0 flex-wrap items-center gap-3">
+            <button
+                type="button"
+                class="text-sm font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white"
+                @click="clearTenantContext"
+            >
+                All platforms (central admin) →
+            </button>
+            <Link
+                :href="route('accounts.index')"
+                class="text-sm font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white"
+            >
+                Switch platform →
+            </Link>
+        </div>
     </div>
 </template>

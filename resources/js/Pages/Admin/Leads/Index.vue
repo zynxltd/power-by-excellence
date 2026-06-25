@@ -8,6 +8,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, inject, ref, watch } from 'vue';
@@ -21,6 +22,7 @@ const props = defineProps({
     statuses: Array,
     pipelineSummary: Object,
     showTenantColumn: Boolean,
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const { formatMoney } = useMoneyFormat();
@@ -75,6 +77,15 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
         </PageHeader>
 
         <TenantContextBanner />
+
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="leads"
+            class="mb-6"
+        />
 
         <div class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
             <button

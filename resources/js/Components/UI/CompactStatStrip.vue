@@ -33,7 +33,7 @@ const gridStyle = computed(() => ({
                 :href="item.href ?? undefined"
                 :title="item.title ?? undefined"
                 :class="[
-                    'flex min-w-0 flex-col px-2.5 py-2.5 sm:px-3',
+                    'flex min-w-0 flex-col items-center px-2.5 py-2.5 text-center sm:px-3',
                     item.href ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60' : '',
                 ]"
             >
@@ -46,7 +46,9 @@ const gridStyle = computed(() => ({
                         item.accent === 'emerald' ? 'text-emerald-600 dark:text-emerald-400'
                         : item.accent === 'amber' ? 'text-amber-600 dark:text-amber-400'
                         : item.accent === 'rose' ? 'text-rose-600 dark:text-rose-400'
+                        : item.accent === 'orange' ? 'text-orange-600 dark:text-orange-400'
                         : item.accent === 'cyan' ? 'text-cyan-600 dark:text-cyan-400'
+                        : item.accent === 'indigo' ? 'text-indigo-600 dark:text-indigo-400'
                         : item.accent === 'violet' ? 'text-violet-600 dark:text-violet-400'
                         : 'text-slate-900 dark:text-white',
                     ]"

@@ -20,6 +20,7 @@ const props = defineProps({
     verticals: { type: Array, default: () => [] },
     biddingModes: { type: Array, default: () => [] },
     tenantHub: { type: Object, default: null },
+    campaignWorkflow: { type: Object, default: null },
     activeDistributionConfigId: { type: [Number, String], default: null },
 });
 
@@ -94,11 +95,11 @@ const submit = () => {
         </PageHeader>
 
         <CampaignWorkflowNav
-            v-if="campaign"
-            :campaign="{ id: campaign.id, name: campaign.name, reference: campaign.reference }"
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
             current="edit"
-            :distribution-config-id="activeDistributionConfigId"
-            :tenant-hub="tenantHub"
             class="mb-6"
         />
 

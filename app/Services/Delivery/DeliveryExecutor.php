@@ -33,8 +33,31 @@ class DeliveryExecutor
         ]);
 
         try {
-            if (! $this->isEligible($lead, $delivery, $fields)) {
-                $log->update(['status' => 'skipped', 'skipped_reason' => 'eligibility_rules']);
+            if (! $delivery->isActive()) {
+                $log->update(['status' => 'skipped', 'skipped_reason' => 'inactive']);
+
+                return DeliveryResult::skipped('inactive');
+            }
+
+            $filterRejection = $this->eligibilityRejection($delivery, $fields);
+
+            if ($filterRejection !== null) {
+                $log->update([
+                    'status' => 'skipped',
+                    'skipped_reason' => 'eligibility_rules',
+                    'post_response' => ['filter_rejection' => $filterRejection],
+                ]);
+
+                PlatformLogger::leadEvent(
+                    $lead,
+                    'delivery.filter_rejected',
+                    "Delivery filter: {$filterRejection['summary']}",
+                    [
+                        'delivery_id' => $delivery->id,
+                        'delivery_name' => $delivery->name,
+                        'filter_rejection' => $filterRejection,
+                    ],
+                );
 
                 return DeliveryResult::skipped('eligibility_rules');
             }
@@ -77,23 +100,45 @@ class DeliveryExecutor
 
     protected function isEligible(Lead $lead, Delivery $delivery, array $fields): bool
     {
-        if (! $delivery->isActive()) {
-            return false;
-        }
+        return $delivery->isActive() && $this->eligibilityRejection($delivery, $fields) === null;
+    }
 
-        if (! empty($delivery->eligibility_rules) && ! $this->ruleEngine->matches($delivery->eligibility_rules, $fields)) {
-            return false;
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function eligibilityRejection(Delivery $delivery, array $fields): ?array
+    {
+        if (! empty($delivery->eligibility_rules)) {
+            $failed = $this->ruleEngine->firstFailingCondition($delivery->eligibility_rules, $fields);
+
+            if ($failed !== null) {
+                return [
+                    'type' => 'eligibility_rules',
+                    'failed_condition' => $failed,
+                    'summary' => $this->ruleEngine->describeCondition($failed, $fields),
+                    'rule_summary' => $this->ruleEngine->summarizeRules($delivery->eligibility_rules),
+                    'lead_field' => $failed['field'] ?? null,
+                    'lead_value' => isset($failed['field']) ? data_get($fields, $failed['field']) : null,
+                ];
+            }
         }
 
         if (! empty($delivery->location_filter)) {
             $state = $fields['state'] ?? null;
             $states = $delivery->location_filter['states'] ?? [];
+
             if ($states && $state && ! in_array($state, $states, true)) {
-                return false;
+                return [
+                    'type' => 'location_filter',
+                    'summary' => "state is not one of: ".implode(', ', $states)." (lead value: {$state})",
+                    'lead_field' => 'state',
+                    'lead_value' => $state,
+                    'allowed_states' => $states,
+                ];
             }
         }
 
-        return true;
+        return null;
     }
 
     protected function directPost(array $fields, array $config, DeliveryLog $log, Delivery $delivery): DeliveryResult
@@ -154,8 +199,31 @@ class DeliveryExecutor
             'status' => 'pending',
         ]);
 
-        if (! $this->isEligible($lead, $delivery, $fields)) {
-            $log->update(['status' => 'skipped', 'skipped_reason' => 'eligibility_rules']);
+        if (! $delivery->isActive()) {
+            $log->update(['status' => 'skipped', 'skipped_reason' => 'inactive']);
+
+            return PingResult::skipped('inactive', $log);
+        }
+
+        $filterRejection = $this->eligibilityRejection($delivery, $fields);
+
+        if ($filterRejection !== null) {
+            $log->update([
+                'status' => 'skipped',
+                'skipped_reason' => 'eligibility_rules',
+                'post_response' => ['filter_rejection' => $filterRejection],
+            ]);
+
+            PlatformLogger::leadEvent(
+                $lead,
+                'delivery.filter_rejected',
+                "Delivery filter: {$filterRejection['summary']}",
+                [
+                    'delivery_id' => $delivery->id,
+                    'delivery_name' => $delivery->name,
+                    'filter_rejection' => $filterRejection,
+                ],
+            );
 
             return PingResult::skipped('eligibility_rules', $log);
         }
@@ -224,8 +292,31 @@ class DeliveryExecutor
             'status' => 'pending',
         ]);
 
-        if (! $this->isEligible($lead, $delivery, $fields)) {
-            $log->update(['status' => 'skipped', 'skipped_reason' => 'eligibility_rules']);
+        if (! $delivery->isActive()) {
+            $log->update(['status' => 'skipped', 'skipped_reason' => 'inactive']);
+
+            return null;
+        }
+
+        $filterRejection = $this->eligibilityRejection($delivery, $fields);
+
+        if ($filterRejection !== null) {
+            $log->update([
+                'status' => 'skipped',
+                'skipped_reason' => 'eligibility_rules',
+                'post_response' => ['filter_rejection' => $filterRejection],
+            ]);
+
+            PlatformLogger::leadEvent(
+                $lead,
+                'delivery.filter_rejected',
+                "Delivery filter: {$filterRejection['summary']}",
+                [
+                    'delivery_id' => $delivery->id,
+                    'delivery_name' => $delivery->name,
+                    'filter_rejection' => $filterRejection,
+                ],
+            );
 
             return null;
         }

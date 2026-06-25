@@ -7,6 +7,7 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import PingTreeTierTable from '@/Components/UI/PingTreeTierTable.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import { routingModeLabel } from '@/utils/routingModes';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
@@ -17,6 +18,7 @@ const props = defineProps({
     routingModes: Array,
     filters: Object,
     filterOptions: Object,
+    campaignWorkflow: { type: Object, default: null },
 });
 
 const localFilters = ref({ ...props.filters });
@@ -52,6 +54,15 @@ const tierSummary = (config) => {
                 <AppButton :href="route('distribution.create')">New Configuration</AppButton>
             </template>
         </PageHeader>
+
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="ping-tree"
+            class="mb-6"
+        />
 
         <Panel title="Filters" class="mb-6">
             <div class="grid gap-4 md:grid-cols-2">

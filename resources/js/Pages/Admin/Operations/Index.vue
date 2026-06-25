@@ -10,6 +10,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
+import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, inject, ref } from 'vue';
@@ -23,6 +24,8 @@ const props = defineProps({
     topCampaigns: Array,
     recentLeads: Object,
     deliveryPreview: Object,
+    campaignWorkflow: { type: Object, default: null },
+    filters: { type: Object, default: () => ({}) },
 });
 
 const hourlyChart = computed(() => ({
@@ -68,6 +71,15 @@ const processingLeads = computed(() => liveStats.value?.processing_leads ?? []);
         </PageHeader>
 
         <TenantContextBanner />
+
+        <CampaignWorkflowNav
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
+            current="operations"
+            class="mb-6"
+        />
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
             <Link :href="route('leads.index')" class="block">

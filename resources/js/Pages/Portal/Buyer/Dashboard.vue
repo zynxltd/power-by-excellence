@@ -8,7 +8,7 @@ import BarChart from '@/Components/UI/BarChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     buyer: Object,
@@ -18,7 +18,7 @@ const props = defineProps({
     currency: { type: String, default: 'GBP' },
 });
 
-const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currency] ?? props.currency + ' '));
+const { formatMoney, currency: displayCurrency } = useMoneyFormat(props.currency);
 </script>
 
 <template>
@@ -39,7 +39,7 @@ const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currenc
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="Credit Balance" :value="symbol + buyer.credit_balance" accent="emerald" />
+            <StatCard label="Credit Balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
             <StatCard label="Leads Today" :value="stats.leads_today" accent="indigo" />
             <StatCard label="Total Leads Purchased" :value="stats.total_leads" accent="cyan" />
         </div>
@@ -48,8 +48,8 @@ const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currenc
             <Panel title="Leads Purchased — Last 7 Days">
                 <BarChart :labels="charts.labels" :datasets="[{ label: 'Leads', data: charts.leads, color: '#6366f1' }]" />
             </Panel>
-            <Panel :title="`Spend — Last 7 Days (${currency})`">
-                <BarChart :labels="charts.labels" :datasets="[{ label: `Spend (${symbol.trim()})`, data: charts.spend, color: '#10b981' }]" />
+            <Panel :title="`Spend — Last 7 Days (${displayCurrency})`">
+                <BarChart :labels="charts.labels" :datasets="[{ label: `Spend (${displayCurrency})`, data: charts.spend, color: '#10b981' }]" />
             </Panel>
         </div>
 
@@ -64,7 +64,7 @@ const symbol = computed(() => ({ GBP: '£', USD: '$', EUR: '€' }[props.currenc
                 <tr v-for="lead in recentLeads" :key="lead.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ lead.uuid?.slice(0, 12) }}…</td>
                     <td class="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{{ lead.status }}</td>
-                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ symbol }}{{ lead.financials?.revenue ?? 0 }}</td>
+                    <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
                     <td class="px-6 py-4"><FormattedDate :value="lead.distributed_at" /></td>
                 </tr>
             </DataTable>

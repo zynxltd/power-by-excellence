@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
+use App\Support\Admin\CampaignWorkflow;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,35 +14,48 @@ class OperationsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $campaignId = $request->filled('campaign_id') ? $request->integer('campaign_id') : null;
+
+        $leadScope = Lead::query();
+        if ($campaignId) {
+            $leadScope->where('campaign_id', $campaignId);
+        }
+
         $stats = [
-            'leads_today' => Lead::whereDate('received_at', today())->count(),
-            'sold_today' => Lead::where('status', 'sold')->whereDate('distributed_at', today())->count(),
-            'unsold_today' => Lead::where('status', 'unsold')->whereDate('received_at', today())->count(),
-            'pending' => Lead::whereIn('status', ['pending', 'processing'])->count(),
-            'quarantined' => Lead::where('status', 'quarantined')->count(),
-            'rejected_today' => Lead::where('status', 'rejected')->whereDate('received_at', today())->count(),
-            'ping_posts_today' => DeliveryLog::query()->forCurrentAccount()->whereDate('created_at', today())
+            'leads_today' => (clone $leadScope)->whereDate('received_at', today())->count(),
+            'sold_today' => (clone $leadScope)->where('status', 'sold')->whereDate('distributed_at', today())->count(),
+            'unsold_today' => (clone $leadScope)->where('status', 'unsold')->whereDate('received_at', today())->count(),
+            'pending' => (clone $leadScope)->whereIn('status', ['pending', 'processing'])->count(),
+            'quarantined' => (clone $leadScope)->where('status', 'quarantined')->count(),
+            'rejected_today' => (clone $leadScope)->where('status', 'rejected')->whereDate('received_at', today())->count(),
+            'ping_posts_today' => DeliveryLog::query()->forCurrentAccount()
+                ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
+                ->whereDate('created_at', today())
                 ->whereNotNull('ping_request')
                 ->count(),
-            'failed_today' => DeliveryLog::query()->forCurrentAccount()->whereDate('created_at', today())
+            'failed_today' => DeliveryLog::query()->forCurrentAccount()
+                ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
+                ->whereDate('created_at', today())
                 ->whereIn('status', ['failed', 'skipped'])
                 ->count(),
             'revenue_today' => (float) \Illuminate\Support\Facades\DB::table('lead_financials')
                 ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
+                ->when($campaignId, fn ($q) => $q->where('leads.campaign_id', $campaignId))
                 ->whereDate('leads.distributed_at', today())
                 ->sum('lead_financials.revenue'),
         ];
 
         $topCampaigns = Lead::query()
             ->join('campaigns', 'campaigns.id', '=', 'leads.campaign_id')
+            ->when($campaignId, fn ($q) => $q->where('leads.campaign_id', $campaignId))
             ->whereDate('leads.received_at', today())
             ->groupBy('campaigns.id', 'campaigns.name')
             ->selectRaw("campaigns.id as id, campaigns.name as name, count(*) as leads, sum(case when leads.status = 'sold' then 1 else 0 end) as sold")
             ->orderByDesc('leads')
-            ->limit(5)
+            ->limit($campaignId ? 1 : 5)
             ->get();
 
-        $queueBreakdown = Lead::query()
+        $queueBreakdown = (clone $leadScope)
             ->selectRaw('status, count(*) as count')
             ->whereIn('status', ['pending', 'processing', 'quarantined', 'accepted'])
             ->groupBy('status')
@@ -52,11 +66,12 @@ class OperationsController extends Controller
             $hour = now()->subHours($h);
             $hourlyLeads[] = [
                 'label' => $hour->format('H:00'),
-                'count' => Lead::whereBetween('received_at', [$hour->copy()->startOfHour(), $hour->copy()->endOfHour()])->count(),
+                'count' => (clone $leadScope)->whereBetween('received_at', [$hour->copy()->startOfHour(), $hour->copy()->endOfHour()])->count(),
             ];
         }
 
-        $recentLeads = Lead::with(['campaign', 'soldToBuyer', 'supplier'])
+        $recentLeads = (clone $leadScope)
+            ->with(['campaign', 'soldToBuyer', 'supplier'])
             ->orderByDesc('received_at')
             ->paginate(20, ['*'], 'lead_page')
             ->withQueryString()
@@ -73,6 +88,7 @@ class OperationsController extends Controller
 
         $deliveryPreview = DeliveryLog::query()
             ->forCurrentAccount()
+            ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
             ->with(['lead', 'delivery', 'buyer'])
             ->orderByDesc('created_at')
             ->paginate(15, ['*'], 'delivery_page')
@@ -99,6 +115,8 @@ class OperationsController extends Controller
             'topCampaigns' => $topCampaigns,
             'recentLeads' => $recentLeads,
             'deliveryPreview' => $deliveryPreview,
+            'campaignWorkflow' => CampaignWorkflow::fromId($campaignId),
+            'filters' => $request->only(['campaign_id']),
         ]);
     }
 }

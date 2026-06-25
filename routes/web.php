@@ -231,6 +231,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
 
     Route::get('accounts', [AccountController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('accounts.index');
     Route::post('accounts/switch', [AccountController::class, 'switch'])->middleware(['superadmin', 'central.host'])->name('accounts.switch');
+    Route::post('accounts/clear', [AccountController::class, 'clear'])->middleware('superadmin')->name('accounts.clear');
     Route::post('accounts/{accountId}/visit', [AccountController::class, 'visit'])->middleware(['superadmin', 'central.host'])->name('accounts.visit');
 
     Route::post('impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');

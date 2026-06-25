@@ -4,6 +4,7 @@ import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
+import LineChart from '@/Components/UI/LineChart.vue';
 import DonutChart from '@/Components/UI/DonutChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -255,10 +256,10 @@ const switchToTenant = (accountId) => {
                         </div>
                     </div>
                 </template>
-                <BarChart
+                <LineChart
                     :labels="charts.labels"
                     :datasets="chartDatasets"
-                    :height="200"
+                    :height="280"
                     :value-formatter="(v) => v"
                     :drilldown-route="route('leads.index')"
                 />
@@ -296,7 +297,8 @@ const switchToTenant = (accountId) => {
             <BarChart
                 :labels="charts.labels"
                 :datasets="revenueDataset"
-                :height="200"
+                :height="280"
+                :scrollable="chartDaysLocal > 14"
                 :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
                 :drilldown-route="route('billing.index')"
             />

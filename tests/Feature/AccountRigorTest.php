@@ -61,6 +61,19 @@ class AccountRigorTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('currentAccountId', $uk->id));
     }
 
+    public function test_super_admin_can_clear_tenant_context(): void
+    {
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+        $uk = Account::where('slug', 'excellence-uk')->first();
+
+        $this->actingAs($super)
+            ->withSession(['current_account_id' => $uk->id, 'god_mode' => true])
+            ->post(route('accounts.clear'))
+            ->assertRedirect()
+            ->assertSessionMissing('current_account_id')
+            ->assertSessionMissing('god_mode');
+    }
+
     public function test_super_admin_switch_requires_valid_account(): void
     {
         $super = User::where('email', 'admin@powerbyexcellence.test')->first();

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Services\Api\CampaignApiSpecService;
+use App\Support\Admin\CampaignWorkflow;
 use App\Support\Admin\TenantHub;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,7 @@ class CampaignApiSpecController extends Controller
             'tenantHost' => TenantResolver::portalHost($campaign->account),
             'premadeTemplates' => $this->premadeTemplates(),
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $activeConfig?->id),
         ]);
     }
 

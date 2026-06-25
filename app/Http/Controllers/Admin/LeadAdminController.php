@@ -8,6 +8,7 @@ use App\Jobs\ProcessLeadJob;
 use App\Support\Queue\LeadJobDispatcher;
 use App\Models\Campaign;
 use App\Models\Lead;
+use App\Support\Admin\CampaignWorkflow;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class LeadAdminController extends Controller
             'statuses' => ['pending', 'processing', 'sold', 'unsold', 'rejected', 'quarantined', 'duplicate'],
             'pipelineSummary' => $this->pipelineSummary($baseQuery),
             'showTenantColumn' => $this->showTenantColumn($request),
+            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
         ]);
     }
 
@@ -75,11 +77,7 @@ class LeadAdminController extends Controller
 
         return Inertia::render('Admin/Leads/Show', [
             'lead' => $lead,
-            'workflowNav' => $lead->campaign ? [
-                'id' => $lead->campaign->id,
-                'name' => $lead->campaign->name,
-                'reference' => $lead->campaign->reference,
-            ] : null,
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($lead->campaign),
             'pipelineStages' => $this->pipelineStages($lead),
             'outcomeDetail' => $this->outcomeDetail($lead),
             'processingMs' => $processingMs,

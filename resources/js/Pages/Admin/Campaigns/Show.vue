@@ -20,6 +20,7 @@ const props = defineProps({
     campaign: Object,
     deliveries: Object,
     tenantHub: Object,
+    campaignWorkflow: Object,
     leadsToday: Number,
 });
 
@@ -44,10 +45,11 @@ const activeConfig = computed(() => props.campaign?.distribution_configs?.find((
         <TenantContextBanner />
 
         <CampaignWorkflowNav
-            :campaign="{ id: campaign.id, name: campaign.name, reference: campaign.reference }"
+            v-if="campaignWorkflow"
+            :campaign="campaignWorkflow.campaign"
+            :distribution-config-id="campaignWorkflow.distributionConfigId"
+            :tenant-hub="campaignWorkflow.tenantHub"
             current="show"
-            :distribution-config-id="activeConfig?.id"
-            :tenant-hub="tenantHub"
             class="mb-6"
         />
 

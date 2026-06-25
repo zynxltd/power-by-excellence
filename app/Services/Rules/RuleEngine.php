@@ -6,43 +6,131 @@ class RuleEngine
 {
     public function matches(?array $rules, array $data): bool
     {
+        return $this->firstFailingCondition($rules, $data) === null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function firstFailingCondition(?array $rules, array $data): ?array
+    {
         if (empty($rules)) {
-            return true;
+            return null;
         }
 
         $operator = $rules['operator'] ?? 'and';
         $conditions = $rules['conditions'] ?? $rules;
 
         if (! isset($rules['operator']) && isset($rules['field'])) {
-            return $this->evaluateCondition($rules, $data);
+            return $this->evaluateCondition($rules, $data) ? null : $rules;
         }
 
         if (! isset($rules['operator']) && isset($rules[0])) {
-            return $this->evaluateGroup('and', $rules, $data);
+            return $this->firstFailingInGroup('and', $rules, $data);
         }
 
-        return $this->evaluateGroup($operator, $conditions, $data);
+        return $this->firstFailingInGroup($operator, $conditions, $data);
     }
 
-    protected function evaluateGroup(string $operator, array $conditions, array $data): bool
+    /**
+     * @return list<string>
+     */
+    public function summarizeRules(?array $rules): array
+    {
+        if (empty($rules)) {
+            return [];
+        }
+
+        $operator = strtoupper($rules['operator'] ?? 'AND');
+        $conditions = $rules['conditions'] ?? [];
+
+        if (! is_array($conditions) || $conditions === []) {
+            return [];
+        }
+
+        return collect($conditions)
+            ->map(fn (array $condition) => $this->describeCondition($condition))
+            ->map(fn (string $line, int $index) => $index > 0 ? "{$operator} {$line}" : $line)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $condition
+     */
+    public function describeCondition(array $condition, ?array $data = null): string
+    {
+        if (isset($condition['operator'], $condition['conditions'])) {
+            $inner = collect($condition['conditions'])
+                ->map(fn (array $c) => $this->describeCondition($c, $data))
+                ->implode(' '.strtoupper($condition['operator']).' ');
+
+            return "({$inner})";
+        }
+
+        $field = $condition['field'] ?? 'field';
+        $op = $condition['op'] ?? 'eq';
+        $expected = $condition['value'] ?? '';
+        $actual = $data ? data_get($data, $field) : null;
+
+        $label = match ($op) {
+            'eq', '=' => "{$field} equals \"{$expected}\"",
+            'neq', '!=' => "{$field} is not \"{$expected}\"",
+            'gt', '>' => "{$field} is greater than {$expected}",
+            'gte', '>=' => "{$field} is at least {$expected}",
+            'lt', '<' => "{$field} is less than {$expected}",
+            'lte', '<=' => "{$field} is at most {$expected}",
+            'in' => "{$field} is one of: ".$this->valueListLabel($expected),
+            'not_in' => "{$field} is not one of: ".$this->valueListLabel($expected),
+            'contains' => "{$field} contains \"{$expected}\"",
+            'regex' => "{$field} matches pattern {$expected}",
+            'exists' => "{$field} has a value",
+            'empty' => "{$field} is empty",
+            default => "{$field} {$op} {$expected}",
+        };
+
+        if ($data !== null && ! $this->evaluateCondition($condition, $data)) {
+            $actualDisplay = $actual === null || $actual === '' ? 'empty' : (string) $actual;
+
+            return "{$label} (lead value: {$actualDisplay})";
+        }
+
+        return $label;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $conditions
+     * @return array<string, mixed>|null
+     */
+    protected function firstFailingInGroup(string $operator, array $conditions, array $data): ?array
     {
         if ($operator === 'or') {
+            $anyMatch = false;
+            $last = null;
+
             foreach ($conditions as $condition) {
                 if ($this->evaluateCondition($condition, $data)) {
-                    return true;
+                    $anyMatch = true;
+                    break;
                 }
+                $last = $condition;
             }
 
-            return false;
+            return $anyMatch ? null : ($last ?? null);
         }
 
         foreach ($conditions as $condition) {
             if (! $this->evaluateCondition($condition, $data)) {
-                return false;
+                return $condition;
             }
         }
 
-        return true;
+        return null;
+    }
+
+    protected function evaluateGroup(string $operator, array $conditions, array $data): bool
+    {
+        return $this->firstFailingInGroup($operator, $conditions, $data) === null;
     }
 
     protected function evaluateCondition(array $condition, array $data): bool
@@ -63,13 +151,33 @@ class RuleEngine
             'gte', '>=' => is_numeric($actual) && (float) $actual >= (float) $expected,
             'lt', '<' => is_numeric($actual) && (float) $actual < (float) $expected,
             'lte', '<=' => is_numeric($actual) && (float) $actual <= (float) $expected,
-            'in' => in_array((string) $actual, array_map('strval', (array) $expected), true),
-            'not_in' => ! in_array((string) $actual, array_map('strval', (array) $expected), true),
+            'in' => in_array((string) $actual, $this->valueList($expected), true),
+            'not_in' => ! in_array((string) $actual, $this->valueList($expected), true),
             'contains' => str_contains((string) $actual, (string) $expected),
             'regex' => (bool) @preg_match($expected, (string) $actual),
             'exists' => filled($actual),
             'empty' => blank($actual),
             default => false,
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function valueList(mixed $expected): array
+    {
+        if (is_array($expected)) {
+            return array_map('strval', $expected);
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (string $part) => trim($part),
+            explode(',', (string) $expected)
+        ), static fn (string $part) => $part !== ''));
+    }
+
+    protected function valueListLabel(mixed $expected): string
+    {
+        return implode(', ', $this->valueList($expected));
     }
 }

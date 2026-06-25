@@ -110,5 +110,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('quarantine:process-expired')->everyFifteenMinutes();
         $schedule->command('platform:status-snapshot')->everyFifteenMinutes();
         $schedule->command('platform:status-snapshot --persist')->dailyAt('06:00');
+
+        if (class_exists(\Laravel\Horizon\Horizon::class)) {
+            $schedule->command('horizon:snapshot')->everyFiveMinutes();
+        }
+
+        $schedule->command('queue:work database --stop-when-empty --max-time=55 --tries=3')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->name('process-database-queue')
+            ->when(fn () => config('queue.default') === 'database');
     })
     ->create();

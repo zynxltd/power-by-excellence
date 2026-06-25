@@ -6,6 +6,7 @@ import DataTable from '@/Components/UI/DataTable.vue';
 import StatCard from '@/Components/UI/StatCard.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head } from '@inertiajs/vue3';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     supplier: Object,
@@ -14,7 +15,7 @@ const props = defineProps({
     recentPayouts: Array,
 });
 
-const symbol = ({ GBP: '£', USD: '$', EUR: '€' }[props.currency] ?? props.currency + ' ');
+const { formatMoney } = useMoneyFormat(props.currency);
 </script>
 
 <template>
@@ -26,8 +27,8 @@ const symbol = ({ GBP: '£', USD: '$', EUR: '€' }[props.currency] ?? props.cur
         />
 
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <StatCard label="Total Payouts" :value="symbol + summary.total_payout" accent="emerald" />
-            <StatCard label="This Month" :value="symbol + summary.payout_this_month" accent="indigo" />
+            <StatCard label="Total Payouts" :value="formatMoney(summary.total_payout)" accent="emerald" />
+            <StatCard label="This Month" :value="formatMoney(summary.payout_this_month)" accent="indigo" />
             <StatCard label="Sold Leads" :value="summary.sold_count" accent="cyan" />
         </div>
 
@@ -47,7 +48,7 @@ const symbol = ({ GBP: '£', USD: '$', EUR: '€' }[props.currency] ?? props.cur
                 </template>
                 <tr v-for="p in recentPayouts" :key="p.uuid" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td class="px-6 py-4 font-mono text-xs text-slate-600 dark:text-slate-400">{{ p.uuid?.slice(0, 12) }}…</td>
-                    <td class="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">{{ symbol }}{{ p.payout }}</td>
+                    <td class="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">{{ formatMoney(p.payout) }}</td>
                     <td class="px-6 py-4"><FormattedDate :value="p.distributed_at" /></td>
                 </tr>
             </DataTable>

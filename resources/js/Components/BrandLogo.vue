@@ -9,6 +9,7 @@ defineProps({
 });
 
 const sizes = {
+    xs: { icon: 'h-6 w-6', text: 'text-sm', img: 'h-6' },
     sm: { icon: 'h-8 w-8', text: 'text-lg', img: 'h-8' },
     md: { icon: 'h-10 w-10', text: 'text-xl', img: 'h-10' },
     lg: { icon: 'h-12 w-12', text: 'text-2xl', img: 'h-12' },
@@ -16,7 +17,7 @@ const sizes = {
 </script>
 
 <template>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
         <img
             v-if="logoUrl"
             :src="logoUrl"

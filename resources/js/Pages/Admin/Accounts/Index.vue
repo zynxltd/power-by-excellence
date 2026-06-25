@@ -4,11 +4,13 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 
 defineProps({ accounts: Array, currentAccountId: Number });
 
 const switchAccount = (accountId) => router.post(route('accounts.switch'), { account_id: accountId });
+
+const clearTenantContext = () => router.post(route('accounts.clear'));
 </script>
 
 <template>
@@ -17,7 +19,29 @@ const switchAccount = (accountId) => router.post(route('accounts.switch'), { acc
         <PageHeader
             title="Partner Platforms (Tenants)"
             description="Each tenant runs on its own subdomain. Switch context, open the tenant portal, or impersonate the tenant admin."
-        />
+        >
+            <template v-if="currentAccountId" #actions>
+                <AppButton variant="secondary" @click="clearTenantContext">
+                    Exit tenant · central admin
+                </AppButton>
+            </template>
+        </PageHeader>
+
+        <div
+            v-if="currentAccountId"
+            class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-100"
+        >
+            <p>
+                Viewing data scoped to one platform. Exit to see <strong>all tenants</strong> on Command Center, cross-tenant reports, and global settings.
+            </p>
+            <button
+                type="button"
+                class="shrink-0 font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 dark:text-indigo-300"
+                @click="clearTenantContext"
+            >
+                All platforms (central admin) →
+            </button>
+        </div>
 
         <Panel :padding="false">
             <DataTable :empty="!accounts?.length">
@@ -45,7 +69,10 @@ const switchAccount = (accountId) => router.post(route('accounts.switch'), { acc
                     <td class="px-6 py-4 text-slate-600">{{ a.buyers_count }} buyers · {{ a.suppliers_count }} suppliers</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex flex-wrap justify-end gap-2">
-                            <span v-if="a.id === currentAccountId" class="text-sm font-semibold text-indigo-600">Active</span>
+                            <template v-if="a.id === currentAccountId">
+                                <span class="text-sm font-semibold text-indigo-600">Active</span>
+                                <AppButton variant="secondary" @click="clearTenantContext">Exit to central</AppButton>
+                            </template>
                             <AppButton v-else variant="secondary" @click="switchAccount(a.id)">Switch</AppButton>
                             <AppButton
                                 :href="route('accounts.visit', a.id)"

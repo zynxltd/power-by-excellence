@@ -8,8 +8,9 @@ import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
-import { Head, router, useForm, Link } from '@inertiajs/vue3';
+import { Head, router, useForm, Link, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     sequences: Array,
@@ -23,7 +24,7 @@ const props = defineProps({
     recentAlertFires: Array,
 });
 
-const activeTab = ref('routing');
+const { formatMoney } = useMoneyFormat();
 
 const tabs = [
     { key: 'routing', label: 'Routing & Tiers' },
@@ -31,6 +32,10 @@ const tabs = [
     { key: 'bulk-sms', label: 'Bulk messaging' },
     { key: 'alerts', label: 'Event Alerts' },
 ];
+
+const page = usePage();
+const tabFromUrl = new URLSearchParams(page.url.split('?')[1] ?? '').get('tab');
+const activeTab = ref(tabs.some((t) => t.key === tabFromUrl) ? tabFromUrl : 'routing');
 
 const sequenceForm = useForm({
     name: '',
@@ -227,7 +232,7 @@ const sendBulk = (id) => {
                                 <span class="text-[10px] font-semibold uppercase text-slate-500">{{ tier.mode?.replace(/_/g, ' ') }}</span>
                             </div>
                             <p class="font-semibold text-slate-900 dark:text-white">{{ tier.name }}</p>
-                            <p v-if="tier.floor_price" class="mt-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">Floor £{{ tier.floor_price }}</p>
+                            <p v-if="tier.floor_price" class="mt-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">Floor {{ formatMoney(tier.floor_price, { currency: tier.currency }) }}</p>
                             <ul class="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
                                 <li v-for="d in tier.deliveries" :key="d.id" class="text-xs">
                                     <Link :href="route('deliveries.show', d.id)" class="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
@@ -548,6 +553,36 @@ const sendBulk = (id) => {
                                 </p>
                             </div>
                             <AppButton variant="danger" @click="destroyAlert(alert.id)">Delete</AppButton>
+                        </div>
+                    </div>
+                </Panel>
+
+                <Panel title="Alert fire history" :padding="false">
+                    <p class="border-b border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
+                        When a threshold is breached, the alert fires here — useful for auditing notifications sent via email, SMS, Slack, or webhook.
+                    </p>
+                    <div v-if="!recentAlertFires?.length" class="p-6 text-sm text-slate-500">No alerts have fired yet.</div>
+                    <div
+                        v-for="fire in recentAlertFires"
+                        :key="fire.id"
+                        class="border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ fire.alert?.name ?? 'Alert' }}</p>
+                                <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+                                    {{ fire.metric }} = {{ fire.value }}
+                                    <span class="text-slate-400">(threshold {{ fire.threshold }})</span>
+                                </p>
+                                <p class="mt-1 text-xs text-slate-500">
+                                    {{ fire.account?.name ?? 'Platform' }} · {{ fire.channel }}
+                                    <span v-if="fire.message"> · {{ fire.message }}</span>
+                                </p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <StatusBadge :status="fire.status" />
+                                <FormattedDate :value="fire.created_at" class="mt-1 block text-xs text-slate-500" />
+                            </div>
                         </div>
                     </div>
                 </Panel>

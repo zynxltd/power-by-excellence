@@ -73,7 +73,7 @@ class ReportMetrics
                 ? $this->monthStart->copy()->addDays($this->days - 1 - $i)
                 : today()->subDays($i);
 
-            $labels[] = $date->format('D j M');
+            $labels[] = $date->format('D j');
             $leads[] = (int) $this->leadsQuery()->whereDate('leads.received_at', $date)->count();
             $sold[] = (int) $this->leadsQuery()
                 ->whereDate('leads.distributed_at', $date)

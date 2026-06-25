@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignField;
+use App\Support\Admin\CampaignWorkflow;
 use App\Support\Admin\TenantHub;
 use App\Support\VerticalCatalog;
 use App\Support\Tenancy\AccountContext;
@@ -78,6 +79,7 @@ class CampaignController extends Controller
             'campaign' => $campaign,
             'deliveries' => $deliveries,
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign),
             'leadsToday' => $campaign->leads()->whereDate('received_at', today())->count(),
         ]);
     }
@@ -92,6 +94,7 @@ class CampaignController extends Controller
             'verticals' => VerticalCatalog::options(),
             'biddingModes' => $this->biddingModes(),
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
+            'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign),
             'activeDistributionConfigId' => $campaign->distributionConfigs()->where('is_active', true)->value('id'),
         ]);
     }

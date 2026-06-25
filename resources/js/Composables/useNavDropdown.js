@@ -7,7 +7,10 @@ export function provideNavDropdown() {
 
     const onDocumentClick = (event) => {
         const target = event.target;
-        if (target instanceof Element && target.closest('[data-nav-dropdown]')) {
+        if (target instanceof Element && (
+            target.closest('[data-nav-dropdown]')
+            || target.closest('[data-nav-dropdown-menu]')
+        )) {
             return;
         }
         openId.value = null;

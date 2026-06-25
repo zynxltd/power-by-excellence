@@ -36,6 +36,16 @@ const revenueLabel = computed(() => {
     if (!props.log.revenue) return null;
     return props.formatMoney ? props.formatMoney(props.log.revenue) : props.log.revenue;
 });
+
+const filterRejection = computed(() => props.log.post_response?.filter_rejection ?? null);
+
+const skippedLabel = computed(() => {
+    if (!props.log.skipped_reason) return null;
+    if (props.log.skipped_reason === 'eligibility_rules' && filterRejection.value?.summary) {
+        return `Filter rejected: ${filterRejection.value.summary}`;
+    }
+    return `Skipped: ${props.log.skipped_reason}`;
+});
 </script>
 
 <template>
@@ -63,8 +73,12 @@ const revenueLabel = computed(() => {
             </div>
         </button>
 
-        <div v-if="log.skipped_reason" class="border-t border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-            Skipped: {{ log.skipped_reason }}
+        <div v-if="skippedLabel" class="border-t border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            {{ skippedLabel }}
+            <p v-if="filterRejection?.lead_field" class="mt-1 text-xs text-amber-700/90 dark:text-amber-300/90">
+                Lead {{ filterRejection.lead_field }}:
+                <span class="font-mono">{{ filterRejection.lead_value ?? 'empty' }}</span>
+            </p>
         </div>
 
         <div v-show="expanded" class="border-t border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-950/40">
