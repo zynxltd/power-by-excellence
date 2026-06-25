@@ -9,8 +9,10 @@ use Illuminate\Http\Request;
 
 class BuyerController extends Controller
 {
-    public function feedback(Request $request, int $buyerId): JsonResponse
+    public function feedback(Request $request, Buyer $buyer): JsonResponse
     {
+        $this->ensureBuyerBelongsToApiAccount($request, $buyer);
+
         $validated = $request->validate([
             'lead_uuid' => 'required|string',
             'status' => 'required|string',
@@ -18,8 +20,7 @@ class BuyerController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $buyer = Buyer::findOrFail($buyerId);
-        $lead = $buyer->account->leads()->where('uuid', $validated['lead_uuid'])->firstOrFail();
+        $lead = $buyer->leads()->where('uuid', $validated['lead_uuid'])->firstOrFail();
 
         $result = app(\App\Services\Buyers\BuyerConversionService::class)->recordFeedback(
             $buyer,
@@ -32,10 +33,11 @@ class BuyerController extends Controller
         return response()->json(['status' => 'ok', 'event' => $result['event']]);
     }
 
-    public function addCredit(Request $request, int $buyerId): JsonResponse
+    public function addCredit(Request $request, Buyer $buyer): JsonResponse
     {
+        $this->ensureBuyerBelongsToApiAccount($request, $buyer);
+
         $validated = $request->validate(['amount' => 'required|numeric|min:0.01']);
-        $buyer = Buyer::findOrFail($buyerId);
 
         $transaction = app(\App\Services\Billing\BuyerBillingService::class)
             ->credit($buyer, $validated['amount'], 'API top-up');
@@ -44,5 +46,14 @@ class BuyerController extends Controller
             'credit_balance' => $buyer->fresh()->credit_balance,
             'transaction_id' => $transaction->id,
         ]);
+    }
+
+    protected function ensureBuyerBelongsToApiAccount(Request $request, Buyer $buyer): void
+    {
+        $accountId = $request->attributes->get('account')?->id;
+
+        if ($accountId && $buyer->account_id !== $accountId) {
+            abort(404);
+        }
     }
 }

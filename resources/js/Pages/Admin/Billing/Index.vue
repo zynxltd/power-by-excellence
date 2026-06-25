@@ -2,14 +2,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
@@ -20,6 +20,13 @@ const props = defineProps({
 
 const tab = ref('credits');
 const { formatMoney } = useMoneyFormat(props.summary?.currency);
+
+const billingStrip = computed(() => [
+    { label: 'Credit pool', value: formatMoney(props.summary?.total_credit, { decimals: 0 }), accent: 'emerald' },
+    { label: 'Active buyers', value: props.summary?.buyer_count ?? 0, accent: 'indigo' },
+    { label: 'Txns today', value: props.summary?.transactions_today ?? 0, accent: 'cyan' },
+    { label: 'Prepay', value: props.summary?.require_prepay ? 'Required' : 'Optional', accent: 'amber' },
+]);
 </script>
 
 <template>
@@ -36,20 +43,7 @@ const { formatMoney } = useMoneyFormat(props.summary?.currency);
             </template>
         </PageHeader>
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard
-                label="Total Credit Pool"
-                :value="formatMoney(summary.total_credit, { decimals: 0 })"
-                accent="emerald"
-            />
-            <StatCard label="Active Buyers" :value="summary.buyer_count" accent="indigo" />
-            <StatCard label="Transactions Today" :value="summary.transactions_today" accent="cyan" />
-            <StatCard
-                label="Prepay Mode"
-                :value="summary.require_prepay ? 'Required' : 'Optional'"
-                accent="amber"
-            />
-        </div>
+        <CompactStatStrip :items="billingStrip" :columns="4" class="mb-6" />
 
         <div class="mt-6 flex gap-1 border-b border-slate-200 dark:border-slate-700">
             <button

@@ -133,6 +133,17 @@ class BuyerEligibilityFeatureTest extends TestCase
         $this->assertFalse($service->canDeliver($lead, $this->delivery->fresh(['buyer'])));
     }
 
+    public function test_campaign_spend_cap_blocks_when_daily_budget_reached(): void
+    {
+        $this->campaign->update(['caps' => ['daily_spend_cap' => 25]]);
+        app(CapService::class)->incrementSpend('campaign', $this->campaign->id, $this->campaign->caps, 20);
+
+        $lead = $this->makeLead(['quality_score' => 90]);
+        $service = app(BuyerEligibilityService::class);
+
+        $this->assertFalse($service->canDeliver($lead, $this->delivery->fresh(['buyer'])));
+    }
+
     protected function makeLead(array $metadata = []): Lead
     {
         return Lead::create([

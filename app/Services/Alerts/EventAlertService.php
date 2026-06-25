@@ -64,18 +64,17 @@ class EventAlertService
     protected function deliverySuccessRate(int $accountId): float
     {
         $since = now()->subDay();
-        $total = DB::table('delivery_logs')
+        $base = DB::table('delivery_logs')
             ->join('deliveries', 'deliveries.id', '=', 'delivery_logs.delivery_id')
-            ->where('deliveries.account_id', $accountId)
-            ->where('delivery_logs.created_at', '>=', $since)
-            ->count();
+            ->join('campaigns', 'campaigns.id', '=', 'deliveries.campaign_id')
+            ->where('campaigns.account_id', $accountId)
+            ->where('delivery_logs.created_at', '>=', $since);
+
+        $total = (clone $base)->count();
         if ($total === 0) {
             return 100;
         }
-        $success = DB::table('delivery_logs')
-            ->join('deliveries', 'deliveries.id', '=', 'delivery_logs.delivery_id')
-            ->where('deliveries.account_id', $accountId)
-            ->where('delivery_logs.created_at', '>=', $since)
+        $success = (clone $base)
             ->where('delivery_logs.status', 'success')
             ->count();
 
@@ -128,7 +127,14 @@ class EventAlertService
             return;
         }
 
-        $message = "Alert \"{$alert->name}\": {$alert->metric} = {$value} (threshold {$alert->operator} {$alert->threshold})";
+        $message = sprintf(
+            'Alert "%s": %s is %s (threshold %s %s)',
+            $alert->name,
+            $this->metricLabel($alert->metric),
+            $this->formatMetricValue($alert->metric, $value),
+            $this->operatorLabel($alert->operator),
+            $this->formatMetricValue($alert->metric, (float) $alert->threshold),
+        );
         PlatformLogger::info('event_alert.triggered', ['alert_id' => $alert->id, 'value' => $value]);
 
         $status = 'sent';
@@ -179,5 +185,49 @@ class EventAlertService
         ]);
 
         $alert->update(['last_triggered_at' => now()]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function metricLabels(): array
+    {
+        return [
+            'leads_today' => 'Leads today',
+            'sold_today' => 'Sold today',
+            'unsold_today' => 'Unsold today',
+            'reject_rate_24h' => 'Reject rate (24h)',
+            'delivery_success_rate_24h' => 'Delivery success (24h)',
+            'pending_queue' => 'Pending queue',
+            'quarantined_count' => 'Quarantined leads',
+            'avg_processing_ms_24h' => 'Avg processing time (24h)',
+            'caps_near_limit' => 'Buyers near daily cap',
+        ];
+    }
+
+    protected function metricLabel(string $metric): string
+    {
+        return self::metricLabels()[$metric] ?? $metric;
+    }
+
+    protected function formatMetricValue(string $metric, float $value): string
+    {
+        return match ($metric) {
+            'reject_rate_24h', 'delivery_success_rate_24h' => round($value, 1).'%',
+            'avg_processing_ms_24h' => round($value).' ms',
+            default => (string) (fmod($value, 1.0) === 0.0 ? (int) $value : round($value, 1)),
+        };
+    }
+
+    protected function operatorLabel(string $operator): string
+    {
+        return match ($operator) {
+            'lt' => 'below',
+            'lte' => 'at or below',
+            'gt' => 'above',
+            'gte' => 'at or above',
+            'eq' => 'equal to',
+            default => $operator,
+        };
     }
 }

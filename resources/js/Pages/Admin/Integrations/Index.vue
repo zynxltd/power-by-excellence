@@ -3,9 +3,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     integrations: Array,
     stats: Object,
 });
@@ -30,6 +32,12 @@ const grouped = (items) => {
     }
     return groups;
 };
+
+const integrationStrip = computed(() => [
+    { label: 'Connected', value: props.stats?.connected ?? 0, accent: 'emerald' },
+    { label: 'Available', value: props.stats?.available ?? 0 },
+    { label: 'Coming soon', value: props.stats?.coming_soon ?? 0, accent: 'amber' },
+]);
 </script>
 
 <template>
@@ -40,20 +48,7 @@ const grouped = (items) => {
             description="Connect webhooks, APIs, payment providers, and lead sources to your platform."
         />
 
-        <div class="mb-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Connected</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.connected }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Available</p>
-                <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.available }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Coming soon</p>
-                <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ stats.coming_soon }}</p>
-            </div>
-        </div>
+        <CompactStatStrip :items="integrationStrip" :columns="3" class="mb-6" />
 
         <div class="space-y-8">
             <section v-for="(items, category) in grouped(integrations)" :key="category">

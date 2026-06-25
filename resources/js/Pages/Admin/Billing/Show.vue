@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
@@ -77,9 +77,11 @@ const typeLabel = (type) => props.ledgerTypes?.find((t) => t.value === type)?.la
             </p>
         </div>
 
-        <div class="grid max-w-xs gap-4">
-            <StatCard label="Current Balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
-        </div>
+        <CompactStatStrip
+            :items="[{ label: 'Current balance', value: formatMoney(buyer.credit_balance), accent: 'emerald' }]"
+            :columns="1"
+            class="mb-6 max-w-xs"
+        />
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
             <Panel title="Ledger adjustment" class="lg:col-span-1">

@@ -65,13 +65,23 @@ class UserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $accountId = $request->attributes->get('account')?->id
+            ?? $request->user()?->account_id
+            ?? $request->session()->get('current_account_id');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => ['required', Password::defaults()],
             'role' => ['required', Rule::in(array_column(UserRole::cases(), 'value'))],
-            'buyer_id' => 'nullable|exists:buyers,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'buyer_id' => [
+                'nullable',
+                Rule::exists('buyers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
+            'supplier_id' => [
+                'nullable',
+                Rule::exists('suppliers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
             'allowed_modules' => 'nullable|array',
             'allowed_modules.*' => ['string', Rule::in(\App\Support\AdminModules::keys())],
             'send_credentials' => 'boolean',
@@ -100,13 +110,23 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $accountId = $request->attributes->get('account')?->id
+            ?? $request->user()?->account_id
+            ?? $request->session()->get('current_account_id');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => ['nullable', Password::defaults()],
             'role' => ['required', Rule::in(array_column(UserRole::cases(), 'value'))],
-            'buyer_id' => 'nullable|exists:buyers,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'buyer_id' => [
+                'nullable',
+                Rule::exists('buyers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
+            'supplier_id' => [
+                'nullable',
+                Rule::exists('suppliers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
             'allowed_modules' => 'nullable|array',
             'allowed_modules.*' => ['string', Rule::in(\App\Support\AdminModules::keys())],
         ]);

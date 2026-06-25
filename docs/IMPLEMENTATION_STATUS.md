@@ -1,10 +1,10 @@
 # PowerByExcellence — Implementation Status
 
-> **Last updated:** 24 June 2026  
+> **Last updated:** 25 June 2026  
 > **Stack:** Laravel 13 · Vue 3 · Inertia · SQLite/MySQL · Laravel Queues  
-> **Tests:** 115 passing (`php artisan test`)
+> **Tests:** 235 passing (`php artisan test`)
 
-This document is the **live inventory** of what is built today. For the full LeadByte specification, see [`LEADBYTE_REPLICA_DEV_DOC.md`](./LEADBYTE_REPLICA_DEV_DOC.md).
+This document is the **live inventory** of what is built today. For the full LeadByte specification, see [`LEADBYTE_REPLICA_DEV_DOC.md`](./LEADBYTE_REPLICA_DEV_DOC.md). For navigation UX recommendations, see [`UX_NAVIGATION_AUDIT.md`](./UX_NAVIGATION_AUDIT.md).
 
 ---
 
@@ -227,11 +227,11 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | 6 | Validation & Filtering | ✅ Partial | Field validation, RuleEngine; no HLR/email service integrations |
 | 7 | Dedupe & Suppression | ✅ | Email/phone dedupe, suppression hash |
 | 8 | Distribution / Ping Tree | ✅ | Engine + admin UI at `/distribution` |
-| 9 | Deliveries | ✅ | Guided 6-step form; all 5 methods |
-| 10 | Caps, Financials, Billing | ✅ Partial | Caps engine, billing UI; no Stripe |
-| 11 | Quarantine & Retry | ✅ Partial | API + status; no admin quarantine page |
+| 9 | Deliveries | ✅ | Guided 8-step form; all 5 methods (+ email ping-post) |
+| 10 | Caps, Financials, Billing | ✅ Partial | Volume + **campaign revenue budget** caps; billing UI; Stripe config UI |
+| 11 | Quarantine & Retry | ✅ | API + admin queue at `/quarantine` (release, reject, bulk) |
 | 12 | Portals | ✅ | Buyer + supplier with billing sections |
-| 13 | Reporting & Webhooks | ✅ Partial | API reports + webhook CRUD; no admin reports UI |
+| 13 | Reporting & Webhooks | ✅ | Admin `/reports` UI + API reports + webhook CRUD |
 | 14 | REST API | ✅ | Full v1 surface documented below |
 | 15 | Database Schema | ✅ | Migrations in `database/migrations/` |
 | 16 | Event Flow / State Machine | ✅ | LeadStatus enum, lead_events audit |
@@ -257,9 +257,13 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | Users | ✅ | ✅ | — | — | ✅ | `AdminCrudTest` |
 | Imports | ✅ | ✅ upload | — | — | — | Route health |
 | Billing | ✅ | — | ✅ per buyer | top-up ✅ | — | `DistributionCrudTest` |
+| Finance | ✅ | — | — | — | — | Route health |
+| Reports | ✅ | — | — | — | — | Route health |
+| Quarantine | ✅ | — | — | release/reject ✅ | — | Feature tests |
 | Settings | ✅ | — | — | ✅ | — | `CampaignValidationTest` |
 | Branding | ✅ | — | — | ✅ upload | — | `AdminCrudTest` |
 | Accounts (super) | ✅ switch | — | — | — | — | Route health |
+| Command Center (super) | ✅ | — | — | — | — | Central host |
 | Profile | ✅ | — | — | ✅ name/email/avatar | — | `ProfileTest` |
 | Profile preferences | — | — | — | ✅ theme/accent | — | `ProfilePreferencesTest` |
 
@@ -268,8 +272,6 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 - Lead create/edit in admin (by design — ingest via API/import)
 - User edit form (create + delete only)
 - Webhook edit (create + delete only)
-- Quarantine admin UI (API only)
-- Reports admin UI (API only)
 
 ---
 
@@ -314,24 +316,39 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 
 | URL | Description |
 |-----|-------------|
-| `/dashboard` | Stats + charts |
-| `/operations` | Live lead pipeline + delivery logs |
-| `/campaigns` | Campaign CRUD + show |
+| `/dashboard` | Today stats strip, charts, tenant table (super admin), quick links |
+| `/command-center` | Super admin: cross-tenant health, ops checks, tenant table (central host) |
+| `/operations` | Live KPI strip, queue, hourly chart, top campaigns |
+| `/campaigns` | Campaign CRUD + show + API spec |
 | `/distribution` | Ping-tree config CRUD |
 | `/deliveries` | Delivery CRUD + test button |
 | `/buyers` | Buyer CRUD + billing link |
 | `/suppliers` | Supplier + SID CRUD |
-| `/leads` | Lead list (filters) + detail |
+| `/leads` | Lead pipeline (filters, live processing) + detail tabs |
+| `/quarantine` | Held leads queue — release, reject, bulk actions |
 | `/billing` | Credit pool + per-buyer ledger |
 | `/billing/{buyer}` | Top-up + transaction history |
+| `/finance` | Revenue, payout, margin roll-up |
+| `/reports` | Analytics KPI strips, charts, breakdown tables |
+| `/logs/delivery` | Delivery attempt audit (ping/post) |
+| `/logs/api` | Ingest API request log |
+| `/logs/access` | Admin sign-in log |
+| `/logs/changes` | Config change audit |
+| `/logs/security` | Security events |
 | `/imports` | CSV bulk import |
+| `/integrations` | Third-party connectors |
+| `/automation` | Sequences, bulk SMS, event alerts |
+| `/routing/simulator` | Tier routing dry-run |
 | `/webhooks` | Outbound webhook config |
+| `/postbacks` | Affiliate conversion pixels |
 | `/api-keys` | API key generate/revoke |
+| `/forms` | Hosted form builder |
 | `/users` | Portal user create/delete |
 | `/settings` | Platform name, timezone, country, currency, prepay toggle |
 | `/branding` | Logo upload, brand name |
 | `/accounts` | Super admin: list + switch platform |
-| `/profile` | Account info, appearance, password |
+| `/profile` | Account info, appearance, password, 2FA |
+| `/help`, `/support` | Help centre + tickets |
 
 ### Buyer Portal
 
@@ -372,31 +389,38 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 
 ---
 
-## Navigation Structure (Sidebar)
+## Navigation Structure (Top Bar)
 
-LeadByte-style siloed navigation (similar to enterprise affiliate platforms, mapped to lead distribution):
+Admin uses a **compact horizontal top nav** (`AdminTopNav.vue`), not a sidebar.
 
-### Admin
+### Admin — primary nav
 
-| Section | Items |
-|---------|-------|
-| **Dashboard** | Overview stats |
-| **Campaigns** | All Campaigns |
-| **Reports / Logs** | Live Operations, Delivery Logs, Lead Pipeline, API Logs, Access Logs, Audit |
-| **Buyers** | Manage Buyers (advertisers) |
-| **Suppliers** | Manage Suppliers (publishers) |
-| **Tools** | Import Data · **Integration** → Webhooks, API Keys · **Automation** → Ping Tree, Deliveries · Fraud Detection |
-| **Account** | Settings, Billing, Profile, Users & Access, Branding, Platforms (super), Log Out |
+| Item | Contents |
+|------|----------|
+| **Home** | `/dashboard` |
+| **Campaigns** ▾ | All campaigns, Form builder |
+| **Ops** ▾ | Live operations, Lead pipeline, Quarantine · Deliveries, Ping tree, Routing simulator, Automation |
+| **Reports** | `/reports` |
+| **More** ▾ | `NavHubMenu` — tenant shortcuts (buyers, suppliers, finance, logs, integrations, settings, help, …) |
+| *(super, no tenant)* | Command Center, Partner platforms |
 
-### Buyer / Supplier portals
+**Also visible:** Live stats bar (leads/sold/queue/quarantine/revenue), tenant switcher (super admin), notifications, theme toggle.
 
-| Section | Items |
-|---------|-------|
-| Dashboard | Portal home |
-| Leads | My Leads |
-| **Account** | Billing / Payouts, Profile, Log Out |
+**Campaign context:** `CampaignWorkflowNav` on campaign-scoped pages (show, edit, API spec, leads, deliveries, distribution, operations).
 
-Components: `SidebarGroup`, `SidebarNestedGroup` (second-level drill-down), `SidebarSubLink`.
+**Buyer/supplier entity pages:** `ManagementHubNav` (overview, edit, billing).
+
+### Buyer / supplier portals
+
+| Item | Route |
+|------|-------|
+| Dashboard | `/portal/buyer` or `/portal/supplier` |
+| My Leads | `…/leads` |
+| Billing / Payouts | `…/billing` |
+
+### UX audit (recommendations)
+
+See **[`UX_NAVIGATION_AUDIT.md`](./UX_NAVIGATION_AUDIT.md)** for friction analysis and proposed IA (promote Buyers/Billing, go-live checklist, plain-English labels, unified logs).
 
 ---
 
@@ -407,15 +431,20 @@ Components: `SidebarGroup`, `SidebarNestedGroup` (second-level drill-down), `Sid
 | Light / dark theme | ✅ global + per-user saved |
 | Accent colours (6 options) | ✅ Profile → Appearance |
 | Whitelabel logo | ✅ `/branding` |
+| Compact KPI strips | ✅ `CompactStatStrip` on dashboard, ops, reports, finance, entity pages |
+| Slim panels & page headers | ✅ reduced padding (`Panel`, `PageHeader`, layout) |
+| Tenant-scoped currency | ✅ `useMoneyFormat` — platform/buyer/campaign currency |
+| Campaign revenue budget caps | ✅ daily/monthly spend cap on campaign + `BuyerEligibilityService` |
 | Dashboard charts | ✅ admin, buyer, supplier |
 | Form validation summaries | ✅ admin forms |
 | Flash success/error messages | ✅ all layouts |
-| Delivery method guide cards | ✅ 6-step wizard |
+| Delivery wizard | ✅ 8-step form with method guides |
+| Campaign wizard | ✅ 4-step create/edit (identity, pricing, routing, caps & budget) |
 | Delete account on profile | ❌ removed by design |
 
 ---
 
-## Test Suite (71 tests)
+## Test Suite (235 tests)
 
 ```bash
 php artisan test
@@ -429,6 +458,7 @@ php artisan test
 | `PlatformModulesTest` | All major routes, seeded data integrity |
 | `AdminCrudTest` | Campaign, buyer, supplier, delivery, webhook, api-key, user, branding |
 | `DistributionCrudTest` | Ping-tree CRUD, billing top-up ledger |
+| `BuyerEligibilityFeatureTest` | Credit, caps, **campaign spend cap** |
 | `RevenueCalculatorTest` | Fixed, dynamic, rule-based pricing |
 | `BuyerBillingTest` | Prepay credit charge |
 | `CampaignValidationTest` | Campaign + settings validation |
@@ -436,7 +466,7 @@ php artisan test
 | `PortalAccessTest` | Role-based portal gates |
 | `ProfileTest` / `ProfilePreferencesTest` | Profile CRUD, theme/accent |
 | `DemoRequestTest` | Homepage demo form |
-| Auth tests | Login, password reset, verification |
+| Auth tests | Login, password reset, verification, 2FA |
 | `RuleEngineTest` | Distribution eligibility rules |
 
 ---
@@ -559,8 +589,14 @@ Foundation, distribution engine, advanced routing, network/financials, portals, 
 | `app/Http/Middleware/SetAccountFromUser.php` | Web tenancy |
 | `app/Http/Middleware/AuthenticateApiKey.php` | API tenancy |
 | `database/seeders/PlatformSeeder.php` | Demo data |
-| `resources/js/Pages/Admin/Deliveries/Form.vue` | Guided delivery wizard |
+| `resources/js/Components/UI/AdminTopNav.vue` | Top navigation |
+| `resources/js/Components/UI/NavHubMenu.vue` | More → platform shortcuts |
+| `resources/js/Components/UI/CampaignWorkflowNav.vue` | In-campaign step nav |
+| `resources/js/Components/UI/CompactStatStrip.vue` | Compact horizontal KPI rows |
+| `app/Support/Admin/TenantHub.php` | More menu link sections |
+| `resources/js/Pages/Admin/Deliveries/Form.vue` | Guided delivery wizard (8 steps) |
 | `resources/js/Pages/Admin/Distribution/*` | Ping-tree UI |
+| `resources/js/Pages/Admin/CommandCenter/Index.vue` | Super-admin ops dashboard |
 | `app/Services/Distribution/WebhookDispatcher.php` | Outbound JSON webhooks |
 | `app/Services/Postbacks/PostbackDispatcher.php` | Affiliate pixels / GET postbacks |
 | `sdk/javascript/pbe-leads.js` | Browser/ESM lead ingest SDK |
@@ -570,9 +606,19 @@ Foundation, distribution engine, advanced routing, network/financials, portals, 
 
 ## Suggested Next Build Order
 
+### UX / navigation (see [`UX_NAVIGATION_AUDIT.md`](./UX_NAVIGATION_AUDIT.md))
+
+1. Campaign **go-live checklist** on show page
+2. Promote **Buyers** + **Billing** to top nav; slim **More** menu
+3. Plain-English nav labels (Today, Held leads, Buyer connections)
+4. Unified **logs** hub with lead UUID search
+5. Delivery **quick setup** path + test CTA
+
+### Product / integrations
+
 1. Stripe Checkout in buyer portal (charge + ledger credit)
 2. Lead source field mapping UI + automatic campaign ingest
 3. FTP / scheduled CSV exports
-4. Full 2FA TOTP enrollment UI
+4. Full 2FA TOTP login challenge
 5. 2-step auth delivery method
 6. User edit form in admin

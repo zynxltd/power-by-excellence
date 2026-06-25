@@ -82,7 +82,6 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="leads"
             class="mb-6"
         />

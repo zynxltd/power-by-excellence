@@ -93,11 +93,12 @@ If time is limited, run this minimum path:
 
 ## Known Demo Limitations
 
-- Billing uses credit ledger + admin top-up; no live card payments (Stripe not integrated)
-- SMS delivery and bulk SMS log to platform log; no live SMS provider
+- Billing uses credit ledger + admin top-up; Stripe integration is config UI — full Checkout in buyer portal is pending
+- SMS delivery and bulk SMS log to platform log unless provider configured
 - Async leads require `php artisan queue:work`
 - User admin supports create/delete; no edit form for existing users
 - Registration is disabled; admins create users at `/users`
+- Buyers and Billing are under top nav **More** (see [UX_NAVIGATION_AUDIT.md](../UX_NAVIGATION_AUDIT.md) for planned IA changes)
 
 ---
 
@@ -106,3 +107,4 @@ If time is limited, run this minimum path:
 - In-app help centre: `/help`
 - Support tickets: `/support` (all roles), `/support/manage` (admin)
 - Implementation inventory: [`../IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md)
+- UX / navigation audit: [`../UX_NAVIGATION_AUDIT.md`](../UX_NAVIGATION_AUDIT.md)

@@ -13,6 +13,7 @@ use App\Support\Tenancy\AccountContext;
 use App\Support\VerticalCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -285,11 +286,19 @@ class DeliveryController extends Controller
             'advanced_distribution_only' => $request->boolean('advanced_distribution_only'),
         ]);
 
+        $accountId = AccountContext::id();
+
         $validated = $request->validate([
-            'campaign_id' => 'required|exists:campaigns,id',
-            'buyer_id' => 'nullable|exists:buyers,id',
+            'campaign_id' => [
+                'required',
+                Rule::exists('campaigns', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
+            'buyer_id' => [
+                'nullable',
+                Rule::exists('buyers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
             'name' => 'required|string|max:255',
-            'method' => 'required|in:direct_post,ping_post,store_lead,email,sms',
+            'method' => 'required|in:direct_post,ping_post,email_ping_post,store_lead,email,sms',
             'trigger_type' => 'in:on_lead_arrival,manual_via_api',
             'status' => 'in:active,inactive,saved',
             'priority' => 'integer|min:0',

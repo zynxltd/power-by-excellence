@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import LogFilters from '@/Components/UI/LogFilters.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -11,9 +11,10 @@ import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
-defineProps({
+const props = defineProps({
     logs: Object,
     stats: Object,
     filters: Object,
@@ -23,6 +24,15 @@ defineProps({
 });
 
 const { formatMoney } = useMoneyFormat();
+
+const logStatStrip = computed(() => [
+    { label: 'Attempts', value: props.stats?.total ?? 0, href: route('logs.delivery'), accent: 'indigo' },
+    { label: 'Success', value: props.stats?.success ?? 0, href: route('logs.delivery', { status: 'success' }), accent: 'emerald' },
+    { label: 'Failed', value: props.stats?.failed ?? 0, href: route('logs.delivery', { status: 'failed' }), accent: 'rose' },
+    { label: 'Skipped', value: props.stats?.skipped ?? 0, href: route('logs.delivery', { status: 'skipped' }), accent: 'amber' },
+    { label: 'Outbid', value: props.stats?.outbid ?? 0, href: route('logs.delivery', { status: 'outbid' }), accent: 'cyan' },
+    { label: 'Avg ms', value: props.stats?.avg_ms ?? 0, accent: 'indigo' },
+]);
 </script>
 
 <template>
@@ -37,14 +47,7 @@ const { formatMoney } = useMoneyFormat();
             </template>
         </PageHeader>
 
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Attempts" :value="stats.total" accent="indigo" :href="route('logs.delivery')" />
-            <StatCard label="Success" :value="stats.success" accent="emerald" :href="route('logs.delivery', { status: 'success' })" />
-            <StatCard label="Failed" :value="stats.failed" accent="rose" :href="route('logs.delivery', { status: 'failed' })" />
-            <StatCard label="Skipped" :value="stats.skipped" accent="amber" :href="route('logs.delivery', { status: 'skipped' })" />
-            <StatCard label="Outbid" :value="stats.outbid" accent="cyan" :href="route('logs.delivery', { status: 'outbid' })" />
-            <StatCard label="Avg (ms)" :value="stats.avg_ms" accent="indigo" />
-        </div>
+        <CompactStatStrip :items="logStatStrip" :columns="6" class="mb-6" />
 
         <LogFilters
             class="mb-6"

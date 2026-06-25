@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
@@ -56,6 +56,24 @@ const queueBreakdown = computed(() => ({
 
 const processingCount = computed(() => liveStats.value?.processing_count ?? queueBreakdown.value?.processing ?? 0);
 const processingLeads = computed(() => liveStats.value?.processing_leads ?? []);
+
+const opsStatStrip = computed(() => [
+    { label: 'Leads today', value: stats.value.leads_today, href: route('leads.index'), accent: 'indigo' },
+    { label: 'Sold', value: stats.value.sold_today, href: route('leads.index', { status: 'sold' }), accent: 'emerald' },
+    { label: 'Unsold', value: stats.value.unsold_today, href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
+    { label: 'Rejected', value: stats.value.rejected_today, href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
+    { label: 'In queue', value: stats.value.pending, href: route('operations.index'), accent: 'orange' },
+    { label: 'Quarantine', value: stats.value.quarantined, href: route('quarantine.index'), accent: 'rose' },
+    { label: 'Ping-posts', value: stats.value.ping_posts_today, href: route('logs.delivery', { method: 'ping-post' }), accent: 'cyan' },
+    { label: 'Revenue', value: formatMoney(stats.value.revenue_today, { decimals: 0 }), href: route('finance.index'), accent: 'emerald' },
+]);
+
+const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
+    label: c.name,
+    value: `${c.leads}/${c.sold}`,
+    href: route('leads.index', { campaign_id: c.id }),
+    title: `${c.name} — ${c.leads} leads, ${c.sold} sold`,
+})));
 </script>
 
 <template>
@@ -76,50 +94,14 @@ const processingLeads = computed(() => liveStats.value?.processing_leads ?? []);
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="operations"
             class="mb-6"
         />
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
-            <Link :href="route('leads.index')" class="block">
-                <StatCard label="Leads Today" :value="stats.leads_today" accent="indigo" />
-            </Link>
-            <Link :href="route('leads.index', { status: 'sold' })" class="block">
-                <StatCard label="Sold Today" :value="stats.sold_today" accent="emerald" />
-            </Link>
-            <Link :href="route('leads.index', { status: 'unsold' })" class="block">
-                <StatCard label="Unsold Today" :value="stats.unsold_today" accent="amber" />
-            </Link>
-            <Link :href="route('leads.index', { status: 'rejected' })" class="block">
-                <StatCard label="Rejected Today" :value="stats.rejected_today" accent="rose" />
-            </Link>
-            <Link :href="route('operations.index')" class="block">
-                <StatCard label="In Queue" :value="stats.pending" accent="amber" />
-            </Link>
-            <Link :href="route('quarantine.index')" class="block">
-                <StatCard label="Quarantined" :value="stats.quarantined" accent="rose" />
-            </Link>
-            <Link :href="route('logs.delivery', { method: 'ping-post' })" class="block">
-                <StatCard label="Ping-Posts" :value="stats.ping_posts_today" accent="cyan" />
-            </Link>
-            <Link :href="route('finance.index')" class="block">
-                <StatCard label="Revenue Today" :value="formatMoney(stats.revenue_today, { decimals: 0 })" accent="emerald" />
-            </Link>
-        </div>
+        <CompactStatStrip :items="opsStatStrip" :columns="8" class="mb-6" />
 
-        <Panel v-if="topCampaigns?.length" title="Top campaigns today" class="mt-6">
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <Link
-                    v-for="c in topCampaigns"
-                    :key="c.id"
-                    :href="route('leads.index', { campaign_id: c.id })"
-                    class="rounded-xl border border-slate-200 p-3 transition hover:border-indigo-300 dark:border-slate-700"
-                >
-                    <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ c.name }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ c.leads }} leads · {{ c.sold }} sold</p>
-                </Link>
-            </div>
+        <Panel v-if="topCampaignStrip.length" title="Top campaigns today" class="mt-6">
+            <CompactStatStrip :items="topCampaignStrip" :columns="topCampaignStrip.length" />
         </Panel>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">

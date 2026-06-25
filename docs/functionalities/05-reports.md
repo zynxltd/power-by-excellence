@@ -13,7 +13,7 @@ The Reports dashboard provides admin analytics across lead volume, conversion, r
 | Admin reports UI | `/reports` |
 | API — lead report | `GET /api/v1/reports/leads` |
 | API — revenue report | `GET /api/v1/reports/revenue` |
-| Navigation | Sidebar → **Reports / Logs** area, or direct link |
+| Navigation | Top bar → **Reports** |
 | Access | Account Admin (UI); API requires `reports.read` permission |
 
 ---
@@ -22,7 +22,7 @@ The Reports dashboard provides admin analytics across lead volume, conversion, r
 
 | Section | Data shown |
 |---------|------------|
-| Summary cards | Leads, sold, rejected, revenue, conversion %, outbid total, ping rejections |
+| KPI strips | Volume, economics (EPL/EPC/CPA), rates, lead status, delivery outcomes — compact horizontal rows (8 columns) |
 | Trend charts | Daily leads, sold, rejected, revenue over selected period |
 | Top buyers | Lead count and revenue by buyer (top 10) |
 | Top suppliers | Lead count and payout by supplier (top 10) |
@@ -39,7 +39,7 @@ The Reports dashboard provides admin analytics across lead volume, conversion, r
 1. Log in as `uk@powerbyexcellence.test`
 2. Navigate to `/reports`
 
-**Expected:** Page header references **Auto Insurance** as the 10-tier demo campaign. Default period: 28 days. Summary cards show non-zero values from seeded historical data.
+**Expected:** Page loads with multiple **compact KPI strips** at the top. Default period: 28 days. Values non-zero from seeded historical data. Currency matches active tenant.
 
 ### 2. Change date range
 

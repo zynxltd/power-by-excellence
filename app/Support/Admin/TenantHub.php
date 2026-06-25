@@ -61,24 +61,48 @@ class TenantHub
             ],
             [
                 'title' => 'Operations',
-                'links' => [
+                'links' => array_values(array_filter([
                     ['label' => 'Live operations', 'href' => route('operations.index'), 'description' => 'Real-time queue and deliveries'],
                     ['label' => 'Routing simulator', 'href' => route('routing.simulator'), 'description' => 'Test tier routing'],
                     ['label' => 'Deliveries', 'href' => route('deliveries.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Buyer delivery configs'],
                     ['label' => 'Delivery logs', 'href' => route('logs.delivery'), 'description' => 'Post attempt history'],
+                    ['label' => 'API logs', 'href' => route('logs.api'), 'description' => 'Ingest API requests'],
+                    ['label' => 'Access logs', 'href' => route('logs.access'), 'description' => 'Admin sign-ins'],
+                    ['label' => 'Change logs', 'href' => route('logs.changes'), 'description' => 'Config audit trail'],
+                    ['label' => 'Security logs', 'href' => route('logs.security'), 'description' => 'Security events'],
                     ['label' => 'Quarantine', 'href' => route('quarantine.index'), 'description' => 'Held leads'],
-                ],
+                    (auth()->user()?->isSuperAdmin() && \App\Support\Tenancy\TenantResolver::isCentralHost())
+                        ? ['label' => 'Live feed', 'href' => route('live-feed.index'), 'description' => 'Platform event stream']
+                        : null,
+                    (auth()->user()?->isSuperAdmin() && \App\Support\Tenancy\TenantResolver::isCentralHost())
+                        ? ['label' => 'Notifications', 'href' => route('notifications.admin.index'), 'description' => 'Alert configuration']
+                        : null,
+                ])),
             ],
             [
                 'title' => 'Finance & tools',
-                'links' => [
+                'links' => array_values(array_filter([
                     ['label' => 'Finance', 'href' => route('finance.index'), 'description' => 'Revenue and margin'],
                     ['label' => 'Billing', 'href' => route('billing.index'), 'description' => 'Buyer credits'],
                     ['label' => 'Reports', 'href' => route('reports.index'), 'description' => 'Performance analytics'],
                     ['label' => 'API keys', 'href' => route('api-keys.index'), 'description' => 'Ingest authentication'],
                     ['label' => 'Integrations', 'href' => route('integrations.index'), 'description' => 'Stripe, lead sources'],
+                    ['label' => 'Webhooks', 'href' => route('webhooks.index'), 'description' => 'Outbound events'],
+                    ['label' => 'Postbacks', 'href' => route('postbacks.index'), 'description' => 'Conversion postbacks'],
                     ['label' => 'Import data', 'href' => route('imports.index'), 'description' => 'CSV bulk import'],
-                ],
+                    ['label' => 'Features', 'href' => route('features.index'), 'description' => 'Feature flags'],
+                    ['label' => 'Settings', 'href' => route('settings.edit'), 'description' => 'Platform settings'],
+                    ['label' => 'Branding', 'href' => route('branding.edit'), 'description' => 'Logo and colours'],
+                    ['label' => 'Support', 'href' => route('support.index'), 'description' => 'Contact support'],
+                    ['label' => 'Help centre', 'href' => route('help.index'), 'description' => 'Documentation'],
+                    ['label' => 'Profile', 'href' => route('profile.edit'), 'description' => 'Your account'],
+                    auth()->user()?->isSuperAdmin()
+                        ? ['label' => 'Horizon (queues)', 'href' => url('/horizon'), 'description' => 'Queue monitor']
+                        : null,
+                    auth()->user()?->isSuperAdmin()
+                        ? ['label' => 'Telescope (debug)', 'href' => url('/telescope'), 'description' => 'Request debugger']
+                        : null,
+                ])),
             ],
         ];
     }

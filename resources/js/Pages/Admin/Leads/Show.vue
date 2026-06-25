@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
@@ -67,6 +67,14 @@ const jumpToTab = (tab) => {
     if (tab) activeTab.value = tab;
 };
 
+const leadStatStrip = computed(() => [
+    { label: 'Status', value: props.lead?.status ?? '—', accent: 'indigo' },
+    { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '—', accent: 'cyan' },
+    { label: 'Revenue', value: formatMoney(props.lead?.financials?.revenue ?? 0), accent: 'emerald' },
+    { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '—', accent: 'amber' },
+    { label: 'Queue ID', value: props.lead?.queue_id ?? '—' },
+]);
+
 const sortedDeliveryLogs = computed(() => {
     const logs = [...(props.lead?.delivery_logs ?? [])];
     return logs.sort((a, b) => {
@@ -128,7 +136,6 @@ const stageLabel = (stage) => {
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="leads"
             class="mb-6"
         />
@@ -197,17 +204,7 @@ const stageLabel = (stage) => {
             </div>
         </Panel>
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatCard label="Status" :value="lead.status" accent="indigo" />
-            <StatCard label="Buyer" :value="lead.sold_to_buyer?.name ?? '—'" accent="cyan" />
-            <StatCard label="Revenue" :value="formatMoney(lead.financials?.revenue ?? 0)" accent="emerald" />
-            <StatCard
-                label="Processing"
-                :value="processingMs ? processingMs + 'ms' : '—'"
-                accent="amber"
-            />
-            <StatCard label="Queue ID" :value="lead.queue_id ?? '—'" accent="slate" />
-        </div>
+        <CompactStatStrip :items="leadStatStrip" :columns="5" class="mt-6" />
 
         <p v-if="processingStatus" class="mt-2 text-sm" :class="processingStatus.class">
             Pipeline target &lt;200ms — {{ processingStatus.label }}

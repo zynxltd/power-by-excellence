@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head } from '@inertiajs/vue3';
@@ -26,11 +26,15 @@ const { formatMoney } = useMoneyFormat(props.currency);
             description="View your credit balance, prepay status, and transaction history."
         />
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <StatCard label="Current Balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
-            <StatCard label="Prepay Mode" :value="requirePrepay ? 'Required' : 'Optional'" accent="amber" />
-            <StatCard label="Currency" :value="currency" accent="indigo" />
-        </div>
+        <CompactStatStrip
+            :items="[
+                { label: 'Balance', value: formatMoney(buyer.credit_balance), accent: 'emerald' },
+                { label: 'Prepay', value: requirePrepay ? 'Required' : 'Optional', accent: 'amber' },
+                { label: 'Currency', value: currency, accent: 'indigo' },
+            ]"
+            :columns="3"
+            class="mb-6"
+        />
 
         <Panel v-if="requirePrepay" class="mt-6">
             <p class="text-sm text-slate-600 dark:text-slate-400">

@@ -82,7 +82,6 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="deliveries"
             class="mb-6"
         />

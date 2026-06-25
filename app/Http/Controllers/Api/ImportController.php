@@ -17,7 +17,13 @@ class ImportController extends Controller
             'file' => 'required|file|mimes:csv,txt|max:10240',
         ]);
 
-        $campaign = Campaign::where('reference', $validated['campaign_reference'])->firstOrFail();
+        $accountId = $request->attributes->get('account')?->id;
+
+        $campaign = Campaign::query()
+            ->when($accountId, fn ($q) => $q->where('account_id', $accountId))
+            ->where('reference', $validated['campaign_reference'])
+            ->firstOrFail();
+
         $import = $importService->import($request->file('file'), $campaign);
 
         return response()->json([

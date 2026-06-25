@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -11,8 +11,9 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import ManagementHubNav from '@/Components/UI/ManagementHubNav.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     supplier: Object,
     recentLeads: Array,
     leadStats: Object,
@@ -20,6 +21,13 @@ defineProps({
 });
 
 const { formatMoney } = useMoneyFormat();
+
+const supplierStatStrip = computed(() => [
+    { label: 'Reference', value: props.supplier.reference, accent: 'indigo' },
+    { label: 'Total leads', value: props.leadStats.total, accent: 'cyan' },
+    { label: 'Sold', value: props.leadStats.sold, accent: 'emerald' },
+    { label: 'Status', value: props.supplier.status, accent: 'amber' },
+]);
 </script>
 
 <template>
@@ -37,12 +45,7 @@ const { formatMoney } = useMoneyFormat();
 
         <ManagementHubNav type="supplier" :entity="supplier" />
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Reference" :value="supplier.reference" accent="indigo" />
-            <StatCard label="Total leads" :value="leadStats.total" accent="cyan" />
-            <StatCard label="Sold" :value="leadStats.sold" accent="emerald" />
-            <StatCard label="Status" :value="supplier.status" accent="amber" />
-        </div>
+        <CompactStatStrip :items="supplierStatStrip" :columns="4" class="mb-6" />
 
         <Panel v-if="portalUser" title="Supplier portal" class="mt-6">
             <div class="flex flex-wrap items-center justify-between gap-3">

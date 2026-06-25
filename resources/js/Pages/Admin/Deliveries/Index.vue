@@ -9,6 +9,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -66,14 +67,15 @@ const testDelivery = (id) => {
 };
 
 const statCards = computed(() => [
-    { label: 'Total deliveries', value: props.stats?.total ?? 0 },
-    { label: 'Active', value: props.stats?.active ?? 0, accent: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Healthy', value: props.stats?.healthy ?? 0, accent: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Warning', value: props.stats?.warning ?? 0, accent: 'text-amber-600 dark:text-amber-400' },
-    { label: 'Critical', value: props.stats?.critical ?? 0, accent: 'text-rose-600 dark:text-rose-400' },
+    { label: 'Total', value: props.stats?.total ?? 0 },
+    { label: 'Active', value: props.stats?.active ?? 0, accent: 'emerald' },
+    { label: 'Healthy', value: props.stats?.healthy ?? 0, accent: 'emerald' },
+    { label: 'Warning', value: props.stats?.warning ?? 0, accent: 'amber' },
+    { label: 'Critical', value: props.stats?.critical ?? 0, accent: 'rose' },
     ...Object.entries(props.stats?.by_method ?? {}).map(([method, count]) => ({
         label: methodLabels[method] ?? method,
         value: count,
+        accent: 'indigo',
     })),
 ]);
 
@@ -98,21 +100,11 @@ watch(() => props.view, (v) => {
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="deliveries"
             class="mb-6"
         />
 
-        <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            <div
-                v-for="card in statCards"
-                :key="card.label"
-                class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"
-            >
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ card.label }}</p>
-                <p :class="['mt-1 text-2xl font-bold text-slate-900 dark:text-white', card.accent]">{{ card.value }}</p>
-            </div>
-        </div>
+        <CompactStatStrip :items="statCards" :columns="statCards.length" class="mb-6" />
 
         <Panel title="Filters" class="mb-6">
             <div class="grid gap-4 md:grid-cols-6">

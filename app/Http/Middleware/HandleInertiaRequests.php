@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\Account;
+use App\Models\Campaign;
 use App\Models\User;
+use App\Support\Admin\TenantHub;
 use App\Support\Money;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
@@ -72,6 +74,10 @@ class HandleInertiaRequests extends Middleware
                 'centralLogin' => fn () => 'https://'.TenantResolver::baseDomain().'/login',
             ],
             'platform' => fn () => $this->platformContext($request),
+            'tenantHub' => fn () => TenantHub::forAccount(
+                $this->resolveAccount($request),
+                $this->resolveCampaignId($request),
+            ),
             'systemStatus' => fn () => $this->systemStatus($request),
         ];
     }
@@ -131,6 +137,23 @@ class HandleInertiaRequests extends Middleware
         }
 
         return route('login');
+    }
+
+    protected function resolveCampaignId(Request $request): ?int
+    {
+        $campaign = $request->route('campaign');
+
+        if ($campaign instanceof Campaign) {
+            return $campaign->id;
+        }
+
+        if (is_numeric($campaign)) {
+            return (int) $campaign;
+        }
+
+        $campaignId = $request->integer('campaign_id');
+
+        return $campaignId > 0 ? $campaignId : null;
     }
 
     protected function resolveAccount(Request $request): ?Account

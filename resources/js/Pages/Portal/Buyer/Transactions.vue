@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head } from '@inertiajs/vue3';
@@ -17,9 +17,11 @@ const { formatMoney } = useMoneyFormat(props.currency);
     <AuthenticatedLayout>
         <PageHeader title="Credit Transactions" :description="`Current balance: ${formatMoney(buyer.credit_balance)}`" />
 
-        <div class="mb-6 max-w-xs">
-            <StatCard label="Current Balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
-        </div>
+        <CompactStatStrip
+            :items="[{ label: 'Current balance', value: formatMoney(buyer.credit_balance), accent: 'emerald' }]"
+            :columns="1"
+            class="mb-6 max-w-xs"
+        />
 
         <Panel title="Transaction History" :padding="false">
             <DataTable :empty="!transactions.data?.length">

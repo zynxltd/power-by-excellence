@@ -7,6 +7,7 @@ import ThemePreferences from './Partials/ThemePreferences.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import TwoFactorForm from './Partials/TwoFactorForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
+import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import { Head } from '@inertiajs/vue3';
 
 defineProps({
@@ -39,6 +40,9 @@ defineProps({
             </Panel>
             <Panel>
                 <TwoFactorForm :two-factor-enabled="twoFactorEnabled" :recovery-codes="recoveryCodes" />
+            </Panel>
+            <Panel>
+                <DeleteUserForm class="max-w-xl" />
             </Panel>
         </div>
     </AuthenticatedLayout>

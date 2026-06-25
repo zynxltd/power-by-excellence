@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -78,6 +78,14 @@ const bulkReject = () => {
 const extendHold = (leadId) => {
     router.post(route('quarantine.extend', leadId), { hours: 24 });
 };
+
+const quarantineStrip = computed(() => [
+    { label: 'In quarantine', value: props.stats.total, accent: 'violet' },
+    { label: 'Expiring today', value: props.stats.expiring_today, accent: 'amber' },
+    { label: 'Validation', value: props.stats.validation, accent: 'rose' },
+    { label: 'Out of hours', value: props.stats.out_of_hours, accent: 'indigo' },
+    { label: 'Unsold retry', value: props.stats.unsold, accent: 'cyan' },
+]);
 </script>
 
 <template>
@@ -97,9 +105,9 @@ const extendHold = (leadId) => {
             </template>
         </PageHeader>
 
-        <div class="mb-6 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+        <div class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
             <p class="font-semibold">Hold period & expiry</p>
-            <p class="mt-1">
+            <p class="mt-0.5">
                 Leads are held for <strong>{{ policy?.default_hours ?? 48 }} hours</strong> by default (configurable per campaign).
                 When the hold expires:
                 <strong>unsold / out-of-hours / general holds</strong> are auto-released back into distribution;
@@ -108,13 +116,7 @@ const extendHold = (leadId) => {
             </p>
         </div>
 
-        <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatCard label="In quarantine" :value="stats.total" accent="purple" />
-            <StatCard label="Expiring today" :value="stats.expiring_today" accent="amber" />
-            <StatCard label="Validation holds" :value="stats.validation" accent="rose" />
-            <StatCard label="Out of hours" :value="stats.out_of_hours" accent="indigo" />
-            <StatCard label="Unsold retry" :value="stats.unsold" accent="cyan" />
-        </div>
+        <CompactStatStrip :items="quarantineStrip" :columns="5" class="mb-6" />
 
         <div class="mb-4 flex flex-wrap gap-2">
             <button

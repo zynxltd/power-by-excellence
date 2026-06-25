@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\LeadStatus;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,19 +21,30 @@ class LiveStats
         }
 
         $leadsToday = (clone $base)->whereDate('received_at', today())->count();
-        $rejectedToday = (clone $base)->where('status', 'rejected')->whereDate('received_at', today())->count();
-        $processingCount = (clone $base)->where('status', 'processing')->count();
+        $rejectedToday = (clone $base)
+            ->whereIn('status', [LeadStatus::Rejected->value, LeadStatus::Duplicate->value])
+            ->whereDate('received_at', today())
+            ->count();
+        $processingCount = (clone $base)->whereIn('status', LeadStatus::processingValues())->count();
 
-        $queueBreakdown = (clone $base)
+        $rawQueueCounts = (clone $base)
             ->selectRaw('status, count(*) as count')
-            ->whereIn('status', ['pending', 'processing', 'accepted', 'quarantined'])
+            ->whereIn('status', [
+                LeadStatus::Pending->value,
+                LeadStatus::Validating->value,
+                LeadStatus::Accepted->value,
+                LeadStatus::Distributing->value,
+                LeadStatus::Quarantined->value,
+            ])
             ->groupBy('status')
             ->pluck('count', 'status')
-            ->toArray();
+            ->all();
+
+        $queueBreakdown = LeadQueueMetrics::queueBreakdown($rawQueueCounts);
 
         $processingLeads = Lead::query()
             ->when($campaignId, fn (Builder $q) => $q->where('campaign_id', $campaignId))
-            ->where('status', 'processing')
+            ->whereIn('status', LeadStatus::processingValues())
             ->with(['campaign:id,name'])
             ->orderByDesc('updated_at')
             ->limit(8)
@@ -52,7 +64,7 @@ class LiveStats
             'sold_today' => (clone $base)->where('status', 'sold')->whereDate('distributed_at', today())->count(),
             'unsold_today' => (clone $base)->where('status', 'unsold')->whereDate('received_at', today())->count(),
             'rejected_today' => $rejectedToday,
-            'pending' => (clone $base)->whereIn('status', ['pending', 'processing'])->count(),
+            'pending' => (clone $base)->whereIn('status', LeadStatus::inFlightValues())->count(),
             'processing_count' => $processingCount,
             'quarantined' => (clone $base)->where('status', 'quarantined')->count(),
             'ping_posts_today' => DeliveryLog::whereDate('created_at', today())
@@ -69,12 +81,7 @@ class LiveStats
                 ->whereDate('leads.distributed_at', today())
                 ->sum('lead_financials.revenue'),
             'reject_rate' => $leadsToday > 0 ? round(($rejectedToday / $leadsToday) * 100, 1) : 0.0,
-            'queue_breakdown' => [
-                'pending' => (int) ($queueBreakdown['pending'] ?? 0),
-                'processing' => (int) ($queueBreakdown['processing'] ?? 0),
-                'accepted' => (int) ($queueBreakdown['accepted'] ?? 0),
-                'quarantined' => (int) ($queueBreakdown['quarantined'] ?? 0),
-            ],
+            'queue_breakdown' => $queueBreakdown,
             'pipeline_summary' => self::pipelineSummary($campaignId),
             'processing_leads' => $processingLeads,
             'updated_at' => now()->toIso8601String(),
@@ -94,16 +101,9 @@ class LiveStats
         $counts = (clone $query)
             ->selectRaw('status, count(*) as count')
             ->groupBy('status')
-            ->pluck('count', 'status');
+            ->pluck('count', 'status')
+            ->all();
 
-        return [
-            'total' => (int) (clone $query)->count(),
-            'pending' => (int) ($counts['pending'] ?? 0),
-            'processing' => (int) ($counts['processing'] ?? 0),
-            'sold' => (int) ($counts['sold'] ?? 0),
-            'unsold' => (int) ($counts['unsold'] ?? 0),
-            'quarantined' => (int) ($counts['quarantined'] ?? 0),
-            'rejected' => (int) ($counts['rejected'] ?? 0),
-        ];
+        return LeadQueueMetrics::pipelineSummary($counts, (int) (clone $query)->count());
     }
 }

@@ -12,13 +12,15 @@
 |------|----------|
 | Live Operations | `/operations` |
 | Lead pipeline | `/leads`, `/leads/{id}` |
-| Quarantine actions | POST `/leads/{id}/quarantine/release`, `/reject` |
+| Quarantine queue | `/quarantine` |
+| Delivery logs | `/logs/delivery` |
+| API logs | `/logs/api` |
 | Access logs | `/logs/access` |
 | Change logs | `/logs/changes` |
 | Security logs | `/logs/security` |
 | CSV import | `/imports` |
 | Routing simulator | `/routing/simulator` |
-| Navigation | Sidebar → **Reports / Logs** → Live Operations, Lead Pipeline |
+| Navigation | Top bar → **Ops** (Live operations, Lead pipeline, Quarantine, Deliveries, …) |
 | Access | Account Admin |
 
 ---
@@ -27,9 +29,12 @@
 
 | Section | Content |
 |---------|---------|
-| Stat cards | Leads today, sold today, pending, quarantined, ping-posts today |
-| Recent leads | Last 30 leads with status, campaign, buyer, timestamp |
-| Delivery logs | Paginated ping-post and direct delivery attempts |
+| KPI strip | Leads today, sold, unsold, rejected, in queue, quarantined, ping-posts, revenue (compact horizontal row) |
+| Top campaigns | Compact strip — leads/sold per campaign (links to filtered pipeline) |
+| Queue breakdown | Pending, processing, accepted, quarantined |
+| Hourly chart | Ingest volume by hour |
+| Recent leads | Paginated with drill-down |
+| Delivery preview | Recent delivery attempts |
 
 ---
 
@@ -42,7 +47,7 @@
 1. Log in as `uk@powerbyexcellence.test`
 2. Navigate to `/operations`
 
-**Expected:** Stat cards populated from seed data. Ping-posts today > 0 if historical logs exist.
+**Expected:** Compact KPI strip populated from seed data. Ping-posts today > 0 if historical logs exist.
 
 #### 2. Review recent leads feed
 

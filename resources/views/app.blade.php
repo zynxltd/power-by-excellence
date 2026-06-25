@@ -27,11 +27,41 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        @php
+            $userTheme = auth()->user()?->theme;
+            $userAccent = auth()->user()?->accent_color ?? 'indigo';
+            $accentVars = [
+                'violet' => ['from' => '#7c3aed', 'to' => '#4f46e5', 'ring' => '#8b5cf6', 'bg' => '#7c3aed'],
+                'indigo' => ['from' => '#6366f1', 'to' => '#4f46e5', 'ring' => '#6366f1', 'bg' => '#4f46e5'],
+                'emerald' => ['from' => '#10b981', 'to' => '#059669', 'ring' => '#34d399', 'bg' => '#059669'],
+                'rose' => ['from' => '#f43f5e', 'to' => '#e11d48', 'ring' => '#fb7185', 'bg' => '#e11d48'],
+                'amber' => ['from' => '#f59e0b', 'to' => '#d97706', 'ring' => '#fbbf24', 'bg' => '#d97706'],
+                'cyan' => ['from' => '#06b6d4', 'to' => '#0891b2', 'ring' => '#22d3ee', 'bg' => '#0891b2'],
+            ];
+            $accent = $accentVars[$userAccent] ?? $accentVars['indigo'];
+        @endphp
         <script>
             (function () {
                 const t = localStorage.getItem('pbe-theme');
-                const dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                const server = @json($userTheme);
+                let dark;
+                if (t === 'dark' || t === 'light') {
+                    dark = t === 'dark';
+                } else if (server === 'dark' || server === 'light') {
+                    dark = server === 'dark';
+                } else {
+                    dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
                 document.documentElement.classList.toggle('dark', dark);
+
+                const accentKey = localStorage.getItem('pbe-accent') || @json($userAccent);
+                const accents = @json($accentVars);
+                const colors = accents[accentKey] || accents.indigo;
+                document.documentElement.dataset.accent = accentKey in accents ? accentKey : 'indigo';
+                document.documentElement.style.setProperty('--accent-from', colors.from);
+                document.documentElement.style.setProperty('--accent-to', colors.to);
+                document.documentElement.style.setProperty('--accent-ring', colors.ring);
+                document.documentElement.style.setProperty('--accent-bg', colors.bg);
             })();
         </script>
         @inertia

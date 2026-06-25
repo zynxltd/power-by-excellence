@@ -26,6 +26,16 @@ const props = defineProps({
 
 const { formatMoney } = useMoneyFormat();
 
+const metricLabel = (value) => props.metrics?.find((m) => m.value === value)?.label ?? value;
+
+const operatorLabel = (operator) => ({
+    lt: 'less than',
+    lte: 'less than or equal to',
+    gt: 'greater than',
+    gte: 'greater than or equal to',
+    eq: 'equal to',
+}[operator] ?? operator);
+
 const tabs = [
     { key: 'routing', label: 'Routing & Tiers' },
     { key: 'sequences', label: 'Sequences' },
@@ -548,7 +558,7 @@ const sendBulk = (id) => {
                             <div>
                                 <p class="font-semibold text-slate-900 dark:text-white">{{ alert.name }}</p>
                                 <p class="mt-1 text-sm text-slate-500">
-                                    {{ alert.metric }} {{ alert.operator }} {{ alert.threshold }}
+                                    {{ metricLabel(alert.metric) }} {{ operatorLabel(alert.operator) }} {{ alert.threshold }}
                                     via {{ alert.channel }}
                                 </p>
                             </div>
@@ -571,7 +581,7 @@ const sendBulk = (id) => {
                             <div class="min-w-0">
                                 <p class="text-sm font-medium text-slate-900 dark:text-white">{{ fire.alert?.name ?? 'Alert' }}</p>
                                 <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
-                                    {{ fire.metric }} = {{ fire.value }}
+                                    {{ metricLabel(fire.metric) }} = {{ fire.value }}
                                     <span class="text-slate-400">(threshold {{ fire.threshold }})</span>
                                 </p>
                                 <p class="mt-1 text-xs text-slate-500">

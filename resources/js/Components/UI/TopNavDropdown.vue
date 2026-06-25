@@ -7,6 +7,7 @@ const props = defineProps({
     label: { type: String, required: true },
     title: { type: String, default: null },
     active: { type: Boolean, default: false },
+    wide: { type: Boolean, default: false },
 });
 
 const nav = useNavDropdown();
@@ -25,7 +26,7 @@ const updatePosition = () => {
     }
 
     const rect = el.getBoundingClientRect();
-    const minWidth = 224;
+    const minWidth = props.wide ? 300 : 224;
     let left = rect.left;
 
     if (left + minWidth > window.innerWidth - 8) {
@@ -102,8 +103,11 @@ onUnmounted(() => {
                 v-show="isOpen"
                 data-nav-dropdown-menu
                 :style="menuStyle"
-                class="rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-xl"
-                @click="nav?.close()"
+                :class="[
+                    'rounded-xl border border-slate-700 bg-slate-900 shadow-xl',
+                    wide ? 'py-0' : 'py-1',
+                ]"
+                @click="wide ? undefined : nav?.close()"
             >
                 <slot />
             </div>

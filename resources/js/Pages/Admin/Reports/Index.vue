@@ -74,7 +74,7 @@ const economicsStrip = computed(() => [
     { label: 'EPL (sold)', title: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.epl), accent: 'cyan' },
     { label: 'EPC (ingest)', title: 'Revenue ÷ leads received', value: formatMoney(kpis.value.epc), accent: 'indigo' },
     { label: 'CPA (payout)', title: 'Payout ÷ sold leads', value: formatMoney(kpis.value.cpa), accent: 'amber' },
-    { label: 'CPL (buyer)', title: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.cpl), accent: 'emerald' },
+    { label: 'CPL (ingest)', title: 'Payout ÷ leads received', value: formatMoney(kpis.value.cpl), accent: 'rose' },
     { label: 'MPL (margin)', title: 'Margin ÷ sold leads', value: formatMoney(kpis.value.mpl), accent: 'violet' },
     { label: 'Margin %', title: 'Margin ÷ revenue', value: `${kpis.value.margin_pct ?? 0}%`, accent: 'violet' },
     { label: 'Pay share', title: 'Payout ÷ revenue', value: `${payoutSharePct.value}%`, accent: 'amber' },
@@ -154,7 +154,7 @@ const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.so
             <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Unit economics</h2>
             <CompactStatStrip :items="economicsStrip" :columns="kpiColumns" />
             <p class="mt-1.5 text-[10px] text-slate-500">
-                Hover for formulas. EPC uses leads received as click proxy; EPL is revenue per sold lead.
+                Hover for formulas. EPL is revenue per sold lead; EPC is revenue per lead received; CPL is supplier payout per lead received.
             </p>
         </section>
 

@@ -151,14 +151,11 @@ class ReportMetrics
 
         return [
             'epl' => $sold > 0 ? round($revenue / $sold, 2) : 0.0,
-            'epl_received' => $received > 0 ? round($revenue / $received, 2) : 0.0,
             'epc' => $received > 0 ? round($revenue / $received, 2) : 0.0,
             'cpa' => $sold > 0 ? round($payout / $sold, 2) : 0.0,
-            'cpl' => $sold > 0 ? round($revenue / $sold, 2) : 0.0,
+            'cpl' => $received > 0 ? round($payout / $received, 2) : 0.0,
             'mpl' => $sold > 0 ? round($margin / $sold, 2) : 0.0,
             'margin_pct' => $marginPct,
-            'avg_payout' => $sold > 0 ? round($payout / $sold, 2) : 0.0,
-            'avg_revenue' => $sold > 0 ? round($revenue / $sold, 2) : 0.0,
         ];
     }
 

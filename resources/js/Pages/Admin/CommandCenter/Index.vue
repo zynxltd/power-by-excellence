@@ -132,19 +132,19 @@ const platformStatItems = computed(() => {
             </template>
         </PageHeader>
 
-        <div class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-5 text-white shadow-lg dark:border-slate-700">
-            <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 px-4 py-3 text-white shadow-sm dark:border-slate-700">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-widest text-indigo-300">Platform operations</p>
-                    <p class="mt-1 text-2xl font-bold">{{ platformStats?.tenants ?? 0 }} active tenants</p>
-                    <p class="mt-1 text-sm text-slate-300">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-300">Platform operations</p>
+                    <p class="mt-0.5 text-lg font-bold">{{ platformStats?.tenants ?? 0 }} active tenants</p>
+                    <p class="mt-0.5 text-xs text-slate-300">
                         {{ platformStats?.leads_today ?? 0 }} leads today · {{ platformStats?.sold_today ?? 0 }} sold · {{ platformStats?.pending_queue ?? 0 }} in queue
                     </p>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm text-slate-300">Overall health</p>
-                    <p class="text-xl font-semibold" :class="overallHealth.class">{{ overallHealth.label }}</p>
-                    <Link :href="route('live-feed.index')" class="mt-2 inline-block text-xs text-indigo-300 hover:text-white">Live feed →</Link>
+                    <p class="text-[10px] text-slate-300">Overall health</p>
+                    <p class="text-sm font-semibold" :class="overallHealth.class">{{ overallHealth.label }}</p>
+                    <Link :href="route('live-feed.index')" class="mt-1 inline-block text-[10px] text-indigo-300 hover:text-white">Live feed →</Link>
                 </div>
             </div>
         </div>
@@ -163,7 +163,7 @@ const platformStatItems = computed(() => {
             <p class="text-slate-500">Post success &amp; sold rate — not ping rejections</p>
         </div>
 
-        <CompactStatStrip :items="platformStatItems" class="mb-6" />
+        <CompactStatStrip :items="platformStatItems" class="mb-4" />
 
         <Panel title="Platform operations" class="mb-6">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
@@ -213,7 +213,7 @@ const platformStatItems = computed(() => {
         </Panel>
 
         <Panel title="Tenant overview" class="mt-6" :padding="false">
-            <p class="border-b border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
+            <p class="border-b border-slate-100 px-3 py-2 text-[10px] text-slate-500 dark:border-slate-800">
                 <strong class="text-slate-700 dark:text-slate-300">Errors</strong> = platform issues (missing URL, timeout, exception) — target 0.
                 <strong class="ml-2 text-slate-700 dark:text-slate-300">Buyer fail</strong> = buyer rejected a post (normal in routing).
                 <strong class="ml-2 text-slate-700 dark:text-slate-300">Skipped / Outbid</strong> = ping-tree waterfall (expected).
@@ -221,41 +221,41 @@ const platformStatItems = computed(() => {
             </p>
             <DataTable :empty="!tenants?.length">
                 <template #head>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Tenant</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Health</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Leads</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sold</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Pings</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Posts</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Post success rate today">Post %</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Platform delivery errors — target 0">Errors</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Buyer post rejections">Buyer fail</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Skipped</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Pending</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Actions</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Tenant</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Health</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Leads</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Sold</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Pings</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Posts</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Post success rate today">Post %</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Platform delivery errors — target 0">Errors</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Buyer post rejections">Buyer fail</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Skipped</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Pending</th>
+                    <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase text-slate-500">Actions</th>
                 </template>
                 <tr v-for="t in tenants" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <p class="font-medium text-slate-900 dark:text-white">{{ t.name }}</p>
                         <a :href="t.portal_url" target="_blank" rel="noopener" class="text-xs text-indigo-600 hover:underline">{{ t.domain }}</a>
                     </td>
-                    <td class="px-4 py-3 capitalize" :class="healthClass(t.health)">{{ t.health }}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2 capitalize" :class="healthClass(t.health)">{{ t.health }}</td>
+                    <td class="px-3 py-2">
                         <Link :href="leadUrl({ account_id: t.id })" :class="statLinkClass()">
                             {{ t.leads_today }}
                         </Link>
                         <span class="text-slate-400"> / {{ t.leads_count }}</span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link :href="leadUrl({ account_id: t.id, status: 'sold' })" :class="statLinkClass()">{{ t.sold_today }}</Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link :href="deliveryLogUrl({ account_id: t.id, has_ping: 1 })" :class="statLinkClass()">{{ t.pings_today }}</Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link :href="deliveryLogUrl({ account_id: t.id, has_post: 1 })" :class="statLinkClass()">{{ t.posts_today }}</Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <span
                             v-if="t.post_success_rate != null"
                             :class="t.post_success_rate >= 95 ? 'text-emerald-600' : (t.post_success_rate < 90 ? 'text-amber-600 font-medium' : 'text-slate-700 dark:text-slate-300')"
@@ -264,7 +264,7 @@ const platformStatItems = computed(() => {
                         </span>
                         <span v-else class="text-slate-400">—</span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link
                             :href="deliveryLogUrl({ account_id: t.id, status: 'failed' })"
                             :class="statLinkClass(t.internal_failed_today > 0)"
@@ -272,7 +272,7 @@ const platformStatItems = computed(() => {
                             {{ t.internal_failed_today }}
                         </Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link
                             :href="deliveryLogUrl({ account_id: t.id, status: 'failed' })"
                             class="text-slate-500 hover:underline"
@@ -280,15 +280,15 @@ const platformStatItems = computed(() => {
                             {{ t.buyer_failed_today }}
                         </Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link :href="deliveryLogUrl({ account_id: t.id, status: 'skipped' })" class="text-slate-500 hover:underline">
                             {{ t.skipped_today }}
                         </Link>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         <Link :href="route('leads.index', { account_id: t.id, status: 'pending' })" :class="statLinkClass()">{{ t.pending }}</Link>
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-3 py-2 text-right">
                         <div class="flex flex-wrap justify-end gap-1">
                             <span v-if="t.is_active_context" class="text-xs font-semibold text-indigo-600">Active</span>
                             <AppButton v-else variant="secondary" class="!px-2 !py-1 !text-xs" @click="switchTenant(t.id)">Switch</AppButton>
@@ -317,7 +317,7 @@ const platformStatItems = computed(() => {
 
         <Panel title="Recent platform events" class="mt-6" :padding="false">
             <div v-if="!recentEvents?.length" class="p-6 text-sm text-slate-500">No events yet.</div>
-            <div v-for="e in recentEvents" :key="e.id" class="border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800">
+            <div v-for="e in recentEvents" :key="e.id" class="border-b border-slate-100 px-3 py-2 last:border-0 dark:border-slate-800">
                 <div class="flex items-start justify-between gap-2">
                     <div>
                         <p class="text-sm font-medium text-slate-900 dark:text-white">{{ e.event_type }}</p>
@@ -327,7 +327,7 @@ const platformStatItems = computed(() => {
                     <FormattedDate :value="e.created_at" class="shrink-0 text-xs" />
                 </div>
             </div>
-            <p class="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
+            <p class="border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500 dark:border-slate-800">
                 Threshold alert history lives under
                 <Link :href="route('automation.index', { tab: 'alerts' })" class="font-medium text-indigo-600 hover:underline">Automation → Event Alerts</Link>.
             </p>

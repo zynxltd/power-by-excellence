@@ -12,7 +12,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
 <template>
     <div
         v-if="isSuperAdmin && !account"
-        class="mb-6 flex flex-col gap-2 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/30 dark:bg-amber-500/10"
+        class="mb-4 flex flex-col gap-1.5 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/30 dark:bg-amber-500/10"
     >
         <p class="text-sm text-amber-950 dark:text-amber-100">
             <span class="font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">No tenant selected</span>
@@ -28,7 +28,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
     </div>
     <div
         v-else-if="account"
-        class="mb-6 flex flex-col gap-2 rounded-xl border border-indigo-200/80 bg-indigo-50/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-500/30 dark:bg-indigo-500/10"
+        class="mb-4 flex flex-col gap-1.5 rounded-lg border border-indigo-200/80 bg-indigo-50/90 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-500/30 dark:bg-indigo-500/10"
     >
         <p class="text-sm text-indigo-950 dark:text-indigo-100">
             <span class="font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Active tenant</span>

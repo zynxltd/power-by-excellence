@@ -132,7 +132,7 @@ class LeadIngestApiTest extends TestCase
         $this->postJson('/api/v1/leads', $payload, ['Authorization' => 'Bearer '.$this->apiToken]);
         $response = $this->postJson('/api/v1/leads', $payload, ['Authorization' => 'Bearer '.$this->apiToken]);
 
-        $response->assertOk()->assertJsonPath('status', LeadStatus::Rejected->value);
+        $response->assertOk()->assertJsonPath('status', LeadStatus::Duplicate->value);
     }
 
     public function test_invalid_api_key_rejected(): void

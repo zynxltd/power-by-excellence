@@ -1,5 +1,5 @@
-import { onMounted, ref, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 
 const THEME_KEY = 'pbe-theme';
 const ACCENT_KEY = 'pbe-accent';
@@ -7,7 +7,7 @@ const ACCENT_KEY = 'pbe-accent';
 const theme = ref('light');
 const accent = ref('indigo');
 
-const accentMap = {
+export const accentMap = {
     violet: { from: '#7c3aed', to: '#4f46e5', ring: '#8b5cf6', bg: '#7c3aed' },
     indigo: { from: '#6366f1', to: '#4f46e5', ring: '#6366f1', bg: '#4f46e5' },
     emerald: { from: '#10b981', to: '#059669', ring: '#34d399', bg: '#059669' },
@@ -16,14 +16,16 @@ const accentMap = {
     cyan: { from: '#06b6d4', to: '#0891b2', ring: '#22d3ee', bg: '#0891b2' },
 };
 
-function applyTheme(value) {
+function applyTheme(value, { persist = true } = {}) {
     const root = document.documentElement;
     root.classList.toggle('dark', value === 'dark');
     theme.value = value;
-    localStorage.setItem(THEME_KEY, value);
+    if (persist) {
+        localStorage.setItem(THEME_KEY, value);
+    }
 }
 
-function applyAccent(value) {
+function applyAccent(value, { persist = true } = {}) {
     const root = document.documentElement;
     const colors = accentMap[value] ?? accentMap.indigo;
     root.dataset.accent = value;
@@ -32,7 +34,20 @@ function applyAccent(value) {
     root.style.setProperty('--accent-ring', colors.ring);
     root.style.setProperty('--accent-bg', colors.bg);
     accent.value = value;
-    localStorage.setItem(ACCENT_KEY, value);
+    if (persist) {
+        localStorage.setItem(ACCENT_KEY, value);
+    }
+}
+
+function applyAccentVisual(value) {
+    const colors = accentMap[value] ?? accentMap.indigo;
+    const root = document.documentElement;
+    root.dataset.accent = value;
+    root.style.setProperty('--accent-from', colors.from);
+    root.style.setProperty('--accent-to', colors.to);
+    root.style.setProperty('--accent-ring', colors.ring);
+    root.style.setProperty('--accent-bg', colors.bg);
+    accent.value = value;
 }
 
 function initFromStorage() {
@@ -43,21 +58,46 @@ function initFromStorage() {
         applyTheme(storedTheme);
     } else {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        applyTheme(prefersDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', prefersDark);
+        theme.value = prefersDark ? 'dark' : 'light';
     }
 
-    applyAccent(storedAccent && accentMap[storedAccent] ? storedAccent : 'indigo');
+    if (storedAccent && accentMap[storedAccent]) {
+        applyAccent(storedAccent);
+    } else {
+        applyAccentVisual('indigo');
+    }
 }
 
 function syncFromServer(prefs) {
-    if (!prefs) return;
-    // Local toggles win over server defaults — prevents flash to light on Inertia navigation
-    if (!localStorage.getItem(THEME_KEY) && prefs.theme) {
+    if (!prefs) {
+        return;
+    }
+
+    const hasLocalTheme = localStorage.getItem(THEME_KEY) === 'dark' || localStorage.getItem(THEME_KEY) === 'light';
+    const storedAccent = localStorage.getItem(ACCENT_KEY);
+    const hasLocalAccent = storedAccent && accentMap[storedAccent];
+
+    if (!hasLocalTheme && (prefs.theme === 'dark' || prefs.theme === 'light')) {
         applyTheme(prefs.theme);
     }
-    if (!localStorage.getItem(ACCENT_KEY) && prefs.accent_color) {
+
+    if (!hasLocalAccent && prefs.accent_color && accentMap[prefs.accent_color]) {
         applyAccent(prefs.accent_color);
     }
+}
+
+function persistPreferencesToServer(nextTheme = theme.value) {
+    const page = usePage();
+    if (!page.props.auth?.user) {
+        return;
+    }
+
+    router.patch(
+        route('profile.preferences'),
+        { theme: nextTheme, accent_color: accent.value },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 
 let initialized = false;
@@ -75,7 +115,11 @@ export function useTheme() {
         { immediate: true, deep: true },
     );
 
-    const toggle = () => applyTheme(theme.value === 'dark' ? 'light' : 'dark');
+    const toggle = () => {
+        const next = theme.value === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        persistPreferencesToServer(next);
+    };
     const setTheme = (value) => applyTheme(value);
     const setAccent = (value) => applyAccent(value);
 

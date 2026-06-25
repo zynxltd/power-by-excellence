@@ -64,6 +64,7 @@ class AdminModules
             'logs.*' => 'logs',
             'api-keys.*' => 'tools',
             'integrations.*' => 'tools',
+            'imports.*' => 'tools',
             'help.*' => 'tools',
             'notifications.admin.*' => 'tools',
             'billing.*' => 'billing',

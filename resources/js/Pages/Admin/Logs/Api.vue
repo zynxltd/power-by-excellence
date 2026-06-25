@@ -3,14 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import LogFilters from '@/Components/UI/LogFilters.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     logs: Object,
     stats: Object,
     filters: Object,
@@ -30,6 +30,14 @@ const timingClass = (ms) => {
     if (ms > 600) return 'text-amber-600 dark:text-amber-400';
     return 'text-slate-600 dark:text-slate-400';
 };
+
+const apiStatStrip = computed(() => [
+    { label: 'Requests', value: props.stats?.total ?? 0, accent: 'indigo' },
+    { label: 'Errors', value: props.stats?.errors ?? 0, accent: 'rose' },
+    { label: 'Avg ms', value: props.stats?.avg_ms ?? 0, accent: 'cyan' },
+    { label: 'P95 ms', value: props.stats?.p95_ms ?? 0, accent: 'amber' },
+    { label: 'Slowest', value: props.stats?.slowest_ms ?? 0, accent: 'rose' },
+]);
 </script>
 
 <template>
@@ -40,13 +48,7 @@ const timingClass = (ms) => {
             description="Response timings, fault codes, and error messages for every API call."
         />
 
-        <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatCard label="Requests" :value="stats.total" accent="indigo" />
-            <StatCard label="Errors" :value="stats.errors" accent="rose" />
-            <StatCard label="Avg (ms)" :value="stats.avg_ms" accent="cyan" />
-            <StatCard label="P95 (ms)" :value="stats.p95_ms" accent="amber" />
-            <StatCard label="Slowest (ms)" :value="stats.slowest_ms" accent="rose" />
-        </div>
+        <CompactStatStrip :items="apiStatStrip" :columns="5" class="mb-6" />
 
         <LogFilters
             class="mb-6"

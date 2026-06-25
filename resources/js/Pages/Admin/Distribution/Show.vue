@@ -50,7 +50,6 @@ const tierGroups = computed(() =>
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="ping-tree"
             class="mb-6"
         />

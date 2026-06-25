@@ -3,11 +3,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     accessLogs: Object,
@@ -27,6 +27,15 @@ const applyFilter = () => {
 };
 
 watch(() => props.filters, (f) => { localAction.value = f?.action ?? ''; });
+
+const securityStatStrip = computed(() => [
+    { label: 'Logins today', value: props.stats?.logins_today ?? 0, accent: 'emerald' },
+    { label: 'Failed (24h)', value: props.stats?.failed_logins_24h ?? 0, accent: 'rose' },
+    { label: 'Unique IPs', value: props.stats?.unique_ips_24h ?? 0, accent: 'cyan' },
+    { label: 'Audit (24h)', value: props.stats?.audit_events_24h ?? 0, accent: 'indigo' },
+    { label: 'Deliv errors', value: props.stats?.delivery_errors_24h ?? 0, accent: 'amber' },
+    { label: 'Avg deliv ms', value: props.stats?.avg_delivery_ms ?? 0, accent: 'indigo' },
+]);
 </script>
 
 <template>
@@ -37,14 +46,7 @@ watch(() => props.filters, (f) => { localAction.value = f?.action ?? ''; });
             description="Access activity, audit events, and platform security metrics."
         />
 
-        <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-            <StatCard label="Logins today" :value="stats.logins_today ?? 0" accent="emerald" />
-            <StatCard label="Failed logins (24h)" :value="stats.failed_logins_24h ?? 0" accent="rose" />
-            <StatCard label="Unique IPs (24h)" :value="stats.unique_ips_24h ?? 0" accent="cyan" />
-            <StatCard label="Audit events (24h)" :value="stats.audit_events_24h ?? 0" accent="indigo" />
-            <StatCard label="Delivery errors (24h)" :value="stats.delivery_errors_24h ?? 0" accent="amber" />
-            <StatCard label="Avg delivery (ms)" :value="stats.avg_delivery_ms ?? 0" accent="indigo" />
-        </div>
+        <CompactStatStrip :items="securityStatStrip" :columns="6" class="mb-6" />
 
         <Panel title="Access Log Filter" class="mb-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end">

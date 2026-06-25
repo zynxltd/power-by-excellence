@@ -158,7 +158,6 @@ const save = () => {
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="api-spec"
             class="mb-6"
         />

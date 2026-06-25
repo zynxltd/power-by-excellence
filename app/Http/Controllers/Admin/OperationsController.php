@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\LeadStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
 use App\Support\Admin\CampaignWorkflow;
+use App\Support\LeadQueueMetrics;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,9 +27,12 @@ class OperationsController extends Controller
             'leads_today' => (clone $leadScope)->whereDate('received_at', today())->count(),
             'sold_today' => (clone $leadScope)->where('status', 'sold')->whereDate('distributed_at', today())->count(),
             'unsold_today' => (clone $leadScope)->where('status', 'unsold')->whereDate('received_at', today())->count(),
-            'pending' => (clone $leadScope)->whereIn('status', ['pending', 'processing'])->count(),
-            'quarantined' => (clone $leadScope)->where('status', 'quarantined')->count(),
-            'rejected_today' => (clone $leadScope)->where('status', 'rejected')->whereDate('received_at', today())->count(),
+            'pending' => (clone $leadScope)->whereIn('status', LeadStatus::inFlightValues())->count(),
+            'quarantined' => (clone $leadScope)->where('status', LeadStatus::Quarantined)->count(),
+            'rejected_today' => (clone $leadScope)
+                ->whereIn('status', [LeadStatus::Rejected, LeadStatus::Duplicate])
+                ->whereDate('received_at', today())
+                ->count(),
             'ping_posts_today' => DeliveryLog::query()->forCurrentAccount()
                 ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
                 ->whereDate('created_at', today())
@@ -55,11 +60,20 @@ class OperationsController extends Controller
             ->limit($campaignId ? 1 : 5)
             ->get();
 
-        $queueBreakdown = (clone $leadScope)
+        $rawQueueCounts = (clone $leadScope)
             ->selectRaw('status, count(*) as count')
-            ->whereIn('status', ['pending', 'processing', 'quarantined', 'accepted'])
+            ->whereIn('status', [
+                LeadStatus::Pending->value,
+                LeadStatus::Validating->value,
+                LeadStatus::Accepted->value,
+                LeadStatus::Distributing->value,
+                LeadStatus::Quarantined->value,
+            ])
             ->groupBy('status')
-            ->pluck('count', 'status');
+            ->pluck('count', 'status')
+            ->all();
+
+        $queueBreakdown = LeadQueueMetrics::queueBreakdown($rawQueueCounts);
 
         $hourlyLeads = [];
         for ($h = 23; $h >= 0; $h--) {

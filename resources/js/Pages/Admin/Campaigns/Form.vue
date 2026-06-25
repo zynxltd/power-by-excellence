@@ -31,7 +31,7 @@ const steps = [
     { id: 'identity', label: 'Identity', num: 1 },
     { id: 'pricing', label: 'Pricing', num: 2 },
     { id: 'routing', label: 'Routing', num: 3 },
-    { id: 'caps', label: 'Caps & status', num: 4 },
+    { id: 'caps', label: 'Caps & budget', num: 4 },
 ];
 
 const { currentStep, goStep, stepStatus, nextStep, prevStep } = useFormSteps(steps, {
@@ -54,8 +54,12 @@ const form = useForm({
     caps: {
         daily: props.campaign?.caps?.daily ?? '',
         hourly: props.campaign?.caps?.hourly ?? '',
+        daily_spend_cap: props.campaign?.caps?.daily_spend_cap ?? '',
+        monthly_spend_cap: props.campaign?.caps?.monthly_spend_cap ?? '',
     },
 });
+
+const capCurrency = computed(() => String(form.currency || props.campaign?.currency || account.value?.default_currency || 'GBP').toUpperCase());
 
 const currencies = ['GBP', 'USD', 'EUR', 'AUD', 'CAD', 'NZD', 'ZAR', 'INR', 'AED'];
 const countries = {
@@ -98,7 +102,6 @@ const submit = () => {
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="edit"
             class="mb-6"
         />
@@ -252,7 +255,7 @@ const submit = () => {
                     </div>
                 </Panel>
 
-                <Panel v-show="currentStep === 'caps'" title="4. Volume caps & status">
+                <Panel v-show="currentStep === 'caps'" title="4. Caps, budget & status">
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <InputLabel value="Status" />
@@ -263,17 +266,38 @@ const submit = () => {
                             </select>
                         </div>
                     </div>
-                    <div class="mt-4 grid max-w-lg grid-cols-2 gap-4">
-                        <div>
-                            <InputLabel value="Daily cap" />
-                            <TextInput v-model="form.caps.daily" type="number" class="mt-1 w-full" placeholder="Unlimited" />
-                        </div>
-                        <div>
-                            <InputLabel value="Hourly cap" />
-                            <TextInput v-model="form.caps.hourly" type="number" class="mt-1 w-full" placeholder="Unlimited" />
+
+                    <div class="mt-6">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Volume caps</h3>
+                        <p class="mt-1 text-xs text-slate-500">Max leads ingested per period. Leave blank for unlimited.</p>
+                        <div class="mt-3 grid max-w-lg grid-cols-2 gap-4">
+                            <div>
+                                <InputLabel value="Daily cap" />
+                                <TextInput v-model="form.caps.daily" type="number" min="0" class="mt-1 w-full" placeholder="Unlimited" />
+                            </div>
+                            <div>
+                                <InputLabel value="Hourly cap" />
+                                <TextInput v-model="form.caps.hourly" type="number" min="0" class="mt-1 w-full" placeholder="Unlimited" />
+                            </div>
                         </div>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">Campaign-level ingest limits. Leave blank for unlimited volume.</p>
+
+                    <div class="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Revenue budget</h3>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Max buyer revenue sold through this campaign ({{ capCurrency }}). Stops distribution when reached — separate from buyer credit limits.
+                        </p>
+                        <div class="mt-3 grid max-w-lg grid-cols-2 gap-4">
+                            <div>
+                                <InputLabel :value="`Daily budget (${capCurrency})`" />
+                                <TextInput v-model="form.caps.daily_spend_cap" type="number" step="0.01" min="0" class="mt-1 w-full" placeholder="Unlimited" />
+                            </div>
+                            <div>
+                                <InputLabel :value="`Monthly budget (${capCurrency})`" />
+                                <TextInput v-model="form.caps.monthly_spend_cap" type="number" step="0.01" min="0" class="mt-1 w-full" placeholder="Unlimited" />
+                            </div>
+                        </div>
+                    </div>
                     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
                         <AppButton type="button" variant="secondary" @click="prevStep">← Back</AppButton>
                         <PrimaryButton :disabled="form.processing" :loading="form.processing">

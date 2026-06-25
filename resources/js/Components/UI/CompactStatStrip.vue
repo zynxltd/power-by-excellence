@@ -33,7 +33,7 @@ const gridStyle = computed(() => ({
                 :href="item.href ?? undefined"
                 :title="item.title ?? undefined"
                 :class="[
-                    'flex min-w-0 flex-col items-center px-2.5 py-2.5 text-center sm:px-3',
+                    'flex min-w-0 flex-col items-center px-2 py-2 text-center sm:px-2.5',
                     item.href ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60' : '',
                 ]"
             >

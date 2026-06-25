@@ -14,8 +14,8 @@ class ReportController extends Controller
 {
     public function leads(Request $request): JsonResponse
     {
-        $from = $request->date('from', now()->subDays(7));
-        $to = $request->date('to', now());
+        $from = $request->date('from') ?? now()->subDays(7);
+        $to = $request->date('to') ?? now();
 
         $stats = Lead::query()
             ->whereBetween('received_at', [$from, $to])
@@ -33,11 +33,14 @@ class ReportController extends Controller
 
     public function revenue(Request $request): JsonResponse
     {
-        $from = $request->date('from', now()->subDays(7));
-        $to = $request->date('to', now());
+        $from = $request->date('from') ?? now()->subDays(7);
+        $to = $request->date('to') ?? now();
+        $accountId = \App\Support\Tenancy\AccountContext::id()
+            ?? $request->attributes->get('account')?->id;
 
         $totals = DB::table('lead_financials')
             ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
+            ->when($accountId, fn ($q) => $q->where('leads.account_id', $accountId))
             ->whereBetween('leads.distributed_at', [$from, $to])
             ->selectRaw('sum(revenue) as revenue, sum(payout) as payout, sum(margin) as margin')
             ->first();

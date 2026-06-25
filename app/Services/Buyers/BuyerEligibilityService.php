@@ -49,6 +49,10 @@ class BuyerEligibilityService
             return false;
         }
 
+        if (! $this->capService->hasSpendCapacity('campaign', $lead->campaign_id, $lead->campaign->caps, $estimatedRevenue)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -118,6 +122,7 @@ class BuyerEligibilityService
         }
 
         $this->capService->increment('campaign', $lead->campaign_id, $lead->campaign->caps);
+        $this->capService->incrementSpend('campaign', $lead->campaign_id, $lead->campaign->caps, $revenue);
 
         if ($lead->source_id) {
             $source = $lead->source ?? $lead->source()->first();

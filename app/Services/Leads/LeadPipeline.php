@@ -137,8 +137,12 @@ class LeadPipeline
 
     protected function reject(Lead $lead, string $reason): Lead
     {
+        $status = str_starts_with($reason, 'Duplicate')
+            ? LeadStatus::Duplicate
+            : LeadStatus::Rejected;
+
         $lead->update([
-            'status' => LeadStatus::Rejected,
+            'status' => $status,
             'reject_reason' => $reason,
             'metadata' => array_merge($lead->metadata ?? [], [
                 'rejection' => [

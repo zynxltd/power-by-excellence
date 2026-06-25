@@ -4,13 +4,22 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
-defineProps({ log: Object });
+const props = defineProps({ log: Object });
 
 const { formatMoney } = useMoneyFormat();
+
+const logDetailStrip = computed(() => [
+    { label: 'Status', value: props.log?.status ?? '—', accent: props.log?.status === 'success' ? 'emerald' : props.log?.status === 'failed' ? 'rose' : 'amber' },
+    { label: 'Duration', value: props.log?.duration_ms != null ? `${props.log.duration_ms}ms` : '—', accent: (props.log?.duration_ms ?? 0) > 1500 ? 'rose' : 'emerald' },
+    { label: 'HTTP', value: props.log?.http_status ?? '—' },
+    { label: 'Revenue', value: formatMoney(props.log?.revenue ?? 0), accent: 'emerald' },
+]);
 </script>
 
 <template>
@@ -23,25 +32,8 @@ const { formatMoney } = useMoneyFormat();
             </template>
         </PageHeader>
 
-        <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Status</p>
-                <div class="mt-2"><StatusBadge :status="log.status" /></div>
-                <p v-if="log.skipped_reason" class="mt-2 text-sm text-rose-600">{{ log.skipped_reason }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Duration</p>
-                <p class="mt-2 text-2xl font-bold" :class="log.duration_ms > 1500 ? 'text-rose-600' : 'text-slate-900 dark:text-white'">{{ log.duration_ms ?? '—' }}<span class="text-sm font-normal text-slate-500"> ms</span></p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">HTTP</p>
-                <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{{ log.http_status ?? '—' }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Revenue</p>
-                <p class="mt-2 text-2xl font-bold text-emerald-600">{{ formatMoney(log.revenue ?? 0) }}</p>
-            </div>
-        </div>
+        <CompactStatStrip :items="logDetailStrip" :columns="4" class="mb-6" />
+        <p v-if="log.skipped_reason" class="mb-6 text-sm text-rose-600">{{ log.skipped_reason }}</p>
 
         <div class="grid gap-6 lg:grid-cols-2">
             <Panel title="Ping request / response" v-if="log.method === 'ping-post'">

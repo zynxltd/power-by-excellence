@@ -3,7 +3,6 @@
 namespace App\Services\Leads;
 
 use App\Models\Campaign;
-use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -12,11 +11,25 @@ class SuppressionImportService
     public function import(Campaign $campaign, UploadedFile $file, string $field = 'email'): int
     {
         $handle = fopen($file->getRealPath(), 'r');
-        $header = fgetcsv($handle);
+        $header = $this->normalizeHeaders(fgetcsv($handle) ?: []);
         $count = 0;
 
+        if ($header === []) {
+            fclose($handle);
+
+            return 0;
+        }
+
         while (($row = fgetcsv($handle)) !== false) {
-            $data = array_combine($header, $row);
+            if ($this->isBlankRow($row)) {
+                continue;
+            }
+
+            $data = $this->combineRow($header, $row);
+            if ($data === null) {
+                continue;
+            }
+
             $value = $data[$field] ?? $data[array_key_first($data)] ?? null;
             if (blank($value)) {
                 continue;
@@ -45,5 +58,50 @@ class SuppressionImportService
         );
 
         return $count;
+    }
+
+    /**
+     * @param  list<string|null>|false  $headers
+     * @return list<string>
+     */
+    protected function normalizeHeaders(array|false $headers): array
+    {
+        if ($headers === false || $headers === []) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($header) {
+            if ($header === null) {
+                return null;
+            }
+
+            $header = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header);
+
+            return trim($header);
+        }, $headers)));
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @param  list<string|null>  $data
+     * @return array<string, string|null>|null
+     */
+    protected function combineRow(array $headers, array $data): ?array
+    {
+        if (count($headers) !== count($data)) {
+            return null;
+        }
+
+        $combined = array_combine($headers, $data);
+
+        return $combined === false ? null : $combined;
+    }
+
+    /**
+     * @param  list<string|null>  $data
+     */
+    protected function isBlankRow(array $data): bool
+    {
+        return collect($data)->every(fn ($value) => blank($value));
     }
 }

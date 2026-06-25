@@ -3,6 +3,7 @@ import BrandLogo from '@/Components/BrandLogo.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import NotificationBell from '@/Components/UI/NotificationBell.vue';
 import TopNavDropdown from '@/Components/UI/TopNavDropdown.vue';
+import NavHubMenu from '@/Components/UI/NavHubMenu.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import { provideNavDropdown } from '@/Composables/useNavDropdown';
@@ -14,6 +15,7 @@ provideNavDropdown();
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const account = computed(() => page.props.auth.account);
+const tenantHub = computed(() => page.props.tenantHub);
 const branding = computed(() => page.props.tenant ?? page.props.auth.account);
 const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
 const isCentralHost = computed(() => page.props.isCentralHost);
@@ -71,69 +73,41 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
                 class="hidden min-w-0 flex-1 items-center gap-0 overflow-x-auto overscroll-x-contain lg:flex [&::-webkit-scrollbar]:hidden"
                 style="-ms-overflow-style: none; scrollbar-width: none;"
             >
-                <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))" title="Dashboard">Dashboard</Link>
-
-                <TopNavDropdown v-if="canAccess('tenant')" id="tenant" label="Tenant" :active="isAdminRoute(['accounts.*', 'buyers.*', 'suppliers.*', 'users.*'])">
-                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('accounts.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Partner Platforms</Link>
-                    <Link :href="route('buyers.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Buyers</Link>
-                    <Link :href="route('suppliers.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Suppliers</Link>
-                    <Link :href="route('users.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Users</Link>
-                </TopNavDropdown>
+                <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))" title="Dashboard">Home</Link>
 
                 <TopNavDropdown v-if="canAccess('campaigns')" id="campaigns" label="Campaigns" :active="isAdminRoute(['campaigns.*', 'forms.*'])">
-                    <Link :href="route('campaigns.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">All Campaigns</Link>
-                    <Link :href="route('forms.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Form Builder</Link>
+                    <Link :href="route('campaigns.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">All campaigns</Link>
+                    <Link :href="route('forms.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Form builder</Link>
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Ops" title="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*'])">
-                    <Link :href="route('operations.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Live Operations</Link>
-                    <Link :href="route('leads.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Lead Pipeline</Link>
+                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Ops" title="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*', 'deliveries.*', 'distribution.*', 'routing.simulator*', 'automation.*'])">
+                    <Link :href="route('operations.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Live operations</Link>
+                    <Link :href="route('leads.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Lead pipeline</Link>
                     <Link :href="route('quarantine.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Quarantine</Link>
+                    <div class="my-1 border-t border-slate-700" />
+                    <Link v-if="canAccess('routing')" :href="route('deliveries.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Deliveries</Link>
+                    <Link v-if="canAccess('routing')" :href="route('distribution.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Ping tree</Link>
+                    <Link v-if="canAccess('routing')" :href="route('routing.simulator')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Routing simulator</Link>
+                    <Link v-if="canAccess('routing')" :href="route('automation.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Automation</Link>
                 </TopNavDropdown>
 
-                <Link v-if="canAccess('reports')" :href="route('reports.index')" :class="navLinkClass(isAdminRoute(['reports.*']))">Reports</Link>
+                <Link v-if="canAccess('reports')" :href="route('reports.index')" :class="navLinkClass(isAdminRoute(['reports.*']))" title="Reports">Reports</Link>
 
-                <TopNavDropdown v-if="canAccess('routing')" id="routing" label="Routing" :active="isAdminRoute(['deliveries.*', 'distribution.*', 'routing.simulator*', 'automation.*'])">
-                    <Link :href="route('deliveries.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Deliveries</Link>
-                    <Link :href="route('distribution.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Ping Tree</Link>
-                    <Link :href="route('routing.simulator')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Routing Simulator</Link>
-                    <Link :href="route('automation.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Automation Hub</Link>
+                <TopNavDropdown
+                    v-if="tenantHub"
+                    id="more"
+                    label="More"
+                    title="Platform shortcuts, finance, logs & settings"
+                    wide
+                    :active="isAdminRoute(['accounts.*', 'buyers.*', 'suppliers.*', 'users.*', 'billing.*', 'finance.*', 'settings.*', 'logs.*', 'integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*', 'branding.*', 'support.*', 'help.*', 'command-center.*'])"
+                >
+                    <NavHubMenu :tenant-hub="tenantHub" />
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('logs')" id="logs" label="Logs" :active="isAdminRoute(['logs.*', 'command-center.*', 'live-feed.*', 'notifications.admin.*'])">
-                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('command-center.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Command Center</Link>
-                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('live-feed.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Live Feed</Link>
-                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('notifications.admin.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Notifications</Link>
-                    <Link :href="route('logs.delivery')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Delivery Logs</Link>
-                    <Link :href="route('logs.api')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">API Logs</Link>
-                    <Link :href="route('logs.access')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Access Logs</Link>
-                    <Link :href="route('logs.changes')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Change Logs</Link>
-                    <Link :href="route('logs.security')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Security Logs</Link>
-                </TopNavDropdown>
-
-                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*'])">
-                    <Link :href="route('integrations.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Integrations</Link>
-                    <Link :href="route('api-keys.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">API Keys</Link>
-                    <Link :href="route('webhooks.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Webhooks</Link>
-                    <Link :href="route('postbacks.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Postbacks</Link>
-                    <Link :href="route('imports.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Import Data</Link>
-                    <Link :href="route('features.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Features</Link>
-                    <template v-if="isSuperAdmin">
-                        <div class="my-1 border-t border-slate-700" />
-                        <a href="/horizon" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Horizon (queues)</a>
-                        <a href="/telescope" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Telescope (debug)</a>
-                    </template>
-                </TopNavDropdown>
-
-                <TopNavDropdown v-if="canAccess('settings') || canAccess('billing') || canAccess('finance')" id="account" label="Account" :active="isAdminRoute(['settings.*', 'billing.*', 'finance.*', 'profile.*', 'support.*', 'help.*', 'branding.*'])">
-                    <Link v-if="canAccess('settings')" :href="route('settings.edit')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Settings</Link>
-                    <Link v-if="canAccess('settings')" :href="route('branding.edit')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Branding</Link>
-                    <Link v-if="canAccess('finance')" :href="route('finance.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Finance</Link>
-                    <Link v-if="canAccess('billing')" :href="route('billing.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Buyer billing</Link>
-                    <Link :href="route('support.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Support</Link>
-                    <Link :href="route('help.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Help Centre</Link>
-                    <Link :href="route('profile.edit')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Profile</Link>
-                </TopNavDropdown>
+                <template v-else-if="isSuperAdmin && isCentralHost">
+                    <Link :href="route('command-center.index')" :class="navLinkClass(route().current('command-center.*'))" title="Command Center">Command</Link>
+                    <Link :href="route('accounts.index')" :class="navLinkClass(route().current('accounts.*'))" title="Partner platforms">Platforms</Link>
+                </template>
             </nav>
 
             <!-- Buyer portal -->
@@ -225,13 +199,13 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
 
         <nav v-if="mobileOpen && !isBuyer && !isSupplier" class="border-t border-slate-800 bg-slate-950 px-4 py-3 lg:hidden">
             <div class="grid grid-cols-2 gap-1 text-sm">
-                <Link :href="route('dashboard')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Dashboard</Link>
-                <Link :href="route('buyers.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Buyers</Link>
-                <Link :href="route('suppliers.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Suppliers</Link>
+                <Link :href="route('dashboard')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Home</Link>
                 <Link :href="route('campaigns.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Campaigns</Link>
-                <Link :href="route('operations.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Live Ops</Link>
-                <Link :href="route('deliveries.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Deliveries</Link>
+                <Link :href="route('operations.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Live ops</Link>
+                <Link :href="route('leads.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Leads</Link>
                 <Link v-if="canAccess('reports')" :href="route('reports.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Reports</Link>
+                <Link :href="route('finance.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Finance</Link>
+                <Link :href="route('buyers.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Buyers</Link>
                 <Link :href="route('settings.edit')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Settings</Link>
             </div>
         </nav>

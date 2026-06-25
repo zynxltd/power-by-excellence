@@ -41,16 +41,18 @@ class LeadController extends Controller
         ], 202);
     }
 
-    public function show(string $uuid): JsonResponse
+    public function show(Request $request, string $uuid): JsonResponse
     {
-        $lead = Lead::where('uuid', $uuid)->with(['financials', 'soldToBuyer', 'deliveryLogs'])->firstOrFail();
+        $lead = $this->findLeadForApi($request, $uuid);
+        $lead->load(['financials', 'soldToBuyer', 'deliveryLogs']);
 
         return response()->json($this->formatResponse($lead));
     }
 
-    public function queueStatus(string $queueId): JsonResponse
+    public function queueStatus(Request $request, string $queueId): JsonResponse
     {
         $lead = Lead::where('queue_id', $queueId)->with(['financials', 'soldToBuyer'])->firstOrFail();
+        $this->ensureLeadBelongsToApiAccount($request, $lead);
 
         return response()->json($this->formatResponse($lead));
     }
@@ -66,12 +68,29 @@ class LeadController extends Controller
         return response()->json($leads);
     }
 
-    public function reprocess(string $uuid): JsonResponse
+    public function reprocess(Request $request, string $uuid): JsonResponse
     {
-        $lead = Lead::where('uuid', $uuid)->firstOrFail();
+        $lead = $this->findLeadForApi($request, $uuid);
         ProcessLeadJob::dispatch($lead->id);
 
         return response()->json(['status' => 'queued', 'queue_id' => $lead->queue_id]);
+    }
+
+    protected function findLeadForApi(Request $request, string $uuid): Lead
+    {
+        $lead = Lead::where('uuid', $uuid)->firstOrFail();
+        $this->ensureLeadBelongsToApiAccount($request, $lead);
+
+        return $lead;
+    }
+
+    protected function ensureLeadBelongsToApiAccount(Request $request, Lead $lead): void
+    {
+        $accountId = $request->attributes->get('account')?->id;
+
+        if ($accountId && $lead->account_id !== $accountId) {
+            abort(404);
+        }
     }
 
     protected function formatResponse(Lead $lead): array

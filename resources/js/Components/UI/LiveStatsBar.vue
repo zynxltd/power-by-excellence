@@ -36,7 +36,7 @@ const updatedLabel = computed(() => {
 <template>
     <div
         v-if="stats || loading"
-        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-2.5 text-sm shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80"
+        class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 text-sm shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80"
     >
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

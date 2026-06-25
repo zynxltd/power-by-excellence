@@ -5,9 +5,10 @@ import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     days: Number,
@@ -22,6 +23,14 @@ const selectedDays = ref(props.days);
 const { formatMoney } = useMoneyFormat(props.currency);
 const applyDays = (d) => router.get(route('finance.index'), { days: d }, { preserveState: true, replace: true });
 watch(() => props.days, (d) => { selectedDays.value = d; });
+
+const financeStrip = computed(() => [
+    { label: `Revenue (${props.days}d)`, value: formatMoney(props.summary?.revenue), accent: 'emerald' },
+    { label: 'Supplier payout', value: formatMoney(props.summary?.payout), accent: 'amber' },
+    { label: 'Margin', value: formatMoney(props.summary?.margin), accent: 'cyan' },
+    { label: 'Credit pool', value: formatMoney(props.summary?.buyer_credit_total) },
+    { label: 'Ledger txns', value: props.summary?.transactions_period ?? 0, accent: 'indigo' },
+]);
 </script>
 
 <template>
@@ -39,28 +48,7 @@ watch(() => props.days, (d) => { selectedDays.value = d; });
 
         <TenantContextBanner />
 
-        <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Revenue ({{ days }}d)</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-600">{{ formatMoney(summary?.revenue) }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Supplier payout</p>
-                <p class="mt-1 text-2xl font-bold text-amber-600">{{ formatMoney(summary?.payout) }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Margin</p>
-                <p class="mt-1 text-2xl font-bold text-cyan-600">{{ formatMoney(summary?.margin) }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Buyer credit pool</p>
-                <p class="mt-1 text-2xl font-bold">{{ formatMoney(summary?.buyer_credit_total) }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Ledger txns</p>
-                <p class="mt-1 text-2xl font-bold">{{ summary?.transactions_period ?? 0 }}</p>
-            </div>
-        </div>
+        <CompactStatStrip :items="financeStrip" :columns="5" class="mb-6" />
 
         <div class="grid gap-6 lg:grid-cols-2">
             <Panel title="Buyers — revenue & credit" :padding="false">

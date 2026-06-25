@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\LeadStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessLeadJob;
+use App\Support\LeadQueueMetrics;
 use App\Support\Queue\LeadJobDispatcher;
 use App\Models\Campaign;
 use App\Models\Lead;
@@ -92,6 +93,15 @@ class LeadAdminController extends Controller
     {
         $this->ensureLeadAccessible($lead);
         abort_unless($lead->status === LeadStatus::Quarantined, 422);
+
+        $reason = $lead->metadata['quarantine_reason'] ?? null;
+        if ($reason === 'validation'
+            || ! empty($lead->metadata['email_validation'])
+            || ! empty($lead->metadata['hlr_validation'])
+            || ! empty($lead->metadata['field_validation'])) {
+            abort(422, 'Validation holds must be rejected — they cannot be released back into distribution.');
+        }
+
         $lead->update(['status' => LeadStatus::Accepted, 'quarantined_until' => null]);
         LeadJobDispatcher::dispatch($lead->id);
 
@@ -188,7 +198,13 @@ class LeadAdminController extends Controller
         $query = Lead::query();
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if ($request->status === 'processing') {
+                $query->whereIn('status', LeadStatus::processingValues());
+            } elseif ($request->status === 'duplicate') {
+                $query->where('status', LeadStatus::Duplicate);
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         if ($request->filled('campaign_id')) {
@@ -231,16 +247,7 @@ class LeadAdminController extends Controller
 
         $total = array_sum($counts);
 
-        return [
-            'total' => $total,
-            'pending' => (int) ($counts['pending'] ?? 0),
-            'processing' => (int) ($counts['processing'] ?? 0),
-            'sold' => (int) ($counts['sold'] ?? 0),
-            'unsold' => (int) ($counts['unsold'] ?? 0),
-            'rejected' => (int) ($counts['rejected'] ?? 0),
-            'quarantined' => (int) ($counts['quarantined'] ?? 0),
-            'duplicate' => (int) ($counts['duplicate'] ?? 0),
-        ];
+        return LeadQueueMetrics::pipelineSummary($counts, $total);
     }
 
     protected function showTenantColumn(Request $request): bool
@@ -275,7 +282,8 @@ class LeadAdminController extends Controller
 
         $current = match ($status) {
             'pending' => 'received',
-            'processing' => 'distribution',
+            'validating' => 'validation',
+            'accepted', 'distributing' => 'distribution',
             'quarantined' => 'validation',
             'duplicate', 'rejected' => 'validation',
             'sold', 'unsold' => 'outcome',
@@ -292,11 +300,11 @@ class LeadAdminController extends Controller
                 'rejected' => $lead->reject_reason ?? 'Validation failed',
                 'duplicate' => 'Duplicate of existing lead',
                 'quarantined' => 'Held for review',
-                default => in_array($status, ['sold', 'unsold', 'processing'], true) ? 'Passed' : null,
+                default => in_array($status, ['sold', 'unsold', 'validating', 'accepted', 'distributing'], true) ? 'Passed' : null,
             },
             'distribution' => $lead->deliveryLogs->isNotEmpty()
                 ? $lead->deliveryLogs->count().' delivery attempt(s)'
-                : ($status === 'processing' ? 'Routing in progress' : null),
+                : (in_array($status, ['distributing'], true) ? 'Routing in progress' : null),
             'outcome' => $outcomeDetail['summary'] ?? null,
         ];
 

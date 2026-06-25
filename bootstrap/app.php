@@ -47,6 +47,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'central.host' => \App\Http\Middleware\EnsureCentralHost::class,
             'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
         ]);
+
+        $middleware->priority([
+            \App\Http\Middleware\AuthenticateApiKey::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

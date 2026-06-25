@@ -79,7 +79,7 @@ class ProfileController extends Controller
 
         $request->user()->update($validated);
 
-        return Redirect::route('profile.edit')->with('success', 'Appearance preferences saved.');
+        return back()->with('success', 'Appearance preferences saved.');
     }
 
     /**

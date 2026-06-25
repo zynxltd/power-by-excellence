@@ -8,9 +8,10 @@ import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     suppliers: Object,
@@ -27,6 +28,12 @@ const applyFilters = () => {
         status: status.value || undefined,
     }, { preserveState: true, replace: true });
 };
+
+const suppliersStrip = computed(() => [
+    { label: 'Total', value: props.stats?.total ?? 0 },
+    { label: 'Active', value: props.stats?.active ?? 0, accent: 'emerald' },
+    { label: 'Sources', value: props.stats?.sources ?? 0, accent: 'indigo' },
+]);
 </script>
 
 <template>
@@ -41,20 +48,7 @@ const applyFilters = () => {
 
         <TenantContextBanner />
 
-        <div class="mb-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Total suppliers</p>
-                <p class="mt-1 text-2xl font-bold">{{ stats?.total ?? 0 }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Active</p>
-                <p class="mt-1 text-2xl font-bold text-emerald-600">{{ stats?.active ?? 0 }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-xs font-semibold uppercase text-slate-500">Traffic sources (SIDs)</p>
-                <p class="mt-1 text-2xl font-bold">{{ stats?.sources ?? 0 }}</p>
-            </div>
-        </div>
+        <CompactStatStrip :items="suppliersStrip" :columns="3" class="mb-6" />
 
         <Panel :padding="false">
             <template #header>

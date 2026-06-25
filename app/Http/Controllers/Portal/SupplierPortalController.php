@@ -14,6 +14,7 @@ class SupplierPortalController extends Controller
     public function dashboard(Request $request): Response
     {
         $supplier = $request->user()->supplier;
+        abort_unless($supplier, 403, 'Supplier account not linked to this user.');
 
         $stats = [
             'leads_today' => Lead::where('supplier_id', $supplier->id)->whereDate('received_at', today())->count(),
@@ -150,6 +151,8 @@ class SupplierPortalController extends Controller
     public function billing(Request $request): Response
     {
         $supplier = $request->user()->supplier;
+        abort_unless($supplier, 403, 'Supplier account not linked to this user.');
+
         $account = $request->user()->account ?? $supplier->account;
 
         $totalPayout = (float) DB::table('lead_financials')

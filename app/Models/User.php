@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Account;
 use App\Models\Buyer;
 use App\Models\Supplier;
+use App\Support\Tenancy\AccountContext;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -101,6 +102,50 @@ class User extends Authenticatable
     public function isSuspended(): bool
     {
         return (bool) $this->is_suspended;
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        $query = static::query()->where($field, $value);
+
+        if ($accountId = static::resolveRouteBindingAccountId()) {
+            $query->where(function ($q) use ($accountId) {
+                $q->where('account_id', $accountId)
+                    ->orWhereHas('buyer', fn ($b) => $b->where('account_id', $accountId))
+                    ->orWhereHas('supplier', fn ($s) => $s->where('account_id', $accountId));
+            });
+        }
+
+        return $query->firstOrFail();
+    }
+
+    protected static function resolveRouteBindingAccountId(): ?int
+    {
+        if ($accountId = AccountContext::id()) {
+            return $accountId;
+        }
+
+        /** @var self|null $user */
+        $user = auth()->user();
+
+        if ($user && ! $user->isSuperAdmin()) {
+            return $user->resolveAccount()?->id;
+        }
+
+        if ($user?->isSuperAdmin()) {
+            $hostAccount = request()->attributes->get('host_account');
+            if ($hostAccount instanceof Account) {
+                return $hostAccount->id;
+            }
+
+            if (session()->has('current_account_id')) {
+                return (int) session('current_account_id');
+            }
+        }
+
+        return null;
     }
 
     public function resolveAccount(): ?Account

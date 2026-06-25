@@ -27,6 +27,10 @@ class ReportsController extends Controller
             ->orderByDesc('updated_at')
             ->first();
 
+        $activeConfig = $pingTreeCampaign?->distributionConfigs
+            ->first(fn ($config) => str_contains(strtolower($config->name ?? ''), '10-tier'))
+            ?? $pingTreeCampaign?->distributionConfigs->first();
+
         return Inertia::render('Admin/Reports/Index', [
             'days' => $metrics->days(),
             'month' => $metrics->month(),
@@ -43,8 +47,7 @@ class ReportsController extends Controller
             'pingTree' => [
                 'campaign_name' => $pingTreeCampaign?->name,
                 'campaign_id' => $pingTreeCampaign?->id,
-                'config_name' => $pingTreeCampaign?->distributionConfigs->firstWhere('name', 'like', '%10-Tier%')?->name
-                    ?? $pingTreeCampaign?->distributionConfigs->first()?->name,
+                'config_name' => $activeConfig?->name,
                 'tier_count' => Delivery::forTenant()->where('campaign_id', $pingTreeCampaign?->id)->whereNotNull('tier')->max('tier') ?? 0,
             ],
             'summary' => $metrics->summary($charts),

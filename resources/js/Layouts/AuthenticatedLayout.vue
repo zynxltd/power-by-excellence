@@ -40,7 +40,7 @@ provide('isNavigating', isNavigating);
             </AppButton>
         </div>
         <AdminTopNav />
-        <main class="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
+        <main class="mx-auto max-w-[1600px] p-3 sm:p-4 lg:p-5">
             <LiveStatsBar v-if="showLiveStats" />
             <BillingAlert />
             <slot />

@@ -12,6 +12,8 @@ use App\Models\DistributionConfig;
 use App\Models\EventAlert;
 use App\Models\EventAlertFire;
 use App\Services\Automation\BulkSmsService;
+use App\Services\Alerts\EventAlertService;
+use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +21,7 @@ use Inertia\Response;
 
 class AutomationController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('Admin/Automation/Index', [
             'sequences' => AutomationSequence::with('steps')->with('campaign:id,name')->orderBy('name')->get(),
@@ -27,23 +29,21 @@ class AutomationController extends Controller
             'eventAlerts' => EventAlert::orderBy('name')->get(),
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference', 'use_advanced_distribution']),
             'routingOverview' => $this->routingOverview(),
-            'metrics' => [
-                ['value' => 'leads_today', 'label' => 'Leads today'],
-                ['value' => 'sold_today', 'label' => 'Sold today'],
-                ['value' => 'unsold_today', 'label' => 'Unsold today'],
-                ['value' => 'reject_rate_24h', 'label' => 'Reject rate (24h)'],
-                ['value' => 'delivery_success_rate_24h', 'label' => 'Delivery success (24h)'],
-                ['value' => 'pending_queue', 'label' => 'Pending queue'],
-                ['value' => 'quarantined_count', 'label' => 'Quarantined'],
-                ['value' => 'avg_processing_ms_24h', 'label' => 'Avg processing (ms)'],
-                ['value' => 'caps_near_limit', 'label' => 'Buyers near cap'],
-            ],
+            'metrics' => collect(EventAlertService::metricLabels())
+                ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
+                ->values()
+                ->all(),
             'providers' => [
                 'sms' => ['log', 'twilio', 'vonage'],
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
             ],
             'alertChannels' => ['email', 'sms', 'webhook', 'slack'],
-            'recentAlertFires' => EventAlertFire::with(['alert:id,name', 'account:id,name'])
+            'recentAlertFires' => EventAlertFire::query()
+                ->when(
+                    AccountContext::id() ?? $request->attributes->get('account')?->id,
+                    fn ($query, int $accountId) => $query->where('account_id', $accountId),
+                )
+                ->with(['alert:id,name', 'account:id,name'])
                 ->orderByDesc('created_at')
                 ->limit(25)
                 ->get(),

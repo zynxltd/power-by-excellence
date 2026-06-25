@@ -168,6 +168,10 @@ class CampaignController extends Controller
             'sell_mode' => 'nullable|in:exclusive,multi_sell',
             'use_advanced_distribution' => 'boolean',
             'caps' => 'nullable|array',
+            'caps.daily' => 'nullable|integer|min:0',
+            'caps.hourly' => 'nullable|integer|min:0',
+            'caps.daily_spend_cap' => 'nullable|numeric|min:0',
+            'caps.monthly_spend_cap' => 'nullable|numeric|min:0',
             'dedupe_config' => 'nullable|array',
         ], [
             'name.required' => 'Campaign name is required.',

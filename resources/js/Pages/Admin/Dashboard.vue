@@ -11,7 +11,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import QuickLinkChips from '@/Components/UI/QuickLinkChips.vue';
-import HorizontalSwipeScroll from '@/Components/UI/HorizontalSwipeScroll.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, inject, ref, watch } from 'vue';
@@ -32,7 +32,7 @@ const props = defineProps({
     quickLinkGroups: Array,
 });
 
-const tenantView = ref('cards');
+
 const chartDaysLocal = ref(props.chartDays);
 const { formatMoney } = useMoneyFormat(props.currency);
 const { stats: liveStats } = useLiveStats();
@@ -85,150 +85,67 @@ const switchToTenant = (accountId) => {
 <template>
     <Head title="Dashboard" />
     <AuthenticatedLayout>
-        <div class="dashboard-hero relative mb-6 overflow-hidden rounded-2xl border border-indigo-200/50 bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 p-6 dark:border-indigo-500/20 sm:p-8">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Platform Overview</h1>
-                    <p class="mt-1 text-sm text-indigo-200/80">
-                        {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin — all partner platforms' }}
-                    </p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <AppButton v-if="isSuperAdmin" :href="route('accounts.index')" variant="secondary">Platforms</AppButton>
-                    <AppButton v-else :href="route('settings.edit')" variant="secondary">Platform settings</AppButton>
-                    <AppButton :href="route('operations.index')" variant="secondary">Live ops</AppButton>
-                    <AppButton :href="route('campaigns.create')">New campaign</AppButton>
-                </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Platform Overview</h1>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin — all partner platforms' }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <AppButton v-if="isSuperAdmin" :href="route('accounts.index')" variant="secondary">Platforms</AppButton>
+                <AppButton v-else :href="route('settings.edit')" variant="secondary">Platform settings</AppButton>
+                <AppButton :href="route('operations.index')" variant="secondary">Live ops</AppButton>
+                <AppButton :href="route('campaigns.create')">New campaign</AppButton>
             </div>
         </div>
 
         <TenantContextBanner />
 
-        <Panel v-if="tenantOverview?.length" title="Partner platforms" class="mb-6">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-slate-600 dark:text-slate-400">Switch tenant to manage buyers, suppliers, and scoped settings.</p>
-                <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
-                    <button
-                        type="button"
-                        :class="['rounded-md px-3 py-1.5 text-xs font-semibold transition', tenantView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
-                        @click="tenantView = 'cards'"
-                    >
-                        Cards
-                    </button>
-                    <button
-                        type="button"
-                        :class="['rounded-md px-3 py-1.5 text-xs font-semibold transition', tenantView === 'table' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
-                        @click="tenantView = 'table'"
-                    >
-                        Table
-                    </button>
-                </div>
-            </div>
-
-            <HorizontalSwipeScroll v-if="tenantView === 'cards'">
-                    <div
-                        v-for="tenant in tenantOverview"
-                        :key="tenant.id"
-                        :class="[
-                            'w-72 shrink-0 snap-start rounded-xl border p-4 transition',
-                            tenant.is_active
-                                ? 'border-indigo-300 bg-indigo-50/50 ring-1 ring-indigo-200 dark:border-indigo-600 dark:bg-indigo-950/30'
-                                : 'border-slate-200 bg-white hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900',
-                        ]"
-                    >
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <p class="font-semibold text-slate-900 dark:text-white">{{ tenant.name }}</p>
-                                <p class="text-xs text-slate-500">{{ tenant.slug }}</p>
-                            </div>
-                            <span
-                                v-if="tenant.is_active"
-                                class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                            >
-                                Active
-                            </span>
-                        </div>
-                        <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                            <div><dt class="text-slate-500">Campaigns</dt><dd class="font-semibold">{{ tenant.campaigns_count }}</dd></div>
-                            <div><dt class="text-slate-500">Leads today</dt><dd class="font-semibold">{{ tenant.leads_today }}</dd></div>
-                            <div><dt class="text-slate-500">Buyers</dt><dd class="font-semibold">{{ tenant.buyers_count }}</dd></div>
-                            <div><dt class="text-slate-500">Suppliers</dt><dd class="font-semibold">{{ tenant.suppliers_count }}</dd></div>
-                        </dl>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <button
-                                v-if="!tenant.is_active"
-                                type="button"
-                                class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-                                @click="switchToTenant(tenant.id)"
-                            >
-                                Switch to tenant
-                            </button>
-                            <Link
-                                :href="route('campaigns.index')"
-                                class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                            >
-                                Campaigns
-                            </Link>
-                            <Link
-                                :href="route('buyers.index')"
-                                class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                            >
-                                Buyers
-                            </Link>
-                        </div>
-                    </div>
-            </HorizontalSwipeScroll>
-
-            <DataTable v-else :empty="!tenantOverview?.length" :loading="isNavigating">
+        <Panel v-if="tenantOverview?.length" title="Partner platforms" class="mb-4" :padding="false">
+            <DataTable :empty="!tenantOverview?.length" :loading="isNavigating">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaigns</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Leads today</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Buyers</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Suppliers</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Platform</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Campaigns</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Leads today</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Buyers</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suppliers</th>
+                    <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                 </template>
                 <tr
                     v-for="tenant in tenantOverview"
                     :key="tenant.id"
                     :class="tenant.is_active ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''"
                 >
-                    <td class="px-6 py-4">
-                        <p class="font-medium text-slate-900 dark:text-white">{{ tenant.name }}</p>
-                        <p class="text-xs text-slate-500">{{ tenant.slug }}</p>
+                    <td class="px-3 py-2">
+                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ tenant.name }}</p>
+                        <p class="text-[10px] text-slate-500">{{ tenant.slug }}</p>
                     </td>
-                    <td class="px-6 py-4 text-slate-600">{{ tenant.campaigns_count }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ tenant.leads_today }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ tenant.buyers_count }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ tenant.suppliers_count }}</td>
-                    <td class="px-6 py-4 text-right">
-                        <button
-                            v-if="!tenant.is_active"
-                            type="button"
-                            class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-                            @click="switchToTenant(tenant.id)"
-                        >
-                            Switch
-                        </button>
-                        <span v-else class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Active</span>
+                    <td class="px-3 py-2 text-sm text-slate-600">{{ tenant.campaigns_count }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">{{ tenant.leads_today }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">{{ tenant.buyers_count }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">{{ tenant.suppliers_count }}</td>
+                    <td class="px-3 py-2 text-right">
+                        <div class="flex flex-wrap justify-end gap-1">
+                            <button
+                                v-if="!tenant.is_active"
+                                type="button"
+                                class="rounded-md bg-indigo-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-indigo-500"
+                                @click="switchToTenant(tenant.id)"
+                            >
+                                Switch
+                            </button>
+                            <span v-else class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">Active</span>
+                            <Link :href="route('campaigns.index')" class="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400">Campaigns</Link>
+                        </div>
                     </td>
                 </tr>
             </DataTable>
         </Panel>
 
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            <Link
-                v-for="card in statLinks"
-                :key="card.label"
-                :href="card.href"
-                class="rounded-xl border border-slate-200 bg-white px-4 py-3 transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-700"
-            >
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ card.label }}</p>
-                <p class="mt-1 text-xl font-bold text-slate-900 dark:text-white">{{ card.value }}</p>
-            </Link>
-        </div>
+        <CompactStatStrip :items="statLinks" :columns="7" class="mb-4" />
 
-        <div class="mb-6 grid gap-6 lg:grid-cols-2">
+        <div class="mb-4 grid gap-4 lg:grid-cols-2">
             <Panel
                 v-for="group in quickLinkGroups"
                 :key="group.title"
@@ -238,7 +155,7 @@ const switchToTenant = (accountId) => {
             </Panel>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-3">
+        <div class="grid gap-4 lg:grid-cols-3">
             <Panel class="lg:col-span-2">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -259,7 +176,7 @@ const switchToTenant = (accountId) => {
                 <LineChart
                     :labels="charts.labels"
                     :datasets="chartDatasets"
-                    :height="280"
+                    :height="220"
                     :value-formatter="(v) => v"
                     :drilldown-route="route('leads.index')"
                 />
@@ -297,7 +214,7 @@ const switchToTenant = (accountId) => {
             <BarChart
                 :labels="charts.labels"
                 :datasets="revenueDataset"
-                :height="280"
+                :height="220"
                 :scrollable="chartDaysLocal > 14"
                 :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
                 :drilldown-route="route('billing.index')"

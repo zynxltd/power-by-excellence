@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import MetaStatCard from '@/Components/UI/MetaStatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
@@ -30,6 +30,14 @@ const fieldCount = computed(() => props.campaign?.fields?.length ?? 0);
 const pingFieldCount = computed(() => props.campaign?.fields?.filter((f) => f.ping_field)?.length ?? 0);
 const configCount = computed(() => props.campaign?.distribution_configs?.length ?? 0);
 const activeConfig = computed(() => props.campaign?.distribution_configs?.find((c) => c.is_active));
+
+const campaignStatStrip = computed(() => [
+    { label: 'Reference', value: props.campaign?.reference ?? '—', accent: 'indigo' },
+    { label: 'Status', value: props.campaign?.status ?? '—', accent: 'emerald' },
+    { label: 'Floor', value: formatMoney(props.campaign?.floor_price), accent: 'cyan' },
+    { label: 'Distribution', value: props.campaign?.use_advanced_distribution ? 'Ping tree' : 'Standard', accent: 'amber' },
+    { label: 'Leads today', value: props.leadsToday ?? 0, accent: 'violet' },
+]);
 </script>
 
 <template>
@@ -48,24 +56,11 @@ const activeConfig = computed(() => props.campaign?.distribution_configs?.find((
             v-if="campaignWorkflow"
             :campaign="campaignWorkflow.campaign"
             :distribution-config-id="campaignWorkflow.distributionConfigId"
-            :tenant-hub="campaignWorkflow.tenantHub"
             current="show"
             class="mb-6"
         />
 
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <MetaStatCard label="Reference" :value="campaign.reference" mono accent="indigo" />
-            <MetaStatCard label="Status" accent="emerald">
-                <StatusBadge :status="campaign.status" />
-            </MetaStatCard>
-            <MetaStatCard label="Floor price" :value="formatMoney(campaign.floor_price)" accent="cyan" />
-            <MetaStatCard label="Distribution" accent="amber">
-                <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                    {{ campaign.use_advanced_distribution ? 'Ping tree' : 'Standard' }}
-                </span>
-            </MetaStatCard>
-            <MetaStatCard label="Leads today" :value="leadsToday" accent="violet" />
-        </div>
+        <CompactStatStrip :items="campaignStatStrip" :columns="5" class="mb-6" />
 
         <Panel title="Campaign Fields" class="mt-6">
             <template #header>

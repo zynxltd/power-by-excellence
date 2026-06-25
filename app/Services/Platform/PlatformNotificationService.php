@@ -44,7 +44,7 @@ class PlatformNotificationService
         return PlatformNotification::create([
             'account_id' => $accountId,
             'created_by_user_id' => $createdBy->id,
-            'audience' => $accountId ? 'tenant' : 'tenant',
+            'audience' => 'tenant',
             'type' => 'broadcast',
             'severity' => $severity,
             'title' => $title,

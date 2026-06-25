@@ -1,13 +1,14 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
@@ -19,30 +20,29 @@ const props = defineProps({
 });
 
 const { formatMoney, currency: displayCurrency } = useMoneyFormat(props.currency);
+
+const buyerPortalStrip = computed(() => [
+    { label: 'Credit', value: formatMoney(props.buyer.credit_balance), accent: 'emerald' },
+    { label: 'Leads today', value: props.stats.leads_today, accent: 'indigo' },
+    { label: 'Total purchased', value: props.stats.total_leads, accent: 'cyan' },
+]);
 </script>
 
 <template>
     <Head title="Buyer Portal" />
     <AuthenticatedLayout>
-        <div class="portal-hero relative mb-6 overflow-hidden rounded-2xl border border-emerald-200/40 bg-gradient-to-br from-slate-900 via-emerald-950 to-teal-950 p-6 dark:border-emerald-500/20">
-            <div class="portal-shine pointer-events-none absolute inset-0" />
-            <div class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 class="text-xl font-bold text-white">Buyer Dashboard</h1>
-                    <p class="text-sm text-emerald-200/80">Credit & lead performance for {{ buyer.name }}</p>
-                </div>
-                <div class="flex gap-2">
-                    <AppButton :href="route('portal.buyer.leads.download')" variant="secondary">Download CSV</AppButton>
-                    <AppButton :href="route('portal.buyer.leads')">View all leads</AppButton>
-                </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Buyer Dashboard</h1>
+                <p class="text-xs text-slate-500">Credit & lead performance for {{ buyer.name }}</p>
+            </div>
+            <div class="flex gap-2">
+                <AppButton :href="route('portal.buyer.leads.download')" variant="secondary">Download CSV</AppButton>
+                <AppButton :href="route('portal.buyer.leads')">View all leads</AppButton>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="Credit Balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
-            <StatCard label="Leads Today" :value="stats.leads_today" accent="indigo" />
-            <StatCard label="Total Leads Purchased" :value="stats.total_leads" accent="cyan" />
-        </div>
+        <CompactStatStrip :items="buyerPortalStrip" :columns="3" class="mb-6" />
 
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
             <Panel title="Leads Purchased — Last 7 Days">

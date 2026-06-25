@@ -12,6 +12,8 @@ const roleLabel = computed(() => {
     if (page.props.auth.isBuyerPortal) return 'Buyer Portal User';
     if (page.props.auth.isSupplierPortal) return 'Supplier Portal User';
     if (page.props.auth.isSuperAdmin) return 'Super Administrator';
+    if (user.value?.role === 'staff') return 'Staff member';
+
     return 'Platform Administrator';
 });
 

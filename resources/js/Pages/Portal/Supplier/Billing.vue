@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head } from '@inertiajs/vue3';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -26,11 +26,15 @@ const { formatMoney } = useMoneyFormat(props.currency);
             description="Track your lead payouts, sold volume, and revenue earned on the platform."
         />
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <StatCard label="Total Payouts" :value="formatMoney(summary.total_payout)" accent="emerald" />
-            <StatCard label="This Month" :value="formatMoney(summary.payout_this_month)" accent="indigo" />
-            <StatCard label="Sold Leads" :value="summary.sold_count" accent="cyan" />
-        </div>
+        <CompactStatStrip
+            :items="[
+                { label: 'Total payouts', value: formatMoney(summary.total_payout), accent: 'emerald' },
+                { label: 'This month', value: formatMoney(summary.payout_this_month), accent: 'indigo' },
+                { label: 'Sold leads', value: summary.sold_count, accent: 'cyan' },
+            ]"
+            :columns="3"
+            class="mb-6"
+        />
 
         <Panel class="mt-6">
             <p class="text-sm text-slate-600 dark:text-slate-400">

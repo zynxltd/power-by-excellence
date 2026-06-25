@@ -1,10 +1,11 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
@@ -16,27 +17,26 @@ const props = defineProps({
 });
 
 const { formatMoney, currency: displayCurrency } = useMoneyFormat(props.currency);
+
+const supplierPortalStrip = computed(() => [
+    { label: 'Leads today', value: props.stats.leads_today, accent: 'indigo' },
+    { label: 'Sold today', value: props.stats.sold_today, accent: 'emerald' },
+    { label: `Payout (${displayCurrency})`, value: formatMoney(props.stats.revenue_today), accent: 'cyan' },
+]);
 </script>
 
 <template>
     <Head title="Supplier Portal" />
     <AuthenticatedLayout>
-        <div class="portal-hero relative mb-6 overflow-hidden rounded-2xl border border-indigo-200/40 bg-gradient-to-br from-slate-900 via-indigo-950 to-cyan-950 p-6">
-            <div class="portal-shine pointer-events-none absolute inset-0" />
-            <div class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 class="text-xl font-bold text-white">Supplier Dashboard</h1>
-                    <p class="text-sm text-indigo-200/80">Lead submissions & payouts for {{ supplier.name }}</p>
-                </div>
-                <AppButton :href="route('portal.supplier.leads')">View all leads</AppButton>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Supplier Dashboard</h1>
+                <p class="text-xs text-slate-500">Lead submissions & payouts for {{ supplier.name }}</p>
             </div>
+            <AppButton :href="route('portal.supplier.leads')">View all leads</AppButton>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="Leads Submitted Today" :value="stats.leads_today" accent="indigo" />
-            <StatCard label="Sold Today" :value="stats.sold_today" accent="emerald" />
-            <StatCard :label="`Payout Today (${displayCurrency})`" :value="formatMoney(stats.revenue_today)" accent="cyan" />
-        </div>
+        <CompactStatStrip :items="supplierPortalStrip" :columns="3" class="mb-6" />
 
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
             <Panel title="Leads Submitted — Last 7 Days">

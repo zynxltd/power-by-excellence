@@ -17,6 +17,7 @@ class ProfilePreferencesTest extends TestCase
         $user = User::factory()->create(['role' => UserRole::SuperAdmin, 'theme' => 'light', 'accent_color' => 'indigo']);
 
         $this->actingAs($user)
+            ->from('/profile')
             ->patch('/profile/preferences', [
                 'theme' => 'dark',
                 'accent_color' => 'emerald',

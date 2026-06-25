@@ -128,7 +128,6 @@ const submit = () => {
             v-if="navWorkflow"
             :campaign="navWorkflow.campaign"
             :distribution-config-id="navWorkflow.distributionConfigId"
-            :tenant-hub="navWorkflow.tenantHub"
             current="ping-tree"
             class="mb-6"
         />

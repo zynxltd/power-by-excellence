@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
-import StatCard from '@/Components/UI/StatCard.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -11,6 +11,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import ManagementHubNav from '@/Components/UI/ManagementHubNav.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     buyer: Object,
@@ -22,6 +23,13 @@ const props = defineProps({
 });
 
 const { formatMoney } = useMoneyFormat(props.currency);
+
+const buyerStatStrip = computed(() => [
+    { label: 'Credit', value: formatMoney(props.buyer.credit_balance), accent: 'emerald' },
+    { label: 'Leads', value: props.buyer.leads_count, accent: 'indigo' },
+    { label: 'Deliveries', value: props.buyer.deliveries_count, accent: 'cyan' },
+    { label: 'Status', value: props.buyer.status, accent: 'amber' },
+]);
 </script>
 
 <template>
@@ -53,12 +61,7 @@ const { formatMoney } = useMoneyFormat(props.currency);
             </div>
         </Panel>
 
-        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Credit balance" :value="formatMoney(buyer.credit_balance)" accent="emerald" />
-            <StatCard label="Leads purchased" :value="buyer.leads_count" accent="indigo" />
-            <StatCard label="Deliveries" :value="buyer.deliveries_count" accent="cyan" />
-            <StatCard label="Status" :value="buyer.status" accent="amber" />
-        </div>
+        <CompactStatStrip :items="buyerStatStrip" :columns="4" class="mb-6" />
 
         <Panel title="Linked deliveries" class="mt-6" :padding="false">
             <DataTable :empty="!buyer.deliveries?.length">

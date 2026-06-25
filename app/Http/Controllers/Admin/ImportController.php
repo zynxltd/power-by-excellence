@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\LeadImport;
 use App\Services\Leads\CsvImportService;
+use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,10 +25,15 @@ class ImportController extends Controller
 
     public function store(Request $request, CsvImportService $importService): RedirectResponse
     {
+        $accountId = AccountContext::id();
+
         if ($request->input('type') === 'suppression') {
             $validated = $request->validate([
-                'campaign_id' => 'required|exists:campaigns,id',
-                'field' => 'required|string|max:64',
+                'campaign_id' => [
+                    'required',
+                    Rule::exists('campaigns', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+                ],
+                'field' => 'required|string|in:email,phone1',
                 'file' => 'required|file|mimes:csv,txt|max:10240',
             ]);
             $campaign = Campaign::findOrFail($validated['campaign_id']);
@@ -36,11 +43,14 @@ class ImportController extends Controller
                 $validated['field']
             );
 
-            return redirect()->route('imports.index')->with('success', "Suppression list imported: {$count} hashes.");
+            return redirect()->route('imports.index')->with('success', "Suppression list imported: {$count} entries.");
         }
 
         $validated = $request->validate([
-            'campaign_id' => 'required|exists:campaigns,id',
+            'campaign_id' => [
+                'required',
+                Rule::exists('campaigns', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
+            ],
             'file' => 'required|file|mimes:csv,txt|max:10240',
         ]);
 
