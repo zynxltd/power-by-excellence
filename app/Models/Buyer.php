@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\BelongsToAccount;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Buyer extends Model
+{
+    use BelongsToAccount;
+
+    protected $fillable = [
+        'account_id',
+        'reference',
+        'name',
+        'email',
+        'status',
+        'credit_balance',
+        'currency',
+        'caps',
+        'schedule',
+        'settings',
+        'portal_password',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'credit_balance' => 'decimal:2',
+            'caps' => 'array',
+            'schedule' => 'array',
+            'settings' => 'array',
+            'portal_password' => 'hashed',
+        ];
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(Delivery::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(BuyerTransaction::class);
+    }
+
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'sold_to_buyer_id');
+    }
+
+    public function portalUsers(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function resolvedCurrency(): string
+    {
+        return strtoupper($this->currency ?: $this->account?->default_currency ?: 'GBP');
+    }
+}

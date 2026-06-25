@@ -1,0 +1,148 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Account;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class AccountSettingsController extends Controller
+{
+    public function edit(Request $request): Response
+    {
+        $account = $this->currentAccount($request);
+
+        return Inertia::render('Admin/Settings/Edit', [
+            'account' => array_merge(
+                $account->only(['id', 'name', 'slug', 'timezone', 'default_currency', 'default_country']),
+                [
+                    'require_buyer_prepay' => $account->settings['require_buyer_prepay'] ?? false,
+                    'billing_status' => $account->settings['billing_status'] ?? 'active',
+                    'billing_due_at' => $account->settings['billing_due_at'] ?? null,
+                    'billing_alert_emails' => $account->settings['billing_alert_emails'] ?? '',
+                    'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
+                ]
+            ),
+            'timezones' => timezone_identifiers_list(),
+            'currencies' => $this->currencies(),
+            'countries' => $this->countries(),
+        ]);
+    }
+
+    public function update(Request $request): RedirectResponse
+    {
+        $account = $this->currentAccount($request);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'timezone' => 'required|timezone:all',
+            'default_country' => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
+            'default_currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
+            'require_buyer_prepay' => 'boolean',
+            'billing_due_at' => 'nullable|date',
+            'billing_status' => 'nullable|in:active,locked',
+            'billing_alert_emails' => 'nullable|string|max:500',
+            'default_low_credit_alert' => 'nullable|numeric|min:0',
+        ], $this->messages());
+
+        $settings = $account->settings ?? [];
+        $settings['require_buyer_prepay'] = $validated['require_buyer_prepay'] ?? false;
+        $settings['billing_due_at'] = $validated['billing_due_at'] ?? null;
+        $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
+        $settings['default_low_credit_alert'] = $validated['default_low_credit_alert'] ?? null;
+
+        if (isset($validated['billing_status'])) {
+            $settings['billing_status'] = $validated['billing_status'];
+            if ($validated['billing_status'] === 'locked') {
+                $settings['billing_locked_at'] = now()->toIso8601String();
+            } else {
+                unset($settings['billing_locked_at'], $settings['billing_lock_reason']);
+            }
+        }
+
+        $account->update([
+            'name' => $validated['name'],
+            'timezone' => $validated['timezone'],
+            'default_country' => $validated['default_country'],
+            'default_currency' => $validated['default_currency'],
+            'settings' => $settings,
+            'is_active' => ($settings['billing_status'] ?? 'active') !== 'locked',
+        ]);
+
+        return back()->with('success', 'Platform settings updated.');
+    }
+
+    protected function currentAccount(Request $request): Account
+    {
+        $account = $request->attributes->get('account');
+
+        if ($account instanceof Account) {
+            return $account;
+        }
+
+        if ($id = \App\Support\Tenancy\AccountContext::id()) {
+            $account = Account::find($id);
+            if ($account) {
+                return $account;
+            }
+        }
+
+        $user = $request->user();
+
+        if ($user?->account_id) {
+            $account = Account::find($user->account_id);
+            if ($account) {
+                return $account;
+            }
+        }
+
+        if ($user?->isSuperAdmin() && $request->session()->has('current_account_id')) {
+            $account = Account::find($request->session()->get('current_account_id'));
+            if ($account) {
+                return $account;
+            }
+        }
+
+        if ($user?->isSuperAdmin()) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                to_route('accounts.index')->with('error', 'Select a partner platform before opening settings.')
+            );
+        }
+
+        abort(403, 'No platform context. Switch tenant or sign in on a partner domain.');
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'default_country.regex' => 'Country must be a 2-letter ISO code (e.g. GB, US, DE).',
+            'default_currency.regex' => 'Currency must be a 3-letter ISO code (e.g. GBP, USD, EUR).',
+        ];
+    }
+
+    protected function currencies(): array
+    {
+        return ['GBP', 'USD', 'EUR', 'AUD', 'CAD', 'NZD', 'ZAR', 'INR', 'AED'];
+    }
+
+    protected function countries(): array
+    {
+        return [
+            'GB' => 'United Kingdom',
+            'US' => 'United States',
+            'CA' => 'Canada',
+            'AU' => 'Australia',
+            'DE' => 'Germany',
+            'FR' => 'France',
+            'IE' => 'Ireland',
+            'NL' => 'Netherlands',
+            'ZA' => 'South Africa',
+            'IN' => 'India',
+            'AE' => 'United Arab Emirates',
+        ];
+    }
+}

@@ -1,0 +1,368 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Enums\LeadStatus;
+use App\Http\Controllers\Controller;
+use App\Jobs\ProcessLeadJob;
+use App\Support\Queue\LeadJobDispatcher;
+use App\Models\Campaign;
+use App\Models\Lead;
+use App\Support\Tenancy\AccountContext;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class LeadAdminController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $baseQuery = $this->filteredQuery($request);
+
+        $query = (clone $baseQuery)
+            ->with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account'])
+            ->orderByDesc('received_at');
+
+        return Inertia::render('Admin/Leads/Index', [
+            'leads' => $query->paginate(25)->withQueryString(),
+            'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference']),
+            'filters' => $request->only(['status', 'campaign_id', 'account_id', 'search', 'from_date', 'to_date']),
+            'statuses' => ['pending', 'processing', 'sold', 'unsold', 'rejected', 'quarantined', 'duplicate'],
+            'pipelineSummary' => $this->pipelineSummary($baseQuery),
+            'showTenantColumn' => $this->showTenantColumn($request),
+        ]);
+    }
+
+    public function show(Lead $lead): Response
+    {
+        $lead->load(['campaign', 'campaign.account', 'events', 'deliveryLogs.delivery', 'deliveryLogs.buyer', 'financials', 'soldToBuyer', 'account']);
+
+        $processingMs = collect($lead->events)
+            ->firstWhere('event_type', 'pipeline.completed')
+            ?->payload['duration_ms'] ?? null;
+
+        $prevId = Lead::query()
+            ->where('campaign_id', $lead->campaign_id)
+            ->where('id', '<', $lead->id)
+            ->orderByDesc('id')
+            ->value('id');
+        $nextId = Lead::query()
+            ->where('campaign_id', $lead->campaign_id)
+            ->where('id', '>', $lead->id)
+            ->orderBy('id')
+            ->value('id');
+
+        return Inertia::render('Admin/Leads/Show', [
+            'lead' => $lead,
+            'workflowNav' => $lead->campaign ? [
+                'id' => $lead->campaign->id,
+                'name' => $lead->campaign->name,
+                'reference' => $lead->campaign->reference,
+            ] : null,
+            'pipelineStages' => $this->pipelineStages($lead),
+            'outcomeDetail' => $this->outcomeDetail($lead),
+            'processingMs' => $processingMs,
+            'navigation' => [
+                'prev_id' => $prevId,
+                'next_id' => $nextId,
+            ],
+        ]);
+    }
+
+    public function releaseQuarantine(Lead $lead): RedirectResponse
+    {
+        abort_unless($lead->status === LeadStatus::Quarantined, 422);
+        $lead->update(['status' => LeadStatus::Accepted, 'quarantined_until' => null]);
+        LeadJobDispatcher::dispatch($lead->id);
+
+        return back()->with('success', 'Lead released from quarantine and queued for distribution.');
+    }
+
+    public function rejectQuarantine(Lead $lead): RedirectResponse
+    {
+        abort_unless($lead->status === LeadStatus::Quarantined, 422);
+        $lead->update(['status' => LeadStatus::Rejected, 'reject_reason' => 'Quarantine rejected by admin']);
+
+        return back()->with('success', 'Quarantined lead rejected.');
+    }
+
+    public function repost(Lead $lead): RedirectResponse
+    {
+        if (! in_array($lead->status, [LeadStatus::Unsold, LeadStatus::Quarantined], true)) {
+            return back()->with('error', 'Only unsold or quarantined leads can be reposted.');
+        }
+
+        if ($lead->status === LeadStatus::Quarantined) {
+            $reason = $lead->metadata['quarantine_reason'] ?? null;
+            if ($reason === 'validation') {
+                return back()->with('error', 'Validation holds must be released or rejected — not reposted.');
+            }
+        }
+
+        $attempts = (int) ($lead->metadata['repost_attempts'] ?? 0);
+        $max = (int) config('platform.max_repost_attempts', 3);
+        if ($attempts >= $max) {
+            return back()->with('error', "Maximum repost attempts ({$max}) reached.");
+        }
+
+        $lead->update([
+            'status' => LeadStatus::Accepted,
+            'quarantined_until' => null,
+            'reject_reason' => null,
+            'sold_to_buyer_id' => null,
+            'distributed_at' => null,
+            'metadata' => array_merge($lead->metadata ?? [], [
+                'repost_attempts' => $attempts + 1,
+                'last_reposted_at' => now()->toIso8601String(),
+            ]),
+        ]);
+
+        LeadJobDispatcher::dispatch($lead->id);
+
+        return back()->with('success', 'Lead queued for repost through the ping tree.');
+    }
+
+    public function export(Request $request)
+    {
+        $leads = (clone $this->filteredQuery($request))
+            ->with(['campaign:id,name,reference', 'financials', 'soldToBuyer:id,name'])
+            ->orderByDesc('received_at')
+            ->limit(5000)
+            ->get();
+
+        $csv = "uuid,campaign,status,firstname,lastname,email,phone,zipcode,revenue,buyer,received_at,distributed_at\n";
+
+        foreach ($leads as $lead) {
+            $csv .= implode(',', array_map(
+                fn ($value) => '"'.str_replace('"', '""', (string) $value).'"',
+                [
+                    $lead->uuid,
+                    $lead->campaign?->reference ?? '',
+                    $lead->status->value,
+                    $lead->getField('firstname'),
+                    $lead->getField('lastname'),
+                    $lead->getField('email'),
+                    $lead->getField('phone1'),
+                    $lead->getField('zipcode'),
+                    $lead->financials?->revenue ?? 0,
+                    $lead->soldToBuyer?->name ?? '',
+                    $lead->received_at,
+                    $lead->distributed_at,
+                ]
+            ))."\n";
+        }
+
+        $filename = 'leads-'.now()->format('Y-m-d-His').'.csv';
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    protected function filteredQuery(Request $request)
+    {
+        $query = Lead::query();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('campaign_id')) {
+            $query->where('campaign_id', $request->campaign_id);
+        }
+
+        if ($request->filled('account_id')) {
+            $query->where('account_id', (int) $request->account_id);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('uuid', 'like', "%{$search}%")
+                    ->orWhere('queue_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('received_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('received_at', '<=', $request->to_date);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    protected function pipelineSummary($baseQuery): array
+    {
+        $counts = (clone $baseQuery)
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $total = array_sum($counts);
+
+        return [
+            'total' => $total,
+            'pending' => (int) ($counts['pending'] ?? 0),
+            'processing' => (int) ($counts['processing'] ?? 0),
+            'sold' => (int) ($counts['sold'] ?? 0),
+            'unsold' => (int) ($counts['unsold'] ?? 0),
+            'rejected' => (int) ($counts['rejected'] ?? 0),
+            'quarantined' => (int) ($counts['quarantined'] ?? 0),
+            'duplicate' => (int) ($counts['duplicate'] ?? 0),
+        ];
+    }
+
+    protected function showTenantColumn(Request $request): bool
+    {
+        return ! AccountContext::id() && $request->user()?->isSuperAdmin();
+    }
+
+    /**
+     * @return list<array{key: string, label: string, state: string, detail: ?string, tab: ?string}>
+     */
+    protected function pipelineStages(Lead $lead): array
+    {
+        $status = $lead->status instanceof LeadStatus ? $lead->status->value : (string) $lead->status;
+
+        $stages = [
+            ['key' => 'received', 'label' => 'Received'],
+            ['key' => 'validation', 'label' => 'Validation'],
+            ['key' => 'distribution', 'label' => 'Distribution'],
+            ['key' => 'outcome', 'label' => 'Outcome'],
+        ];
+
+        $current = match ($status) {
+            'pending' => 'received',
+            'processing' => 'distribution',
+            'quarantined' => 'validation',
+            'duplicate', 'rejected' => 'validation',
+            'sold', 'unsold' => 'outcome',
+            default => 'received',
+        };
+
+        $order = ['received', 'validation', 'distribution', 'outcome'];
+        $currentIdx = array_search($current, $order, true);
+        $outcomeDetail = $this->outcomeDetail($lead);
+
+        $stageDetails = [
+            'received' => $lead->received_at ? 'Lead ingested' : null,
+            'validation' => match ($status) {
+                'rejected' => $lead->reject_reason ?? 'Validation failed',
+                'duplicate' => 'Duplicate of existing lead',
+                'quarantined' => 'Held for review',
+                default => in_array($status, ['sold', 'unsold', 'processing'], true) ? 'Passed' : null,
+            },
+            'distribution' => $lead->deliveryLogs->isNotEmpty()
+                ? $lead->deliveryLogs->count().' delivery attempt(s)'
+                : ($status === 'processing' ? 'Routing in progress' : null),
+            'outcome' => $outcomeDetail['summary'] ?? null,
+        ];
+
+        $stageTabs = [
+            'received' => 'events',
+            'validation' => in_array($status, ['rejected', 'duplicate', 'quarantined'], true) ? 'events' : null,
+            'distribution' => 'deliveries',
+            'outcome' => in_array($status, ['sold', 'unsold', 'rejected'], true) ? 'deliveries' : 'events',
+        ];
+
+        return collect($stages)->map(function (array $stage, int $i) use ($currentIdx, $status, $stageDetails, $stageTabs) {
+            $state = 'upcoming';
+            if ($i < $currentIdx) {
+                $state = 'complete';
+            } elseif ($i === $currentIdx) {
+                $state = in_array($status, ['rejected', 'duplicate', 'quarantined', 'unsold'], true) ? 'error' : 'current';
+            }
+
+            return array_merge($stage, [
+                'state' => $state,
+                'detail' => $stageDetails[$stage['key']] ?? null,
+                'tab' => $stageTabs[$stage['key']] ?? null,
+            ]);
+        })->all();
+    }
+
+    /**
+     * @return array{title: string, summary: string, reason: ?string, hints: list<string>, delivery_stats: array<string, int>}
+     */
+    protected function outcomeDetail(Lead $lead): array
+    {
+        $status = $lead->status instanceof LeadStatus ? $lead->status->value : (string) $lead->status;
+
+        $deliveryStats = $lead->deliveryLogs
+            ->groupBy('status')
+            ->map->count()
+            ->all();
+
+        $lastUnsoldEvent = collect($lead->events)
+            ->first(fn ($e) => in_array($e->event_type, ['lead.unsold', 'lead.rejected', 'lead.duplicate'], true));
+
+        $hints = [];
+        if (($deliveryStats['outbid'] ?? 0) > 0) {
+            $hints[] = $deliveryStats['outbid'].' buyer(s) outbid — bid below winning price or floor.';
+        }
+        if (($deliveryStats['failed'] ?? 0) > 0) {
+            $hints[] = $deliveryStats['failed'].' delivery attempt(s) failed — check buyer API logs.';
+        }
+        if (($deliveryStats['skipped'] ?? 0) > 0) {
+            $hints[] = $deliveryStats['skipped'].' delivery attempt(s) skipped — caps, filters, or schedule.';
+        }
+        if ($lead->deliveryLogs->isEmpty() && $status === 'unsold') {
+            $hints[] = 'No buyers were pinged — check ping tree tiers and delivery eligibility.';
+        }
+
+        return match ($status) {
+            'sold' => [
+                'title' => 'Sold',
+                'summary' => 'Lead sold to '.($lead->soldToBuyer?->name ?? 'buyer'),
+                'reason' => null,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+            'unsold' => [
+                'title' => 'Unsold',
+                'summary' => 'No buyer accepted this lead after distribution',
+                'reason' => $lead->reject_reason ?? $lastUnsoldEvent?->message,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+            'rejected' => [
+                'title' => 'Rejected',
+                'summary' => 'Lead failed validation or was rejected',
+                'reason' => $lead->reject_reason ?? $lastUnsoldEvent?->message,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+            'duplicate' => [
+                'title' => 'Duplicate',
+                'summary' => 'Matched an existing lead in this campaign',
+                'reason' => $lead->reject_reason ?? $lastUnsoldEvent?->message,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+            'quarantined' => [
+                'title' => 'Quarantined',
+                'summary' => 'Lead held for manual review',
+                'reason' => $lead->reject_reason,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+            default => [
+                'title' => ucfirst($status),
+                'summary' => 'Pipeline still in progress',
+                'reason' => null,
+                'hints' => $hints,
+                'delivery_stats' => $deliveryStats,
+            ],
+        };
+    }
+}

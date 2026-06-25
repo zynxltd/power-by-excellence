@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+@layer utilities {
+    .animate-pulse-slow {
+        animation: pulse-slow 6s ease-in-out infinite;
+    }
+
+    .animation-delay-2000 {
+        animation-delay: 2s;
+    }
+
+    .animation-delay-4000 {
+        animation-delay: 4s;
+    }
+
+    .animate-float {
+        animation: float 8s ease-in-out infinite;
+    }
+
+    .animate-float-delayed {
+        animation: float 8s ease-in-out 2s infinite;
+    }
+
+    .animate-gradient {
+        background-size: 200% 200%;
+        animation: gradient-shift 8s ease infinite;
+    }
+
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .glass {
+        @apply border border-white/10 bg-white/5 backdrop-blur-xl;
+    }
+
+    .glass-dark {
+        @apply border border-white/10 bg-slate-900/60 backdrop-blur-xl;
+    }
+
+    .form-select {
+        @apply mt-1 block w-full rounded-xl border-slate-200 bg-white py-2.5 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100;
+    }
+
+    .form-select:focus {
+        border-color: var(--accent-ring);
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-ring) 20%, transparent);
+    }
+
+    .form-input {
+        @apply block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm placeholder-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500;
+    }
+
+    .form-input:focus {
+        border-color: var(--accent-ring);
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-ring) 20%, transparent);
+    }
+
+    .accent-gradient {
+        background-image: linear-gradient(to right, var(--accent-from), var(--accent-to));
+    }
+
+    .accent-bg {
+        background-color: var(--accent-bg);
+    }
+
+    .accent-ring {
+        --tw-ring-color: var(--accent-ring);
+    }
+
+    .accent-text {
+        color: var(--accent-from);
+    }
+
+    .accent-border {
+        border-color: var(--accent-ring);
+    }
+
+    /* Marketing site — logo brand: violet → indigo → cyan */
+    .marketing-content {
+        @apply bg-white text-slate-900;
+        background-image: theme('backgroundImage.brand-mesh-light');
+    }
+
+    .marketing-content.marketing-dark {
+        @apply bg-slate-950 text-white;
+        background-image: theme('backgroundImage.brand-mesh-dark');
+    }
+
+    .brand-gradient-text {
+        @apply bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400 bg-clip-text text-transparent;
+    }
+
+    .brand-kicker {
+        @apply text-sm font-semibold uppercase tracking-widest text-indigo-600 marketing-dark:text-indigo-400;
+    }
+
+    .brand-btn-primary {
+        @apply rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 font-semibold text-white shadow-xl shadow-indigo-500/30 transition hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-500 hover:shadow-indigo-500/45;
+    }
+
+    .brand-btn-secondary {
+        @apply rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 marketing-dark:border-white/15 marketing-dark:bg-white/5 marketing-dark:text-white marketing-dark:shadow-none marketing-dark:hover:bg-white/10;
+    }
+
+    .brand-card {
+        @apply rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition hover:border-slate-300 hover:shadow-md marketing-dark:border-white/10 marketing-dark:bg-slate-900/50 marketing-dark:shadow-none marketing-dark:hover:border-indigo-500/40;
+    }
+
+    .brand-card-sm {
+        @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md marketing-dark:border-white/10 marketing-dark:bg-slate-900/50 marketing-dark:shadow-none marketing-dark:hover:border-indigo-500/40;
+    }
+
+    .brand-section-alt {
+        @apply border-y border-slate-200 bg-slate-50 marketing-dark:border-white/10 marketing-dark:bg-slate-900/30;
+    }
+
+    .brand-section-light {
+        @apply border-y border-indigo-100/60 bg-white/50 backdrop-blur-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/50;
+    }
+
+    .brand-stat-value {
+        @apply bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-500 bg-clip-text font-bold text-transparent marketing-dark:from-violet-400 marketing-dark:via-indigo-400 marketing-dark:to-cyan-400;
+    }
+
+    .brand-badge {
+        @apply inline-flex items-center gap-2 rounded-full border border-indigo-200/80 bg-white/90 px-4 py-1.5 text-sm font-medium text-indigo-700 backdrop-blur-sm marketing-dark:border-indigo-500/30 marketing-dark:bg-slate-900/60 marketing-dark:text-indigo-300;
+    }
+
+    .hero-section {
+        @apply relative;
+        background:
+            radial-gradient(ellipse 80% 50% at 85% 15%, rgba(99, 102, 241, 0.09), transparent 55%),
+            radial-gradient(ellipse 60% 45% at 10% 85%, rgba(34, 211, 238, 0.07), transparent 50%),
+            linear-gradient(180deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
+    }
+
+    .marketing-content.marketing-dark .hero-section {
+        background:
+            radial-gradient(ellipse 80% 50% at 85% 15%, rgba(99, 102, 241, 0.15), transparent 55%),
+            radial-gradient(ellipse 60% 45% at 10% 85%, rgba(34, 211, 238, 0.08), transparent 50%),
+            linear-gradient(180deg, #020617 0%, #0f172a 55%, #020617 100%);
+    }
+
+    .hero-grid {
+        background-image:
+            linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+        background-size: 3.5rem 3.5rem;
+        mask-image: radial-gradient(ellipse 85% 70% at 50% 40%, black 20%, transparent 75%);
+    }
+
+    .marketing-content.marketing-dark .hero-grid {
+        background-image:
+            linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    }
+
+    .hero-panel {
+        transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
+        transition: transform 0.5s ease;
+    }
+
+    @media (min-width: 1024px) {
+        .hero-panel:hover {
+            transform: perspective(1200px) rotateY(-2deg) rotateX(1deg) translateY(-2px);
+        }
+    }
+
+    .hero-stat-chip {
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hero-stat-chip:hover {
+        @apply border-indigo-200 shadow-sm shadow-indigo-500/10;
+    }
+
+    .marketing-content.marketing-dark .hero-stat-chip:hover {
+        @apply border-indigo-500/30;
+    }
+
+    .brand-pill {
+        @apply rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 marketing-dark:border-white/10 marketing-dark:bg-white/5 marketing-dark:text-slate-300 marketing-dark:shadow-none marketing-dark:hover:border-indigo-500/30 marketing-dark:hover:bg-indigo-500/10 marketing-dark:hover:text-white;
+    }
+
+    .brand-icon-wrap {
+        @apply inline-flex rounded-xl bg-gradient-to-br from-slate-100 via-indigo-50 to-cyan-50 p-3 text-indigo-700 marketing-dark:from-slate-800 marketing-dark:via-indigo-950 marketing-dark:to-cyan-950 marketing-dark:text-indigo-300;
+    }
+
+    .marketing-chrome {
+        @apply relative border-b border-white/10 bg-slate-950 text-white;
+        box-shadow: 0 4px 24px -4px rgba(99, 102, 241, 0.2);
+    }
+
+    .marketing-chrome::before {
+        content: '';
+        @apply pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500 to-transparent opacity-90;
+    }
+
+    .marketing-chrome-footer::before {
+        content: '';
+        @apply pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400 opacity-60;
+    }
+
+    .marketing-content .form-input,
+    .marketing-content .form-select {
+        @apply border-violet-200/80 bg-white text-slate-900 focus:border-indigo-400 focus:ring-indigo-400/20;
+    }
+
+    .marketing-content.marketing-dark .form-input,
+    .marketing-content.marketing-dark .form-select {
+        @apply border-slate-700 bg-slate-800 text-slate-100;
+    }
+
+    .marketing-content .article-h2 {
+        @apply mt-8 text-2xl font-bold text-slate-900;
+    }
+
+    .marketing-content.marketing-dark .article-h2 {
+        @apply text-white;
+    }
+
+    .marketing-content .article-h3 {
+        @apply mt-6 text-lg font-semibold text-slate-900;
+    }
+
+    .marketing-content.marketing-dark .article-h3 {
+        @apply text-white;
+    }
+
+    .marketing-content .article-p {
+        @apply mt-4 leading-relaxed text-slate-700;
+    }
+
+    .marketing-content.marketing-dark .article-p {
+        @apply text-slate-300;
+    }
+
+    .marketing-content .article-p strong {
+        @apply font-semibold text-slate-900;
+    }
+
+    .marketing-content.marketing-dark .article-p strong {
+        @apply text-white;
+    }
+
+    .marketing-content .article-ul {
+        @apply mt-4 list-disc space-y-1 pl-5 text-slate-700;
+    }
+
+    .marketing-content.marketing-dark .article-ul {
+        @apply text-slate-300;
+    }
+
+    .marketing-content .article-code {
+        @apply rounded bg-slate-100 px-1 text-cyan-700;
+    }
+
+    .marketing-content.marketing-dark .article-code {
+        @apply bg-slate-800 text-cyan-400;
+    }
+}
+
+@keyframes pulse-slow {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
