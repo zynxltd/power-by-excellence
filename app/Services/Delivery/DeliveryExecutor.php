@@ -66,6 +66,7 @@ class DeliveryExecutor
 
             $log->update([
                 'status' => 'failed',
+                'skipped_reason' => 'exception',
                 'duration_ms' => (int) ((microtime(true) - $start) * 1000),
                 'post_response' => ['error' => $e->getMessage()],
             ]);
@@ -277,6 +278,7 @@ class DeliveryExecutor
         if (! $response) {
             $log->update([
                 'status' => 'failed',
+                'skipped_reason' => 'timeout',
                 'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
             ]);
 
@@ -343,7 +345,7 @@ class DeliveryExecutor
             return DeliveryResult::success($revenue, $postResponse->status());
         }
 
-        $log->update(['status' => 'failed']);
+        $log->update(['status' => 'failed', 'skipped_reason' => 'post_rejected']);
 
         return DeliveryResult::failed('Post rejected', $postResponse->status());
     }

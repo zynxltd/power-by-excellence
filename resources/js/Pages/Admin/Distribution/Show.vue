@@ -4,16 +4,32 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
+import PingTreeTierTable from '@/Components/UI/PingTreeTierTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
+import { routingModeLabel } from '@/utils/routingModes';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-defineProps({
+const props = defineProps({
     config: Object,
     tiers: Array,
     campaign: Object,
 });
 
-const modeLabel = (mode) => mode?.replace(/_/g, ' ');
+const { formatMoney } = useMoneyFormat(props.campaign?.currency);
+
+const viewMode = ref((props.tiers?.length ?? 0) > 10 ? 'table' : 'flow');
+
+const tierGroups = computed(() =>
+    (props.tiers ?? []).map((tier) => ({
+        name: tier.name,
+        mode: tier.mode,
+        floor_price: tier.floor_price,
+        delivery_ids: tier.deliveries?.map((d) => d.id) ?? [],
+        rules: tier.rules,
+    })),
+);
 </script>
 
 <template>
@@ -43,16 +59,46 @@ const modeLabel = (mode) => mode?.replace(/_/g, ' ');
                 <p class="mt-2 font-mono text-sm text-slate-700 dark:text-slate-300">{{ campaign?.reference }}</p>
             </Panel>
             <Panel class="!p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mode</p>
-                <p class="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                    {{ campaign?.use_advanced_distribution ? 'Advanced (Ping Tree)' : 'Standard' }}
-                </p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Tiers</p>
+                <p class="mt-2 text-sm text-slate-700 dark:text-slate-300">{{ tiers?.length ?? 0 }} configured</p>
             </Panel>
         </div>
 
-        <Panel title="Ping tree flow">
-            <div class="relative mx-auto max-w-3xl py-4">
-                <!-- Lead entry -->
+        <Panel title="Ping tree">
+            <template #header>
+                <div v-if="(tiers?.length ?? 0) > 4" class="flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700">
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-md px-3 py-1.5 font-medium transition',
+                            viewMode === 'table'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+                        ]"
+                        @click="viewMode = 'table'"
+                    >
+                        Table
+                    </button>
+                    <button
+                        type="button"
+                        :class="[
+                            'rounded-md px-3 py-1.5 font-medium transition',
+                            viewMode === 'flow'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+                        ]"
+                        @click="viewMode = 'flow'"
+                    >
+                        Visual flow
+                    </button>
+                </div>
+            </template>
+
+            <div v-if="viewMode === 'table' && tiers?.length">
+                <PingTreeTierTable :groups="tierGroups" :collapsed-limit="15" />
+            </div>
+
+            <div v-else-if="viewMode === 'flow' && tiers?.length" class="relative mx-auto max-w-3xl py-4">
                 <div class="flex flex-col items-center">
                     <div class="rounded-xl border-2 border-indigo-300 bg-indigo-50 px-6 py-3 text-center dark:border-indigo-700 dark:bg-indigo-950/40">
                         <p class="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Lead arrives</p>
@@ -61,7 +107,6 @@ const modeLabel = (mode) => mode?.replace(/_/g, ' ');
                     <div class="my-2 h-8 w-0.5 bg-slate-300 dark:bg-slate-600" />
                 </div>
 
-                <!-- Tiers -->
                 <div v-for="(tier, ti) in tiers" :key="tier.tier" class="flex flex-col items-center">
                     <div class="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                         <div class="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
@@ -73,9 +118,9 @@ const modeLabel = (mode) => mode?.replace(/_/g, ' ');
                             </div>
                             <div class="text-right">
                                 <p class="text-xs font-semibold uppercase text-slate-500">Mode</p>
-                                <p class="text-sm capitalize text-slate-700 dark:text-slate-300">{{ modeLabel(tier.mode) }}</p>
+                                <p class="text-sm text-slate-700 dark:text-slate-300">{{ routingModeLabel(tier.mode) }}</p>
                                 <p v-if="tier.floor_price" class="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-                                    Floor £{{ tier.floor_price }}
+                                    Floor {{ formatMoney(tier.floor_price) }}
                                 </p>
                             </div>
                         </div>
@@ -120,7 +165,6 @@ const modeLabel = (mode) => mode?.replace(/_/g, ' ');
                     </div>
                 </div>
 
-                <!-- End state -->
                 <div v-if="tiers?.length" class="mt-2 flex flex-col items-center">
                     <div class="h-8 w-0.5 bg-slate-300 dark:bg-slate-600" />
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-center dark:border-slate-700 dark:bg-slate-800/50">
@@ -128,11 +172,11 @@ const modeLabel = (mode) => mode?.replace(/_/g, ' ');
                         <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Lead marked unsold</p>
                     </div>
                 </div>
-
-                <p v-if="!tiers?.length" class="text-center text-sm text-slate-600 dark:text-slate-400">
-                    No tiers configured. Edit this ping tree to add routing groups.
-                </p>
             </div>
+
+            <p v-else class="text-center text-sm text-slate-600 dark:text-slate-400">
+                No tiers configured. Edit this ping tree to add routing groups.
+            </p>
         </Panel>
     </AuthenticatedLayout>
 </template>

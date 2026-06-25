@@ -304,15 +304,28 @@ class DemoHistoricalDataSeeder extends Seeder
         }
 
         $tierCount = min(10, random_int(3, 10));
-        $outcomes = ['success', 'failed', 'skipped', 'outbid', 'ping_ok'];
 
         for ($t = 0; $t < $tierCount; $t++) {
             $delivery = $deliveries->get($t) ?? $deliveries->random();
+            $isWinningTier = $status === LeadStatus::Sold->value && $t === $tierCount - 1;
+            $isEarlierTier = $t < $tierCount - 1;
+
             $logStatus = match (true) {
-                $status === LeadStatus::Sold->value && $t === $tierCount - 1 => 'success',
-                $status === LeadStatus::Rejected->value => collect(['skipped', 'failed'])->random(),
-                $t < $tierCount - 1 => collect(['outbid', 'skipped', 'failed'])->random(),
-                default => collect($outcomes)->random(),
+                $isWinningTier => 'success',
+                $status === LeadStatus::Rejected->value => random_int(1, 100) <= 3
+                    ? 'failed'
+                    : (random_int(0, 1) ? 'skipped' : 'outbid'),
+                $isEarlierTier => random_int(1, 100) <= 2
+                    ? 'failed'
+                    : (random_int(1, 100) <= 45 ? 'outbid' : 'skipped'),
+                default => collect(['skipped', 'outbid', 'ping_ok'])->random(),
+            };
+
+            $skippedReason = match ($logStatus) {
+                'outbid' => 'auction_lost',
+                'skipped' => collect(['ping_rejected', 'floor_not_met', 'eligibility_rules', 'insufficient_credit'])->random(),
+                'failed' => collect(['post_rejected', 'buyer_timeout'])->random(),
+                default => null,
             };
 
             $revenue = $logStatus === 'success' ? (float) ($lead->financials?->revenue ?? random_int(1200, 2500) / 100) : 0;
@@ -322,16 +335,18 @@ class DemoHistoricalDataSeeder extends Seeder
                 'delivery_id' => $delivery->id,
                 'buyer_id' => $delivery->buyer_id,
                 'status' => $logStatus,
-                'skipped_reason' => in_array($logStatus, ['skipped', 'outbid', 'failed'], true)
-                    ? collect(['ping_rejected', 'auction_lost', 'floor_not_met', 'buyer_timeout', 'insufficient_credit'])->random()
-                    : null,
+                'skipped_reason' => $skippedReason,
                 'revenue' => $revenue,
                 'duration_ms' => random_int(18, 95),
                 'http_status' => $logStatus === 'success' ? 200 : ($logStatus === 'failed' ? 422 : null),
                 'ping_request' => ['url' => '/api/v1/ping', 'tier' => $t + 1],
-                'ping_response' => ['Success' => $logStatus !== 'failed', 'Cost' => $revenue ?: random_int(800, 2200) / 100],
-                'post_request' => $logStatus === 'success' ? ['url' => '/api/v1/post'] : null,
-                'post_response' => $logStatus === 'success' ? ['Success' => true, 'Approved' => true] : null,
+                'ping_response' => ['Success' => ! in_array($logStatus, ['failed'], true) || $skippedReason === 'buyer_timeout', 'Cost' => $revenue ?: random_int(800, 2200) / 100],
+                'post_request' => in_array($logStatus, ['success', 'failed'], true) ? ['url' => '/api/v1/post'] : null,
+                'post_response' => match ($logStatus) {
+                    'success' => ['Success' => true, 'Approved' => true],
+                    'failed' => ['Success' => false, 'message' => 'Rejected'],
+                    default => null,
+                },
                 'created_at' => $lead->received_at?->copy()->addSeconds($t * 2 + 1),
                 'updated_at' => $lead->received_at?->copy()->addSeconds($t * 2 + 2),
             ]);

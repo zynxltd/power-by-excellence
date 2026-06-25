@@ -18,7 +18,7 @@ const props = defineProps({
     recentEvents: Array,
     recentAlerts: Array,
     opsChecks: Array,
-    herdSetup: Object,
+    platformStatus: Object,
 });
 
 const page = usePage();
@@ -59,6 +59,14 @@ const checkStatusLabel = (status) => ({
     critical: 'Critical',
 }[status] ?? status);
 
+const opsCategories = [
+    { id: 'infrastructure', title: 'Infrastructure', description: 'Tenancy, database, cache, queue, storage, and scheduler.' },
+    { id: 'speed', title: 'Speed', description: 'Lead pipeline latency vs platform target.' },
+    { id: 'quality', title: 'Quality', description: 'Post success and platform-side delivery errors.' },
+];
+
+const checksForCategory = (categoryId) => (props.opsChecks ?? []).filter((c) => c.category === categoryId);
+
 const healthClass = (health) => ({
     healthy: 'text-emerald-600',
     warning: 'text-amber-600',
@@ -80,6 +88,20 @@ const platformStatItems = computed(() => {
         { label: 'Sold', value: s.sold_today, href: leadUrl({ status: 'sold' }), accent: 'emerald', title: 'Sold today' },
         { label: 'Pings', value: s.pings_today, href: deliveryLogUrl({ has_ping: 1 }), accent: 'violet', title: 'Pings today' },
         { label: 'Posts', value: s.posts_today, href: deliveryLogUrl({ has_post: 1 }), accent: 'cyan', title: 'Posts today' },
+        {
+            label: 'Post %',
+            value: s.post_success_rate != null ? `${s.post_success_rate}%` : '—',
+            href: deliveryLogUrl({ has_post: 1, status: 'success' }),
+            accent: s.post_success_rate != null && s.post_success_rate >= 95 ? 'emerald' : (s.post_success_rate != null && s.post_success_rate < 90 ? 'amber' : undefined),
+            title: 'Post success rate today (target ≥95%)',
+        },
+        {
+            label: 'Errors',
+            value: s.internal_failed_today ?? 0,
+            href: deliveryLogUrl({ status: 'failed' }),
+            accent: (s.internal_failed_today ?? 0) > 0 ? 'rose' : 'emerald',
+            title: 'Platform delivery errors today (config, timeout, exception)',
+        },
         { label: 'Pending', value: s.pending_queue, href: route('leads.index', { status: 'pending' }), accent: 'amber', title: 'Queue depth' },
         { label: 'Failed jobs', value: s.failed_jobs, href: route('operations.index'), accent: s.failed_jobs > 0 ? 'rose' : undefined, title: 'Failed queue jobs' },
         {
@@ -138,75 +160,48 @@ const platformStatItems = computed(() => {
             <p class="text-slate-500">Post success &amp; sold rate — not ping rejections</p>
         </div>
 
-        <CompactStatStrip :items="platformStatItems" :columns="10" class="mb-6" />
+        <CompactStatStrip :items="platformStatItems" class="mb-6" />
 
         <Panel title="Platform operations" class="mb-6">
             <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                Infrastructure checks for tenancy, sessions, database, and queue.
-                Run <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-indigo-600 dark:bg-slate-800">php artisan platform:check</code> for a full CLI report.
+                Infrastructure, speed, and quality gates for the whole network.
+                Checks are cached for 60s; DNS lookups for 5m. Status snapshots every 15 minutes.
+                <span v-if="platformStatus?.checked_at" class="block mt-1 text-xs text-slate-500">
+                    Last status refresh: <FormattedDate :value="platformStatus.checked_at" />
+                    · <Link :href="route('status.index')" class="text-indigo-600 hover:underline">Public status page</Link>
+                </span>
+                Run <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-indigo-600 dark:bg-slate-800">php artisan platform:check</code> for a fresh CLI report.
             </p>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div
-                    v-for="check in opsChecks ?? []"
-                    :key="check.key"
-                    class="flex min-h-[7rem] flex-col rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-800/40"
-                >
-                    <div class="flex items-start justify-between gap-2">
-                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ check.label }}</p>
-                        <span class="shrink-0 text-xs font-semibold uppercase" :class="checkStatusClass(check.status)">
-                            {{ checkStatusLabel(check.status) }}
-                        </span>
-                    </div>
-                    <p class="mt-2 flex-1 text-sm text-slate-600 dark:text-slate-400">{{ check.message }}</p>
-                    <button
-                        v-if="check.command"
-                        type="button"
-                        class="mt-3 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-left font-mono text-[10px] text-indigo-600 hover:bg-indigo-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
-                        @click="copyText(check.command, check.key)"
-                    >
-                        {{ copied === check.key ? '✓ Copied' : check.command }}
-                    </button>
-                </div>
-            </div>
 
-            <div
-                v-if="herdSetup?.needs_linking || herdSetup?.commands?.length"
-                class="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/50 dark:bg-amber-950/20"
-            >
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Laravel Herd — tenant subdomains</p>
-                        <p class="mt-1 text-sm text-amber-800/90 dark:text-amber-300/90">
-                            <template v-if="herdSetup.needs_linking">
-                                {{ herdSetup.missing?.length }} subdomain(s) not resolving locally. Link them in Herd to enable tenant portals.
-                            </template>
-                            <template v-else>
-                                All tenant subdomains resolve. No Herd linking required.
-                            </template>
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <AppButton
-                            v-if="herdSetup.needs_linking"
-                            variant="secondary"
-                            class="!text-xs"
-                            @click="copyText(herdSetup.shell_script, 'herd-all')"
+            <div v-for="cat in opsCategories" :key="cat.id" class="mb-6 last:mb-0">
+                <div class="mb-3">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ cat.title }}</h3>
+                    <p class="text-xs text-slate-500">{{ cat.description }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div
+                        v-for="check in checksForCategory(cat.id)"
+                        :key="check.key"
+                        class="flex min-h-[7rem] flex-col rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-800/40"
+                    >
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ check.label }}</p>
+                            <span class="shrink-0 text-xs font-semibold uppercase" :class="checkStatusClass(check.status)">
+                                {{ checkStatusLabel(check.status) }}
+                            </span>
+                        </div>
+                        <p class="mt-2 flex-1 text-sm text-slate-600 dark:text-slate-400">{{ check.message }}</p>
+                        <p v-if="check.hint" class="mt-2 text-xs text-slate-500">{{ check.hint }}</p>
+                        <button
+                            v-if="check.command"
+                            type="button"
+                            class="mt-3 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-left font-mono text-[10px] text-indigo-600 hover:bg-indigo-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
+                            @click="copyText(check.command, check.key)"
                         >
-                            {{ copied === 'herd-all' ? '✓ Copied script' : 'Copy herd link script' }}
-                        </AppButton>
-                        <AppButton
-                            v-if="herdSetup.needs_linking"
-                            variant="secondary"
-                            class="!text-xs"
-                            @click="copyText('php artisan platform:link-tenants', 'herd-cmd')"
-                        >
-                            {{ copied === 'herd-cmd' ? '✓ Copied' : 'Copy artisan command' }}
-                        </AppButton>
+                            {{ copied === check.key ? '✓ Copied' : check.command }}
+                        </button>
                     </div>
                 </div>
-                <ul v-if="herdSetup.missing?.length" class="mt-3 space-y-1 text-xs font-mono text-amber-900 dark:text-amber-200">
-                    <li v-for="host in herdSetup.missing" :key="host">herd link {{ host }}</li>
-                </ul>
             </div>
 
             <p class="mt-4 text-xs text-slate-500">
@@ -218,7 +213,10 @@ const platformStatItems = computed(() => {
 
         <Panel title="Tenant overview" class="mt-6" :padding="false">
             <p class="border-b border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
-                <strong class="text-slate-700 dark:text-slate-300">Failed</strong> = buyer ping/post rejected or errored — not a platform outage. Click stats to drill into logs.
+                <strong class="text-slate-700 dark:text-slate-300">Errors</strong> = platform issues (missing URL, timeout, exception) — target 0.
+                <strong class="ml-2 text-slate-700 dark:text-slate-300">Buyer fail</strong> = buyer rejected a post (normal in routing).
+                <strong class="ml-2 text-slate-700 dark:text-slate-300">Skipped / Outbid</strong> = ping-tree waterfall (expected).
+                Post success % target ≥95%.
             </p>
             <DataTable :empty="!tenants?.length">
                 <template #head>
@@ -228,7 +226,9 @@ const platformStatItems = computed(() => {
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sold</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Pings</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Posts</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Buyer delivery failures today">Failed</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Post success rate today">Post %</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Platform delivery errors — target 0">Errors</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500" title="Buyer post rejections">Buyer fail</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Skipped</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Pending</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Actions</th>
@@ -255,11 +255,28 @@ const platformStatItems = computed(() => {
                         <Link :href="deliveryLogUrl({ account_id: t.id, has_post: 1 })" :class="statLinkClass()">{{ t.posts_today }}</Link>
                     </td>
                     <td class="px-4 py-3">
+                        <span
+                            v-if="t.post_success_rate != null"
+                            :class="t.post_success_rate >= 95 ? 'text-emerald-600' : (t.post_success_rate < 90 ? 'text-amber-600 font-medium' : 'text-slate-700 dark:text-slate-300')"
+                        >
+                            {{ t.post_success_rate }}%
+                        </span>
+                        <span v-else class="text-slate-400">—</span>
+                    </td>
+                    <td class="px-4 py-3">
                         <Link
                             :href="deliveryLogUrl({ account_id: t.id, status: 'failed' })"
-                            :class="statLinkClass(t.failed_today > 0)"
+                            :class="statLinkClass(t.internal_failed_today > 0)"
                         >
-                            {{ t.failed_today }}
+                            {{ t.internal_failed_today }}
+                        </Link>
+                    </td>
+                    <td class="px-4 py-3">
+                        <Link
+                            :href="deliveryLogUrl({ account_id: t.id, status: 'failed' })"
+                            class="text-slate-500 hover:underline"
+                        >
+                            {{ t.buyer_failed_today }}
                         </Link>
                     </td>
                     <td class="px-4 py-3">

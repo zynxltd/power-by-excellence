@@ -87,6 +87,17 @@ class TenantResolver
         return $scheme.'://'.self::portalHost($account).$path;
     }
 
+    public static function apiBaseUrl(?Account $account = null): string
+    {
+        if ($account) {
+            return rtrim(self::portalUrl($account, ''), '/').'/api/v1';
+        }
+
+        $scheme = request()->getScheme() ?: 'https';
+
+        return rtrim($scheme.'://'.self::host(), '/').'/api/v1';
+    }
+
     public static function forceRootUrl(?Account $account): void
     {
         if ($account) {

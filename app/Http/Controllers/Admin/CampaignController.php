@@ -62,12 +62,21 @@ class CampaignController extends Controller
         return redirect()->route('campaigns.show', $campaign)->with('success', 'Campaign created.');
     }
 
-    public function show(Campaign $campaign): Response
+    public function show(Request $request, Campaign $campaign): Response
     {
-        $campaign->load(['fields', 'deliveries.buyer', 'distributionConfigs', 'account']);
+        $campaign->load(['fields', 'distributionConfigs', 'account']);
+
+        $deliveries = $campaign->deliveries()
+            ->with('buyer:id,name,reference')
+            ->orderByRaw('tier IS NULL, tier ASC')
+            ->orderBy('priority')
+            ->orderBy('name')
+            ->paginate($request->integer('per_page', 15), ['*'], 'delivery_page')
+            ->withQueryString();
 
         return Inertia::render('Admin/Campaigns/Show', [
             'campaign' => $campaign,
+            'deliveries' => $deliveries,
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
             'leadsToday' => $campaign->leads()->whereDate('received_at', today())->count(),
         ]);
@@ -75,11 +84,15 @@ class CampaignController extends Controller
 
     public function edit(Request $request, Campaign $campaign): Response
     {
+        $campaign->load('account');
+
         return Inertia::render('Admin/Campaigns/Form', [
             'campaign' => $campaign,
             'defaults' => $this->accountDefaults($request),
             'verticals' => VerticalCatalog::options(),
             'biddingModes' => $this->biddingModes(),
+            'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
+            'activeDistributionConfigId' => $campaign->distributionConfigs()->where('is_active', true)->value('id'),
         ]);
     }
 

@@ -1,6 +1,7 @@
 <script setup>
 import BrandLogo from '@/Components/BrandLogo.vue';
 import MarketingThemeToggle from '@/Components/Marketing/MarketingThemeToggle.vue';
+import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -12,6 +13,7 @@ defineProps({
 const page = usePage();
 const signInUrl = computed(() => page.props.urls?.marketingSignIn ?? route('login'));
 const isAuthenticated = computed(() => !!page.props.auth?.user);
+const systemStatus = computed(() => page.props.systemStatus);
 
 const mobileOpen = ref(false);
 const productOpen = ref(false);
@@ -74,11 +76,13 @@ const navLinkClass = (isActive) => [
                     >
                         <a href="/#how-it-works" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">How it works</a>
                         <Link :href="route('help.index')" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">Help Centre</Link>
+                        <Link :href="route('status.index')" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">System status</Link>
                     </div>
                 </div>
             </div>
 
             <div class="flex items-center gap-2">
+                <SystemStatusBadge v-if="systemStatus" :status="systemStatus" compact class="hidden sm:inline-flex" />
                 <MarketingThemeToggle class="hidden lg:flex" />
                 <div class="hidden items-center gap-2 lg:flex">
                     <Link
@@ -118,6 +122,7 @@ const navLinkClass = (isActive) => [
                 <Link :href="route('pricing')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">Pricing</Link>
                 <Link :href="route('blog.index')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">Blog</Link>
                 <Link :href="route('help.index')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">Help Centre</Link>
+                <Link :href="route('status.index')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">System status</Link>
                 <a href="/#demo" class="brand-btn-primary mt-2 px-3 py-2.5 text-center text-sm" @click="closeMobile">Book a Demo</a>
                 <Link v-if="canLogin" :href="signInUrl" class="px-2 py-2 text-cyan-400" @click="closeMobile">{{ isAuthenticated ? 'Go to Platform' : 'Sign In' }}</Link>
             </div>

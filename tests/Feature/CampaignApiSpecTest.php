@@ -24,7 +24,10 @@ class CampaignApiSpecTest extends TestCase
         $admin = User::where('email', 'uk@powerbyexcellence.test')->first();
         $campaign = Campaign::where('reference', 'auto-insurance-uk')->first();
 
-        $this->actingAs($admin)->get(route('campaigns.api-spec', $campaign))->assertOk();
+        $this->actingAs($admin)->get(route('campaigns.api-spec', $campaign))->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('apiBaseUrl', fn ($url) => str_contains($url, 'excellence-uk.powerbyexcellence.test/api/v1'))
+            );
 
         $payload = [
             'spec' => [

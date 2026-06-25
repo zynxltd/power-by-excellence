@@ -2,6 +2,7 @@
 import MarketingNav from '@/Components/Marketing/MarketingNav.vue';
 import MarketingFooter from '@/Components/Marketing/MarketingFooter.vue';
 import SeoHead from '@/Components/SeoHead.vue';
+import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
 import { useMarketingTheme } from '@/Composables/useMarketingTheme';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -14,6 +15,7 @@ defineProps({
 const page = usePage();
 const { marketingTheme } = useMarketingTheme();
 const demoSuccess = computed(() => page.props.flash?.demo_success);
+const systemStatus = computed(() => page.props.systemStatus);
 const signInUrl = computed(() => page.props.urls?.marketingSignIn ?? route('login'));
 const isAuthenticated = computed(() => !!page.props.auth?.user);
 
@@ -141,12 +143,15 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
                 <div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 xl:gap-16">
                     <!-- Left: content -->
                     <div class="text-center lg:text-left">
-                        <div class="brand-badge mb-7 inline-flex shadow-sm shadow-indigo-500/10">
-                            <span class="relative flex h-2 w-2">
-                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-                                <span class="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400" />
-                            </span>
-                            Enterprise lead distribution software
+                        <div class="mb-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                            <div class="brand-badge inline-flex shadow-sm shadow-indigo-500/10">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+                                    <span class="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400" />
+                                </span>
+                                Enterprise lead distribution software
+                            </div>
+                            <SystemStatusBadge v-if="systemStatus" :status="systemStatus" />
                         </div>
 
                         <h1 class="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.04] xl:text-6xl">

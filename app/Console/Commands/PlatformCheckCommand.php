@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Platform\PlatformOpsCheck;
+use App\Services\Platform\PlatformStatusService;
 use Illuminate\Console\Command;
 
 class PlatformCheckCommand extends Command
@@ -11,14 +12,14 @@ class PlatformCheckCommand extends Command
 
     protected $description = 'Run platform operational health checks (tenancy, session, queue, database)';
 
-    public function handle(PlatformOpsCheck $checks): int
+    public function handle(PlatformOpsCheck $checks, PlatformStatusService $status): int
     {
         $this->info('PowerByExcellence platform checks');
         $this->newLine();
 
         $hasCritical = false;
 
-        foreach ($checks->run() as $check) {
+        foreach ($checks->run(fresh: true) as $check) {
             $icon = match ($check['status']) {
                 'ok' => '<fg=green>OK</>',
                 'warning' => '<fg=yellow>WARN</>',
@@ -39,6 +40,10 @@ class PlatformCheckCommand extends Command
                 $hasCritical = true;
             }
         }
+
+        $this->newLine();
+        $snapshot = $status->refresh();
+        $this->comment('Cached status: '.$snapshot['label'].' (checked '.$snapshot['checked_at'].')');
 
         $this->newLine();
         $this->comment('Tenant setup: super admin manages platforms at /accounts. Tenant users sign in on their subdomain only.');

@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\PostbackController;
 use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserSupportTicketController;
 use App\Http\Controllers\Portal\BuyerPortalController;
 use App\Http\Controllers\Portal\SupplierPortalController;
@@ -90,6 +91,9 @@ Route::middleware('marketing.central')->group(function () {
 
     Route::get('/help', [HelpController::class, 'index'])->name('help.index');
     Route::get('/help/{slug}', [HelpController::class, 'show'])->name('help.show');
+
+    Route::get('/status', [SystemStatusController::class, 'index'])->name('status.index');
+    Route::get('/status.json', [SystemStatusController::class, 'json'])->name('status.json');
 
     Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('demo.request');
 });

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Tenancy\AccountContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -46,5 +48,20 @@ class DeliveryLog extends Model
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class);
+    }
+
+    public function scopeForCurrentAccount(Builder $query): Builder
+    {
+        if ($accountId = AccountContext::id()) {
+            $query->whereHas('delivery', function (Builder $q) use ($accountId) {
+                $q->whereIn('campaign_id', function ($sub) use ($accountId) {
+                    $sub->select('id')
+                        ->from('campaigns')
+                        ->where('account_id', $accountId);
+                });
+            });
+        }
+
+        return $query;
     }
 }

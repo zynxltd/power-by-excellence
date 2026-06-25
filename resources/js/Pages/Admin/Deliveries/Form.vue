@@ -8,11 +8,13 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import FormSetupLayout from '@/Components/UI/FormSetupLayout.vue';
 import EligibilityRulesEditor from '@/Components/UI/EligibilityRulesEditor.vue';
 import ScheduleEditor from '@/Components/UI/ScheduleEditor.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { useFormSteps } from '@/Composables/useFormSteps';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     delivery: Object,
@@ -37,37 +39,9 @@ const steps = [
     { id: 'schedule', label: 'Schedule', num: 8 },
 ];
 
-const currentStep = ref('basics');
-
-const stepIndex = (id) => steps.findIndex((s) => s.id === id);
-
-const maxStepReached = ref(props.delivery ? steps.length - 1 : 0);
-
-const goStep = (id) => {
-    const targetIdx = stepIndex(id);
-    const currentIdx = stepIndex(currentStep.value);
-
-    if (targetIdx > currentIdx) {
-        maxStepReached.value = Math.max(maxStepReached.value, targetIdx);
-    }
-
-    currentStep.value = id;
-};
-
-const stepStatus = (id) => {
-    const idx = stepIndex(id);
-    const currentIdx = stepIndex(currentStep.value);
-
-    if (id === currentStep.value) {
-        return 'active';
-    }
-
-    if (idx < currentIdx || (props.delivery && idx <= maxStepReached.value)) {
-        return 'complete';
-    }
-
-    return 'pending';
-};
+const { currentStep, goStep, stepStatus } = useFormSteps(steps, {
+    isEdit: !!props.delivery,
+});
 
 const defaultConfig = () => ({
     url: '',
@@ -87,8 +61,12 @@ const defaultConfig = () => ({
     custom_post_data: '{}',
 });
 
+const queryCampaignId = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('campaign_id')
+    : null;
+
 const form = useForm({
-    campaign_id: props.delivery?.campaign_id ?? props.campaigns?.[0]?.id ?? '',
+    campaign_id: props.delivery?.campaign_id ?? queryCampaignId ?? props.campaigns?.[0]?.id ?? '',
     buyer_id: props.delivery?.buyer_id ?? '',
     name: props.delivery?.name ?? '',
     method: props.delivery?.method ?? 'store_lead',
@@ -233,45 +211,8 @@ const submit = () => {
             </p>
         </Panel>
 
-        <div class="grid gap-6 lg:grid-cols-12">
-            <!-- Step sidebar -->
-            <aside class="lg:col-span-3">
-                <Panel title="Setup steps">
-                    <ol class="space-y-1">
-                        <li v-for="s in steps" :key="s.id">
-                            <button
-                                type="button"
-                                :class="[
-                                    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition',
-                                    stepStatus(s.id) === 'active'
-                                        ? 'bg-indigo-100 font-semibold text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200'
-                                        : stepStatus(s.id) === 'complete'
-                                            ? 'text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30'
-                                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
-                                ]"
-                                @click="goStep(s.id)"
-                            >
-                                <span
-                                    :class="[
-                                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                                        stepStatus(s.id) === 'active'
-                                            ? 'bg-indigo-600 text-white'
-                                            : stepStatus(s.id) === 'complete'
-                                                ? 'bg-emerald-500 text-white'
-                                                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-                                    ]"
-                                >
-                                    <svg v-if="stepStatus(s.id) === 'complete'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <span v-else>{{ s.num }}</span>
-                                </span>
-                                {{ s.label }}
-                            </button>
-                        </li>
-                    </ol>
-                </Panel>
-
+        <FormSetupLayout :steps="steps" :current-step="currentStep" :step-status="stepStatus" @go="goStep">
+            <template #sidebar>
                 <Panel v-if="selectedBuyer || selectedCampaign" title="Summary" class="mt-4">
                     <dl class="space-y-2 text-sm">
                         <div v-if="selectedCampaign"><dt class="text-slate-500">Campaign</dt><dd class="font-medium">{{ selectedCampaign.name }}</dd></div>
@@ -296,9 +237,9 @@ const submit = () => {
                         </div>
                     </div>
                 </Panel>
-            </aside>
+            </template>
 
-            <form class="space-y-6 lg:col-span-9" @submit.prevent="submit">
+            <form class="space-y-6" @submit.prevent="submit">
                 <FormErrorSummary :errors="form.errors" />
 
                 <Panel v-show="currentStep === 'basics'" title="1. Basics">
@@ -520,6 +461,6 @@ const submit = () => {
                     </div>
                 </Panel>
             </form>
-        </div>
+        </FormSetupLayout>
     </AuthenticatedLayout>
 </template>

@@ -26,6 +26,9 @@ class PlatformModulesTest extends TestCase
         $this->get('/pricing')->assertOk();
         $this->get('/login')->assertOk();
         $this->get('/register')->assertNotFound();
+        $this->get('/status')->assertOk();
+        $this->get('/status.json')->assertOk();
+        $this->get('/help')->assertOk();
     }
 
     public function test_admin_modules_uk_platform(): void

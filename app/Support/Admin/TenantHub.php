@@ -54,6 +54,7 @@ class TenantHub
                     $campaignId ? ['label' => 'This campaign', 'href' => route('campaigns.show', $campaignId), 'description' => 'Campaign overview'] : null,
                     $campaignId ? ['label' => 'API spec', 'href' => route('campaigns.api-spec', $campaignId), 'description' => 'Ingest schema and docs'] : null,
                     $campaignId ? ['label' => 'Ping tree', 'href' => route('distribution.create').$campaignQuery, 'description' => 'Distribution routing'] : null,
+                    $campaignId ? ['label' => 'Add delivery', 'href' => route('deliveries.create').'?campaign_id='.$campaignId, 'description' => 'New buyer delivery'] : null,
                     ['label' => 'Lead pipeline', 'href' => route('leads.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Search and inspect leads'],
                     ['label' => 'Hosted forms', 'href' => route('forms.index'), 'description' => 'Form builder'],
                 ])),
@@ -62,7 +63,8 @@ class TenantHub
                 'title' => 'Operations',
                 'links' => [
                     ['label' => 'Live operations', 'href' => route('operations.index'), 'description' => 'Real-time queue and deliveries'],
-                    ['label' => 'Deliveries', 'href' => route('deliveries.index'), 'description' => 'Buyer delivery configs'],
+                    ['label' => 'Routing simulator', 'href' => route('routing.simulator'), 'description' => 'Test tier routing'],
+                    ['label' => 'Deliveries', 'href' => route('deliveries.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Buyer delivery configs'],
                     ['label' => 'Delivery logs', 'href' => route('logs.delivery'), 'description' => 'Post attempt history'],
                     ['label' => 'Quarantine', 'href' => route('quarantine.index'), 'description' => 'Held leads'],
                 ],
@@ -70,9 +72,11 @@ class TenantHub
             [
                 'title' => 'Finance & tools',
                 'links' => [
-                    ['label' => 'Billing', 'href' => route('billing.index'), 'description' => 'Usage and invoices'],
+                    ['label' => 'Finance', 'href' => route('finance.index'), 'description' => 'Revenue and margin'],
+                    ['label' => 'Billing', 'href' => route('billing.index'), 'description' => 'Buyer credits'],
                     ['label' => 'Reports', 'href' => route('reports.index'), 'description' => 'Performance analytics'],
                     ['label' => 'API keys', 'href' => route('api-keys.index'), 'description' => 'Ingest authentication'],
+                    ['label' => 'Integrations', 'href' => route('integrations.index'), 'description' => 'Stripe, lead sources'],
                     ['label' => 'Import data', 'href' => route('imports.index'), 'description' => 'CSV bulk import'],
                 ],
             ],

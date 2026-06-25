@@ -6,6 +6,8 @@ import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
+import PingTreeTierTable from '@/Components/UI/PingTreeTierTable.vue';
+import { routingModeLabel } from '@/utils/routingModes';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 
@@ -28,9 +30,15 @@ const clearFilters = () => {
     applyFilters();
 };
 
-const modeLabel = (mode) => mode?.replace(/_/g, ' ');
-
 watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
+
+const tierSummary = (config) => {
+    const groups = config.config?.groups ?? [];
+    if (!groups.length) return 'No tiers';
+    const modes = [...new Set(groups.map((g) => g.mode).filter(Boolean))];
+    const modeHint = modes.length === 1 ? routingModeLabel(modes[0]) : `${modes.length} modes`;
+    return `${groups.length} tiers · ${modeHint}`;
+};
 </script>
 
 <template>
@@ -82,15 +90,11 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ c.name }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ c.campaign?.name }}</td>
                     <td class="px-6 py-4">
-                        <div class="flex flex-wrap gap-1">
-                            <span
-                                v-for="(g, i) in c.config?.groups"
-                                :key="i"
-                                class="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                            >
-                                {{ g.name }} ({{ modeLabel(g.mode) }})
-                            </span>
-                        </div>
+                        <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ tierSummary(c) }}</p>
+                        <p v-if="c.config?.groups?.length" class="mt-1 text-xs text-slate-500">
+                            {{ c.config.groups[0]?.name }}
+                            <span v-if="c.config.groups.length > 1">→ {{ c.config.groups[c.config.groups.length - 1]?.name }}</span>
+                        </p>
                     </td>
                     <td class="px-6 py-4">
                         <StatusBadge :status="c.is_active ? 'active' : 'inactive'" />

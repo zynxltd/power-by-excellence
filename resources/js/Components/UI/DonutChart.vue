@@ -7,6 +7,7 @@ const props = defineProps({
     items: { type: Object, default: () => ({}) },
     colors: { type: Object, default: () => ({}) },
     drilldownRoute: { type: String, default: '' },
+    periodDays: { type: Number, default: 30 },
 });
 
 const defaultColors = {
@@ -60,14 +61,14 @@ const drillHref = (status) => {
                 <div class="h-full w-full rounded-full" :style="{ background: gradient }" />
                 <div class="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white dark:bg-slate-900">
                     <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ total }}</span>
-                    <span class="text-[10px] text-slate-500">30 days</span>
+                    <span class="text-[10px] text-slate-500">{{ periodDays }} days</span>
                 </div>
             </Link>
             <div v-else class="relative h-28 w-28 shrink-0">
                 <div class="h-full w-full rounded-full" :style="{ background: gradient }" />
                 <div class="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white dark:bg-slate-900">
                     <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ total }}</span>
-                    <span class="text-[10px] text-slate-500">30 days</span>
+                    <span class="text-[10px] text-slate-500">{{ periodDays }} days</span>
                 </div>
             </div>
             <div class="flex-1 space-y-2">

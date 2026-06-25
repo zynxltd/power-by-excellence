@@ -9,9 +9,11 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import QuickLinkChips from '@/Components/UI/QuickLinkChips.vue';
+import HorizontalSwipeScroll from '@/Components/UI/HorizontalSwipeScroll.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { useLiveStats } from '@/Composables/useLiveStats';
 
@@ -35,6 +37,10 @@ const { formatMoney } = useMoneyFormat(props.currency);
 const { stats: liveStats } = useLiveStats();
 const isNavigating = inject('isNavigating', ref(false));
 
+watch(() => props.chartDays, (days) => {
+    chartDaysLocal.value = days;
+});
+
 const stats = computed(() => ({
     ...props.stats,
     ...(liveStats.value ?? {}),
@@ -46,9 +52,19 @@ const applyChartDays = (d) => {
 };
 
 const chartDatasets = computed(() => [
-    { label: 'Received', data: props.charts?.leads ?? [], color: '#6366f1' },
-    { label: 'Sold', data: props.charts?.sold ?? [], color: '#10b981' },
+    { label: 'Received', data: props.charts?.leads ?? [], color: '#6366f1', colorTo: '#818cf8', gradient: true },
+    { label: 'Sold', data: props.charts?.sold ?? [], color: '#059669', colorTo: '#34d399', gradient: true },
 ]);
+
+const revenueDataset = computed(() => ([
+    {
+        label: 'Revenue',
+        data: props.charts?.revenue ?? [],
+        color: '#0891b2',
+        colorTo: '#22d3ee',
+        gradient: true,
+    },
+]));
 
 const statLinks = computed(() => [
     { label: 'Leads Today', value: stats.value.leads_today, href: route('leads.index'), accent: 'indigo' },
@@ -108,8 +124,7 @@ const switchToTenant = (accountId) => {
                 </div>
             </div>
 
-            <div v-if="tenantView === 'cards'" class="-mx-1 overflow-x-auto pb-2">
-                <div class="flex min-w-min snap-x snap-mandatory gap-4 px-1">
+            <HorizontalSwipeScroll v-if="tenantView === 'cards'">
                     <div
                         v-for="tenant in tenantOverview"
                         :key="tenant.id"
@@ -161,8 +176,7 @@ const switchToTenant = (accountId) => {
                             </Link>
                         </div>
                     </div>
-                </div>
-            </div>
+            </HorizontalSwipeScroll>
 
             <DataTable v-else :empty="!tenantOverview?.length" :loading="isNavigating">
                 <template #head>
@@ -219,16 +233,7 @@ const switchToTenant = (accountId) => {
                 :key="group.title"
                 :title="group.title"
             >
-                <div class="flex flex-wrap gap-2">
-                    <Link
-                        v-for="link in group.links"
-                        :key="link.href"
-                        :href="link.href"
-                        class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-600 dark:hover:bg-indigo-950/30 dark:hover:text-indigo-300"
-                    >
-                        {{ link.label }}
-                    </Link>
-                </div>
+                <QuickLinkChips :links="group.links" />
             </Panel>
         </div>
 
@@ -238,31 +243,60 @@ const switchToTenant = (accountId) => {
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume — {{ chartDaysLocal }} days</h3>
                         <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
-                            <button v-for="d in [7, 14, 30]" :key="d" type="button" :class="['rounded-md px-2.5 py-1 text-xs font-semibold', chartDaysLocal === d ? 'bg-indigo-600 text-white' : 'text-slate-600']" @click="applyChartDays(d)">{{ d }}d</button>
+                            <button
+                                v-for="d in [7, 14, 30]"
+                                :key="d"
+                                type="button"
+                                :class="['rounded-md px-2.5 py-1 text-xs font-semibold transition', chartDaysLocal === d ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                                @click="applyChartDays(d)"
+                            >
+                                {{ d }}d
+                            </button>
                         </div>
                     </div>
                 </template>
                 <BarChart
                     :labels="charts.labels"
                     :datasets="chartDatasets"
-                    :height="160"
+                    :height="200"
                     :value-formatter="(v) => v"
                     :drilldown-route="route('leads.index')"
                 />
             </Panel>
-            <Panel title="Status Breakdown — 30 Days">
-                <DonutChart :items="charts.status_breakdown" :drilldown-route="route('leads.index')" />
+            <Panel>
+                <template #header>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Status breakdown — {{ chartDaysLocal }} days</h3>
+                    </div>
+                </template>
+                <DonutChart :items="charts.status_breakdown" :drilldown-route="route('leads.index')" :period-days="chartDaysLocal" />
             </Panel>
         </div>
 
         <Panel class="mt-6">
             <template #header>
-                <h3 class="font-semibold text-slate-900 dark:text-white">Revenue — {{ chartDaysLocal }} days ({{ currency }})</h3>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Revenue — {{ chartDaysLocal }} days</h3>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ currency }} · sold lead revenue by day</p>
+                    </div>
+                    <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+                        <button
+                            v-for="d in [7, 14, 30]"
+                            :key="`rev-${d}`"
+                            type="button"
+                            :class="['rounded-md px-2.5 py-1 text-xs font-semibold transition', chartDaysLocal === d ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                            @click="applyChartDays(d)"
+                        >
+                            {{ d }}d
+                        </button>
+                    </div>
+                </div>
             </template>
             <BarChart
                 :labels="charts.labels"
-                :datasets="[{ label: 'Revenue', data: charts.revenue, color: '#06b6d4' }]"
-                :height="140"
+                :datasets="revenueDataset"
+                :height="200"
                 :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
                 :drilldown-route="route('billing.index')"
             />

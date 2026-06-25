@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Money;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
+use App\Services\Platform\PlatformStatusService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Illuminate\Support\Facades\Storage;
@@ -71,7 +72,24 @@ class HandleInertiaRequests extends Middleware
                 'centralLogin' => fn () => 'https://'.TenantResolver::baseDomain().'/login',
             ],
             'platform' => fn () => $this->platformContext($request),
+            'systemStatus' => fn () => $this->systemStatus($request),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function systemStatus(Request $request): ?array
+    {
+        if (! TenantResolver::isCentralHost($request->getHost())) {
+            return null;
+        }
+
+        return rescue(
+            fn () => app(PlatformStatusService::class)->publicPayload(),
+            null,
+            false
+        );
     }
 
     /**

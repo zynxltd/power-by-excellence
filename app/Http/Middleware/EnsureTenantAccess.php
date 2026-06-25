@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Support\Http\ExternalRedirect;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
 use Closure;
@@ -42,9 +44,29 @@ class EnsureTenantAccess
         }
 
         if ($hostAccount && ! $user->belongsToAccount($hostAccount)) {
-            abort(403, 'Your account is not registered on this platform domain.');
+            return $this->redirectToUserPortal(
+                $request,
+                $user,
+                'Your account is not registered on this platform domain.'
+            );
         }
 
         return $next($request);
+    }
+
+    protected function redirectToUserPortal(Request $request, User $user, string $message): Response
+    {
+        $account = $user->resolveAccount();
+
+        if (! $account) {
+            abort(403, $message);
+        }
+
+        $path = $request->getPathInfo() ?: '/dashboard';
+        $url = TenantResolver::portalUrl($account, $path);
+
+        $request->session()->flash('error', $message);
+
+        return ExternalRedirect::away($request, $url);
     }
 }

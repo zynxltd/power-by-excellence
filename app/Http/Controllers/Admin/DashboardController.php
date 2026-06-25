@@ -153,7 +153,7 @@ class DashboardController extends Controller
 
         $statusBreakdown = Lead::query()
             ->select('status', DB::raw('count(*) as count'))
-            ->whereDate('received_at', '>=', today()->subDays(30))
+            ->whereDate('received_at', '>=', today()->subDays($days))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
@@ -164,6 +164,7 @@ class DashboardController extends Controller
             'sold' => $sold,
             'revenue' => $revenue,
             'status_breakdown' => $statusBreakdown,
+            'chart_days' => $days,
         ];
     }
 

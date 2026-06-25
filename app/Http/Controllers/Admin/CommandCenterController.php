@@ -10,9 +10,12 @@ use App\Models\EventAlertFire;
 use App\Models\Lead;
 use App\Models\LeadEvent;
 use App\Models\User;
+use App\Services\Platform\PlatformNotificationService;
 use App\Services\Platform\PlatformOpsCheck;
+use App\Services\Platform\PlatformStatusService;
 use App\Services\Platform\ProcessingMetrics;
 use App\Services\Platform\TenantHealth;
+use App\Support\Delivery\DeliveryLogClassifier;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Database\Eloquent\Builder;
@@ -56,6 +59,9 @@ class CommandCenterController extends Controller
                     ->whereDate('delivery_logs.created_at', today())
                     ->where('delivery_logs.status', 'failed')
                     ->count(),
+                'internal_failed_today' => $this->internalFailuresForAccount($a->id, today()),
+                'buyer_failed_today' => $this->buyerFailuresForAccount($a->id, today()),
+                'post_success_rate' => $this->postSuccessRateForAccount($a->id, today()),
                 'skipped_today' => $this->deliveryLogsForAccount($a->id)
                     ->whereDate('delivery_logs.created_at', today())
                     ->where('delivery_logs.status', 'skipped')
@@ -73,6 +79,8 @@ class CommandCenterController extends Controller
             'sold_today' => Lead::withoutGlobalScopes()->whereDate('distributed_at', today())->where('status', 'sold')->count(),
             'pings_today' => DeliveryLog::whereDate('created_at', today())->whereNotNull('ping_request')->count(),
             'posts_today' => DeliveryLog::whereDate('created_at', today())->whereNotNull('post_request')->count(),
+            'internal_failed_today' => $this->internalFailuresCount(today()),
+            'post_success_rate' => $this->postSuccessRate(null, today()),
             'pending_queue' => Lead::withoutGlobalScopes()->whereIn('status', ['pending', 'processing'])->count(),
             'failed_jobs' => $this->failedJobsCount(),
             'avg_processing_ms' => $processing->avgProcessingMs(),
@@ -88,6 +96,9 @@ class CommandCenterController extends Controller
             'idle' => $tenants->where('health', 'idle')->count(),
         ];
 
+        $opsCheck = app(PlatformOpsCheck::class);
+        app(PlatformNotificationService::class)->syncHerdLinkingAlert($opsCheck->herdLinkStatus());
+
         return Inertia::render('Admin/CommandCenter/Index', [
             'platformStats' => $platformStats,
             'healthSummary' => $healthSummary,
@@ -98,17 +109,70 @@ class CommandCenterController extends Controller
                 ->orderByDesc('created_at')
                 ->limit(15)
                 ->get(),
-            'opsChecks' => app(PlatformOpsCheck::class)->run(),
-            'herdSetup' => app(PlatformOpsCheck::class)->herdLinkStatus(),
+            'opsChecks' => $opsCheck->run(),
+            'platformStatus' => app(PlatformStatusService::class)->publicPayload(),
         ]);
     }
 
-  protected function deliveryLogsForAccount(int $accountId): Builder
+    protected function deliveryLogsForAccount(int $accountId): Builder
     {
         return DeliveryLog::query()
             ->join('deliveries', 'deliveries.id', '=', 'delivery_logs.delivery_id')
             ->join('campaigns', 'campaigns.id', '=', 'deliveries.campaign_id')
             ->where('campaigns.account_id', $accountId);
+    }
+
+    protected function internalFailuresForAccount(int $accountId, \Carbon\CarbonInterface $date): int
+    {
+        return (int) DeliveryLogClassifier::scopeInternalFailures(
+            $this->deliveryLogsForAccount($accountId)->whereDate('delivery_logs.created_at', $date)
+        )->count();
+    }
+
+    protected function buyerFailuresForAccount(int $accountId, \Carbon\CarbonInterface $date): int
+    {
+        $failed = (int) $this->deliveryLogsForAccount($accountId)
+            ->whereDate('delivery_logs.created_at', $date)
+            ->where('delivery_logs.status', 'failed')
+            ->count();
+
+        return max(0, $failed - $this->internalFailuresForAccount($accountId, $date));
+    }
+
+    protected function internalFailuresCount(\Carbon\CarbonInterface $date): int
+    {
+        return (int) DeliveryLogClassifier::scopeInternalFailures(
+            DeliveryLog::query()->whereDate('delivery_logs.created_at', $date)
+        )->count();
+    }
+
+    protected function postSuccessRateForAccount(int $accountId, \Carbon\CarbonInterface $date): ?float
+    {
+        return $this->postSuccessRate($accountId, $date);
+    }
+
+    protected function postSuccessRate(?int $accountId, \Carbon\CarbonInterface $date): ?float
+    {
+        $query = $accountId
+            ? $this->deliveryLogsForAccount($accountId)
+            : DeliveryLog::query();
+
+        $posts = (clone $query)
+            ->whereDate('delivery_logs.created_at', $date)
+            ->whereNotNull('delivery_logs.post_request')
+            ->count();
+
+        if ($posts === 0) {
+            return null;
+        }
+
+        $successes = (clone $query)
+            ->whereDate('delivery_logs.created_at', $date)
+            ->whereNotNull('delivery_logs.post_request')
+            ->where('delivery_logs.status', 'success')
+            ->count();
+
+        return round(($successes / $posts) * 100, 1);
     }
 
     protected function failedJobsCount(): int

@@ -179,7 +179,12 @@ class LeadByteFeaturesTest extends TestCase
                 ->where('days', 14)
                 ->has('charts')
                 ->has('byBuyer')
+                ->has('byCampaign')
+                ->has('bySid')
                 ->has('deliveryPerformance')
+                ->has('summary.kpis')
+                ->where('summary.kpis.epl', fn ($v) => is_numeric($v))
+                ->where('summary.kpis.epc', fn ($v) => is_numeric($v))
             );
     }
 }

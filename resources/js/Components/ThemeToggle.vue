@@ -1,13 +1,22 @@
 <script setup>
 import { useTheme } from '@/Composables/useTheme';
 
+defineProps({
+    variant: { type: String, default: 'default' },
+});
+
 const { theme, toggle } = useTheme();
 </script>
 
 <template>
     <button
         type="button"
-        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+        :class="[
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition',
+            variant === 'dark'
+                ? 'border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white'
+                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200',
+        ]"
         :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
         @click="toggle"
     >

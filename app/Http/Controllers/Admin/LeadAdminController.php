@@ -37,7 +37,26 @@ class LeadAdminController extends Controller
 
     public function show(Lead $lead): Response
     {
-        $lead->load(['campaign', 'campaign.account', 'events', 'deliveryLogs.delivery', 'deliveryLogs.buyer', 'financials', 'soldToBuyer', 'account']);
+        $this->ensureLeadAccessible($lead);
+
+        $lead->load([
+            'campaign',
+            'campaign.account',
+            'events',
+            'deliveryLogs' => fn ($q) => $q
+                ->with(['delivery:id,name,method,tier,campaign_id', 'buyer:id,name'])
+                ->orderBy('created_at'),
+            'financials',
+            'soldToBuyer',
+            'account',
+        ]);
+
+        $lead->setRelation(
+            'deliveryLogs',
+            $lead->deliveryLogs
+                ->sortBy(fn ($log) => sprintf('%05d-%s', $log->delivery?->tier ?? 9999, $log->created_at))
+                ->values()
+        );
 
         $processingMs = collect($lead->events)
             ->firstWhere('event_type', 'pipeline.completed')
@@ -73,6 +92,7 @@ class LeadAdminController extends Controller
 
     public function releaseQuarantine(Lead $lead): RedirectResponse
     {
+        $this->ensureLeadAccessible($lead);
         abort_unless($lead->status === LeadStatus::Quarantined, 422);
         $lead->update(['status' => LeadStatus::Accepted, 'quarantined_until' => null]);
         LeadJobDispatcher::dispatch($lead->id);
@@ -82,6 +102,7 @@ class LeadAdminController extends Controller
 
     public function rejectQuarantine(Lead $lead): RedirectResponse
     {
+        $this->ensureLeadAccessible($lead);
         abort_unless($lead->status === LeadStatus::Quarantined, 422);
         $lead->update(['status' => LeadStatus::Rejected, 'reject_reason' => 'Quarantine rejected by admin']);
 
@@ -90,6 +111,8 @@ class LeadAdminController extends Controller
 
     public function repost(Lead $lead): RedirectResponse
     {
+        $this->ensureLeadAccessible($lead);
+
         if (! in_array($lead->status, [LeadStatus::Unsold, LeadStatus::Quarantined], true)) {
             return back()->with('error', 'Only unsold or quarantined leads can be reposted.');
         }
@@ -225,6 +248,17 @@ class LeadAdminController extends Controller
     protected function showTenantColumn(Request $request): bool
     {
         return ! AccountContext::id() && $request->user()?->isSuperAdmin();
+    }
+
+    protected function ensureLeadAccessible(Lead $lead): void
+    {
+        $accountId = AccountContext::id()
+            ?? request()->attributes->get('host_account')?->id
+            ?? request()->attributes->get('account')?->id;
+
+        if ($accountId !== null && (int) $lead->account_id !== (int) $accountId) {
+            abort(404);
+        }
     }
 
     /**

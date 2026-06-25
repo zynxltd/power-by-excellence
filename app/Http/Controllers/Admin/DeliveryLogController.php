@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
 use App\Models\Buyer;
 use App\Models\Delivery;
 use App\Models\DeliveryLog;
+use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,9 +25,16 @@ class DeliveryLogController extends Controller
             ? \Carbon\Carbon::parse($request->input('date_to'))->endOfDay()
             : now()->endOfDay();
 
-        $query = DeliveryLog::with(['lead.campaign', 'delivery', 'buyer'])
+        $query = DeliveryLog::query()
+            ->with(['lead.campaign', 'delivery', 'buyer'])
             ->whereBetween('delivery_logs.created_at', [$since, $until])
             ->orderByDesc('delivery_logs.created_at');
+
+        if ($accountId = $request->input('account_id')) {
+            $query->whereHas('delivery.campaign', fn ($q) => $q->withoutGlobalScopes()->where('account_id', (int) $accountId));
+        } else {
+            $query->forCurrentAccount();
+        }
 
         if ($status = $request->input('status')) {
             $query->where('delivery_logs.status', $status);
@@ -55,11 +64,7 @@ class DeliveryLogController extends Controller
             $query->whereHas('delivery', fn ($q) => $q->where('campaign_id', $campaignId));
         }
 
-        if ($accountId = $request->input('account_id')) {
-            $query->whereHas('delivery.campaign', fn ($q) => $q->where('account_id', (int) $accountId));
-        }
-
-        if ($request->boolean('has_post')) {
+        if ($search = $request->input('q')) {
             $query->whereNotNull('delivery_logs.post_request');
         }
 
@@ -124,6 +129,8 @@ class DeliveryLogController extends Controller
 
     public function show(DeliveryLog $deliveryLog): Response
     {
+        $this->ensureLogAccessible($deliveryLog);
+
         $deliveryLog->load(['lead.campaign', 'lead.financials', 'delivery', 'buyer']);
 
         return Inertia::render('Admin/DeliveryLogs/Show', [
@@ -151,5 +158,22 @@ class DeliveryLogController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    protected function ensureLogAccessible(DeliveryLog $deliveryLog): void
+    {
+        if (! $accountId = AccountContext::id()) {
+            return;
+        }
+
+        $campaignAccountId = Campaign::withoutGlobalScopes()
+            ->whereIn('id', function ($q) use ($deliveryLog) {
+                $q->select('campaign_id')
+                    ->from('deliveries')
+                    ->where('id', $deliveryLog->delivery_id);
+            })
+            ->value('account_id');
+
+        abort_unless($campaignAccountId && (int) $campaignAccountId === (int) $accountId, 404);
     }
 }

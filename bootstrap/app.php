@@ -53,6 +53,43 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*'),
         );
 
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, Request $request) {
+            if ($e->getStatusCode() !== 403 || $request->is('api/*') || $request->expectsJson()) {
+                return null;
+            }
+
+            $user = $request->user();
+            if (! $user || $user->isSuperAdmin()) {
+                return null;
+            }
+
+            $account = $user->resolveAccount();
+            if (! $account) {
+                return null;
+            }
+
+            $hostAccount = $request->attributes->get('host_account')
+                ?? \App\Support\Tenancy\TenantResolver::resolveFromHost($request->getHost());
+
+            if (! $hostAccount || $user->belongsToAccount($hostAccount)) {
+                return null;
+            }
+
+            $message = $e->getMessage() ?: 'Access denied.';
+            $path = $request->getPathInfo() ?: '/dashboard';
+            $url = \App\Support\Tenancy\TenantResolver::portalUrl($account, $path);
+
+            if ($request->hasSession()) {
+                $request->session()->flash('error', $message);
+            }
+
+            if ($request->header('X-Inertia')) {
+                return \Inertia\Inertia::location($url);
+            }
+
+            return redirect()->away($url);
+        });
+
         $exceptions->report(function (\Throwable $e) {
             if (app()->runningInConsole()) {
                 return;
@@ -71,5 +108,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('quarantine:process-expired')->everyFifteenMinutes();
+        $schedule->command('platform:status-snapshot')->everyFifteenMinutes();
+        $schedule->command('platform:status-snapshot --persist')->dailyAt('06:00');
     })
     ->create();

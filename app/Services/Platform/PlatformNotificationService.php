@@ -11,6 +11,8 @@ use Illuminate\Support\Collection;
 
 class PlatformNotificationService
 {
+    public const ALERT_HERD_TENANT_LINKING = 'herd_tenant_linking';
+
     public function logTenantActivity(
         Account $account,
         ?User $actor,
@@ -48,6 +50,95 @@ class PlatformNotificationService
             'title' => $title,
             'body' => $body,
             'expires_at' => $expiresAt,
+        ]);
+    }
+
+    /**
+     * @param  array{linked: list<string>, missing: list<string>, commands: list<string>, shell_script: string, needs_linking: bool}  $herd
+     */
+    public function syncHerdLinkingAlert(array $herd): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('platform_notifications')) {
+            return;
+        }
+
+        if (! ($herd['needs_linking'] ?? false)) {
+            $this->clearSystemAlert(self::ALERT_HERD_TENANT_LINKING);
+
+            return;
+        }
+
+        $missing = $herd['missing'] ?? [];
+        $count = count($missing);
+        $isLocal = app()->environment('local');
+
+        $title = $isLocal
+            ? 'Laravel Herd — link tenant subdomains'
+            : 'Tenant subdomains not resolving';
+
+        $hostList = implode(', ', array_slice($missing, 0, 5));
+        if ($count > 5) {
+            $hostList .= ' …';
+        }
+
+        $body = $isLocal
+            ? "{$count} subdomain(s) not resolving locally ({$hostList}). Link them in Herd or run php artisan platform:link-tenants."
+            : "{$count} subdomain(s) failed DNS resolution ({$hostList}). Configure DNS for tenant portals.";
+
+        $this->upsertSystemAlert(
+            self::ALERT_HERD_TENANT_LINKING,
+            $title,
+            $body,
+            'warning',
+            [
+                'missing_hosts' => $missing,
+                'shell_script' => $herd['shell_script'] ?? '',
+                'artisan_command' => 'php artisan platform:link-tenants',
+            ],
+        );
+    }
+
+    public function clearSystemAlert(string $alertKey): void
+    {
+        PlatformNotification::query()
+            ->where('audience', 'super_admin')
+            ->where('type', 'system')
+            ->where('metadata->alert_key', $alertKey)
+            ->delete();
+    }
+
+    protected function upsertSystemAlert(
+        string $alertKey,
+        string $title,
+        ?string $body,
+        string $severity = 'warning',
+        array $metadata = [],
+    ): PlatformNotification {
+        $existing = PlatformNotification::query()
+            ->where('audience', 'super_admin')
+            ->where('type', 'system')
+            ->where('metadata->alert_key', $alertKey)
+            ->first();
+
+        $payload = [
+            'title' => $title,
+            'body' => $body,
+            'severity' => $severity,
+            'metadata' => array_merge($metadata, ['alert_key' => $alertKey]),
+        ];
+
+        if ($existing) {
+            $existing->update($payload);
+
+            return $existing->fresh();
+        }
+
+        return PlatformNotification::create([
+            ...$payload,
+            'account_id' => null,
+            'created_by_user_id' => null,
+            'audience' => 'super_admin',
+            'type' => 'system',
         ]);
     }
 

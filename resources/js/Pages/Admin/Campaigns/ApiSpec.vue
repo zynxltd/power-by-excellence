@@ -21,6 +21,8 @@ const props = defineProps({
     verticals: Array,
     apiBaseUrl: String,
     premadeTemplates: { type: Array, default: () => [] },
+    tenantHost: { type: String, default: '' },
+    tenantHub: { type: Object, default: null },
 });
 
 const activeTab = ref('overview');
@@ -155,6 +157,8 @@ const save = () => {
             :campaign="campaign"
             current="api-spec"
             :distribution-config-id="activeDistributionConfigId"
+            :tenant-hub="tenantHub"
+            class="mb-6"
         />
 
         <div class="grid gap-6 lg:grid-cols-12">
@@ -208,6 +212,7 @@ const save = () => {
                         <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                             <p class="text-xs font-semibold uppercase text-slate-500">Endpoint</p>
                             <p class="mt-1 font-mono text-sm text-indigo-600">POST {{ apiBaseUrl }}/leads</p>
+                            <p v-if="tenantHost" class="mt-1 text-xs text-slate-500">Tenant host: {{ tenantHost }}</p>
                         </div>
                         <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                             <p class="text-xs font-semibold uppercase text-slate-500">Fields</p>
@@ -276,9 +281,9 @@ const save = () => {
                                 <label class="text-xs font-semibold uppercase text-slate-500">Method</label>
                                 <p class="mt-1 font-mono text-sm">POST</p>
                             </div>
-                            <div>
-                                <label class="text-xs font-semibold uppercase text-slate-500">Path</label>
-                                <p class="mt-1 font-mono text-sm">/api/v1/leads</p>
+                            <div class="sm:col-span-2">
+                                <label class="text-xs font-semibold uppercase text-slate-500">Full URL</label>
+                                <p class="mt-1 break-all font-mono text-sm">{{ apiBaseUrl }}/leads</p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label class="text-xs font-semibold uppercase text-slate-500">Description</label>

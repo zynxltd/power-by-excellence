@@ -123,4 +123,52 @@ class PlatformNotificationTest extends TestCase
 
         $this->assertSame(0, app(PlatformNotificationService::class)->unreadCount($super));
     }
+
+    public function test_herd_linking_alert_created_when_subdomains_missing(): void
+    {
+        $service = app(PlatformNotificationService::class);
+
+        $service->syncHerdLinkingAlert([
+            'needs_linking' => true,
+            'missing' => ['missing-tenant.powerbyexcellence.test'],
+            'linked' => [],
+            'commands' => ['herd link missing-tenant.powerbyexcellence.test'],
+            'shell_script' => 'herd link missing-tenant.powerbyexcellence.test',
+        ]);
+
+        $this->assertDatabaseHas('platform_notifications', [
+            'type' => 'system',
+            'audience' => 'super_admin',
+            'severity' => 'warning',
+        ]);
+
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+        $this->assertSame(1, $service->unreadCount($super));
+    }
+
+    public function test_herd_linking_alert_cleared_when_resolved(): void
+    {
+        $service = app(PlatformNotificationService::class);
+
+        $service->syncHerdLinkingAlert([
+            'needs_linking' => true,
+            'missing' => ['missing-tenant.powerbyexcellence.test'],
+            'linked' => [],
+            'commands' => [],
+            'shell_script' => '',
+        ]);
+
+        $service->syncHerdLinkingAlert([
+            'needs_linking' => false,
+            'missing' => [],
+            'linked' => ['excellence-uk.powerbyexcellence.test'],
+            'commands' => [],
+            'shell_script' => '',
+        ]);
+
+        $this->assertDatabaseMissing('platform_notifications', [
+            'type' => 'system',
+            'metadata->alert_key' => PlatformNotificationService::ALERT_HERD_TENANT_LINKING,
+        ]);
+    }
 }

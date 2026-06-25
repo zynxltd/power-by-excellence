@@ -3,10 +3,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import StatCard from '@/Components/UI/StatCard.vue';
-import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import DeliveryAttemptLog from '@/Components/Delivery/DeliveryAttemptLog.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -62,6 +62,23 @@ const formatEvent = (type) => eventLabels[type] ?? type?.replace(/[._]/g, ' ') ?
 
 const jumpToTab = (tab) => {
     if (tab) activeTab.value = tab;
+};
+
+const sortedDeliveryLogs = computed(() => {
+    const logs = [...(props.lead?.delivery_logs ?? [])];
+    return logs.sort((a, b) => {
+        const tierA = a.delivery?.tier ?? 9999;
+        const tierB = b.delivery?.tier ?? 9999;
+        if (tierA !== tierB) return tierA - tierB;
+        return new Date(a.created_at) - new Date(b.created_at);
+    });
+});
+
+const shouldExpandLog = (log) => {
+    if (log.ping_request || log.post_request || log.ping_response || log.post_response) {
+        return true;
+    }
+    return ['failed', 'skipped', 'outbid'].includes(log.status);
 };
 
 const stageLabel = (stage) => {
@@ -241,26 +258,28 @@ const stageLabel = (stage) => {
             </div>
         </Panel>
 
-        <Panel v-if="activeTab === 'deliveries'" title="Delivery attempts" class="mt-6">
-            <div v-if="!lead.delivery_logs?.length" class="py-4 text-sm text-slate-500">No delivery attempts.</div>
-            <div
-                v-for="log in lead.delivery_logs"
-                :key="log.id"
-                class="mb-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
-            >
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                        <span class="font-medium text-slate-900 dark:text-white">{{ log.delivery?.name }}</span>
-                        <span v-if="log.buyer?.name" class="ml-2 text-sm text-slate-500">· {{ log.buyer.name }}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <StatusBadge :status="log.status" />
-                        <Link :href="route('logs.delivery.show', log.id)" class="text-sm text-indigo-600 hover:underline">Full log →</Link>
-                    </div>
+        <Panel v-if="activeTab === 'deliveries'" class="mt-6">
+            <template #header>
+                <div>
+                    <h3 class="font-semibold text-slate-900 dark:text-white">Delivery attempts</h3>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Ping/post request and response payloads for each buyer route. Expand a row to inspect the full exchange.
+                    </p>
                 </div>
-                <p v-if="log.skipped_reason" class="mt-2 text-sm text-amber-600">Skipped: {{ log.skipped_reason }}</p>
-                <p v-if="log.duration_ms" class="mt-1 text-xs text-slate-500">{{ log.duration_ms }}ms</p>
-                <p v-if="log.revenue" class="mt-1 text-sm font-medium text-emerald-600">Revenue: {{ formatMoney(log.revenue) }}</p>
+            </template>
+
+            <div v-if="!sortedDeliveryLogs.length" class="py-4 text-sm text-slate-500">
+                No delivery attempts — this lead may have been rejected before distribution.
+            </div>
+
+            <div v-else class="space-y-3">
+                <DeliveryAttemptLog
+                    v-for="log in sortedDeliveryLogs"
+                    :key="log.id"
+                    :log="log"
+                    :format-money="formatMoney"
+                    :default-expanded="shouldExpandLog(log)"
+                />
             </div>
         </Panel>
     </AuthenticatedLayout>

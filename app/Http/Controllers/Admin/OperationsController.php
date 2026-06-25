@@ -20,10 +20,10 @@ class OperationsController extends Controller
             'pending' => Lead::whereIn('status', ['pending', 'processing'])->count(),
             'quarantined' => Lead::where('status', 'quarantined')->count(),
             'rejected_today' => Lead::where('status', 'rejected')->whereDate('received_at', today())->count(),
-            'ping_posts_today' => DeliveryLog::whereDate('created_at', today())
+            'ping_posts_today' => DeliveryLog::query()->forCurrentAccount()->whereDate('created_at', today())
                 ->whereNotNull('ping_request')
                 ->count(),
-            'failed_today' => DeliveryLog::whereDate('created_at', today())
+            'failed_today' => DeliveryLog::query()->forCurrentAccount()->whereDate('created_at', today())
                 ->whereIn('status', ['failed', 'skipped'])
                 ->count(),
             'revenue_today' => (float) \Illuminate\Support\Facades\DB::table('lead_financials')
@@ -71,7 +71,9 @@ class OperationsController extends Controller
                 'received_at' => $lead->received_at?->toDateTimeString(),
             ]);
 
-        $deliveryPreview = DeliveryLog::with(['lead', 'delivery', 'buyer'])
+        $deliveryPreview = DeliveryLog::query()
+            ->forCurrentAccount()
+            ->with(['lead', 'delivery', 'buyer'])
             ->orderByDesc('created_at')
             ->paginate(15, ['*'], 'delivery_page')
             ->withQueryString()

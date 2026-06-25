@@ -3,13 +3,15 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
+import FormSetupLayout from '@/Components/UI/FormSetupLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import EligibilityRulesEditor from '@/Components/UI/EligibilityRulesEditor.vue';
+import { useFormSteps } from '@/Composables/useFormSteps';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -17,6 +19,15 @@ const props = defineProps({
     config: Object,
     campaigns: Array,
     routingModes: Array,
+});
+
+const steps = [
+    { id: 'config', label: 'Configuration', num: 1 },
+    { id: 'tiers', label: 'Tiers', num: 2 },
+];
+
+const { currentStep, goStep, stepStatus, nextStep, prevStep } = useFormSteps(steps, {
+    isEdit: !!props.config,
 });
 
 const defaultGroup = () => ({
@@ -85,7 +96,7 @@ const submit = () => {
     <AuthenticatedLayout>
         <PageHeader
             :title="config ? 'Edit Ping Tree' : 'New Ping Tree'"
-            description="Unlimited tiers — each tier groups buyer deliveries with routing mode and optional entry filters."
+            description="Step-by-step setup — link a campaign, then configure unlimited tiers with routing and filters."
         />
 
         <CampaignWorkflowNav
@@ -95,91 +106,126 @@ const submit = () => {
             :distribution-config-id="config?.id"
         />
 
-        <form @submit.prevent="submit" class="mx-auto max-w-3xl space-y-6">
-            <FormErrorSummary :errors="form.errors" />
-
-            <Panel title="Configuration">
-                <div class="space-y-4">
-                    <div>
-                        <InputLabel value="Campaign" />
-                        <select v-model="form.campaign_id" class="form-select mt-1 w-full" required>
-                            <option value="" disabled>Select campaign</option>
-                            <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }} ({{ c.reference }})</option>
-                        </select>
-                        <InputError class="mt-1" :message="form.errors.campaign_id" />
-                    </div>
-                    <div>
-                        <InputLabel value="Configuration name" />
-                        <TextInput v-model="form.name" class="mt-1 w-full" placeholder="e.g. Hybrid Ping Tree" required />
-                        <InputError class="mt-1" :message="form.errors.name" />
-                    </div>
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                        <input v-model="form.is_active" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
-                        Active (use this configuration when campaign has advanced distribution enabled)
-                    </label>
-                </div>
-            </Panel>
-
-            <Panel
-                v-for="(group, index) in form.groups"
-                :key="index"
-                :title="`Tier ${index + 1}: ${group.name}`"
-            >
-                <div v-if="form.groups.length > 1" class="mb-4 flex justify-end">
-                    <button type="button" class="text-sm text-rose-500 hover:text-rose-400" @click="removeGroup(index)">Remove tier</button>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <InputLabel value="Tier name" />
-                            <TextInput v-model="group.name" class="mt-1 w-full" required />
+        <FormSetupLayout :steps="steps" :current-step="currentStep" :step-status="stepStatus" @go="goStep">
+            <template #sidebar>
+                <Panel title="Summary" class="mt-4">
+                    <dl class="space-y-2 text-sm">
+                        <div v-if="selectedCampaign">
+                            <dt class="text-slate-500">Campaign</dt>
+                            <dd class="font-medium">{{ selectedCampaign.name }}</dd>
+                        </div>
+                        <div v-if="form.name">
+                            <dt class="text-slate-500">Config name</dt>
+                            <dd class="font-medium">{{ form.name }}</dd>
                         </div>
                         <div>
-                            <InputLabel value="Routing mode" />
-                            <select v-model="group.mode" class="form-select mt-1 w-full">
-                                <option v-for="m in routingModes" :key="m.value" :value="m.value">{{ m.label }}</option>
+                            <dt class="text-slate-500">Tiers</dt>
+                            <dd class="font-medium">{{ form.groups.length }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-slate-500">Status</dt>
+                            <dd class="font-medium">{{ form.is_active ? 'Active' : 'Inactive' }}</dd>
+                        </div>
+                    </dl>
+                </Panel>
+            </template>
+
+            <form class="space-y-6" @submit.prevent="submit">
+                <FormErrorSummary :errors="form.errors" />
+
+                <Panel v-show="currentStep === 'config'" title="1. Configuration">
+                    <div class="space-y-4">
+                        <div>
+                            <InputLabel value="Campaign" />
+                            <select v-model="form.campaign_id" class="form-select mt-1 w-full" required>
+                                <option value="" disabled>Select campaign</option>
+                                <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }} ({{ c.reference }})</option>
                             </select>
+                            <InputError class="mt-1" :message="form.errors.campaign_id" />
                         </div>
-                    </div>
-                    <div v-if="group.mode === 'parallel_auction'" class="max-w-xs">
-                        <InputLabel value="Floor price" />
-                        <TextInput v-model="group.floor_price" type="number" step="0.01" min="0" class="mt-1 w-full" />
-                    </div>
-                    <div>
-                        <InputLabel value="Deliveries in this tier" />
-                        <p v-if="!form.campaign_id" class="mt-1 text-sm text-slate-500">Select a campaign first.</p>
-                        <p v-else-if="!availableDeliveries.length" class="mt-1 text-sm text-amber-600">No deliveries for this campaign. Create deliveries first.</p>
-                        <div v-else class="mt-2 flex flex-wrap gap-2">
-                            <button
-                                v-for="d in availableDeliveries"
-                                :key="d.id"
-                                type="button"
-                                :class="[
-                                    'rounded-lg border px-3 py-1.5 text-sm font-medium transition',
-                                    group.delivery_ids.includes(d.id)
-                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
-                                        : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400',
-                                ]"
-                                @click="toggleDelivery(index, d.id)"
-                            >
-                                {{ d.name }}
-                                <span class="ml-1 text-xs opacity-70">({{ d.method?.replace(/_/g, ' ') }})</span>
-                            </button>
+                        <div>
+                            <InputLabel value="Configuration name" />
+                            <TextInput v-model="form.name" class="mt-1 w-full" placeholder="e.g. Hybrid Ping Tree" required />
+                            <InputError class="mt-1" :message="form.errors.name" />
                         </div>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                            <input v-model="form.is_active" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                            Active (use when campaign has advanced distribution enabled)
+                        </label>
                     </div>
-                    <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
-                        <InputLabel value="Tier entry filters" />
-                        <p class="mb-2 text-xs text-slate-500">Leads must match these rules to enter this tier. Per-delivery filters are on each delivery edit page.</p>
-                        <EligibilityRulesEditor v-model="group.rules" />
+                    <div class="mt-4 flex justify-end">
+                        <AppButton type="button" @click="nextStep">Next: Tiers →</AppButton>
                     </div>
-                </div>
-            </Panel>
+                </Panel>
 
-            <div class="flex items-center gap-3">
-                <AppButton type="button" variant="secondary" @click="addGroup">+ Add tier (unlimited)</AppButton>
-                <PrimaryButton :disabled="form.processing">{{ config ? 'Update' : 'Create' }} Configuration</PrimaryButton>
-            </div>
-        </form>
+                <template v-if="currentStep === 'tiers'">
+                    <Panel
+                        v-for="(group, index) in form.groups"
+                        :key="index"
+                        :title="`Tier ${index + 1}: ${group.name}`"
+                    >
+                        <div v-if="form.groups.length > 1" class="mb-4 flex justify-end">
+                            <button type="button" class="text-sm text-rose-500 hover:text-rose-400" @click="removeGroup(index)">Remove tier</button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <InputLabel value="Tier name" />
+                                    <TextInput v-model="group.name" class="mt-1 w-full" required />
+                                </div>
+                                <div>
+                                    <InputLabel value="Routing mode" />
+                                    <select v-model="group.mode" class="form-select mt-1 w-full">
+                                        <option v-for="m in routingModes" :key="m.value" :value="m.value">{{ m.label }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div v-if="group.mode === 'parallel_auction'" class="max-w-xs">
+                                <InputLabel value="Floor price" />
+                                <TextInput v-model="group.floor_price" type="number" step="0.01" min="0" class="mt-1 w-full" />
+                            </div>
+                            <div>
+                                <InputLabel value="Deliveries in this tier" />
+                                <p v-if="!form.campaign_id" class="mt-1 text-sm text-slate-500">Select a campaign first.</p>
+                                <p v-else-if="!availableDeliveries.length" class="mt-1 text-sm text-amber-600">No deliveries for this campaign. Create deliveries first.</p>
+                                <div v-else class="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                        v-for="d in availableDeliveries"
+                                        :key="d.id"
+                                        type="button"
+                                        :class="[
+                                            'rounded-lg border px-3 py-1.5 text-sm font-medium transition',
+                                            group.delivery_ids.includes(d.id)
+                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                                : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400',
+                                        ]"
+                                        @click="toggleDelivery(index, d.id)"
+                                    >
+                                        {{ d.name }}
+                                        <span class="ml-1 text-xs opacity-70">({{ d.method?.replace(/_/g, ' ') }})</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
+                                <InputLabel value="Tier entry filters" />
+                                <p class="mb-2 text-xs text-slate-500">Leads must match these rules to enter this tier.</p>
+                                <EligibilityRulesEditor v-model="group.rules" />
+                            </div>
+                        </div>
+                    </Panel>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap gap-3">
+                            <AppButton type="button" variant="secondary" @click="prevStep">← Back</AppButton>
+                            <AppButton type="button" variant="secondary" @click="addGroup">+ Add tier</AppButton>
+                        </div>
+                        <PrimaryButton :disabled="form.processing" :loading="form.processing">
+                            {{ config ? 'Update' : 'Create' }} Configuration
+                        </PrimaryButton>
+                    </div>
+                </template>
+            </form>
+        </FormSetupLayout>
     </AuthenticatedLayout>
 </template>

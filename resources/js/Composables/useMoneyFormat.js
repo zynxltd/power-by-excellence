@@ -13,6 +13,9 @@ const LOCALE_BY_CURRENCY = {
     AED: 'ar-AE',
 };
 
+/** Currency layout locale — symbol always before the amount (e.g. €25.03 not 25,03 €). */
+const MONEY_FORMAT_LOCALE = 'en-GB';
+
 export function useMoneyFormat(overrideCurrency = null) {
     const page = usePage();
 
@@ -32,10 +35,11 @@ export function useMoneyFormat(overrideCurrency = null) {
     const formatMoney = (amount, options = {}) => {
         const { decimals = 2, compact = false, currency: currencyOverride = null } = options;
         const cur = (currencyOverride ?? currency.value).toUpperCase();
-        const loc = currencyOverride ? (LOCALE_BY_CURRENCY[cur] ?? 'en-GB') : locale.value;
-        return new Intl.NumberFormat(loc, {
+
+        return new Intl.NumberFormat(MONEY_FORMAT_LOCALE, {
             style: 'currency',
             currency: cur,
+            currencyDisplay: 'narrowSymbol',
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals,
             notation: compact ? 'compact' : 'standard',

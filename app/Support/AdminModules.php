@@ -13,7 +13,8 @@ class AdminModules
             ['key' => 'dashboard', 'label' => 'Dashboard', 'description' => 'Home dashboard and overview'],
             ['key' => 'tenant', 'label' => 'Tenant', 'description' => 'Buyers, suppliers, and users'],
             ['key' => 'campaigns', 'label' => 'Campaigns', 'description' => 'Campaigns, forms, and API specs'],
-            ['key' => 'operations', 'label' => 'Operations', 'description' => 'Live ops, leads, quarantine, reports'],
+            ['key' => 'operations', 'label' => 'Operations', 'description' => 'Live ops, leads, and quarantine'],
+            ['key' => 'reports', 'label' => 'Reports', 'description' => 'Revenue, EPL/EPC, and delivery analytics'],
             ['key' => 'routing', 'label' => 'Routing', 'description' => 'Deliveries and ping trees'],
             ['key' => 'logs', 'label' => 'Logs', 'description' => 'System and delivery logs'],
             ['key' => 'tools', 'label' => 'Tools', 'description' => 'API keys, integrations, and utilities'],
@@ -36,7 +37,7 @@ class AdminModules
      */
     public static function defaultsForStaff(): array
     {
-        return ['dashboard', 'operations', 'campaigns'];
+        return ['dashboard', 'operations', 'reports', 'campaigns'];
     }
 
     public static function moduleForRoute(?string $routeName): ?string
@@ -57,7 +58,7 @@ class AdminModules
             'operations.*' => 'operations',
             'leads.*' => 'operations',
             'quarantine.*' => 'operations',
-            'reports.*' => 'operations',
+            'reports.*' => 'reports',
             'deliveries.*' => 'routing',
             'distribution.*' => 'routing',
             'logs.*' => 'logs',

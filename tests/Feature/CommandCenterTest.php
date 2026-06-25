@@ -54,7 +54,6 @@ class CommandCenterTest extends TestCase
                 ->has('platformStats')
                 ->has('tenants')
                 ->has('opsChecks')
-                ->has('herdSetup')
                 ->where('platformStats.pings_today', fn ($v) => $v >= 1)
             );
     }

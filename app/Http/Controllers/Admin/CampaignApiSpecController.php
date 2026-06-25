@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Services\Api\CampaignApiSpecService;
+use App\Support\Admin\TenantHub;
+use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,6 +22,8 @@ class CampaignApiSpecController extends Controller
         $sample = $specService->sampleRequest($campaign, $spec);
 
         $activeConfig = $campaign->distributionConfigs()->where('is_active', true)->first();
+        $apiBaseUrl = TenantResolver::apiBaseUrl($campaign->account);
+        $tenantRoot = rtrim(TenantResolver::portalUrl($campaign->account, ''), '/');
 
         return Inertia::render('Admin/Campaigns/ApiSpec', [
             'campaign' => $campaign->only(['id', 'name', 'reference', 'vertical_id', 'currency', 'country', 'account_id']),
@@ -31,12 +35,14 @@ class CampaignApiSpecController extends Controller
             'spec' => $spec,
             'sampleRequest' => $sample,
             'sampleResponse' => $specService->sampleResponse(),
-            'curl' => $specService->buildCurl(config('app.url'), null, $spec, $sample),
+            'curl' => $specService->buildCurl($tenantRoot, null, $spec, $sample),
             'fieldTypes' => $this->fieldTypes(),
             'formTypes' => $this->formTypes(),
             'verticals' => \App\Support\VerticalCatalog::options(),
-            'apiBaseUrl' => rtrim(config('app.url'), '/').'/api/v1',
+            'apiBaseUrl' => $apiBaseUrl,
+            'tenantHost' => TenantResolver::portalHost($campaign->account),
             'premadeTemplates' => $this->premadeTemplates(),
+            'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
         ]);
     }
 

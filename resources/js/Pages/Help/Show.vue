@@ -1,8 +1,8 @@
 <script setup>
 import BrandLogo from '@/Components/BrandLogo.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import HelpMarkdown from '@/Components/Help/HelpMarkdown.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
 
 const props = defineProps({
     article: { type: Object, required: true },
@@ -10,26 +10,6 @@ const props = defineProps({
 });
 
 const page = usePage();
-
-const bodyBlocks = computed(() => {
-    const lines = (props.article.body ?? '').split('\n');
-    const blocks = [];
-
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        if (trimmed.startsWith('## ')) {
-            blocks.push({ type: 'heading', text: trimmed.slice(3) });
-        } else if (trimmed.startsWith('- ')) {
-            blocks.push({ type: 'list-item', text: trimmed.slice(2) });
-        } else {
-            blocks.push({ type: 'paragraph', text: trimmed });
-        }
-    }
-
-    return blocks;
-});
 </script>
 
 <template>
@@ -67,24 +47,8 @@ const bodyBlocks = computed(() => {
                         {{ article.summary }}
                     </p>
 
-                    <div class="prose-custom mt-8 space-y-4 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-                        <template v-for="(block, i) in bodyBlocks" :key="i">
-                            <h2
-                                v-if="block.type === 'heading'"
-                                class="text-xl font-bold text-slate-900 dark:text-white"
-                            >
-                                {{ block.text }}
-                            </h2>
-                            <p
-                                v-else-if="block.type === 'paragraph'"
-                                class="leading-relaxed text-slate-700 dark:text-slate-300"
-                            >
-                                {{ block.text }}
-                            </p>
-                            <ul v-else-if="block.type === 'list-item'" class="ml-4 list-disc text-slate-700 dark:text-slate-300">
-                                <li>{{ block.text }}</li>
-                            </ul>
-                        </template>
+                    <div class="prose-custom mt-8 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+                        <HelpMarkdown :body="article.body" />
                     </div>
 
                     <Link
