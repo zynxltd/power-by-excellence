@@ -6,6 +6,7 @@ import AdminHubMenu from '@/Components/UI/AdminHubMenu.vue';
 import TopNavDropdown from '@/Components/UI/TopNavDropdown.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import { provideNavDropdown } from '@/Composables/useNavDropdown';
+import { pushToast } from '@/Composables/useToast';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -14,7 +15,13 @@ provideNavDropdown();
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const account = computed(() => page.props.auth.account);
-const branding = computed(() => page.props.tenant ?? page.props.auth.account);
+const branding = computed(() => {
+    if (isSuperAdmin.value && isCentralHost.value) {
+        return null;
+    }
+
+    return page.props.tenant ?? page.props.auth.account;
+});
 const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
 const isCentralHost = computed(() => page.props.isCentralHost);
 const isBuyer = computed(() => page.props.auth.isBuyerPortal);
@@ -22,6 +29,28 @@ const isSupplier = computed(() => page.props.auth.isSupplierPortal);
 const allowedModules = computed(() => page.props.auth?.allowedModules ?? []);
 
 const canAccess = (module) => isSuperAdmin.value || allowedModules.value.includes(module);
+
+const hasTenantContext = computed(() => Boolean(account.value));
+
+const needsTenantOnCentral = computed(() => isSuperAdmin.value && isCentralHost.value && !hasTenantContext.value);
+
+/** Tenant switcher lives on Partner platforms / page banners — not in central admin header. */
+const showHeaderTenantSwitcher = computed(() => isSuperAdmin.value && Boolean(account.value) && !isCentralHost.value);
+
+const guardTenantRoute = (event) => {
+    if (!needsTenantOnCentral.value) {
+        return true;
+    }
+
+    event.preventDefault();
+    pushToast('Select a partner platform first — click Switch on a platform row.', 'error');
+
+    if (!route().current('accounts.index')) {
+        router.visit(route('accounts.index'));
+    }
+
+    return false;
+};
 
 const userInitials = computed(() => {
     const name = user.value?.name ?? '?';
@@ -203,11 +232,11 @@ const mobileSections = computed(() => {
             label: 'Account',
             links: [
                 ...(canAccess('settings') ? [
-                    { label: 'Settings', href: route('settings.edit') },
-                    { label: 'Branding', href: route('branding.edit') },
+                    { label: 'Settings', href: route('settings.edit'), requiresTenant: true },
+                    { label: 'Branding', href: route('branding.edit'), requiresTenant: true },
                 ] : []),
-                ...(canAccess('finance') ? [{ label: 'Finance', href: route('finance.index') }] : []),
-                ...(canAccess('billing') ? [{ label: 'Buyer Billing', href: route('billing.index') }] : []),
+                ...(canAccess('finance') ? [{ label: 'Finance', href: route('finance.index'), requiresTenant: true }] : []),
+                ...(canAccess('billing') ? [{ label: 'Buyer Billing', href: route('billing.index'), requiresTenant: true }] : []),
                 { label: 'Support', href: isSuperAdmin.value ? route('support.admin.index') : route('support.index') },
                 { label: 'Help Centre', href: route('help.index') },
                 { label: 'Profile', href: route('profile.edit') },
@@ -221,13 +250,14 @@ const mobileSections = computed(() => {
 
 <template>
     <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
-        <div class="relative mx-auto grid h-14 max-w-[1600px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 sm:px-6">
+        <div class="relative mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-2 px-3 sm:px-6 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
             <!-- Left: mobile menu + brand -->
-            <div class="flex min-w-0 items-center gap-2 justify-self-start">
-                <button type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden" @click="mobileOpen = !mobileOpen">
+            <div class="flex min-w-0 flex-1 items-center gap-1.5 justify-self-start md:gap-2">
+                <button type="button" class="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden" @click="mobileOpen = !mobileOpen">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
                 <template v-if="isSuperAdmin && isCentralHost && adminHub">
+                    <div class="hidden md:block">
                     <Dropdown align="left" width="72" teleport content-classes="py-0 bg-slate-900 text-slate-100">
                         <template #trigger>
                             <button
@@ -249,13 +279,26 @@ const mobileSections = computed(() => {
                             <AdminHubMenu :hub="adminHub" />
                         </template>
                     </Dropdown>
+                    </div>
                     <Link
                         :href="homeHref"
-                        class="min-w-0 truncate text-lg font-bold tracking-tight text-white hover:text-indigo-200"
+                        class="hidden min-w-0 truncate text-lg font-bold tracking-tight text-white hover:text-indigo-200 md:inline"
                         :title="brandTitle"
                     >
-                        <span class="hidden bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent sm:inline">Power</span><span class="hidden sm:inline">ByExcellence</span>
-                        <span class="sm:hidden">{{ brandTitle }}</span>
+                        <span class="bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">Power</span><span>ByExcellence</span>
+                    </Link>
+                    <Link
+                        :href="homeHref"
+                        class="min-w-0 max-w-[9.5rem] shrink md:hidden"
+                        :title="brandTitle"
+                    >
+                        <BrandLogo
+                            size="sm"
+                            variant="light"
+                            :logo-url="branding?.logo_url"
+                            :brand-name="branding?.display_name"
+                            :show-text="true"
+                        />
                     </Link>
                 </template>
                 <Link
@@ -353,10 +396,44 @@ const mobileSections = computed(() => {
                     label="Account"
                     :active="isAdminRoute(['settings.*', 'billing.*', 'finance.*', 'profile.*', 'support.*', 'help.*', 'branding.*'])"
                 >
-                    <Link v-if="canAccess('settings')" :href="route('settings.edit')" :class="dropdownLinkClass">Settings</Link>
-                    <Link v-if="canAccess('settings')" :href="route('branding.edit')" :class="dropdownLinkClass">Branding</Link>
-                    <Link v-if="canAccess('finance')" :href="route('finance.index')" :class="dropdownLinkClass">Finance</Link>
-                    <Link v-if="canAccess('billing')" :href="route('billing.index')" :class="dropdownLinkClass">Buyer Billing</Link>
+                    <p
+                        v-if="needsTenantOnCentral"
+                        class="border-b border-slate-800 px-4 py-2 text-xs leading-relaxed text-slate-400"
+                    >
+                        Select a platform via <strong class="text-slate-300">Switch</strong> to edit tenant settings.
+                    </p>
+                    <Link
+                        v-if="canAccess('settings')"
+                        :href="route('settings.edit')"
+                        :class="[dropdownLinkClass, needsTenantOnCentral && 'opacity-80']"
+                        @click="guardTenantRoute"
+                    >
+                        Settings
+                    </Link>
+                    <Link
+                        v-if="canAccess('settings')"
+                        :href="route('branding.edit')"
+                        :class="[dropdownLinkClass, needsTenantOnCentral && 'opacity-80']"
+                        @click="guardTenantRoute"
+                    >
+                        Branding
+                    </Link>
+                    <Link
+                        v-if="canAccess('finance')"
+                        :href="route('finance.index')"
+                        :class="[dropdownLinkClass, needsTenantOnCentral && 'opacity-80']"
+                        @click="guardTenantRoute"
+                    >
+                        Finance
+                    </Link>
+                    <Link
+                        v-if="canAccess('billing')"
+                        :href="route('billing.index')"
+                        :class="[dropdownLinkClass, needsTenantOnCentral && 'opacity-80']"
+                        @click="guardTenantRoute"
+                    >
+                        Buyer Billing
+                    </Link>
                     <Link :href="isSuperAdmin ? route('support.admin.index') : route('support.index')" :class="dropdownLinkClass">
                         {{ isSuperAdmin ? 'Support Queue' : 'Support' }}
                     </Link>
@@ -378,12 +455,12 @@ const mobileSections = computed(() => {
             </nav>
 
             <!-- Right: tenant switcher + utilities -->
-            <div class="flex shrink-0 items-center justify-end gap-1.5 justify-self-end">
-                <Dropdown v-if="isSuperAdmin && account" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
+            <div class="flex shrink-0 items-center justify-end gap-1 justify-self-end sm:gap-1.5">
+                <Dropdown v-if="showHeaderTenantSwitcher" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
                     <template #trigger>
                         <button
                             type="button"
-                            class="flex h-9 max-w-[11rem] items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2 text-left text-slate-200 transition hover:bg-slate-800 sm:max-w-[13rem] xl:max-w-[15rem]"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-200 transition hover:bg-slate-800 sm:h-9 sm:w-auto sm:px-2"
                             :title="account?.display_name ?? 'All partner platforms'"
                         >
                             <svg class="h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -424,7 +501,7 @@ const mobileSections = computed(() => {
                     <template #trigger>
                         <button
                             type="button"
-                            class="flex h-9 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-1.5 transition hover:bg-slate-800 sm:px-2"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 transition hover:bg-slate-800 sm:h-9 sm:w-auto sm:gap-2 sm:px-2"
                             :title="user?.name"
                         >
                             <div class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
@@ -471,7 +548,7 @@ const mobileSections = computed(() => {
                                 :key="link.href + link.label"
                                 :href="link.href"
                                 class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                                @click="closeMobile"
+                                @click="(e) => { if (link.requiresTenant && !guardTenantRoute(e)) return; closeMobile(); }"
                             >
                                 {{ link.label }}
                             </Link>
