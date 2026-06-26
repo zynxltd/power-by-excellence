@@ -40,7 +40,8 @@ class ValidationService
         }
 
         $provider = $this->resolver->forAccount($account);
-        $context = ValidationContext::fromLead($lead);
+        $ipWhitelist = $integration['ipqs']['ip_whitelist'] ?? '';
+        $context = ValidationContext::fromLead($lead, filled($ipWhitelist) ? (string) $ipWhitelist : null);
 
         $emailCheck = $config['email_validation'] ?? $integration['email_validation'] ?? true;
         $hlrCheck = $config['hlr_validation'] ?? $integration['hlr_validation'] ?? true;

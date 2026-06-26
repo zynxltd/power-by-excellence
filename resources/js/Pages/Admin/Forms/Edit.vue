@@ -13,6 +13,7 @@ const props = defineProps({
     apiSpec: Object,
     specFieldOptions: Array,
     suppliers: { type: Array, default: () => [] },
+    supplierIframeEmbedEnabled: { type: Boolean, default: false },
     embed: { type: Object, default: () => ({}) },
 });
 
@@ -188,12 +189,18 @@ const addFieldFromSpec = (step, specName) => {
                     <div class="md:col-span-2">
                         <label class="text-sm font-medium">Allowed parent domains (iframe embed)</label>
                         <textarea v-model="allowedDomainsText" rows="3" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800" placeholder="partner.example.com&#10;affiliates.example.com" />
-                        <p class="mt-1 text-xs text-slate-500">One hostname per line. Empty = embed allowed on any site. When set, only these domains can iframe the form (browser-enforced).</p>
+                        <p class="mt-1 text-xs text-slate-500">One hostname per line. Optional extra restriction when iframe embed is enabled. Empty = any site allowed.</p>
                     </div>
                     <div>
                         <label class="text-sm font-medium">Iframe height (px)</label>
                         <input v-model.number="f.config.embed_height" type="number" min="320" max="2000" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
                     </div>
+                </div>
+
+                <div v-if="!supplierIframeEmbedEnabled" class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                    <p class="font-semibold">Iframe embed not enabled</p>
+                    <p class="mt-1">Your platform account does not allow supplier iframe embeds. Enable <strong>Allow supplier iframe embeds</strong> in Platform Settings to let affiliates host forms on external sites.</p>
+                    <p class="mt-2 text-xs">Direct links still work. Iframe snippets are hidden until the feature is enabled.</p>
                 </div>
 
                 <div class="mt-6 space-y-4">
@@ -204,21 +211,23 @@ const addFieldFromSpec = (step, specName) => {
                         </div>
                         <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.directUrl }}</code>
                     </div>
-                    <div>
-                        <div class="mb-1 flex items-center justify-between gap-2">
-                            <label class="text-xs font-semibold uppercase text-slate-500">Iframe URL (with tracking example)</label>
-                            <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeUrl)">Copy</button>
+                    <template v-if="supplierIframeEmbedEnabled">
+                        <div>
+                            <div class="mb-1 flex items-center justify-between gap-2">
+                                <label class="text-xs font-semibold uppercase text-slate-500">Iframe URL (with tracking example)</label>
+                                <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeUrl)">Copy</button>
+                            </div>
+                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeUrl }}</code>
+                            <p class="mt-1 text-xs text-slate-500">Query params: {{ embed.trackingParams?.join(', ') }}</p>
                         </div>
-                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeUrl }}</code>
-                        <p class="mt-1 text-xs text-slate-500">Query params: {{ embed.trackingParams?.join(', ') }}</p>
-                    </div>
-                    <div>
-                        <div class="mb-1 flex items-center justify-between gap-2">
-                            <label class="text-xs font-semibold uppercase text-slate-500">Iframe HTML</label>
-                            <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeHtml)">Copy</button>
+                        <div>
+                            <div class="mb-1 flex items-center justify-between gap-2">
+                                <label class="text-xs font-semibold uppercase text-slate-500">Iframe HTML</label>
+                                <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeHtml)">Copy</button>
+                            </div>
+                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeHtml }}</code>
                         </div>
-                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeHtml }}</code>
-                    </div>
+                    </template>
                 </div>
             </Panel>
 

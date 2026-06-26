@@ -311,12 +311,13 @@ const mobileSections = computed(() => {
             <nav v-else-if="isSupplier" class="hidden items-center justify-center gap-1 md:flex">
                 <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>
                 <Link :href="route('portal.supplier.leads')" :class="navLinkClass(route().current('portal.supplier.leads'))">My Leads</Link>
+                <Link :href="route('portal.supplier.embeds')" :class="navLinkClass(route().current('portal.supplier.embeds'))">Form embeds</Link>
                 <Link :href="route('portal.supplier.billing')" :class="navLinkClass(route().current('portal.supplier.billing'))">Payouts</Link>
             </nav>
 
             <!-- Right: tenant switcher + utilities -->
             <div class="flex shrink-0 items-center justify-end gap-1.5 justify-self-end">
-                <Dropdown v-if="isSuperAdmin" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
+                <Dropdown v-if="isSuperAdmin && account" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
                     <template #trigger>
                         <button
                             type="button"

@@ -99,6 +99,10 @@ class PlatformNotificationService
 
     public function hrefFor(User $user, PlatformNotification $notification): ?string
     {
+        if ($user->isSuperAdmin() && $notification->type === 'system') {
+            return route('command-center.index');
+        }
+
         $ticketId = $notification->metadata['support_ticket_id'] ?? null;
 
         if (! $ticketId) {
@@ -164,6 +168,34 @@ class PlatformNotificationService
             ->where('type', 'system')
             ->where('metadata->alert_key', $alertKey)
             ->delete();
+    }
+
+    public function syncSystemAlert(
+        string $alertKey,
+        string $title,
+        ?string $body,
+        string $severity = 'warning',
+        array $metadata = [],
+    ): PlatformNotification {
+        return $this->upsertSystemAlert($alertKey, $title, $body, $severity, $metadata);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, PlatformNotification>
+     */
+    public function activeSystemAlerts(int $limit = 12): \Illuminate\Support\Collection
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('platform_notifications')) {
+            return collect();
+        }
+
+        return PlatformNotification::query()
+            ->where('audience', 'super_admin')
+            ->where('type', 'system')
+            ->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END")
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get();
     }
 
     protected function upsertSystemAlert(

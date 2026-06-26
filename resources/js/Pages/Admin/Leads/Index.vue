@@ -53,6 +53,63 @@ const filterByStatus = (status) => {
     applyFilters();
 };
 
+const validationLabels = {
+    email_checked: 'Email validation run',
+    email_failed: 'Email check failed',
+    email_passed: 'Email check passed',
+    hlr_checked: 'HLR check run',
+    hlr_failed: 'HLR check failed',
+    hlr_passed: 'HLR check passed',
+    ip_checked: 'IP fraud check run',
+    ip_failed: 'IP fraud check failed',
+    ip_passed: 'IP fraud check passed',
+};
+
+const redirectLabels = {
+    offered: 'Redirect offered',
+    followed: 'Redirect followed',
+};
+
+const drillContext = computed(() => {
+    const f = localFilters.value ?? {};
+    const parts = [];
+
+    if (f.from_date && f.to_date) {
+        parts.push(`${f.from_date} → ${f.to_date}`);
+    } else if (f.from_date) {
+        parts.push(`from ${f.from_date}`);
+    }
+
+    if (f.status) {
+        parts.push(`status: ${f.status}`);
+    }
+
+    if (f.quality_min && f.quality_max) {
+        parts.push(`quality ${f.quality_min}–${f.quality_max}`);
+    } else if (f.quality_min) {
+        parts.push(`quality ≥ ${f.quality_min}`);
+    } else if (f.quality_max) {
+        parts.push(`quality ≤ ${f.quality_max}`);
+    }
+
+    if (f.validation) {
+        parts.push(validationLabels[f.validation] ?? f.validation);
+    }
+
+    if (f.redirect) {
+        parts.push(redirectLabels[f.redirect] ?? f.redirect);
+    }
+
+    if (f.campaign_id) {
+        const campaign = props.campaigns?.find((c) => String(c.id) === String(f.campaign_id));
+        if (campaign) {
+            parts.push(`campaign: ${campaign.name}`);
+        }
+    }
+
+    return parts;
+});
+
 const summaryCards = [
     { key: '', label: 'All', accent: 'slate' },
     { key: 'pending', label: 'Pending', accent: 'indigo' },
@@ -78,6 +135,14 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
         </PageHeader>
 
         <TenantContextBanner />
+
+        <div
+            v-if="drillContext.length"
+            class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-sm text-indigo-950 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-100"
+        >
+            <strong>Filtered view</strong> — {{ drillContext.join(' · ') }}.
+            <Link :href="route('reports.index')" class="ml-1 font-medium underline">Back to reports</Link>
+        </div>
 
         <CampaignWorkflowNav
             v-if="campaignWorkflow"
@@ -169,6 +234,24 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">Min quality</label>
                     <input v-model="localFilters.quality_min" type="number" min="0" max="100" class="form-input" placeholder="e.g. 60" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-500">Max quality</label>
+                    <input v-model="localFilters.quality_max" type="number" min="0" max="100" class="form-input" placeholder="e.g. 79" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-500">Validation</label>
+                    <select v-model="localFilters.validation" class="form-select">
+                        <option value="">Any</option>
+                        <option v-for="(label, key) in validationLabels" :key="key" :value="key">{{ label }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-500">Redirect</label>
+                    <select v-model="localFilters.redirect" class="form-select">
+                        <option value="">Any</option>
+                        <option v-for="(label, key) in redirectLabels" :key="key" :value="key">{{ label }}</option>
+                    </select>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">From</label>

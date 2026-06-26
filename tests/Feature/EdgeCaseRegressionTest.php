@@ -199,4 +199,137 @@ class EdgeCaseRegressionTest extends TestCase
         $this->assertSame(0, User::whereNotNull('supplier_id')->whereDoesntHave('supplier')->count());
         $this->assertSame(0, User::whereNotNull('buyer_id')->whereDoesntHave('buyer')->count());
     }
+
+    public function test_supplier_embeds_only_show_forms_for_assigned_campaigns(): void
+    {
+        $host = ['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'];
+        $account = Account::where('slug', 'excellence-uk')->first();
+        $supplier = Supplier::where('account_id', $account->id)->where('reference', 'supplier-main')->first();
+        $assignedCampaign = Campaign::where('account_id', $account->id)->where('reference', 'mortgage-uk')->first();
+        $otherCampaign = Campaign::where('account_id', $account->id)->where('reference', 'solar-uk')->first();
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        \App\Models\CampaignSupplier::where('supplier_id', $supplier->id)->delete();
+
+        \App\Models\HostedForm::create([
+            'account_id' => $account->id,
+            'campaign_id' => $assignedCampaign->id,
+            'name' => 'Assigned Campaign Form',
+            'slug' => 'assigned-campaign-form',
+            'is_active' => true,
+            'config' => ['multi_step' => true, 'steps' => []],
+        ]);
+
+        \App\Models\HostedForm::create([
+            'account_id' => $account->id,
+            'campaign_id' => $otherCampaign->id,
+            'name' => 'Unassigned Campaign Form',
+            'slug' => 'unassigned-campaign-form',
+            'is_active' => true,
+            'config' => ['multi_step' => true, 'steps' => []],
+        ]);
+
+        $this->withServerVariables($host)
+            ->actingAs($supplierUser)
+            ->get(route('portal.supplier.embeds'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('forms', 0));
+
+        \App\Models\CampaignSupplier::create([
+            'campaign_id' => $assignedCampaign->id,
+            'supplier_id' => $supplier->id,
+        ]);
+
+        $this->withServerVariables($host)
+            ->actingAs($supplierUser)
+            ->get(route('portal.supplier.embeds'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('forms', fn ($forms) => collect($forms)->pluck('slug')->contains('assigned-campaign-form'))
+                ->where('forms', fn ($forms) => ! collect($forms)->pluck('slug')->contains('unassigned-campaign-form'))
+            );
+    }
+
+    public function test_error_flash_is_set_for_blocked_user_actions(): void
+    {
+        $admin = User::where('email', 'uk@powerbyexcellence.test')->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($admin)
+            ->post(route('users.suspend', $admin))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+    }
+
+    public function test_whitelisted_ip_skips_ip_check_but_not_email(): void
+    {
+        \Illuminate\Support\Facades\Http::fake([
+            'www.ipqualityscore.com/api/json/email/*' => \Illuminate\Support\Facades\Http::response([
+                'success' => true,
+                'valid' => false,
+                'fraud_score' => 99,
+                'disposable' => false,
+            ]),
+            'www.ipqualityscore.com/api/json/ip/*' => \Illuminate\Support\Facades\Http::response([
+                'success' => true,
+                'fraud_score' => 99,
+                'proxy' => true,
+            ]),
+        ]);
+
+        $provider = new \App\Services\Validation\IpqsValidationProvider(['api_key' => 'test-key']);
+        $context = new \App\Services\Validation\ValidationContext(ipWhitelist: '198.51.100.10');
+
+        $ipResult = $provider->validateIp('198.51.100.10', $context);
+        $emailResult = $provider->validateEmail('bad@example.com', $context);
+
+        $this->assertTrue($ipResult->passed);
+        $this->assertFalse($emailResult->passed);
+        \Illuminate\Support\Facades\Http::assertSentCount(1);
+    }
+
+    public function test_form_submit_ignores_cross_tenant_supplier_id(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $ukCampaign = Campaign::whereHas('account', fn ($q) => $q->where('slug', 'excellence-uk'))->first();
+        $foreignSupplier = Supplier::whereHas('account', fn ($q) => $q->where('slug', 'insurance-ca'))->first();
+        $email = 'scope.'.uniqid().'@example.com';
+
+        $form = \App\Models\HostedForm::create([
+            'account_id' => $ukCampaign->account_id,
+            'campaign_id' => $ukCampaign->id,
+            'name' => 'Supplier scope form',
+            'slug' => 'supplier-scope-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'steps' => [[
+                    'id' => 'step-1',
+                    'title' => 'Contact',
+                    'fields' => [
+                        ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => true, 'options' => []],
+                    ],
+                ]],
+            ],
+        ]);
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->post(route('forms.submit', $form->slug), [
+                'email' => $email,
+                'supplier_id' => (string) $foreignSupplier->id,
+            ], [
+                'X-Inertia' => 'true',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->assertOk();
+
+        $lead = Lead::where('campaign_id', $ukCampaign->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($lead);
+        $this->assertSame($email, $lead->field_data['email'] ?? null);
+        $this->assertNull($lead->supplier_id);
+    }
 }

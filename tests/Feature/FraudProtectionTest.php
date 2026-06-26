@@ -36,7 +36,8 @@ class FraudProtectionTest extends TestCase
         $this->assertSame('growth', $summary['plan']);
         $this->assertTrue($summary['entitled']);
         $this->assertTrue($summary['included']);
-        $this->assertTrue($summary['supports_url_scanner']);
+        $this->assertTrue($summary['supports_residential_proxy']);
+        $this->assertFalse($summary['supports_url_scanner']);
     }
 
     public function test_starter_without_addon_is_not_entitled(): void
@@ -72,7 +73,8 @@ class FraudProtectionTest extends TestCase
 
         $this->assertFalse($fraud->isPlanEntitled($account));
         $this->assertTrue($fraud->isEntitled($account));
-        $this->assertTrue($fraud->supportsUrlScanner($account));
+        $this->assertTrue($fraud->supportsResidentialProxy($account));
+        $this->assertFalse($fraud->supportsUrlScanner($account));
         $this->assertTrue($fraud->canValidateLead($account));
 
         Http::fake([

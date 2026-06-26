@@ -304,6 +304,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
         Route::get('/', [SupplierPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/leads', [SupplierPortalController::class, 'leads'])->name('leads');
         Route::get('/leads/download', [SupplierPortalController::class, 'downloadLeads'])->name('leads.download');
+        Route::get('/embeds', [SupplierPortalController::class, 'embeds'])->name('embeds');
         Route::get('/billing', [SupplierPortalController::class, 'billing'])->name('billing');
     });
 

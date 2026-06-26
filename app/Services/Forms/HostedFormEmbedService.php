@@ -2,6 +2,7 @@
 
 namespace App\Services\Forms;
 
+use App\Models\Account;
 use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Source;
@@ -25,6 +26,83 @@ class HostedFormEmbedService
         'utm_content',
         'utm_term',
     ];
+
+    public function accountAllowsSupplierIframeEmbed(?Account $account): bool
+    {
+        if (! $account) {
+            return false;
+        }
+
+        return (bool) ($account->settings['supplier_iframe_embed'] ?? false);
+    }
+
+    public function isEmbedRequest(Request $request): bool
+    {
+        return $request->boolean('embed') || $request->query('embed') === '1';
+    }
+
+    public function assertEmbedAllowed(HostedForm $form, Request $request): void
+    {
+        if (! $this->isEmbedRequest($request)) {
+            return;
+        }
+
+        $form->loadMissing('account');
+
+        if (! $this->accountAllowsSupplierIframeEmbed($form->account)) {
+            abort(403, 'Iframe embed is not enabled for this platform.');
+        }
+    }
+
+    /**
+     * @param  array<string, string>  $params
+     * @return array<string, mixed>
+     */
+    public function embedPayload(HostedForm $form, array $params = [], bool $iframe = false): array
+    {
+        $height = (int) ($form->config['embed_height'] ?? 720);
+
+        return [
+            'directUrl' => $this->embedUrl($form, $params, false),
+            'iframeUrl' => $this->embedUrl($form, $params, true),
+            'iframeHtml' => $this->iframeSnippet($form, $params, $height),
+            'trackingParams' => self::TRACKING_QUERY_PARAMS,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function supplierTrackingParams(Supplier $supplier, ?Source $source = null): array
+    {
+        $source ??= $supplier->sources()->orderBy('id')->first();
+
+        return array_filter([
+            'supplier_id' => (string) $supplier->id,
+            'sid' => $source?->sid,
+        ]);
+    }
+
+    /**
+     * @return list<HostedForm>
+     */
+    public function formsForSupplier(Supplier $supplier): array
+    {
+        $campaignIds = $supplier->campaignSuppliers()->pluck('campaign_id');
+
+        if ($campaignIds->isEmpty()) {
+            return [];
+        }
+
+        return HostedForm::withoutGlobalScopes()
+            ->where('account_id', $supplier->account_id)
+            ->where('is_active', true)
+            ->whereIn('campaign_id', $campaignIds)
+            ->with('campaign:id,name,reference')
+            ->orderBy('name')
+            ->get()
+            ->all();
+    }
 
     /**
      * @param  array<string, mixed>  $overrides
@@ -85,6 +163,12 @@ class HostedFormEmbedService
 
     public function frameAncestorsDirective(HostedForm $form): ?string
     {
+        $form->loadMissing('account');
+
+        if (! $this->accountAllowsSupplierIframeEmbed($form->account)) {
+            return "frame-ancestors 'self'";
+        }
+
         $allowed = $form->config['allowed_domains'] ?? [];
         if ($allowed === []) {
             return null;
@@ -101,6 +185,10 @@ class HostedFormEmbedService
 
     public function assertSubmitRefererAllowed(HostedForm $form, Request $request): void
     {
+        if ($this->isEmbedRequest($request)) {
+            $this->assertEmbedAllowed($form, $request);
+        }
+
         $allowed = $form->config['allowed_domains'] ?? [];
         if ($allowed === []) {
             return;

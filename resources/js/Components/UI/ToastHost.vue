@@ -11,7 +11,7 @@ const styles = {
 </script>
 
 <template>
-    <div class="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
+    <div class="pointer-events-none fixed top-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
         <transition-group name="toast">
             <div
                 v-for="toast in toasts"
@@ -33,6 +33,6 @@ const styles = {
 .toast-enter-from,
 .toast-leave-to {
     opacity: 0;
-    transform: translateY(0.5rem);
+    transform: translateY(-0.5rem);
 }
 </style>

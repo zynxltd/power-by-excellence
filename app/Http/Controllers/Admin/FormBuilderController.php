@@ -29,7 +29,7 @@ class FormBuilderController extends Controller
 
     public function edit(HostedForm $hostedForm): Response
     {
-        $hostedForm->load('campaign.fields');
+        $hostedForm->load('campaign.fields', 'account');
 
         $campaignForms = HostedForm::where('campaign_id', $hostedForm->campaign_id)
             ->orderBy('name')
@@ -41,6 +41,8 @@ class FormBuilderController extends Controller
             'ssid' => 'your_subid',
             'click_id' => 'affiliate_click_id',
         ]);
+        $account = $hostedForm->account ?? $hostedForm->campaign?->account;
+        $iframeEmbedEnabled = $embedService->accountAllowsSupplierIframeEmbed($account);
 
         return Inertia::render('Admin/Forms/Edit', [
             'form' => $hostedForm,
@@ -55,12 +57,8 @@ class FormBuilderController extends Controller
             ])->values(),
             'campaignForms' => $campaignForms,
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
-            'embed' => [
-                'directUrl' => $hostedForm->embedUrl(),
-                'iframeUrl' => $hostedForm->embedUrl($sampleParams, true),
-                'iframeHtml' => $hostedForm->iframeSnippet($sampleParams, (int) ($hostedForm->config['embed_height'] ?? 720)),
-                'trackingParams' => HostedFormEmbedService::TRACKING_QUERY_PARAMS,
-            ],
+            'supplierIframeEmbedEnabled' => $iframeEmbedEnabled,
+            'embed' => $embedService->embedPayload($hostedForm, $sampleParams),
         ]);
     }
 

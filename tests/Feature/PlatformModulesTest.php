@@ -98,7 +98,7 @@ class PlatformModulesTest extends TestCase
     {
         $supplier = User::where('email', 'supplier-portal@excellence-uk.test')->first();
 
-        foreach (['/portal/supplier', '/portal/supplier/leads', '/portal/supplier/billing', '/profile'] as $url) {
+        foreach (['/portal/supplier', '/portal/supplier/leads', '/portal/supplier/embeds', '/portal/supplier/billing', '/profile'] as $url) {
             $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
                 ->actingAs($supplier)
                 ->get($url)
@@ -120,7 +120,7 @@ class PlatformModulesTest extends TestCase
 
     public function test_seeded_demo_data_sense_check(): void
     {
-        $this->assertDatabaseCount('accounts', 10);
+        $this->assertDatabaseCount('accounts', count(config('tenant_platforms', [])));
         $this->assertDatabaseHas('campaigns', ['reference' => 'auto-insurance-uk']);
         $this->assertDatabaseHas('campaigns', ['reference' => 'loans-uk']);
         $this->assertDatabaseHas('campaigns', ['reference' => 'mortgage-uk']);

@@ -17,7 +17,7 @@ class DeliveryLogController extends Controller
     public function index(Request $request): Response
     {
         $days = (int) $request->input('days', 7);
-        $days = in_array($days, [1, 7, 14, 28], true) ? $days : 7;
+        $days = in_array($days, [1, 7, 14, 28, 30, 60, 90], true) ? $days : 7;
         $since = $request->filled('date_from')
             ? \Carbon\Carbon::parse($request->input('date_from'))->startOfDay()
             : now()->subDays($days)->startOfDay();

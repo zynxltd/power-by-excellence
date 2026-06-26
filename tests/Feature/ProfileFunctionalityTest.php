@@ -112,6 +112,19 @@ class ProfileFunctionalityTest extends TestCase
         $this->assertNull($this->ukAdmin->fresh()->avatar_path);
     }
 
+    public function test_user_can_update_password(): void
+    {
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'NewPassword123!',
+                'password_confirmation' => 'NewPassword123!',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Password updated.');
+    }
+
     public function test_two_factor_can_be_enabled_and_disabled(): void
     {
         $this->ukHost()

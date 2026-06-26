@@ -61,6 +61,11 @@ class FraudProtectionService
 
     public function supportsUrlScanner(Account $account): bool
     {
+        return false;
+    }
+
+    public function supportsResidentialProxy(Account $account): bool
+    {
         if ($this->adminOverride()) {
             return true;
         }
@@ -69,7 +74,7 @@ class FraudProtectionService
             return false;
         }
 
-        return (bool) ($this->planConfig($account)['url_scanner'] ?? false);
+        return (bool) ($this->planConfig($account)['residential_proxy'] ?? false);
     }
 
     public function usageCount(Account $account): int
@@ -140,6 +145,7 @@ class FraudProtectionService
             'monthly_cap' => $cap,
             'usage_percent' => $cap ? min(100, round(($usage / max(1, $cap)) * 100, 1)) : null,
             'supports_url_scanner' => $this->supportsUrlScanner($account),
+            'supports_residential_proxy' => $this->supportsResidentialProxy($account),
             'cap_reached' => ! $adminOverride && $planEntitled && $cap !== null && $usage >= $cap,
         ];
     }
@@ -169,7 +175,7 @@ class FraudProtectionService
                 'email_validation' => true,
                 'hlr_validation' => true,
                 'ip_validation' => true,
-                'url_validation' => (bool) ($planConfig['url_scanner'] ?? false),
+                'url_validation' => false,
                 'quarantine_on_fail' => $integration['quarantine_on_fail'] ?? true,
             ]);
         }

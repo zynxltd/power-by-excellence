@@ -11,8 +11,10 @@ use App\Models\Account;
 use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\CampaignField;
+use App\Models\CampaignSupplier;
 use App\Models\Delivery;
 use App\Models\DistributionConfig;
+use App\Models\HostedForm;
 use App\Models\Lead;
 use App\Models\LeadFinancial;
 use App\Models\LeadEvent;
@@ -24,6 +26,7 @@ use App\Services\Billing\BuyerBillingService;
 use App\Services\Billing\FraudProtectionService;
 use App\Support\VerticalCatalog;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class PlatformSeeder extends Seeder
 {
@@ -54,6 +57,7 @@ class PlatformSeeder extends Seeder
             'default_country' => $platform['default_country'],
             'settings' => app(FraudProtectionService::class)->provisionSettingsForPlan([
                 'require_buyer_prepay' => false,
+                'supplier_iframe_embed' => true,
                 'validation_integration' => [
                     'enabled' => true,
                     'email_validation' => true,
@@ -115,8 +119,9 @@ class PlatformSeeder extends Seeder
             ],
         ]);
 
+        $supplierSecondary = null;
         if (! empty($platform['suppliers'][1])) {
-            Supplier::create([
+            $supplierSecondary = Supplier::create([
                 'account_id' => $account->id,
                 'reference' => 'supplier-secondary',
                 'name' => $platform['suppliers'][1],
@@ -144,14 +149,31 @@ class PlatformSeeder extends Seeder
             'name' => 'Google Sub-Affiliate 2',
         ]);
 
-        $firstCampaign = null;
+        Source::create([
+            'supplier_id' => $supplier->id,
+            'sid' => 'facebook_leads',
+            'name' => 'Facebook Lead Ads',
+        ]);
+
+        $seededCampaigns = collect();
         foreach ($platform['campaigns'] as $campaignDef) {
             $campaign = $this->seedCampaign($account, $platform, $campaignDef, $buyer, $buyerSecondary, $supplier, $source);
-            $firstCampaign ??= $campaign;
+            $seededCampaigns->push($campaign);
 
-            if (in_array($campaign->reference, ['auto-insurance-uk', 'auto-insurance-us'], true)) {
+            if (in_array($campaign->reference, ['auto-insurance-uk', 'auto-insurance-us', 'loans-uk', 'loans-emea'], true)) {
                 $this->seedDemoLeads($account, $campaign, $supplier, $source, $buyer);
             }
+        }
+
+        $this->seedCampaignSupplierLinks($supplier, $seededCampaigns);
+        if ($supplierSecondary) {
+            $this->seedCampaignSupplierLinks($supplierSecondary, $seededCampaigns->take(max(1, (int) ceil($seededCampaigns->count() / 2))));
+        }
+
+        $this->seedHostedForms($account, $platform, $seededCampaigns);
+
+        if ($account->slug === 'excellence-uk') {
+            $this->seedVarietyLeads($account, $seededCampaigns->firstWhere('reference', 'auto-insurance-uk'), $supplier, $source);
         }
 
         AccessLog::create([
@@ -373,6 +395,203 @@ class PlatformSeeder extends Seeder
     protected function platforms(): array
     {
         return config('tenant_platforms', []);
+    }
+
+    /**
+     * @param  Collection<int, Campaign>  $campaigns
+     */
+    protected function seedCampaignSupplierLinks(Supplier $supplier, Collection $campaigns): void
+    {
+        foreach ($campaigns as $campaign) {
+            CampaignSupplier::firstOrCreate(
+                [
+                    'campaign_id' => $campaign->id,
+                    'supplier_id' => $supplier->id,
+                ],
+                [
+                    'payout_amount' => $campaign->payout_amount,
+                    'caps' => ['daily' => 100],
+                ]
+            );
+        }
+    }
+
+    /**
+     * @param  Collection<int, Campaign>  $campaigns
+     */
+    protected function seedHostedForms(Account $account, array $platform, Collection $campaigns): void
+    {
+        foreach ($campaigns->take(3) as $index => $campaign) {
+            $campaignDef = collect($platform['campaigns'])->firstWhere('reference', $campaign->reference) ?? [];
+            $vertical = $campaignDef['vertical'] ?? null;
+            $slug = $campaign->reference.'-capture';
+
+            if ($account->slug === 'excellence-uk' && $campaign->reference === 'auto-insurance-uk') {
+                $slug = 'auto-insurance-quote-uk';
+            }
+
+            HostedForm::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'account_id' => $account->id,
+                    'campaign_id' => $campaign->id,
+                    'name' => $campaign->name.' Capture Form',
+                    'is_active' => true,
+                    'config' => $this->hostedFormConfig($campaign, $vertical, $index === 0),
+                ]
+            );
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function hostedFormConfig(Campaign $campaign, ?string $vertical, bool $richSteps): array
+    {
+        if ($richSteps && $vertical === 'insurance_auto' && $campaign->reference === 'auto-insurance-uk') {
+            return [
+                'multi_step' => true,
+                'redirect_url' => url('/help'),
+                'embed_height' => 780,
+                'steps' => [
+                    [
+                        'id' => 'vehicle',
+                        'title' => 'Your vehicle',
+                        'description' => 'Quick details about the car you want to insure',
+                        'fields' => [
+                            ['name' => 'vehicle_year', 'label' => 'Vehicle year', 'type' => 'number', 'required' => true, 'options' => []],
+                            ['name' => 'vehicle_make', 'label' => 'Make', 'type' => 'text', 'required' => true, 'options' => []],
+                            ['name' => 'cover_type', 'label' => 'Cover type', 'type' => 'radio', 'required' => true, 'options' => ['Comprehensive', 'Third party fire & theft', 'Third party only']],
+                        ],
+                    ],
+                    [
+                        'id' => 'driver',
+                        'title' => 'About you',
+                        'description' => 'We need a few details to find your best quote',
+                        'fields' => [
+                            ['name' => 'firstname', 'label' => 'First name', 'type' => 'text', 'required' => true, 'options' => []],
+                            ['name' => 'lastname', 'label' => 'Last name', 'type' => 'text', 'required' => true, 'options' => []],
+                            ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => true, 'options' => []],
+                        ],
+                    ],
+                    [
+                        'id' => 'contact',
+                        'title' => 'Contact & postcode',
+                        'fields' => [
+                            ['name' => 'phone1', 'label' => 'Phone', 'type' => 'tel', 'required' => true, 'options' => []],
+                            ['name' => 'zipcode', 'label' => 'Postcode', 'type' => 'postcode', 'required' => true, 'options' => []],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        $fields = collect(VerticalCatalog::fieldsFor($vertical))
+            ->map(fn (array $field) => [
+                'name' => $field['name'],
+                'label' => $field['label'],
+                'type' => match ($field['name']) {
+                    'email' => 'email',
+                    'phone1' => 'tel',
+                    'zipcode' => 'postcode',
+                    default => 'text',
+                },
+                'required' => (bool) ($field['required'] ?? false),
+                'options' => [],
+            ])
+            ->values()
+            ->all();
+
+        $mid = (int) ceil(count($fields) / 2);
+
+        return [
+            'multi_step' => count($fields) > 4,
+            'embed_height' => 720,
+            'thank_you' => ['mode' => 'inline', 'message' => 'Thanks — your '.$campaign->name.' enquiry was received.'],
+            'steps' => count($fields) > 4
+                ? [
+                    [
+                        'id' => 'details',
+                        'title' => 'Your details',
+                        'fields' => array_slice($fields, 0, $mid),
+                    ],
+                    [
+                        'id' => 'contact',
+                        'title' => 'Contact',
+                        'fields' => array_slice($fields, $mid),
+                    ],
+                ]
+                : [[
+                    'id' => 'single',
+                    'title' => $campaign->name,
+                    'fields' => $fields,
+                ]],
+        ];
+    }
+
+    protected function seedVarietyLeads(Account $account, ?Campaign $campaign, Supplier $supplier, Source $source): void
+    {
+        if (! $campaign) {
+            return;
+        }
+
+        Lead::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'supplier_id' => $supplier->id,
+            'source_id' => $source->id,
+            'status' => LeadStatus::Quarantined,
+            'field_data' => [
+                'firstname' => 'Quarantine',
+                'lastname' => 'Demo',
+                'email' => 'quarantine.demo@test.test',
+                'phone1' => '07700900150',
+                'zipcode' => 'E1 6AN',
+            ],
+            'sid' => $source->sid,
+            'received_at' => now()->subHours(2),
+            'quarantined_until' => now()->addDay(),
+            'metadata' => [
+                'quarantine_reason' => 'validation',
+                'email_validation' => ['passed' => false, 'status' => 'high_risk'],
+            ],
+        ]);
+
+        Lead::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'supplier_id' => $supplier->id,
+            'source_id' => $source->id,
+            'status' => LeadStatus::Duplicate,
+            'field_data' => [
+                'firstname' => 'Duplicate',
+                'lastname' => 'Demo',
+                'email' => 'jane.cooper@demo.test',
+                'phone1' => '07700900151',
+                'zipcode' => 'SW1A 1AA',
+            ],
+            'sid' => $source->sid,
+            'received_at' => now()->subHour(),
+            'metadata' => ['duplicate_of' => 'seed'],
+        ]);
+
+        Lead::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'supplier_id' => $supplier->id,
+            'source_id' => $source->id,
+            'status' => LeadStatus::Rejected,
+            'field_data' => [
+                'firstname' => 'Rejected',
+                'lastname' => 'Demo',
+                'email' => 'rejected.demo@test.test',
+                'phone1' => '07700900152',
+                'zipcode' => 'N1 9GU',
+            ],
+            'sid' => $source->sid,
+            'received_at' => now()->subMinutes(30),
+            'metadata' => ['reject_reason' => 'Campaign cap reached'],
+        ]);
     }
 
     protected function seedDemoLeads(Account $account, Campaign $campaign, Supplier $supplier, Source $source, Buyer $buyer): void

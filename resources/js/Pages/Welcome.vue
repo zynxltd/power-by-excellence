@@ -3,6 +3,7 @@ import MarketingNav from '@/Components/Marketing/MarketingNav.vue';
 import MarketingFooter from '@/Components/Marketing/MarketingFooter.vue';
 import SeoHead from '@/Components/SeoHead.vue';
 import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
+import ToastHost from '@/Components/UI/ToastHost.vue';
 import { useMarketingTheme } from '@/Composables/useMarketingTheme';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -14,7 +15,6 @@ defineProps({
 
 const page = usePage();
 const { marketingTheme } = useMarketingTheme();
-const demoSuccess = computed(() => page.props.flash?.demo_success);
 const systemStatus = computed(() => page.props.systemStatus);
 const signInUrl = computed(() => page.props.urls?.marketingSignIn ?? route('login'));
 const isAuthenticated = computed(() => !!page.props.auth?.user);
@@ -1068,9 +1068,6 @@ const toggleFaq = (index) => {
                         </ul>
                     </div>
                     <div class="brand-card">
-                        <div v-if="demoSuccess" class="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
-                            {{ demoSuccess }}
-                        </div>
                         <form @submit.prevent="submitDemo" class="space-y-4">
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-slate-700 marketing-dark:text-slate-300">Full name</label>
@@ -1121,5 +1118,6 @@ const toggleFaq = (index) => {
         </div>
 
         <MarketingFooter :can-login="canLogin" />
+        <ToastHost />
     </div>
 </template>

@@ -38,7 +38,7 @@ class NotificationInboxController extends Controller
     {
         $service->markRead($request->user(), $notification);
 
-        return back();
+        return back()->with('success', 'Notification marked as read.');
     }
 
     public function markAllRead(Request $request, PlatformNotificationService $service): RedirectResponse

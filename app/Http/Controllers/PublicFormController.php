@@ -20,6 +20,9 @@ class PublicFormController extends BaseController
 
     public function show(Request $request, string $slug): Response
     {
+        $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $this->embedService->assertEmbedAllowed($form, $request);
+
         return Inertia::render('Forms/Show', $this->formPageProps($request, $slug));
     }
 

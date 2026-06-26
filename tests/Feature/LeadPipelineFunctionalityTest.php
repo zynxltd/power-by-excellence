@@ -351,7 +351,7 @@ class LeadPipelineFunctionalityTest extends TestCase
 
     public function test_duplicate_filter_on_lead_index(): void
     {
-        $campaign = Campaign::where('account_id', $this->ukAccount->id)->first();
+        $campaign = Campaign::where('account_id', $this->ukAccount->id)->where('reference', 'loans-uk')->first();
 
         $duplicate = Lead::create([
             'account_id' => $this->ukAccount->id,

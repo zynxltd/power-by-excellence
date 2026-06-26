@@ -181,7 +181,8 @@ class NotificationsFunctionalityTest extends TestCase
         $this->ukHost()
             ->actingAs($this->ukAdmin)
             ->post(route('notifications.read', $notice))
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Notification marked as read.');
 
         $this->assertSame(0, $this->service->unreadCount($this->ukAdmin));
     }

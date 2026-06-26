@@ -1,5 +1,6 @@
 <script setup>
 import BrandLogo from '@/Components/BrandLogo.vue';
+import ToastHost from '@/Components/UI/ToastHost.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -107,5 +108,6 @@ const highlights = [
                 &copy; {{ new Date().getFullYear() }} {{ tenant?.display_name ?? 'PowerByExcellence' }}. All rights reserved.
             </div>
         </div>
+        <ToastHost />
     </div>
 </template>

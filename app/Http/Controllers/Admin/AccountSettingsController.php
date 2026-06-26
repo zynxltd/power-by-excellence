@@ -22,6 +22,7 @@ class AccountSettingsController extends Controller
                 $account->only(['id', 'name', 'slug', 'timezone', 'default_currency', 'default_country']),
                 [
                     'require_buyer_prepay' => $account->settings['require_buyer_prepay'] ?? false,
+                    'supplier_iframe_embed' => $account->settings['supplier_iframe_embed'] ?? false,
                     'billing_status' => $account->settings['billing_status'] ?? 'active',
                     'billing_due_at' => $account->settings['billing_due_at'] ?? null,
                     'billing_alert_emails' => $account->settings['billing_alert_emails'] ?? '',
@@ -44,6 +45,7 @@ class AccountSettingsController extends Controller
             'default_country' => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'default_currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'require_buyer_prepay' => 'boolean',
+            'supplier_iframe_embed' => 'boolean',
             'billing_due_at' => 'nullable|date',
             'billing_status' => 'nullable|in:active,locked',
             'billing_alert_emails' => 'nullable|string|max:500',
@@ -52,6 +54,7 @@ class AccountSettingsController extends Controller
 
         $settings = $account->settings ?? [];
         $settings['require_buyer_prepay'] = $validated['require_buyer_prepay'] ?? false;
+        $settings['supplier_iframe_embed'] = $validated['supplier_iframe_embed'] ?? false;
         $settings['billing_due_at'] = $validated['billing_due_at'] ?? null;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
         $settings['default_low_credit_alert'] = $validated['default_low_credit_alert'] ?? null;

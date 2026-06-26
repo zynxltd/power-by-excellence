@@ -101,7 +101,7 @@ const fraudChecks = [
     { label: 'Email verification (deliverability & disposable)', plans: 'All with Fraud' },
     { label: 'Phone validation + HLR', plans: 'All with Fraud' },
     { label: 'IP / proxy / VPN / Tor detection', plans: 'All with Fraud' },
-    { label: 'Malicious URL scanner', plans: 'Growth, Enterprise' },
+    { label: 'Residential proxy detection', plans: 'Growth, Enterprise' },
     { label: 'Lead quality score & quarantine', plans: 'Growth, Enterprise' },
 ];
 

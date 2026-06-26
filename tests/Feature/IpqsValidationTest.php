@@ -147,6 +147,19 @@ class IpqsValidationTest extends TestCase
         $this->assertTrue($result->passed);
     }
 
+    public function test_whitelisted_ip_skips_live_fraud_check(): void
+    {
+        Http::fake();
+
+        $provider = new IpqsValidationProvider(['api_key' => 'test-key']);
+        $context = new \App\Services\Validation\ValidationContext(ipWhitelist: '203.0.113.10, 198.51.100.0/24');
+        $result = $provider->validateIp('198.51.100.10', $context);
+
+        $this->assertTrue($result->passed);
+        $this->assertTrue($result->meta['whitelisted'] ?? false);
+        Http::assertNothingSent();
+    }
+
     public function test_pipeline_quarantines_on_ipqs_ip_fraud_failure(): void
     {
         $campaign = Campaign::withoutGlobalScopes()->with('fields')->where('reference', 'auto-insurance-uk')->first();
@@ -206,7 +219,7 @@ class IpqsValidationTest extends TestCase
         $this->assertSame('ipqs', $lead->metadata['ip_validation']['provider'] ?? null);
     }
 
-    public function test_pipeline_runs_url_validation_when_enabled(): void
+    public function test_url_validation_is_disabled_for_lead_ingest(): void
     {
         $campaign = Campaign::withoutGlobalScopes()->with('fields')->where('reference', 'auto-insurance-uk')->first();
         $this->assertNotNull($campaign);
@@ -243,10 +256,6 @@ class IpqsValidationTest extends TestCase
                 'unsafe' => false,
                 'risk_score' => 20,
                 'malware' => true,
-                'phishing' => false,
-                'suspicious' => false,
-                'parking' => false,
-                'spamming' => false,
             ]),
         ]);
 
@@ -264,8 +273,8 @@ class IpqsValidationTest extends TestCase
         app(LeadPipeline::class)->process($lead->fresh());
 
         $lead->refresh();
-        $this->assertSame(LeadStatus::Quarantined, $lead->status);
-        $this->assertFalse($lead->metadata['url_validation']['passed'] ?? true);
+        $this->assertNull($lead->metadata['url_validation'] ?? null);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/api/json/url/'));
     }
 
     public function test_resolver_falls_back_to_demo_when_ipqs_key_missing(): void

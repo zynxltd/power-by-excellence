@@ -119,13 +119,13 @@ const usingPresetDays = computed(() => (
         <div class="flex flex-wrap items-end gap-4">
             <div v-if="showDays" class="shrink-0">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Period</label>
-                <div class="flex rounded-lg border border-slate-200 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-800">
+                <div class="flex h-[2.625rem] items-stretch gap-0.5 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
                     <button
                         v-for="d in [1, 7, 14, 28, 30, 60, 90]"
                         :key="d"
                         type="button"
                         :class="[
-                            'rounded-md px-2.5 py-1.5 text-xs font-semibold transition',
+                            'flex items-center justify-center rounded-lg px-2.5 text-xs font-semibold transition sm:px-3 sm:text-sm',
                             usingPresetDays && Number(local.days) === d
                                 ? 'bg-indigo-600 text-white'
                                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700',

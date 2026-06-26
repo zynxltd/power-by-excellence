@@ -46,6 +46,7 @@ return [
         'allow_crawlers' => env('IPQS_ALLOW_CRAWLERS', true),
         'lower_penalty_for_mobiles' => env('IPQS_LOWER_PENALTY_FOR_MOBILES', false),
         'pass_user_agent' => env('IPQS_PASS_USER_AGENT', true),
+        'ip_whitelist' => env('IPQS_IP_WHITELIST', ''),
 
         // Malicious URL scanner API
         'url_strictness' => (int) env('IPQS_URL_STRICTNESS', 0),

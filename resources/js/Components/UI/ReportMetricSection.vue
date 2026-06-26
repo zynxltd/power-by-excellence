@@ -79,6 +79,12 @@ const accentGlow = (accent) => {
                     >
                         {{ item.value }}
                     </p>
+                    <p
+                        v-if="item.href"
+                        class="mt-1 truncate text-[10px] font-medium text-indigo-600 dark:text-indigo-400"
+                    >
+                        View →
+                    </p>
                 </component>
             </div>
         </div>

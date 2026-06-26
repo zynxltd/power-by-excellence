@@ -6,7 +6,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import { pushToast } from '@/Composables/useToast';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     settings: Object,
@@ -18,9 +18,7 @@ const props = defineProps({
 });
 
 const ipqsDefaults = {
-    api_key: '',
     fraud_score_threshold: 85,
-    url_risk_threshold: 85,
     email_timeout: 7,
     email_fast: false,
     email_abuse_strictness: 0,
@@ -47,12 +45,7 @@ const ipqsDefaults = {
     allow_crawlers: true,
     lower_penalty_for_mobiles: false,
     pass_user_agent: true,
-    url_strictness: 0,
-    block_phishing_url: true,
-    block_malware_url: true,
-    block_suspicious_url: false,
-    block_parked_url: false,
-    block_spam_url: true,
+    ip_whitelist: '',
 };
 
 const mergeIpqs = (source = {}) => ({ ...ipqsDefaults, ...source });
@@ -66,7 +59,6 @@ const form = useForm({
     email_validation: props.settings?.email_validation ?? true,
     hlr_validation: props.settings?.hlr_validation ?? true,
     ip_validation: props.settings?.ip_validation ?? true,
-    url_validation: props.settings?.url_validation ?? false,
     quarantine_on_fail: props.settings?.quarantine_on_fail ?? true,
     ipqs: mergeIpqs(props.settings?.ipqs),
 });
@@ -81,7 +73,6 @@ watch(() => props.settings, (settings) => {
     form.email_validation = settings.email_validation ?? true;
     form.hlr_validation = settings.hlr_validation ?? true;
     form.ip_validation = settings.ip_validation ?? true;
-    form.url_validation = settings.url_validation ?? false;
     form.quarantine_on_fail = settings.quarantine_on_fail ?? true;
     form.ipqs = mergeIpqs(settings.ipqs);
 }, { deep: true });
@@ -94,16 +85,14 @@ const settingsSummary = computed(() => {
     if (form.email_validation) parts.push('Email');
     if (form.hlr_validation) parts.push('Phone');
     if (form.ip_validation) parts.push('IP');
-    if (form.url_validation) parts.push('URL');
     parts.push(form.quarantine_on_fail ? 'Quarantine' : 'Reject');
 
     return parts.join(' · ');
 });
 
 const effectiveProvider = computed(() => form.provider || 'demo');
-const ipqsReady = computed(() => effectiveProvider.value === 'ipqs' && (props.hasIpqsKey || (form.ipqs.api_key && form.ipqs.api_key !== '••••••••')));
 const fraud = computed(() => props.fraudProtection ?? {});
-const fraudBlocked = computed(() => !fraud.value.entitled || fraud.value.cap_reached);
+const fraudSubscribed = computed(() => fraud.value.plan_entitled || fraud.value.admin_override);
 const showPlanUpgradeNotice = computed(() => !fraud.value.plan_entitled && !fraud.value.admin_override);
 const showAdminOverrideNotice = computed(() => fraud.value.admin_override && !fraud.value.plan_entitled);
 
@@ -112,16 +101,77 @@ const lookupsPerLead = computed(() => {
     if (form.email_validation) n++;
     if (form.hlr_validation) n++;
     if (form.ip_validation) n++;
-    if (form.url_validation) n++;
 
     return n;
 });
+
+const userAgentPresets = [
+    { id: 'current', label: 'This browser' },
+    {
+        id: 'chrome-mac',
+        label: 'Chrome — macOS',
+        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
+    {
+        id: 'chrome-win',
+        label: 'Chrome — Windows',
+        ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
+    {
+        id: 'safari-mac',
+        label: 'Safari — macOS',
+        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+    },
+    {
+        id: 'firefox-win',
+        label: 'Firefox — Windows',
+        ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+    },
+    {
+        id: 'chrome-android',
+        label: 'Chrome — Android',
+        ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    },
+    {
+        id: 'safari-iphone',
+        label: 'Safari — iPhone',
+        ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+    },
+    {
+        id: 'googlebot',
+        label: 'Googlebot (crawler)',
+        ua: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    },
+    {
+        id: 'headless',
+        label: 'Headless Chrome (bot-like)',
+        ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36',
+    },
+    { id: 'empty', label: 'Empty (no user agent)' },
+    { id: 'custom', label: 'Custom' },
+];
+
+const selectedUserAgentPreset = ref('current');
+
+const applyUserAgentPreset = () => {
+    const preset = userAgentPresets.find((item) => item.id === selectedUserAgentPreset.value);
+    if (!preset || preset.id === 'custom') {
+        return;
+    }
+
+    if (preset.id === 'current') {
+        testForm.user_agent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    } else if (preset.id === 'empty') {
+        testForm.user_agent = '';
+    } else {
+        testForm.user_agent = preset.ua ?? '';
+    }
+};
 
 const testForm = useForm({
     email: '',
     phone: '',
     ip: '',
-    url: '',
     user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
 });
 
@@ -146,7 +196,7 @@ const runTest = () => {
     <AuthenticatedLayout>
         <PageHeader
             title="Fraud Detection"
-            description="Email, phone HLR, IP/proxy/VPN, and URL scanning on lead ingest."
+            description="Email, phone HLR, and IP/proxy/VPN checks on lead ingest."
         >
             <template #actions>
                 <Link :href="route('integrations.index')" class="text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
@@ -159,20 +209,27 @@ const runTest = () => {
             <div
                 v-for="feature in planFeatures"
                 :key="feature.id"
-                class="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/50"
-                :class="feature.coming_soon ? 'opacity-60' : ''"
+                class="rounded-xl border px-4 py-3"
+                :class="feature.subscribed
+                    ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50'
+                    : 'border-amber-200 bg-amber-50/50 dark:border-amber-500/30 dark:bg-amber-500/5'"
             >
                 <div class="flex items-start justify-between gap-2">
                     <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ feature.name }}</p>
-                    <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {{ feature.min_plan }}
+                    <span
+                        class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                        :class="feature.subscribed
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200'"
+                    >
+                        {{ feature.subscribed ? 'Included' : 'Not in subscription' }}
                     </span>
                 </div>
                 <p class="mt-1 text-xs text-slate-500">{{ feature.description }}</p>
-                <p v-if="feature.lookups_per_lead" class="mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
+                <p class="mt-1 text-[10px] text-slate-400">Requires {{ feature.min_plan }}</p>
+                <p v-if="feature.lookups_per_lead && feature.subscribed" class="mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
                     {{ feature.lookups_per_lead }} lookup / lead when enabled
                 </p>
-                <p v-if="feature.coming_soon" class="mt-1 text-[10px] font-medium text-amber-600">Not wired for lead ingest</p>
             </div>
         </div>
 
@@ -246,47 +303,52 @@ const runTest = () => {
                     </div>
 
                     <div class="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Plan checks (1 lookup each)</p>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Plan checks (1 lookup each)</p>
+                            <span
+                                v-if="!fraudSubscribed"
+                                class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200"
+                            >
+                                Not in subscription — demo only
+                            </span>
+                        </div>
                         <label class="flex items-center gap-3">
                             <input v-model="form.email_validation" type="checkbox" class="rounded border-slate-300" />
-                            <span class="text-sm text-slate-700 dark:text-slate-300">Email validation</span>
+                            <span class="text-sm text-slate-700 dark:text-slate-300">
+                                Email validation
+                                <span v-if="!fraudSubscribed" class="text-xs text-amber-700 dark:text-amber-300"> (not in subscription)</span>
+                            </span>
                         </label>
                         <label class="flex items-center gap-3">
                             <input v-model="form.hlr_validation" type="checkbox" class="rounded border-slate-300" />
-                            <span class="text-sm text-slate-700 dark:text-slate-300">Phone validation + HLR</span>
+                            <span class="text-sm text-slate-700 dark:text-slate-300">
+                                Phone validation + HLR
+                                <span v-if="!fraudSubscribed" class="text-xs text-amber-700 dark:text-amber-300"> (not in subscription)</span>
+                            </span>
                         </label>
                         <label class="flex items-center gap-3">
                             <input v-model="form.ip_validation" type="checkbox" class="rounded border-slate-300" />
-                            <span class="text-sm text-slate-700 dark:text-slate-300">IP / proxy / VPN / Tor / bot</span>
-                        </label>
-                        <label class="flex items-center gap-3">
-                            <input v-model="form.url_validation" type="checkbox" class="rounded border-slate-300" :disabled="!fraud.supports_url_scanner" />
                             <span class="text-sm text-slate-700 dark:text-slate-300">
-                                Malicious URL scanner
-                                <span v-if="!fraud.supports_url_scanner" class="text-xs text-slate-500"> (Growth plan+)</span>
+                                IP / proxy / VPN / Tor / bot
+                                <span v-if="!fraudSubscribed" class="text-xs text-amber-700 dark:text-amber-300"> (not in subscription)</span>
                             </span>
                         </label>
-                        <p class="text-xs text-slate-500">URL scanned from lead fields: url, website, landing_url</p>
                     </div>
 
                     <div
                         v-if="effectiveProvider === 'ipqs'"
                         class="space-y-5 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-500/10"
                     >
-                        <div>
-                            <InputLabel value="API key" />
-                            <input v-model="form.ipqs.api_key" type="password" class="form-input mt-1 w-full font-mono text-sm" placeholder="Fraud detection API key" autocomplete="off" />
-                        </div>
+                        <p v-if="hasIpqsKey" class="text-xs text-emerald-700 dark:text-emerald-300">
+                            Live fraud checks are configured by the platform operator.
+                        </p>
+                        <p v-else class="text-xs text-amber-700 dark:text-amber-300">
+                            Live provider selected but no platform API key is configured. Checks fall back to demo mode.
+                        </p>
 
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <div>
-                                <InputLabel value="Fraud score threshold (email / phone / IP)" />
-                                <input v-model.number="form.ipqs.fraud_score_threshold" type="number" min="0" max="100" class="form-input mt-1 w-full" />
-                            </div>
-                            <div>
-                                <InputLabel value="URL risk threshold" />
-                                <input v-model.number="form.ipqs.url_risk_threshold" type="number" min="0" max="100" class="form-input mt-1 w-full" />
-                            </div>
+                        <div>
+                            <InputLabel value="Fraud score threshold (email / phone / IP)" />
+                            <input v-model.number="form.ipqs.fraud_score_threshold" type="number" min="0" max="100" class="form-input mt-1 w-full max-w-xs" />
                         </div>
 
                         <details class="group rounded-lg border border-indigo-200/80 bg-white/70 dark:border-indigo-500/20 dark:bg-slate-900/40">
@@ -326,9 +388,21 @@ const runTest = () => {
                             </div>
                         </details>
 
-                        <details class="group rounded-lg border border-indigo-200/80 bg-white/70 dark:border-indigo-500/20 dark:bg-slate-900/40">
+                        <details class="group rounded-lg border border-indigo-200/80 bg-white/70 dark:border-indigo-500/20 dark:bg-slate-900/40" open>
                             <summary class="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100">IP / proxy / VPN options</summary>
                             <div class="space-y-3 border-t border-indigo-100 px-3 py-3 dark:border-indigo-500/20">
+                                <div>
+                                    <InputLabel value="IP whitelist" />
+                                    <textarea
+                                        v-model="form.ipqs.ip_whitelist"
+                                        rows="3"
+                                        class="form-input mt-1 w-full font-mono text-sm"
+                                        placeholder="203.0.113.10, 198.51.100.0/24"
+                                    />
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        Comma-separated IPs or CIDR ranges (e.g. company office network). Whitelisted IPs skip fraud checks.
+                                    </p>
+                                </div>
                                 <div>
                                     <InputLabel value="Strictness (0–3)" />
                                     <input v-model.number="form.ipqs.strictness" type="number" min="0" max="3" class="form-input mt-1 w-full" />
@@ -344,35 +418,40 @@ const runTest = () => {
                                 <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_tor" type="checkbox" class="rounded border-slate-300" /> Block Tor</label>
                                 <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_bots" type="checkbox" class="rounded border-slate-300" /> Block bots</label>
                                 <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_recent_abuse_ip" type="checkbox" class="rounded border-slate-300" /> Block recent IP abuse</label>
-                                <p class="text-xs text-slate-500">Residential proxy detection is automatic on SMB+ plans.</p>
+                                <p
+                                    class="text-xs"
+                                    :class="fraud.supports_residential_proxy
+                                        ? 'text-slate-500'
+                                        : 'font-medium text-amber-700 dark:text-amber-300'"
+                                >
+                                    <template v-if="fraud.supports_residential_proxy">
+                                        Residential proxy detection is active on your plan (included in IP check).
+                                    </template>
+                                    <template v-else>
+                                        Residential proxy detection — not in subscription (requires Growth plan or above).
+                                    </template>
+                                </p>
                             </div>
                         </details>
-
-                        <details class="group rounded-lg border border-indigo-200/80 bg-white/70 dark:border-indigo-500/20 dark:bg-slate-900/40">
-                            <summary class="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100">URL scanner options</summary>
-                            <div class="space-y-3 border-t border-indigo-100 px-3 py-3 dark:border-indigo-500/20">
-                                <div>
-                                    <InputLabel value="URL strictness (0–2)" />
-                                    <input v-model.number="form.ipqs.url_strictness" type="number" min="0" max="2" class="form-input mt-1 w-full" />
-                                </div>
-                                <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_phishing_url" type="checkbox" class="rounded border-slate-300" /> Block phishing</label>
-                                <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_malware_url" type="checkbox" class="rounded border-slate-300" /> Block malware</label>
-                                <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_suspicious_url" type="checkbox" class="rounded border-slate-300" /> Block suspicious</label>
-                                <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_parked_url" type="checkbox" class="rounded border-slate-300" /> Block parked domains</label>
-                                <label class="flex items-center gap-2 text-sm"><input v-model="form.ipqs.block_spam_url" type="checkbox" class="rounded border-slate-300" /> Block spam domains</label>
-                            </div>
-                        </details>
-
-                        <p v-if="!ipqsReady" class="text-xs text-amber-700 dark:text-amber-300">
-                            Save an API key to enable live fraud checks. Missing key falls back to demo provider.
-                        </p>
                     </div>
 
                     <div
                         v-else
-                        class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                        class="space-y-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
                     >
-                        Demo provider — no live API calls. Switch to the live provider for production.
+                        <p>Demo provider — no live API calls. Switch to the live provider for production.</p>
+                        <div>
+                            <InputLabel value="IP whitelist (demo)" />
+                            <textarea
+                                v-model="form.ipqs.ip_whitelist"
+                                rows="2"
+                                class="form-input mt-1 w-full font-mono text-sm"
+                                placeholder="203.0.113.10, 198.51.100.0/24"
+                            />
+                            <p class="mt-1 text-amber-800/80 dark:text-amber-200/80">
+                                Whitelisted IPs pass IP checks even in demo mode.
+                            </p>
+                        </div>
                     </div>
 
                     <AppButton type="submit" :loading="form.processing" :disabled="form.processing">
@@ -396,12 +475,25 @@ const runTest = () => {
                         <input id="ip" v-model="testForm.ip" type="text" class="form-input mt-1 w-full" placeholder="8.8.8.8" />
                     </div>
                     <div>
-                        <InputLabel for="url" value="Test URL" />
-                        <input id="url" v-model="testForm.url" type="text" class="form-input mt-1 w-full" placeholder="https://example.com" />
-                    </div>
-                    <div>
-                        <InputLabel for="user_agent" value="User agent (for IP scoring)" />
-                        <input id="user_agent" v-model="testForm.user_agent" type="text" class="form-input mt-1 w-full font-mono text-xs" />
+                        <InputLabel for="user_agent_preset" value="User agent (for IP scoring)" />
+                        <select
+                            id="user_agent_preset"
+                            v-model="selectedUserAgentPreset"
+                            class="form-input mt-1 w-full"
+                            @change="applyUserAgentPreset"
+                        >
+                            <option v-for="preset in userAgentPresets" :key="preset.id" :value="preset.id">
+                                {{ preset.label }}
+                            </option>
+                        </select>
+                        <textarea
+                            id="user_agent"
+                            v-model="testForm.user_agent"
+                            rows="2"
+                            class="form-input mt-2 w-full font-mono text-xs"
+                            placeholder="User-Agent string sent with the IP check"
+                            @input="selectedUserAgentPreset = 'custom'"
+                        />
                     </div>
                     <AppButton type="submit" variant="secondary" :loading="testForm.processing" :disabled="testForm.processing">
                         Run test

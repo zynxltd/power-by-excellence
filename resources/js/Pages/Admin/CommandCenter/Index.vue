@@ -17,6 +17,7 @@ const props = defineProps({
     tenants: Array,
     opsChecks: Array,
     platformStatus: Object,
+    systemAlerts: Array,
 });
 
 const page = usePage();
@@ -95,6 +96,12 @@ const statLinkClass = (highlight = false) => [
     'hover:underline',
     highlight ? 'font-medium text-rose-600' : 'text-indigo-600 dark:text-indigo-400',
 ];
+
+const severityDotClass = (severity) => ({
+    critical: 'bg-rose-500',
+    warning: 'bg-amber-500',
+    info: 'bg-sky-500',
+}[severity] ?? 'bg-slate-400');
 
 const platformStatItems = computed(() => {
     const s = props.platformStats ?? {};
@@ -179,6 +186,29 @@ const platformStatItems = computed(() => {
         </div>
 
         <CompactStatStrip :items="platformStatItems" class="mb-4" />
+
+        <Panel v-if="systemAlerts?.length" title="Active system alerts" class="mb-6">
+            <p class="mb-3 text-xs text-slate-500">
+                Synced to the super-admin notification bell. Cleared automatically when issues resolve.
+            </p>
+            <div class="space-y-2">
+                <div
+                    v-for="alert in systemAlerts"
+                    :key="alert.id"
+                    class="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs dark:border-slate-700"
+                    :class="alert.severity === 'critical' ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/20' : (alert.severity === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' : '')"
+                >
+                    <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" :class="severityDotClass(alert.severity)" />
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold text-slate-800 dark:text-slate-200">{{ alert.title }}</p>
+                        <p v-if="alert.body" class="mt-0.5 text-slate-600 dark:text-slate-400">{{ alert.body }}</p>
+                        <p v-if="alert.updated_at" class="mt-1 text-[10px] text-slate-400">
+                            Updated <FormattedDate :value="alert.updated_at" />
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </Panel>
 
         <Panel title="Platform operations" class="mb-6">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">

@@ -448,6 +448,76 @@ class ReportsFunctionalityTest extends TestCase
             );
     }
 
+    public function test_lead_drilldown_filters_from_reports_context(): void
+    {
+        $campaign = Campaign::where('account_id', $this->account->id)->first();
+        $from = today()->subDays(3)->toDateString();
+        $to = today()->toDateString();
+
+        Lead::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'status' => 'rejected',
+            'field_data' => ['email' => 'failed@test.test'],
+            'metadata' => [
+                'quality_score' => 35,
+                'email_validation' => ['passed' => false],
+            ],
+            'received_at' => today(),
+        ]);
+
+        Lead::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'status' => 'sold',
+            'field_data' => ['email' => 'good@test.test'],
+            'metadata' => [
+                'quality_score' => 90,
+                'email_validation' => ['passed' => true],
+            ],
+            'received_at' => today(),
+            'distributed_at' => today(),
+            'redirect_followed_at' => now(),
+        ]);
+
+        $this->tenantRequest()
+            ->actingAs($this->admin)
+            ->get(route('leads.index', [
+                'from_date' => $from,
+                'to_date' => $to,
+                'validation' => 'email_failed',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.validation', 'email_failed')
+                ->where('leads.total', fn ($total) => $total >= 1)
+            );
+
+        $this->tenantRequest()
+            ->actingAs($this->admin)
+            ->get(route('leads.index', [
+                'from_date' => $from,
+                'to_date' => $to,
+                'quality_min' => 80,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('leads.total', fn ($total) => $total >= 1)
+            );
+
+        $this->tenantRequest()
+            ->actingAs($this->admin)
+            ->get(route('leads.index', [
+                'status' => 'sold',
+                'redirect' => 'followed',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.redirect', 'followed')
+                ->where('leads.total', 1)
+            );
+    }
+
     protected function createLead(
         Campaign $campaign,
         string $status,

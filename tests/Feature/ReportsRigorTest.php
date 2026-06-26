@@ -61,10 +61,10 @@ class ReportsRigorTest extends TestCase
 
     public function test_kpis_are_zero_when_no_sold_leads_in_period(): void
     {
-        $campaign = Campaign::first();
+        $campaign = Campaign::where('reference', 'mortgage-uk')->first();
 
         Lead::withoutGlobalScopes()
-            ->where('campaign_id', $campaign->id)
+            ->where('account_id', $campaign->account_id)
             ->where('status', 'sold')
             ->update([
                 'received_at' => now()->subYear(),

@@ -11,6 +11,7 @@ const props = defineProps({
     height: { type: Number, default: 260 },
     valueFormatter: { type: Function, default: null },
     drilldownRoute: { type: String, default: '' },
+    drilldownQuery: { type: Object, default: () => ({}) },
     showLegend: { type: Boolean, default: true },
     scrollable: { type: Boolean, default: null },
 });
@@ -126,7 +127,10 @@ const onBarClick = (index) => {
         ? { from_date: date, to_date: date }
         : { day_index: index };
 
-    router.get(props.drilldownRoute, params);
+    router.get(props.drilldownRoute, {
+        ...props.drilldownQuery,
+        ...params,
+    });
 };
 
 const tooltip = computed(() => {

@@ -400,6 +400,55 @@ class FormBuilderFunctionalityTest extends TestCase
             ->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://partner.example.com");
     }
 
+    public function test_iframe_embed_blocked_when_account_setting_disabled(): void
+    {
+        $account = $this->campaign->account;
+        $settings = $account->settings ?? [];
+        $settings['supplier_iframe_embed'] = false;
+        $account->update(['settings' => $settings]);
+
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'No iframe',
+            'slug' => 'no-iframe-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $this->get(route('forms.show', ['slug' => $form->slug, 'embed' => '1']))
+            ->assertForbidden();
+
+        $this->get(route('forms.show', $form->slug))
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', "frame-ancestors 'self'");
+    }
+
+    public function test_iframe_embed_allowed_on_any_site_when_account_setting_enabled(): void
+    {
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Open iframe',
+            'slug' => 'open-iframe-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $this->get(route('forms.show', ['slug' => $form->slug, 'embed' => '1']))
+            ->assertOk();
+
+        $response = $this->get(route('forms.show', $form->slug));
+        $response->assertOk();
+        $this->assertFalse($response->headers->has('Content-Security-Policy'));
+    }
+
     public function test_redirect_thank_you_mode_redirects_away(): void
     {
         Queue::fake();

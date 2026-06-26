@@ -87,9 +87,7 @@ class OperationsFunctionalityTest extends TestCase
     {
         $account = Account::where('slug', 'excellence-uk')->first();
         $campaignA = Campaign::where('reference', 'loans-uk')->first();
-        $campaignB = Campaign::where('account_id', $account->id)
-            ->where('id', '!=', $campaignA->id)
-            ->first();
+        $campaignB = Campaign::where('reference', 'mortgage-uk')->first();
 
         $this->assertNotNull($campaignB);
 

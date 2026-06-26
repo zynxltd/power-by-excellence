@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
+use App\Services\Forms\HostedFormEmbedService;
 use App\Support\CsvExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +145,35 @@ class SupplierPortalController extends Controller
         }
 
         return CsvExport::download($csv, 'supplier-leads.csv');
+    }
+
+    public function embeds(Request $request): Response
+    {
+        $supplier = $request->user()->supplier;
+        abort_unless($supplier, 403, 'Supplier account not linked to this user.');
+
+        $account = $request->user()->account ?? $supplier->account;
+        $embedService = app(HostedFormEmbedService::class);
+        $iframeEmbedAllowed = $embedService->accountAllowsSupplierIframeEmbed($account);
+        $tracking = $embedService->supplierTrackingParams($supplier);
+
+        $forms = collect($embedService->formsForSupplier($supplier))->map(function ($form) use ($embedService, $tracking) {
+            return [
+                'id' => $form->id,
+                'name' => $form->name,
+                'slug' => $form->slug,
+                'campaign' => $form->campaign?->only(['id', 'name', 'reference']),
+                'embed' => $embedService->embedPayload($form, $tracking),
+            ];
+        })->values();
+
+        return Inertia::render('Portal/Supplier/Embeds', [
+            'supplier' => $supplier->only(['id', 'name', 'reference']),
+            'sources' => $supplier->sources()->orderBy('sid')->get(['id', 'sid', 'name']),
+            'iframeEmbedAllowed' => $iframeEmbedAllowed,
+            'forms' => $forms,
+            'trackingParams' => HostedFormEmbedService::TRACKING_QUERY_PARAMS,
+        ]);
     }
 
     public function billing(Request $request): Response

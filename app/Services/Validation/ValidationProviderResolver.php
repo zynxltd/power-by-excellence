@@ -27,6 +27,7 @@ class ValidationProviderResolver
 
         if ($driver === 'ipqs' && $this->fraudProtection->isEntitled($account)) {
             $config = $this->ipqsConfig($account);
+            $config['residential_proxy_detection'] = $this->fraudProtection->supportsResidentialProxy($account);
             if (filled($config['api_key'] ?? null)) {
                 return new IpqsValidationProvider($config);
             }

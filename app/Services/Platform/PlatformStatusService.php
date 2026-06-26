@@ -72,9 +72,7 @@ class PlatformStatusService
 
         Cache::put(self::CACHE_KEY, $payload, now()->addHours(2));
 
-        app(PlatformNotificationService::class)->syncHerdLinkingAlert(
-            $this->opsCheck->herdLinkStatus(),
-        );
+        app(PlatformAdminAlertService::class)->syncAll($payload);
 
         if ($persistDaily) {
             PlatformStatusSnapshot::updateOrCreate(

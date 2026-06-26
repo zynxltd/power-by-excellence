@@ -39,7 +39,18 @@ class LeadAdminController extends Controller
         return Inertia::render('Admin/Leads/Index', [
             'leads' => $leads,
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference']),
-            'filters' => $request->only(['status', 'campaign_id', 'account_id', 'search', 'from_date', 'to_date', 'quality_min']),
+            'filters' => $request->only([
+                'status',
+                'campaign_id',
+                'account_id',
+                'search',
+                'from_date',
+                'to_date',
+                'quality_min',
+                'quality_max',
+                'validation',
+                'redirect',
+            ]),
             'statuses' => ['pending', 'processing', 'sold', 'unsold', 'rejected', 'quarantined', 'duplicate'],
             'pipelineSummary' => $this->pipelineSummary($baseQuery),
             'showTenantColumn' => $this->showTenantColumn($request),
@@ -244,6 +255,34 @@ class LeadAdminController extends Controller
         if ($request->filled('quality_min')) {
             $min = max(0, min(100, (int) $request->input('quality_min')));
             $query->whereRaw("CAST(json_extract(metadata, '$.quality_score') AS INTEGER) >= ?", [$min]);
+        }
+
+        if ($request->filled('quality_max')) {
+            $max = max(0, min(100, (int) $request->input('quality_max')));
+            $query->whereRaw("CAST(json_extract(metadata, '$.quality_score') AS INTEGER) <= ?", [$max]);
+        }
+
+        if ($request->filled('validation')) {
+            match ($request->string('validation')->toString()) {
+                'email_checked' => $query->whereNotNull('metadata->email_validation'),
+                'email_failed' => $query->where('metadata->email_validation->passed', false),
+                'email_passed' => $query->where('metadata->email_validation->passed', true),
+                'hlr_checked' => $query->whereNotNull('metadata->hlr_validation'),
+                'hlr_failed' => $query->where('metadata->hlr_validation->passed', false),
+                'hlr_passed' => $query->where('metadata->hlr_validation->passed', true),
+                'ip_checked' => $query->whereNotNull('metadata->ip_validation'),
+                'ip_failed' => $query->where('metadata->ip_validation->passed', false),
+                'ip_passed' => $query->where('metadata->ip_validation->passed', true),
+                default => null,
+            };
+        }
+
+        if ($request->filled('redirect')) {
+            match ($request->string('redirect')->toString()) {
+                'offered' => $query->whereNotNull('redirect_offered_at'),
+                'followed' => $query->whereNotNull('redirect_followed_at'),
+                default => null,
+            };
         }
 
         return $query;

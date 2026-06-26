@@ -9,6 +9,7 @@ const props = defineProps({
     datasets: { type: Array, default: () => [] },
     height: { type: Number, default: 260 },
     drilldownRoute: { type: String, default: '' },
+    drilldownQuery: { type: Object, default: () => ({}) },
     valueFormatter: { type: Function, default: null },
     maxXTicks: { type: Number, default: 7 },
 });
@@ -191,7 +192,7 @@ const onClick = (event) => {
         return;
     }
 
-    router.get(props.drilldownRoute, drilldownParams(index));
+    router.get(props.drilldownRoute, { ...props.drilldownQuery, ...drilldownParams(index) });
 };
 </script>
 

@@ -13,6 +13,7 @@ import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import LogFilters from '@/Components/UI/LogFilters.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
+import { useReportDrilldown } from '@/Composables/useReportDrilldown';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -40,6 +41,7 @@ const props = defineProps({
 });
 
 const { formatMoney, formatNumber, formatMoneyMulti } = useMoneyFormat(props.currency);
+const { leadsDrill, deliveryDrill, financeDrill, periodForLeads, periodForFinance } = useReportDrilldown(props);
 
 const revenueByCurrency = computed(() => props.summary?.revenue_by_currency ?? []);
 const financialDecimals = computed(() => (props.hasMultipleCurrencies ? 0 : 0));
@@ -103,28 +105,32 @@ const quarantineRate = computed(() => pct(props.summary?.quarantined_period ?? 0
 const pingFailRate = computed(() => pct(delivery.value.rejections ?? 0, delivery.value.attempts ?? 0));
 
 const volumeStrip = computed(() => [
-    { label: `Leads (${props.periodLabel || props.days + 'd'})`, value: formatNumber(props.summary?.leads_period), href: route('leads.index'), accent: 'indigo' },
-    { label: 'Sold', value: formatNumber(props.summary?.sold_period), href: route('leads.index', { status: 'sold' }), accent: 'emerald' },
-    { label: 'Unsold', value: formatNumber(props.summary?.unsold_period), href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
-    { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
-    { label: 'Quarantined', value: formatNumber(props.summary?.quarantined_period), href: route('quarantine.index'), accent: 'orange' },
+    { label: `Leads (${props.periodLabel || props.days + 'd'})`, value: formatNumber(props.summary?.leads_period), href: leadsDrill(), title: 'All leads received in this period', accent: 'indigo' },
+    { label: 'Sold', value: formatNumber(props.summary?.sold_period), href: leadsDrill({ status: 'sold' }), title: 'Leads sold to buyers in this period', accent: 'emerald' },
+    { label: 'Unsold', value: formatNumber(props.summary?.unsold_period), href: leadsDrill({ status: 'unsold' }), title: 'Leads that completed distribution without a sale', accent: 'amber' },
+    { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: leadsDrill({ status: 'rejected' }), title: 'Leads rejected at validation or ingest', accent: 'rose' },
+    { label: 'Quarantined', value: formatNumber(props.summary?.quarantined_period), href: leadsDrill({ status: 'quarantined' }), title: 'Leads held in quarantine during this period', accent: 'orange' },
     {
         label: props.hasMultipleCurrencies ? 'Revenue (by currency)' : 'Revenue',
-        title: props.hasMultipleCurrencies ? 'Totals are not combined across currencies — filter by currency or campaign for unit economics.' : undefined,
+        title: props.hasMultipleCurrencies
+            ? 'Sold-lead revenue by currency — opens sold leads with financials'
+            : 'Total buyer revenue from sold leads in this period',
         value: formatFinancial(props.summary?.revenue_period, 'revenue'),
-        href: route('billing.index'),
+        href: leadsDrill({ status: 'sold' }),
         accent: 'cyan',
     },
     {
         label: props.hasMultipleCurrencies ? 'Payout (by currency)' : 'Payout',
+        title: 'Supplier payout totals — opens finance breakdown by buyer and supplier',
         value: formatFinancial(props.summary?.payout_period, 'payout'),
-        href: route('finance.index'),
+        href: financeDrill(),
         accent: 'amber',
     },
     {
         label: props.hasMultipleCurrencies ? 'Margin (by currency)' : 'Margin',
+        title: 'Revenue minus payout — opens finance summary for this period',
         value: formatFinancial(props.summary?.margin_period, 'margin'),
-        href: route('finance.index'),
+        href: financeDrill(),
         accent: 'violet',
     },
 ]);
@@ -132,59 +138,59 @@ const volumeStrip = computed(() => [
 const economicsStrip = computed(() => {
     if (props.hasMultipleCurrencies) {
         return [
-            { label: 'EPL (sold)', title: 'Revenue ÷ sold leads, per currency', value: formatKpiMoneyMulti('epl'), accent: 'cyan' },
-            { label: 'EPC (ingest)', title: 'Revenue ÷ leads received, per currency', value: formatKpiMoneyMulti('epc'), accent: 'indigo' },
-            { label: 'CPA (payout)', title: 'Payout ÷ sold leads, per currency', value: formatKpiMoneyMulti('cpa'), accent: 'amber' },
-            { label: 'CPL (ingest)', title: 'Payout ÷ leads received, per currency', value: formatKpiMoneyMulti('cpl'), accent: 'rose' },
-            { label: 'MPL (margin)', title: 'Margin ÷ sold leads, per currency', value: formatKpiMoneyMulti('mpl'), accent: 'violet' },
-            { label: 'Margin %', title: 'Margin ÷ revenue, per currency', value: formatKpiPctMulti('margin_pct'), accent: 'violet' },
-            { label: 'Pay share', title: 'Payout ÷ revenue, per currency', value: formatKpiPctMulti('payout_share_pct'), accent: 'amber' },
-            { label: 'Net / lead', title: 'Margin ÷ leads received, per currency', value: formatKpiMoneyMulti('net_per_lead'), accent: 'violet' },
+            { label: 'EPL (sold)', title: 'Revenue ÷ sold leads — view sold leads with revenue', value: formatKpiMoneyMulti('epl'), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
+            { label: 'EPC (ingest)', title: 'Revenue ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('epc'), href: leadsDrill(), accent: 'indigo' },
+            { label: 'CPA (payout)', title: 'Payout ÷ sold leads — view sold leads with payout', value: formatKpiMoneyMulti('cpa'), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
+            { label: 'CPL (ingest)', title: 'Payout ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('cpl'), href: leadsDrill(), accent: 'rose' },
+            { label: 'MPL (margin)', title: 'Margin ÷ sold leads — view sold leads with margin', value: formatKpiMoneyMulti('mpl'), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
+            { label: 'Margin %', title: 'Margin ÷ revenue — opens finance summary', value: formatKpiPctMulti('margin_pct'), href: financeDrill(), accent: 'violet' },
+            { label: 'Pay share', title: 'Payout ÷ revenue — opens finance summary', value: formatKpiPctMulti('payout_share_pct'), href: financeDrill(), accent: 'amber' },
+            { label: 'Net / lead', title: 'Margin ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('net_per_lead'), href: leadsDrill(), accent: 'violet' },
         ];
     }
 
     return [
-        { label: 'EPL (sold)', title: 'Revenue ÷ sold leads', value: formatMoney(kpis.value.epl), accent: 'cyan' },
-        { label: 'EPC (ingest)', title: 'Revenue ÷ leads received', value: formatMoney(kpis.value.epc), accent: 'indigo' },
-        { label: 'CPA (payout)', title: 'Payout ÷ sold leads', value: formatMoney(kpis.value.cpa), accent: 'amber' },
-        { label: 'CPL (ingest)', title: 'Payout ÷ leads received', value: formatMoney(kpis.value.cpl), accent: 'rose' },
-        { label: 'MPL (margin)', title: 'Margin ÷ sold leads', value: formatMoney(kpis.value.mpl), accent: 'violet' },
-        { label: 'Margin %', title: 'Margin ÷ revenue', value: `${kpis.value.margin_pct ?? 0}%`, accent: 'violet' },
-        { label: 'Pay share', title: 'Payout ÷ revenue', value: `${payoutSharePct.value}%`, accent: 'amber' },
-        { label: 'Net / lead', title: 'Margin ÷ leads received', value: formatMoney(netPerLead.value), accent: 'violet' },
+        { label: 'EPL (sold)', title: 'Revenue ÷ sold leads — view sold leads with revenue', value: formatMoney(kpis.value.epl), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
+        { label: 'EPC (ingest)', title: 'Revenue ÷ leads received — view all leads in period', value: formatMoney(kpis.value.epc), href: leadsDrill(), accent: 'indigo' },
+        { label: 'CPA (payout)', title: 'Payout ÷ sold leads — view sold leads with payout', value: formatMoney(kpis.value.cpa), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
+        { label: 'CPL (ingest)', title: 'Payout ÷ leads received — view all leads in period', value: formatMoney(kpis.value.cpl), href: leadsDrill(), accent: 'rose' },
+        { label: 'MPL (margin)', title: 'Margin ÷ sold leads — view sold leads with margin', value: formatMoney(kpis.value.mpl), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
+        { label: 'Margin %', title: 'Margin ÷ revenue — opens finance summary', value: `${kpis.value.margin_pct ?? 0}%`, href: financeDrill(), accent: 'violet' },
+        { label: 'Pay share', title: 'Payout ÷ revenue — opens finance summary', value: `${payoutSharePct.value}%`, href: financeDrill(), accent: 'amber' },
+        { label: 'Net / lead', title: 'Margin ÷ leads received — view all leads in period', value: formatMoney(netPerLead.value), href: leadsDrill(), accent: 'violet' },
     ];
 });
 
 const rateStrip = computed(() => [
-    { label: 'Conversion', title: 'Sold ÷ received', value: `${props.summary?.conversion ?? 0}%`, accent: 'indigo' },
-    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold)', value: `${props.summary?.sell_through ?? 0}%`, accent: 'emerald' },
-    { label: 'Reject rate', title: 'Rejected ÷ received', value: `${props.summary?.reject_rate ?? 0}%`, accent: 'rose' },
-    { label: 'Quarantine', title: 'Quarantined ÷ received', value: `${quarantineRate.value}%`, accent: 'orange' },
-    { label: 'Avg quality', title: 'Mean lead quality score (0–100)', value: quality.value.avg_score ?? '—', accent: 'violet', href: route('leads.index') },
-    { label: 'Email pass', title: 'Email deliverability pass rate', value: quality.value.email_checked ? `${quality.value.email_pass_rate}%` : '—', accent: 'cyan' },
-    { label: 'HLR pass', title: 'Mobile HLR reachability pass rate', value: quality.value.hlr_checked ? `${quality.value.hlr_pass_rate}%` : '—', accent: 'indigo' },
-    { label: 'Ping success', title: 'Successful delivery attempts', value: `${delivery.value.success_rate ?? 0}%`, accent: 'emerald' },
-    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts', value: `${delivery.value.outbid_rate ?? 0}%`, accent: 'amber' },
-    { label: 'Ping fail', title: 'Failed/skipped ÷ delivery attempts', value: `${pingFailRate.value}%`, accent: 'rose' },
-    { label: 'Redirect rate', title: 'Consumer thank-you page clicks ÷ redirects offered', value: `${redirect.value.redirect_rate ?? 0}%`, accent: 'cyan' },
-    { label: 'Avg latency', title: 'Mean delivery duration', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—', accent: 'cyan' },
+    { label: 'Conversion', title: 'Sold ÷ received — view sold leads in this period', value: `${props.summary?.conversion ?? 0}%`, href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
+    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold) — view sold leads', value: `${props.summary?.sell_through ?? 0}%`, href: leadsDrill({ status: 'sold' }), accent: 'emerald' },
+    { label: 'Reject rate', title: 'Rejected ÷ received — view rejected leads', value: `${props.summary?.reject_rate ?? 0}%`, href: leadsDrill({ status: 'rejected' }), accent: 'rose' },
+    { label: 'Quarantine', title: 'Quarantined ÷ received — view quarantined leads in period', value: `${quarantineRate.value}%`, href: leadsDrill({ status: 'quarantined' }), accent: 'orange' },
+    { label: 'Avg quality', title: 'Mean lead quality score — view all scored leads', value: quality.value.avg_score ?? '—', href: leadsDrill(), accent: 'violet' },
+    { label: 'Email pass', title: 'Email deliverability pass rate — view leads that passed email check', value: quality.value.email_checked ? `${quality.value.email_pass_rate}%` : '—', href: quality.value.email_checked ? leadsDrill({ validation: 'email_passed' }) : null, accent: 'cyan' },
+    { label: 'HLR pass', title: 'Mobile HLR pass rate — view leads that passed HLR check', value: quality.value.hlr_checked ? `${quality.value.hlr_pass_rate}%` : '—', href: quality.value.hlr_checked ? leadsDrill({ validation: 'hlr_passed' }) : null, accent: 'indigo' },
+    { label: 'Ping success', title: 'Successful buyer delivery attempts — view success logs', value: `${delivery.value.success_rate ?? 0}%`, href: deliveryDrill({ status: 'success' }), accent: 'emerald' },
+    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts — view outbid logs', value: `${delivery.value.outbid_rate ?? 0}%`, href: deliveryDrill({ status: 'outbid' }), accent: 'amber' },
+    { label: 'Ping fail', title: 'Failed delivery attempts — view failed ping/post logs', value: `${pingFailRate.value}%`, href: deliveryDrill({ status: 'failed' }), accent: 'rose' },
+    { label: 'Redirect rate', title: 'Thank-you page clicks ÷ redirects offered — view sold leads that followed redirect', value: `${redirect.value.redirect_rate ?? 0}%`, href: leadsDrill({ status: 'sold', redirect: 'followed' }), accent: 'cyan' },
+    { label: 'Avg latency', title: 'Mean delivery duration — view all delivery attempts', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—', href: deliveryDrill(), accent: 'cyan' },
 ]);
 
 const qualityStrip = computed(() => [
-    { label: 'Avg score', value: quality.value.avg_score ?? '—', accent: 'violet', href: route('leads.index') },
-    { label: 'Excellent (80+)', value: formatNumber(quality.value.excellent ?? 0), accent: 'emerald', href: route('leads.index', { quality_min: 80 }) },
-    { label: 'Good (60–79)', value: formatNumber(quality.value.good ?? 0), accent: 'cyan' },
-    { label: 'Fair (40–59)', value: formatNumber(quality.value.fair ?? 0), accent: 'amber' },
-    { label: 'Poor (<40)', value: formatNumber(quality.value.poor ?? 0), accent: 'rose', href: route('leads.index', { quality_min: 0 }) },
-    { label: 'Email checked', value: formatNumber(quality.value.email_checked ?? 0), accent: 'indigo' },
-    { label: 'Email failed', value: formatNumber(quality.value.email_failed ?? 0), accent: 'rose', href: route('quarantine.index') },
-    { label: 'HLR checked', value: formatNumber(quality.value.hlr_checked ?? 0), accent: 'indigo' },
-    { label: 'HLR failed', value: formatNumber(quality.value.hlr_failed ?? 0), accent: 'rose', href: route('quarantine.index') },
-    { label: 'IP checked', value: formatNumber(quality.value.ip_checked ?? 0), accent: 'indigo' },
-    { label: 'IP failed', value: formatNumber(quality.value.ip_failed ?? 0), accent: 'rose', href: route('quarantine.index') },
+    { label: 'Avg score', value: quality.value.avg_score ?? '—', title: 'All leads with quality scores in this period', href: leadsDrill(), accent: 'violet' },
+    { label: 'Excellent (80+)', value: formatNumber(quality.value.excellent ?? 0), title: 'Leads scoring 80 or above', href: leadsDrill({ quality_min: 80 }), accent: 'emerald' },
+    { label: 'Good (60–79)', value: formatNumber(quality.value.good ?? 0), title: 'Leads scoring 60–79', href: leadsDrill({ quality_min: 60, quality_max: 79 }), accent: 'cyan' },
+    { label: 'Fair (40–59)', value: formatNumber(quality.value.fair ?? 0), title: 'Leads scoring 40–59', href: leadsDrill({ quality_min: 40, quality_max: 59 }), accent: 'amber' },
+    { label: 'Poor (<40)', value: formatNumber(quality.value.poor ?? 0), title: 'Leads scoring below 40', href: leadsDrill({ quality_max: 39 }), accent: 'rose' },
+    { label: 'Email checked', value: formatNumber(quality.value.email_checked ?? 0), title: 'Leads with an email validation result', href: leadsDrill({ validation: 'email_checked' }), accent: 'indigo' },
+    { label: 'Email failed', value: formatNumber(quality.value.email_failed ?? 0), title: 'Leads that failed email deliverability check', href: leadsDrill({ validation: 'email_failed' }), accent: 'rose' },
+    { label: 'HLR checked', value: formatNumber(quality.value.hlr_checked ?? 0), title: 'Leads with a mobile HLR check', href: leadsDrill({ validation: 'hlr_checked' }), accent: 'indigo' },
+    { label: 'HLR failed', value: formatNumber(quality.value.hlr_failed ?? 0), title: 'Leads that failed mobile reachability check', href: leadsDrill({ validation: 'hlr_failed' }), accent: 'rose' },
+    { label: 'IP checked', value: formatNumber(quality.value.ip_checked ?? 0), title: 'Leads with an IP fraud check', href: leadsDrill({ validation: 'ip_checked' }), accent: 'indigo' },
+    { label: 'IP failed', value: formatNumber(quality.value.ip_failed ?? 0), title: 'Leads that failed IP fraud check', href: leadsDrill({ validation: 'ip_failed' }), accent: 'rose' },
 ]);
 
-const deliveryLogFilter = (params = {}) => route('logs.delivery', { days: props.days, ...params });
+const deliveryLogFilter = (params = {}) => deliveryDrill(params);
 
 const statusLabels = {
     pending: 'Pending',
@@ -201,12 +207,14 @@ const statusLabels = {
 const leadStatusStrip = computed(() => Object.entries(props.leadStatusBreakdown ?? {}).map(([status, count]) => ({
     label: statusLabels[status] ?? status,
     value: formatNumber(count),
-    href: route('leads.index', { status }),
+    title: `View ${statusLabels[status] ?? status} leads in this period`,
+    href: leadsDrill({ status }),
 })));
 
 const deliveryOutcomeStrip = computed(() => Object.entries(props.distributionOutcome ?? {}).map(([status, count]) => ({
     label: status,
     value: formatNumber(count),
+    title: `View ${status} delivery log entries in this period`,
     href: deliveryLogFilter({ status }),
 })));
 
@@ -270,19 +278,19 @@ const revenueDataset = computed(() => ([
 
         <ReportMetricSection
             title="Unit economics"
-            description="Revenue and payout efficiency per lead. Hover a metric for the formula — EPL is revenue per sold lead; EPC is revenue per lead received; CPL is supplier payout per lead received."
+            description="Revenue and payout efficiency per lead. Click any metric to open the underlying leads or finance view for this period."
             :items="economicsStrip"
         />
 
         <ReportMetricSection
             title="Rates & delivery health"
-            description="Conversion, rejection, and ping-post delivery quality for the selected period."
+            description="Conversion, rejection, and ping-post delivery quality. Click to open filtered leads or delivery logs."
             :items="rateStrip"
         />
 
         <ReportMetricSection
             title="Lead quality"
-            description="Quality scores combine email deliverability, mobile HLR reachability, and field completeness. Scores are computed at ingest from validation results."
+            description="Quality scores from email, HLR, and IP checks at ingest. Click to see the matching leads."
             :items="qualityStrip"
         />
 
@@ -303,6 +311,7 @@ const revenueDataset = computed(() => ([
                         { label: 'Rejected', data: charts?.rejected ?? [], color: '#f43f5e' },
                     ]"
                     :drilldown-route="route('leads.index')"
+                    :drilldown-query="periodForLeads"
                 />
             </Panel>
             <Panel>
@@ -322,7 +331,8 @@ const revenueDataset = computed(() => ([
                     :height="220"
                     :scrollable="days > 14"
                     :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
-                    :drilldown-route="route('billing.index')"
+                    :drilldown-route="route('finance.index')"
+                    :drilldown-query="periodForFinance"
                 />
             </Panel>
         </div>
@@ -340,6 +350,7 @@ const revenueDataset = computed(() => ([
                 ]"
                 :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
                 :drilldown-route="route('finance.index')"
+                :drilldown-query="periodForFinance"
             />
         </Panel>
 

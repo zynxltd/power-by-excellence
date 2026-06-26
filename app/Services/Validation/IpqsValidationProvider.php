@@ -179,6 +179,16 @@ class IpqsValidationProvider implements ValidationProvider
             return ValidationResult::fail('Fraud detection API key not configured', ['provider' => 'ipqs']);
         }
 
+        $whitelist = IpWhitelistMatcher::whitelistFromContext($context, $this->config);
+        if (IpWhitelistMatcher::isWhitelisted($ip, $whitelist)) {
+            return ValidationResult::pass([
+                'provider' => 'ipqs',
+                'check' => 'ip',
+                'status' => 'whitelisted',
+                'whitelisted' => true,
+            ]);
+        }
+
         $query = [
             'strictness' => (string) max(0, min(3, (int) ($this->config['strictness'] ?? 1))),
             'allow_public_access_points' => $this->boolString('allow_public_access_points', true),
@@ -209,6 +219,12 @@ class IpqsValidationProvider implements ValidationProvider
         $crawler = (bool) ($response['is_crawler'] ?? false);
         $recentAbuse = (bool) ($response['recent_abuse'] ?? false);
         $mobile = (bool) ($response['mobile'] ?? false);
+        $residentialProxy = (bool) ($response['is_residential_proxy'] ?? false)
+            || strtolower((string) ($response['connection_type'] ?? '')) === 'residential';
+
+        if ($residentialProxy && $this->bool('residential_proxy_detection', false)) {
+            $proxy = true;
+        }
 
         if ($crawler && $this->bool('allow_crawlers', true)) {
             return ValidationResult::pass([
@@ -244,6 +260,7 @@ class IpqsValidationProvider implements ValidationProvider
             'is_crawler' => $crawler,
             'recent_abuse' => $recentAbuse,
             'mobile' => $mobile,
+            'residential_proxy' => $residentialProxy,
             'country_code' => $response['country_code'] ?? null,
             'isp' => $response['ISP'] ?? $response['isp'] ?? null,
             'connection_type' => $response['connection_type'] ?? null,

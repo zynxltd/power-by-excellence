@@ -89,7 +89,7 @@ onUnmounted(() => {
         <button
             v-if="showControls && canScrollLeft"
             type="button"
-            class="absolute left-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 shadow-md transition hover:bg-indigo-50 sm:flex dark:border-slate-700 dark:bg-slate-900/95 dark:hover:bg-indigo-950/50"
+            class="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 shadow-md transition hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900/95 dark:hover:bg-indigo-950/50"
             aria-label="Scroll left"
             @click="scrollBy(-scrollStep)"
         >
@@ -100,7 +100,7 @@ onUnmounted(() => {
         <button
             v-if="showControls && canScrollRight"
             type="button"
-            class="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 shadow-md transition hover:bg-indigo-50 sm:flex dark:border-slate-700 dark:bg-slate-900/95 dark:hover:bg-indigo-950/50"
+            class="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-200 bg-white/95 p-2 shadow-md transition hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900/95 dark:hover:bg-indigo-950/50"
             aria-label="Scroll right"
             @click="scrollBy(scrollStep)"
         >
@@ -134,8 +134,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <p v-if="showControls && (canScrollLeft || canScrollRight)" class="mt-1 text-center text-[10px] text-slate-400 sm:hidden">
-            Swipe left or right to see more platforms
+        <p v-if="showControls && (canScrollLeft || canScrollRight)" class="mt-1 text-center text-[10px] text-slate-400">
+            Drag, swipe, or use the arrows to see more
         </p>
     </div>
 </template>

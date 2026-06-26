@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
+import HorizontalSwipeScroll from '@/Components/UI/HorizontalSwipeScroll.vue';
 import { Head, router, useForm, Link, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -230,12 +231,12 @@ const sendBulk = (id) => {
                         </Link>
                     </div>
                 </div>
-                <div class="overflow-x-auto p-6">
-                    <div class="flex min-w-max gap-4">
+                <div class="p-6">
+                    <HorizontalSwipeScroll :scroll-step="280">
                         <div
                             v-for="tier in config.tiers"
                             :key="tier.tier"
-                            class="w-56 shrink-0 rounded-xl border border-violet-200 bg-gradient-to-b from-violet-50 to-white p-4 shadow-sm transition hover:shadow-md dark:border-violet-900/50 dark:from-violet-950/30 dark:to-slate-900"
+                            class="w-56 shrink-0 snap-start rounded-xl border border-violet-200 bg-gradient-to-b from-violet-50 to-white p-4 shadow-sm transition hover:shadow-md dark:border-violet-900/50 dark:from-violet-950/30 dark:to-slate-900"
                         >
                             <div class="mb-3 flex items-center justify-between">
                                 <span class="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">Tier {{ tier.tier }}</span>
@@ -252,7 +253,8 @@ const sendBulk = (id) => {
                                 </li>
                             </ul>
                         </div>
-                    </div>
+                    </HorizontalSwipeScroll>
+                    <p class="mt-2 text-center text-xs text-slate-400">Drag or scroll horizontally to view all tiers</p>
                 </div>
             </div>
         </div>

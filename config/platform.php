@@ -20,4 +20,24 @@ return [
         'fallback_active' => false,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Super-admin alert thresholds
+    |--------------------------------------------------------------------------
+    |
+    | Synced into platform_notifications (type=system) for the super-admin bell
+    | and command center. Tune per environment via .env if needed.
+    |
+    */
+
+    'admin_alerts' => [
+        'failed_jobs_warning' => (int) env('ADMIN_ALERT_FAILED_JOBS_WARN', 1),
+        'failed_jobs_critical' => (int) env('ADMIN_ALERT_FAILED_JOBS_CRITICAL', 10),
+        'queue_backlog_warning' => (int) env('ADMIN_ALERT_QUEUE_BACKLOG_WARN', 100),
+        'queue_backlog_critical' => (int) env('ADMIN_ALERT_QUEUE_BACKLOG_CRITICAL', 500),
+        'production_errors_window_minutes' => (int) env('ADMIN_ALERT_ERRORS_WINDOW', 15),
+        'production_errors_threshold' => (int) env('ADMIN_ALERT_ERRORS_THRESHOLD', 3),
+        'exception_alert_cooldown_seconds' => (int) env('ADMIN_ALERT_EXCEPTION_COOLDOWN', 300),
+    ],
+
 ];

@@ -22,6 +22,7 @@ const form = useForm({
     default_country: props.account.default_country ?? 'GB',
     default_currency: props.account.default_currency ?? 'GBP',
     require_buyer_prepay: props.account.require_buyer_prepay ?? false,
+    supplier_iframe_embed: props.account.supplier_iframe_embed ?? false,
     billing_due_at: props.account.billing_due_at ?? '',
     billing_status: props.account.billing_status ?? 'active',
     billing_alert_emails: props.account.billing_alert_emails ?? '',
@@ -96,6 +97,19 @@ const submit = () => {
                         </ul>
                     </div>
                     <InputError class="mt-1" :message="form.errors.require_buyer_prepay" />
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <label class="flex items-start gap-3">
+                        <input v-model="form.supplier_iframe_embed" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                        <span>
+                            <span class="block text-sm font-medium text-slate-900 dark:text-white">Allow supplier iframe embeds</span>
+                            <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                                When enabled, suppliers can embed hosted lead forms on any external website via iframe. When disabled, forms can only be opened as direct links on your platform domain.
+                            </span>
+                        </span>
+                    </label>
+                    <InputError class="mt-1" :message="form.errors.supplier_iframe_embed" />
                 </div>
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">

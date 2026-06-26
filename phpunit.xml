@@ -32,6 +32,8 @@
         <env name="SESSION_DOMAIN" value=""/>
         <env name="APP_URL" value="http://powerbyexcellence.test"/>
         <env name="APP_BASE_DOMAIN" value="powerbyexcellence.test"/>
+        <env name="VALIDATION_DRIVER" value="demo"/>
+        <env name="IPQS_API_KEY" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

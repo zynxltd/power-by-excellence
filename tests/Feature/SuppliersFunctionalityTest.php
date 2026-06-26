@@ -354,4 +354,65 @@ class SuppliersFunctionalityTest extends TestCase
                 ->where('summary.sold_count', fn ($v) => $v >= 1)
             );
     }
+
+    public function test_supplier_portal_embeds_page_lists_forms_when_iframe_enabled(): void
+    {
+        $campaign = Campaign::where('account_id', $this->ukAccount->id)->first();
+        $supplier = Supplier::where('account_id', $this->ukAccount->id)->first();
+        $source = $supplier->sources()->orderBy('id')->first();
+
+        $form = \App\Models\HostedForm::create([
+            'account_id' => $this->ukAccount->id,
+            'campaign_id' => $campaign->id,
+            'name' => 'Supplier Embed Form',
+            'slug' => 'supplier-embed-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'steps' => [[
+                    'id' => 'step-1',
+                    'title' => 'Contact',
+                    'fields' => [
+                        ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => true, 'options' => []],
+                    ],
+                ]],
+            ],
+        ]);
+
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        $response = $this->ukHost()
+            ->actingAs($supplierUser)
+            ->get(route('portal.supplier.embeds'));
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Portal/Supplier/Embeds')
+                ->where('iframeEmbedAllowed', true)
+            );
+
+        $forms = $response->original->getData()['page']['props']['forms'];
+        $match = collect($forms)->firstWhere('slug', $form->slug);
+        $this->assertNotNull($match);
+        $this->assertStringContainsString('embed=1', $match['embed']['iframeUrl']);
+        $this->assertStringContainsString('supplier_id='.$supplier->id, $match['embed']['iframeUrl']);
+        $this->assertStringContainsString('sid='.$source->sid, $match['embed']['iframeUrl']);
+    }
+
+    public function test_supplier_portal_embeds_page_shows_disabled_when_account_blocks_iframe(): void
+    {
+        $settings = $this->ukAccount->settings ?? [];
+        $settings['supplier_iframe_embed'] = false;
+        $this->ukAccount->update(['settings' => $settings]);
+
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        $this->ukHost()
+            ->actingAs($supplierUser)
+            ->get(route('portal.supplier.embeds'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('iframeEmbedAllowed', false)
+            );
+    }
 }

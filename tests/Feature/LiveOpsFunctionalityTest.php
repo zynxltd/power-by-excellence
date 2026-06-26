@@ -265,7 +265,7 @@ class LiveOpsFunctionalityTest extends TestCase
     public function test_campaign_filter_scopes_operations_stats(): void
     {
         $other = Campaign::where('account_id', $this->ukAccount->id)
-            ->where('id', '!=', $this->campaign->id)
+            ->where('reference', 'mortgage-uk')
             ->first();
 
         Lead::create([

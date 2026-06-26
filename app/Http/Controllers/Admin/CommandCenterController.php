@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\Platform\PlatformAdminAlertService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Platform\PlatformOpsCheck;
 use App\Services\Platform\PlatformStatusService;
@@ -95,7 +96,19 @@ class CommandCenterController extends Controller
         ];
 
         $opsCheck = app(PlatformOpsCheck::class);
-        app(PlatformNotificationService::class)->syncHerdLinkingAlert($opsCheck->herdLinkStatus());
+        $statusPayload = app(PlatformStatusService::class)->current();
+        app(PlatformAdminAlertService::class)->syncAll($statusPayload);
+
+        $systemAlerts = app(PlatformNotificationService::class)
+            ->activeSystemAlerts()
+            ->map(fn ($n) => [
+                'id' => $n->id,
+                'title' => $n->title,
+                'body' => $n->body,
+                'severity' => $n->severity,
+                'updated_at' => $n->updated_at?->toIso8601String(),
+                'alert_key' => $n->metadata['alert_key'] ?? null,
+            ]);
 
         return Inertia::render('Admin/CommandCenter/Index', [
             'platformStats' => $platformStats,
@@ -103,7 +116,8 @@ class CommandCenterController extends Controller
             'currentAccountId' => session('current_account_id'),
             'tenants' => $tenants,
             'opsChecks' => $opsCheck->run(),
-            'platformStatus' => app(PlatformStatusService::class)->publicPayload(),
+            'platformStatus' => app(PlatformStatusService::class)->publicPayload($statusPayload),
+            'systemAlerts' => $systemAlerts,
         ]);
     }
 

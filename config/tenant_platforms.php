@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Demo partner platforms seeded by PlatformSeeder (10 tenants).
+ * Demo partner platforms seeded by PlatformSeeder (13 tenants).
  */
 return [
     [
@@ -167,6 +167,56 @@ return [
             ['name' => 'Mortgage', 'reference' => 'mortgage-emea', 'vertical' => 'mortgage'],
             ['name' => 'Auto Insurance', 'reference' => 'auto-emea', 'vertical' => 'insurance_auto'],
             ['name' => 'Solar', 'reference' => 'solar-emea', 'vertical' => 'solar'],
+        ],
+    ],
+    [
+        'name' => 'France Leads FR',
+        'slug' => 'france-fr',
+        'timezone' => 'Europe/Paris',
+        'default_country' => 'FR',
+        'default_currency' => 'EUR',
+        'admin_email' => 'fr@powerbyexcellence.test',
+        'subscription_plan' => 'growth',
+        'buyers' => ['AXA France Partners', 'MAIF Lead Desk'],
+        'suppliers' => ['Hexagone Affiliés', 'LeadSud Media'],
+        'campaigns' => [
+            ['name' => 'Assurance Auto', 'reference' => 'auto-fr', 'vertical' => 'insurance_auto'],
+            ['name' => 'Prêts Personnels', 'reference' => 'loans-fr', 'vertical' => 'loans'],
+            ['name' => 'Solaire', 'reference' => 'solar-fr', 'vertical' => 'solar'],
+            ['name' => 'Assurance Habitation', 'reference' => 'home-fr', 'vertical' => 'insurance_home'],
+        ],
+    ],
+    [
+        'name' => 'Iberia Leads ES',
+        'slug' => 'spain-es',
+        'timezone' => 'Europe/Madrid',
+        'default_country' => 'ES',
+        'default_currency' => 'EUR',
+        'admin_email' => 'es@powerbyexcellence.test',
+        'subscription_plan' => 'starter',
+        'buyers' => ['Mapfre Partners', 'Santander Lead Hub'],
+        'suppliers' => ['Iberia Affiliates'],
+        'campaigns' => [
+            ['name' => 'Seguros Auto', 'reference' => 'auto-es', 'vertical' => 'insurance_auto'],
+            ['name' => 'Préstamos', 'reference' => 'loans-es', 'vertical' => 'loans'],
+            ['name' => 'Hipoteca', 'reference' => 'mortgage-es', 'vertical' => 'mortgage'],
+        ],
+    ],
+    [
+        'name' => 'Asia Finance SG',
+        'slug' => 'singapore-sg',
+        'timezone' => 'Asia/Singapore',
+        'default_country' => 'SG',
+        'default_currency' => 'SGD',
+        'admin_email' => 'sg@powerbyexcellence.test',
+        'subscription_plan' => 'enterprise',
+        'buyers' => ['DBS Lead Partners', 'OCBC Buyer Network', 'UOB Affiliates'],
+        'suppliers' => ['SEA Lead Media', 'APAC Compare'],
+        'campaigns' => [
+            ['name' => 'Personal Loans', 'reference' => 'loans-sg', 'vertical' => 'loans'],
+            ['name' => 'Home Loans', 'reference' => 'mortgage-sg', 'vertical' => 'mortgage'],
+            ['name' => 'Solar', 'reference' => 'solar-sg', 'vertical' => 'solar'],
+            ['name' => 'Insurance', 'reference' => 'insurance-sg', 'vertical' => 'insurance_auto'],
         ],
     ],
 ];

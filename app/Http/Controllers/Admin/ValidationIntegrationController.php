@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Services\Validation\ValidationProviderResolver;
 use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,6 @@ class ValidationIntegrationController extends Controller
         $resolver = app(ValidationProviderResolver::class);
         $fraud = app(\App\Services\Billing\FraudProtectionService::class);
         $ipqsUi = $resolver->ipqsSettingsForUi($account);
-        $storedIpqs = $stored['ipqs'] ?? [];
 
         $settings = [
             'enabled' => $stored['enabled'] ?? true,
@@ -29,11 +29,8 @@ class ValidationIntegrationController extends Controller
             'email_validation' => $stored['email_validation'] ?? true,
             'hlr_validation' => $stored['hlr_validation'] ?? true,
             'ip_validation' => $stored['ip_validation'] ?? true,
-            'url_validation' => $stored['url_validation'] ?? false,
             'quarantine_on_fail' => $stored['quarantine_on_fail'] ?? true,
-            'ipqs' => array_merge($ipqsUi, [
-                'api_key' => ! empty($storedIpqs['api_key']) ? '••••••••' : '',
-            ]),
+            'ipqs' => $ipqsUi,
         ];
 
         return Inertia::render('Admin/Integrations/Validation', [
@@ -41,13 +38,13 @@ class ValidationIntegrationController extends Controller
             'driver' => config('validation.driver'),
             'hasIpqsKey' => filled($resolver->ipqsConfig($account)['api_key'] ?? null),
             'fraudProtection' => $fraud->summary($account),
-            'planFeatures' => $this->planFeatures(),
+            'planFeatures' => $this->planFeatures($account),
             'demoHints' => [
                 'Reject email domains: invalid.demo, bounce.demo, trap.demo',
                 'Use +trap in email to simulate spam trap',
                 'Phone prefixes 07000, 08000 simulate unreachable HLR',
                 'IPs 10.66.x.x and 198.51.100.x simulate high-risk (demo only)',
-                'URLs on malware.demo / phish.demo fail in demo mode',
+                'Add office IPs or CIDR ranges to the whitelist to skip IP checks',
             ],
         ]);
     }
@@ -65,16 +62,13 @@ class ValidationIntegrationController extends Controller
             'email_validation' => 'boolean',
             'hlr_validation' => 'boolean',
             'ip_validation' => 'boolean',
-            'url_validation' => 'boolean',
             'quarantine_on_fail' => 'boolean',
-            'ipqs.api_key' => 'nullable|string|max:255',
             'ipqs.fraud_score_threshold' => 'nullable|integer|min:0|max:100',
-            'ipqs.url_risk_threshold' => 'nullable|integer|min:0|max:100',
             'ipqs.email_timeout' => 'nullable|integer|min:1|max:60',
             'ipqs.email_abuse_strictness' => 'nullable|integer|min:0|max:2',
             'ipqs.phone_countries' => 'nullable|string|max:120',
             'ipqs.strictness' => 'nullable|integer|min:0|max:3',
-            'ipqs.url_strictness' => 'nullable|integer|min:0|max:2',
+            'ipqs.ip_whitelist' => 'nullable|string|max:2000',
         ]);
 
         $ipqs = app(ValidationProviderResolver::class)->ipqsSettingsForUi($account);
@@ -94,10 +88,7 @@ class ValidationIntegrationController extends Controller
             }
         }
 
-        $apiKey = $request->input('ipqs.api_key', '');
-        if (! empty($apiKey) && $apiKey !== '••••••••') {
-            $ipqs['api_key'] = encrypt($apiKey);
-        } elseif (! empty($existingIpqs['api_key'])) {
+        if (! empty($existingIpqs['api_key'])) {
             $ipqs['api_key'] = $existingIpqs['api_key'];
         }
 
@@ -107,7 +98,7 @@ class ValidationIntegrationController extends Controller
             'email_validation' => $request->boolean('email_validation'),
             'hlr_validation' => $request->boolean('hlr_validation'),
             'ip_validation' => $request->boolean('ip_validation'),
-            'url_validation' => $request->boolean('url_validation') && $fraud->supportsUrlScanner($account),
+            'url_validation' => false,
             'quarantine_on_fail' => $request->boolean('quarantine_on_fail'),
             'ipqs' => $ipqs,
         ];
@@ -124,17 +115,19 @@ class ValidationIntegrationController extends Controller
     public function test(Request $request): RedirectResponse
     {
         $account = $this->resolveAdminAccount($request);
+        $integration = $account->settings['validation_integration'] ?? [];
+        $ipWhitelist = $integration['ipqs']['ip_whitelist'] ?? null;
 
         $validated = $request->validate([
             'email' => 'nullable|email',
             'phone' => 'nullable|string',
             'ip' => 'nullable|ip',
-            'url' => 'nullable|string|max:2048',
             'user_agent' => 'nullable|string|max:512',
         ]);
 
         $context = new \App\Services\Validation\ValidationContext(
             userAgent: $validated['user_agent'] ?? $request->userAgent(),
+            ipWhitelist: filled($ipWhitelist) ? (string) $ipWhitelist : null,
         );
 
         $provider = app(ValidationProviderResolver::class)->forAccount($account);
@@ -155,62 +148,50 @@ class ValidationIntegrationController extends Controller
             $results['ip'] = ['passed' => $r->passed, 'reason' => $r->reason, 'meta' => $r->meta];
         }
 
-        if (! empty($validated['url'])) {
-            $r = $provider->validateUrl($validated['url'], $context);
-            $results['url'] = ['passed' => $r->passed, 'reason' => $r->reason, 'meta' => $r->meta];
-        }
-
         return back()->with('testResults', $results);
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    protected function planFeatures(): array
+    protected function planFeatures(Account $account): array
     {
+        $fraud = app(\App\Services\Billing\FraudProtectionService::class);
+        $fraudSubscribed = $fraud->isPlanEntitled($account) || $fraud->adminOverride();
+        $residentialProxySubscribed = $fraud->supportsResidentialProxy($account);
+
         return [
             [
                 'id' => 'email',
                 'name' => 'Email Validation',
                 'description' => 'Deliverability, disposable, spam trap, leak detection',
-                'min_plan' => 'Free',
+                'min_plan' => 'Fraud Detection',
                 'lookups_per_lead' => 1,
+                'subscribed' => $fraudSubscribed,
             ],
             [
                 'id' => 'phone',
                 'name' => 'Phone Validation + HLR',
                 'description' => 'Validity, carrier, line type, SMS pumping signals',
-                'min_plan' => 'Free',
+                'min_plan' => 'Fraud Detection',
                 'lookups_per_lead' => 1,
+                'subscribed' => $fraudSubscribed,
             ],
             [
                 'id' => 'ip',
                 'name' => 'IP / Proxy / VPN Detection',
                 'description' => 'Fraud score, proxy, VPN, Tor, bot detection',
-                'min_plan' => 'Free',
+                'min_plan' => 'Fraud Detection',
                 'lookups_per_lead' => 1,
-            ],
-            [
-                'id' => 'url',
-                'name' => 'Malicious URL Scanner',
-                'description' => 'Phishing, malware, parked & spam domains',
-                'min_plan' => 'Free',
-                'lookups_per_lead' => 1,
+                'subscribed' => $fraudSubscribed,
             ],
             [
                 'id' => 'residential_proxy',
                 'name' => 'Residential Proxy Detection',
-                'description' => 'Enhanced proxy signals (included in IP check)',
-                'min_plan' => 'SMB+',
+                'description' => 'Enhanced residential proxy signals (included in IP check)',
+                'min_plan' => 'Growth+',
                 'lookups_per_lead' => 0,
-            ],
-            [
-                'id' => 'transaction',
-                'name' => 'Transaction Scoring',
-                'description' => 'Order-level fraud scoring (not wired for lead ingest)',
-                'min_plan' => 'SMB Basic',
-                'lookups_per_lead' => 0,
-                'coming_soon' => true,
+                'subscribed' => $residentialProxySubscribed,
             ],
         ];
     }

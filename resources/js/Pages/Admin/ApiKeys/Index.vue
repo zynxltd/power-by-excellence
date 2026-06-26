@@ -113,10 +113,6 @@ const copyText = async (text, key) => {
             </div>
         </div>
 
-        <div v-if="page.props.flash?.success && !newToken" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
-            {{ page.props.flash.success }}
-        </div>
-
         <div class="mb-6 grid gap-4 sm:grid-cols-3">
             <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase text-slate-500">Active keys</p>

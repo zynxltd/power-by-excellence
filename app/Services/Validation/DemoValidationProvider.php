@@ -76,6 +76,16 @@ class DemoValidationProvider implements ValidationProvider
             return ValidationResult::fail('IP address missing or invalid', ['provider' => 'demo', 'check' => 'ip']);
         }
 
+        $whitelist = IpWhitelistMatcher::whitelistFromContext($context);
+        if (IpWhitelistMatcher::isWhitelisted($ip, $whitelist)) {
+            return ValidationResult::pass([
+                'provider' => 'demo',
+                'check' => 'ip',
+                'status' => 'whitelisted',
+                'whitelisted' => true,
+            ]);
+        }
+
         foreach (config('validation.demo.high_risk_ip_prefixes', ['10.66.', '198.51.100.']) as $prefix) {
             if (str_starts_with($ip, $prefix)) {
                 return ValidationResult::fail('High-risk IP range (demo)', [

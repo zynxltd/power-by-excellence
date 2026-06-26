@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            \App\Http\Middleware\BridgeSessionFlashToInertia::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
@@ -109,6 +110,8 @@ return Application::configure(basePath: dirname(__DIR__))
                     null,
                     $e
                 );
+
+                app(\App\Services\Platform\PlatformAdminAlertService::class)->notifyUncaughtException($e);
             } catch (Throwable) {
                 // fail silently
             }
@@ -118,6 +121,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('quarantine:process-expired')->everyFifteenMinutes();
         $schedule->command('platform:status-snapshot')->everyFifteenMinutes();
         $schedule->command('platform:status-snapshot --persist')->dailyAt('06:00');
+        $schedule->command('platform:sync-alerts')->everyFiveMinutes();
 
         if (class_exists(\Laravel\Horizon\Horizon::class)) {
             $schedule->command('horizon:snapshot')->everyFiveMinutes();
