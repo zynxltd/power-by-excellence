@@ -30,7 +30,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('platform_notification_id')->constrained()->cascadeOnDelete();
             $table->timestamp('read_at');
-            $table->unique(['user_id', 'platform_notification_id']);
+            $table->unique(['user_id', 'platform_notification_id'], 'pn_reads_user_notification_uq');
         });
     }
 
