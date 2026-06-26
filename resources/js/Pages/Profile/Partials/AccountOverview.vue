@@ -1,7 +1,7 @@
 <script setup>
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { useDateFormat } from '@/composables/useDateFormat';
+import { useDateFormat } from '@/Composables/useDateFormat';
 
 const page = usePage();
 const { formatDate } = useDateFormat();

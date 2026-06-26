@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UserRole;
 use App\Models\Account;
 use App\Models\User;
 use App\Support\AdminModules;
@@ -38,6 +39,8 @@ class AccountFunctionalityTest extends TestCase
     public function test_accounts_routes_map_to_tenant_module(): void
     {
         $this->assertSame('tenant', AdminModules::moduleForRoute('accounts.index'));
+        $this->assertSame('tenant', AdminModules::moduleForRoute('accounts.create'));
+        $this->assertSame('tenant', AdminModules::moduleForRoute('accounts.store'));
         $this->assertSame('tenant', AdminModules::moduleForRoute('accounts.switch'));
     }
 
@@ -218,5 +221,96 @@ class AccountFunctionalityTest extends TestCase
             'excellence-uk.powerbyexcellence.test/god-mode/handoff/',
             $response->headers->get('Location') ?? ''
         );
+    }
+
+    public function test_super_admin_can_open_create_platform_form(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->get(route('accounts.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Accounts/Create')
+                ->has('baseDomain')
+                ->has('timezones')
+                ->has('currencies')
+                ->has('countries')
+            );
+    }
+
+    public function test_create_platform_form_only_on_central_host(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->get('http://excellence-uk.powerbyexcellence.test/accounts/create')
+            ->assertForbidden();
+    }
+
+    public function test_tenant_admin_cannot_create_platform(): void
+    {
+        $this->actingAs($this->tenantAdmin)
+            ->get(route('accounts.create'))
+            ->assertForbidden();
+
+        $this->actingAs($this->tenantAdmin)
+            ->post(route('accounts.store'), $this->validPlatformPayload())
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_can_provision_new_platform(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->post(route('accounts.store'), $this->validPlatformPayload())
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('success');
+
+        $account = Account::where('slug', 'acme-leads')->first();
+        $this->assertNotNull($account);
+        $this->assertSame('Acme Leads', $account->name);
+        $this->assertSame('GBP', $account->default_currency);
+        $this->assertTrue($account->is_active);
+        $this->assertTrue($account->settings['validation_integration']['enabled']);
+
+        $admin = User::where('email', 'admin@acme-leads.test')->first();
+        $this->assertNotNull($admin);
+        $this->assertSame($account->id, $admin->account_id);
+        $this->assertSame(UserRole::AccountAdmin, $admin->role);
+        $this->assertSame('acme-leads.powerbyexcellence.test', $account->resolvedDomain());
+    }
+
+    public function test_create_platform_validates_unique_slug_and_admin_email(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->post(route('accounts.store'), array_merge($this->validPlatformPayload(), [
+                'slug' => 'excellence-uk',
+                'admin_email' => 'uk@powerbyexcellence.test',
+            ]))
+            ->assertSessionHasErrors(['slug', 'admin_email']);
+    }
+
+    public function test_create_platform_rejects_reserved_slug(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->post(route('accounts.store'), array_merge($this->validPlatformPayload(), [
+                'slug' => 'api',
+            ]))
+            ->assertSessionHasErrors(['slug']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validPlatformPayload(): array
+    {
+        return [
+            'name' => 'Acme Leads',
+            'slug' => 'acme-leads',
+            'domain' => '',
+            'timezone' => 'Europe/London',
+            'default_country' => 'GB',
+            'default_currency' => 'GBP',
+            'admin_name' => 'Acme Admin',
+            'admin_email' => 'admin@acme-leads.test',
+            'admin_password' => 'SecurePass1!',
+            'send_credentials' => false,
+        ];
     }
 }

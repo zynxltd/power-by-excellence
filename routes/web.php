@@ -230,6 +230,8 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     Route::get('accounts', [AccountController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('accounts.index');
+    Route::get('accounts/create', [AccountController::class, 'create'])->middleware(['superadmin', 'central.host'])->name('accounts.create');
+    Route::post('accounts', [AccountController::class, 'store'])->middleware(['superadmin', 'central.host'])->name('accounts.store');
     Route::post('accounts/switch', [AccountController::class, 'switch'])->middleware(['superadmin', 'central.host'])->name('accounts.switch');
     Route::post('accounts/clear', [AccountController::class, 'clear'])->middleware('superadmin')->name('accounts.clear');
     Route::post('accounts/{accountId}/visit', [AccountController::class, 'visit'])->middleware(['superadmin', 'central.host'])->name('accounts.visit');

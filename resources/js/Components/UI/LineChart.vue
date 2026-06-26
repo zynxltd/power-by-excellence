@@ -13,9 +13,27 @@ const props = defineProps({
 
 const hover = ref(null);
 
-const padding = { top: 12, right: 2, bottom: 40, left: 2 };
+const padding = { top: 12, right: 1, bottom: 40, left: 0 };
 const labelRowHeight = 28;
-const yAxisWidth = computed(() => (props.valueFormatter ? 56 : 40));
+
+const formatValue = (v) => (props.valueFormatter ? props.valueFormatter(v) : v);
+
+const yAxisLabels = computed(() => (
+    gridLines.value
+        .slice(0, -1)
+        .map((line) => ({
+            value: line.value,
+            topPercent: (line.y / props.height) * 100,
+        }))
+));
+
+const yAxisWidth = computed(() => {
+    const labels = yAxisLabels.value.map((line) => String(formatValue(line.value)));
+    const maxLen = labels.length ? Math.max(...labels.map((s) => s.length)) : 2;
+
+    return Math.min(48, Math.max(24, maxLen * 6.5 + 6));
+});
+
 const innerWidth = computed(() => 100 - padding.left - padding.right);
 const innerHeight = computed(() => props.height - padding.top - padding.bottom - labelRowHeight);
 
@@ -54,15 +72,6 @@ const gridLines = computed(() => {
         value: Math.round(maxValue.value * (1 - i / lines)),
     }));
 });
-
-const yAxisLabels = computed(() => (
-    gridLines.value
-        .slice(0, -1)
-        .map((line) => ({
-            value: line.value,
-            topPercent: (line.y / props.height) * 100,
-        }))
-));
 
 const xTicks = computed(() => (
     chartXTicks(props.labels, props.maxXTicks).map((tick) => ({
@@ -114,8 +123,6 @@ const areaPath = (points) => {
     return `${smoothPath(points)} L ${end.x} ${base} L ${start.x} ${base} Z`;
 };
 
-const formatValue = (v) => (props.valueFormatter ? props.valueFormatter(v) : v);
-
 const hoverIndex = computed(() => hover.value?.index ?? null);
 
 const tooltip = computed(() => {
@@ -155,22 +162,25 @@ const onMouseLeave = () => {
 
 <template>
     <div class="relative w-full">
-        <div class="flex w-full gap-1" :style="{ height: `${height}px` }">
+        <div class="relative w-full" :style="{ height: `${height}px` }">
             <div
-                class="pointer-events-none relative shrink-0"
-                :style="{ width: `${yAxisWidth}px` }"
+                class="pointer-events-none absolute inset-y-0 left-0 z-10"
+                :style="{ width: `${yAxisWidth}px`, bottom: `${labelRowHeight}px` }"
             >
                 <span
                     v-for="(label, index) in yAxisLabels"
                     :key="`y-${index}`"
-                    class="absolute right-0 -translate-y-1/2 text-right text-[10px] font-medium leading-none text-slate-500 dark:text-slate-400"
+                    class="absolute right-0 -translate-y-1/2 text-right text-[10px] font-medium tabular-nums leading-none text-slate-500 dark:text-slate-400"
                     :style="{ top: `${label.topPercent}%` }"
                 >
                     {{ formatValue(label.value) }}
                 </span>
             </div>
 
-            <div class="relative min-w-0 flex-1">
+            <div
+                class="absolute inset-0"
+                :style="{ paddingLeft: `${yAxisWidth}px` }"
+            >
                 <svg
                     :viewBox="`0 0 100 ${height}`"
                     class="h-full w-full overflow-visible"
@@ -277,7 +287,7 @@ const onMouseLeave = () => {
             </div>
         </div>
 
-        <div v-if="datasets.length > 1" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 dark:border-slate-800" :style="{ marginLeft: `${yAxisWidth + 4}px` }">
+        <div v-if="datasets.length > 1" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 dark:border-slate-800" :style="{ marginLeft: `${yAxisWidth}px` }">
             <div v-for="(dataset, i) in datasets" :key="i" class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                 <span class="h-2 w-3 rounded-full" :style="{ backgroundColor: dataset.color }" />
                 {{ dataset.label }}

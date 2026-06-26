@@ -154,6 +154,7 @@ class ToolsFunctionalityTest extends TestCase
         $config = $this->account->fresh()->settings['lead_sources']['facebook'];
         $this->assertTrue($config['enabled']);
         $this->assertSame($campaign->id, $config['campaign_id']);
+        $this->assertSame('fb-verify-token', $config['verify_token']);
 
         $this->tenantRequest()
             ->actingAs($this->admin)
@@ -162,9 +163,28 @@ class ToolsFunctionalityTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Integrations/LeadSource')
                 ->where('provider', 'facebook')
+                ->where('config.verify_token', 'fb-verify-token')
                 ->has('webhookUrl')
                 ->has('ingestUrl')
             );
+    }
+
+    public function test_lead_source_generates_verify_token_when_blank(): void
+    {
+        $campaign = Campaign::where('reference', 'loans-uk')->first();
+
+        $this->tenantRequest()
+            ->actingAs($this->admin)
+            ->put(route('integrations.lead-source.update', 'facebook'), [
+                'enabled' => true,
+                'verify_token' => '',
+                'campaign_id' => $campaign->id,
+            ])
+            ->assertRedirect();
+
+        $token = $this->account->fresh()->settings['lead_sources']['facebook']['verify_token'] ?? '';
+        $this->assertNotSame('', $token);
+        $this->assertGreaterThanOrEqual(16, strlen($token));
     }
 
     public function test_unknown_lead_source_provider_returns_404(): void

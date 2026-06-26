@@ -40,16 +40,51 @@ See [God Mode](./god-mode.md).
 
 ## Creating tenants
 
-New accounts are provisioned via seeders (demo) or platform onboarding (production). Each needs:
+Super admins provision new partner platforms from the **central host** (`powerbyexcellence.test` in local dev).
+
+### UI flow
+
+1. Sign in as **super admin** on the central host.
+2. Open **Partner Platforms** (`/accounts`).
+3. Click **New platform** (`/accounts/create`).
+4. Complete the form:
+   - **Platform name** — display label for the tenant.
+   - **Subdomain slug** — becomes `{slug}.{base_domain}` (e.g. `acme-leads.powerbyexcellence.test`).
+   - **Custom domain** (optional) — override the default subdomain hostname.
+   - **Country, currency, timezone** — defaults for new campaigns and billing.
+   - **Account admin** — first tenant user (`account_admin` role) who can configure buyers, suppliers, and campaigns.
+5. Submit. The platform appears on the partner list immediately.
+6. **Local dev:** run `herd link {slug}.{base_domain}` or `php artisan platform:link-tenants` so the subdomain resolves.
+7. Use **Open portal ↗** or **Visit** to enter god mode on the new tenant.
+
+The provisioner creates only the `Account` record and one `account_admin` user — no demo buyers, suppliers, or campaigns. Configure those after visiting the tenant portal.
+
+### API / code
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `accounts.create` | GET | Create form |
+| `accounts.store` | POST | Provision tenant |
+
+Service: `App\Services\Platform\TenantProvisioner`.
+
+### Required data
 
 | Field | Purpose |
 |-------|---------|
-| `slug` | Subdomain segment |
+| `name` | Platform display name |
+| `slug` | Subdomain segment (unique, lowercase) |
 | `domain` | Optional custom hostname |
-| `default_currency` | GBP, USD, CAD, EUR |
-| Admin user | `account_admin` role linked to account |
+| `default_currency` | GBP, USD, CAD, EUR, etc. |
+| `default_country` | 2-letter ISO code |
+| `timezone` | PHP timezone identifier |
+| `admin_name`, `admin_email`, `admin_password` | First tenant admin |
 
-Run `php artisan platform:link-tenants` locally (Herd) so subdomains resolve.
+Reserved slugs (`api`, `admin`, `www`, etc.) are rejected.
+
+### Demo / seed data
+
+Seeded demo tenants come from `database/seeders/PlatformSeeder.php` and `config/tenant_platforms.php` with full buyers, suppliers, and campaigns. Use the UI flow above for real onboarding without demo data.
 
 ## DNS & environments
 

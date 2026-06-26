@@ -8,6 +8,7 @@ use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,6 +26,7 @@ class LeadSourceIntegrationController extends Controller
         $config = $account->settings['lead_sources'][$provider] ?? [
             'enabled' => false,
             'verify_token' => '',
+            'page_access_token' => '',
             'campaign_id' => null,
             'field_mapping' => [],
         ];
@@ -47,7 +49,11 @@ class LeadSourceIntegrationController extends Controller
         $validated = $request->validate([
             'enabled' => 'boolean',
             'verify_token' => 'nullable|string|max:255',
-            'campaign_id' => 'nullable|exists:campaigns,id',
+            'page_access_token' => 'nullable|string|max:500',
+            'campaign_id' => [
+                'nullable',
+                Rule::exists('campaigns', 'id')->where('account_id', $account->id),
+            ],
             'field_mapping' => 'nullable|array',
         ]);
 

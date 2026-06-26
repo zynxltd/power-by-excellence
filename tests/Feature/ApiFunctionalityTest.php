@@ -289,9 +289,30 @@ class ApiFunctionalityTest extends TestCase
         $settings['lead_sources']['google'] = ['enabled' => true, 'campaign_id' => $this->campaign->id];
         $this->account->update(['settings' => $settings]);
 
-        $this->postJson('/api/v1/integrations/google/ingest/'.$this->account->slug, ['email' => 'x@y.com'])
+        $this->postJson('/api/v1/integrations/google/ingest/'.$this->account->slug, [
+            'email' => 'fb-lead@example.com',
+            'firstname' => 'Test',
+            'lastname' => 'Lead',
+            'phone1' => '07700900444',
+            'zipcode' => 'SW1A 1AA',
+        ])
             ->assertStatus(202)
-            ->assertJsonPath('accepted', true);
+            ->assertJsonPath('accepted', true)
+            ->assertJsonStructure(['lead_id', 'queue_id']);
+
+        $this->getJson('/api/v1/integrations/facebook/webhook/'.$this->account->slug.'?hub.mode=subscribe&hub.challenge=CHAL123&hub.verify_token=wrong')
+            ->assertForbidden();
+
+        $settings['lead_sources']['facebook'] = [
+            'enabled' => true,
+            'verify_token' => 'fb-test-token',
+            'campaign_id' => $this->campaign->id,
+        ];
+        $this->account->update(['settings' => $settings]);
+
+        $this->get('/api/v1/integrations/facebook/webhook/'.$this->account->slug.'?hub.mode=subscribe&hub.challenge=CHAL123&hub.verify_token=fb-test-token')
+            ->assertOk()
+            ->assertSee('CHAL123');
     }
 
     public function test_api_auth_and_permission_boundaries(): void

@@ -5,7 +5,7 @@ Internal guides for **PowerByExcellence platform operators** (super admins). The
 | Guide | Description |
 |-------|-------------|
 | [Command Center](./command-center.md) | Cross-tenant health, delivery metrics, ops checks |
-| [Partner Platforms](./partner-platforms.md) | Tenant list, switching context, visiting subdomains |
+| [Partner Platforms](./partner-platforms.md) | Tenant list, creating platforms, switching context, visiting subdomains |
 | [God Mode](./god-mode.md) | Cross-subdomain super-admin sessions |
 | [Impersonation](./impersonation.md) | Acting as tenant staff, buyers, or suppliers |
 | [Live Feed](./live-feed.md) | Real-time platform-wide lead event stream |

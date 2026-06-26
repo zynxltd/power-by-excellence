@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useDateFormat } from '@/composables/useDateFormat';
+import { useDateFormat } from '@/Composables/useDateFormat';
 
 const props = defineProps({
     value: { type: [String, Number, Date], default: null },

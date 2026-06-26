@@ -20,8 +20,9 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
             title="Partner Platforms (Tenants)"
             description="Each tenant runs on its own subdomain. Switch context, open the tenant portal, or impersonate the tenant admin."
         >
-            <template v-if="currentAccountId" #actions>
-                <AppButton variant="secondary" @click="clearTenantContext">
+            <template #actions>
+                <AppButton :href="route('accounts.create')" variant="primary">New platform</AppButton>
+                <AppButton v-if="currentAccountId" variant="secondary" @click="clearTenantContext">
                     Exit tenant · central admin
                 </AppButton>
             </template>

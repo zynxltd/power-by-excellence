@@ -15,7 +15,6 @@ const props = defineProps({
 });
 
 const LABEL_AREA_PX = 32;
-const Y_AXIS_WIDTH_PX = 36;
 const GROUP_MIN_WIDTH_PX = 28;
 
 const hover = ref(null);
@@ -70,6 +69,15 @@ const gridLines = computed(() => {
         position: (i / lines) * 100,
         value: Math.round(maxValue.value * (1 - i / lines)),
     }));
+});
+
+const yAxisWidth = computed(() => {
+    const labels = gridLines.value
+        .slice(0, -1)
+        .map((line) => String(formatValue(line.value)));
+    const maxLen = labels.length ? Math.max(...labels.map((s) => s.length)) : 2;
+
+    return Math.min(52, Math.max(28, maxLen * 6.5 + 6));
 });
 
 const formatValue = (v) => (props.valueFormatter ? props.valueFormatter(v) : v);
@@ -152,7 +160,7 @@ const displayLabel = (label, index) => {
         <div class="relative w-full" :style="{ height: `${height}px` }">
             <div
                 class="pointer-events-none absolute inset-y-0 left-0 z-10 flex flex-col justify-between"
-                :style="{ width: `${Y_AXIS_WIDTH_PX}px`, bottom: `${LABEL_AREA_PX}px` }"
+                :style="{ width: `${yAxisWidth}px`, bottom: `${LABEL_AREA_PX}px` }"
             >
                 <div
                     v-for="(line, index) in gridLines"
@@ -162,7 +170,7 @@ const displayLabel = (label, index) => {
                 >
                     <span
                         v-if="index < gridLines.length - 1"
-                        class="w-full pr-1 text-right text-[10px] tabular-nums leading-none text-slate-400"
+                        class="w-full pr-0.5 text-right text-[10px] tabular-nums leading-none text-slate-400"
                     >
                         {{ formatValue(line.value) }}
                     </span>
@@ -181,7 +189,7 @@ const displayLabel = (label, index) => {
 
             <div
                 class="absolute inset-0 flex flex-col"
-                :style="{ paddingLeft: `${Y_AXIS_WIDTH_PX}px` }"
+                :style="{ paddingLeft: `${yAxisWidth}px` }"
             >
                 <div
                     class="relative min-h-0 flex-1"
@@ -202,7 +210,7 @@ const displayLabel = (label, index) => {
                             />
                         </div>
 
-                        <div class="absolute inset-0 flex items-stretch justify-between gap-0.5 px-1">
+                        <div class="absolute inset-0 flex items-stretch justify-between gap-0.5">
                             <div
                                 v-for="(label, i) in labels"
                                 :key="`${label}-${i}`"
