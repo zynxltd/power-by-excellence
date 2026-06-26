@@ -233,6 +233,51 @@ class AdminCrudTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
+    public function test_user_store_can_email_credentials_for_staff(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $this->actingAs($this->admin);
+
+        $this->post(route('users.store'), [
+            'name' => 'Emailed Staff',
+            'email' => 'emailed-staff@test.com',
+            'password' => 'Password123!',
+            'role' => 'staff',
+            'send_credentials' => true,
+        ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\PortalCredentialsMail::class, function ($mail) {
+            return $mail->hasTo('emailed-staff@test.com');
+        });
+    }
+
+    public function test_user_store_generates_password_when_blank(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->post(route('users.store'), [
+            'name' => 'Auto Password User',
+            'email' => 'auto-password@test.com',
+            'password' => '',
+            'role' => 'account_admin',
+            'send_credentials' => false,
+        ])->assertRedirect();
+
+        $this->assertNotNull(User::where('email', 'auto-password@test.com')->first());
+    }
+
+    public function test_user_cannot_suspend_own_account(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->post(route('users.suspend', $this->admin))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertFalse($this->admin->fresh()->is_suspended);
+    }
+
     public function test_branding_update(): void
     {
         Storage::fake('public');

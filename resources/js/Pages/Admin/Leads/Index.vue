@@ -10,6 +10,7 @@ import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import LeadQualityBadge from '@/Components/UI/LeadQualityBadge.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, inject, ref, watch } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -146,7 +147,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
         </Panel>
 
         <Panel title="Filters" class="mb-6">
-            <div class="grid gap-4 md:grid-cols-5">
+            <div class="grid gap-4 md:grid-cols-6">
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">Search UUID</label>
                     <input v-model="localFilters.search" type="text" class="form-input" placeholder="UUID or queue ID" @keyup.enter="applyFilters" />
@@ -164,6 +165,10 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                         <option value="">All campaigns</option>
                         <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
                     </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-500">Min quality</label>
+                    <input v-model="localFilters.quality_min" type="number" min="0" max="100" class="form-input" placeholder="e.g. 60" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">From</label>
@@ -190,6 +195,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     <th v-if="showTenantColumn" class="text-left">Platform</th>
                     <th class="text-left">Campaign</th>
                     <th class="text-left">Status</th>
+                    <th class="text-left">Quality</th>
                     <th class="text-left">Revenue</th>
                     <th class="text-left">Received</th>
                 </template>
@@ -200,6 +206,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     </td>
                     <td class="text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
                     <td class=""><StatusBadge :status="lead.status" /></td>
+                    <td class=""><LeadQualityBadge :quality="lead.quality" compact /></td>
                     <td class="font-medium">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
                     <td class=""><FormattedDate :value="lead.received_at" /></td>
                 </ClickableTableRow>

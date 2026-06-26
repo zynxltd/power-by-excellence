@@ -2,9 +2,9 @@
 <html>
 <head><meta charset="utf-8"><title>Portal login</title></head>
 <body style="font-family: sans-serif; line-height: 1.5; color: #1e293b;">
-    <h2>Your {{ $platformName }} portal account</h2>
+    <h2>Your {{ $platformName }} account</h2>
     <p>Hello {{ $user->name }},</p>
-    <p>An administrator has created portal access for you. Use the credentials below to sign in:</p>
+    <p>An administrator has created an account for you. Use the credentials below to sign in:</p>
     <ul>
         <li><strong>Portal URL:</strong> <a href="{{ $portalUrl }}">{{ $portalUrl }}</a></li>
         <li><strong>Email:</strong> {{ $user->email }}</li>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\HostedForm;
+use App\Models\Supplier;
+use App\Services\Forms\HostedFormEmbedService;
 use App\Support\VerticalCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,13 @@ class FormBuilderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
 
+        $embedService = app(HostedFormEmbedService::class);
+        $sampleParams = array_filter([
+            'sid' => $hostedForm->config['default_sid'] ?? 'your_sid',
+            'ssid' => 'your_subid',
+            'click_id' => 'affiliate_click_id',
+        ]);
+
         return Inertia::render('Admin/Forms/Edit', [
             'form' => $hostedForm,
             'fieldTypes' => $this->fieldTypes(),
@@ -45,6 +54,13 @@ class FormBuilderController extends Controller
                 'api_type' => $f['type'] ?? 'string',
             ])->values(),
             'campaignForms' => $campaignForms,
+            'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
+            'embed' => [
+                'directUrl' => $hostedForm->embedUrl(),
+                'iframeUrl' => $hostedForm->embedUrl($sampleParams, true),
+                'iframeHtml' => $hostedForm->iframeSnippet($sampleParams, (int) ($hostedForm->config['embed_height'] ?? 720)),
+                'trackingParams' => HostedFormEmbedService::TRACKING_QUERY_PARAMS,
+            ],
         ]);
     }
 
@@ -100,6 +116,10 @@ class FormBuilderController extends Controller
             'config' => 'nullable|array',
             'config.redirect_url' => 'nullable|url',
             'config.allowed_domains' => 'nullable|array',
+            'config.allowed_domains.*' => 'string|max:255',
+            'config.default_supplier_id' => 'nullable|integer|exists:suppliers,id',
+            'config.default_sid' => 'nullable|string|max:100',
+            'config.embed_height' => 'nullable|integer|min:320|max:2000',
             'config.css' => 'nullable|string',
             'config.thank_you' => 'nullable|array',
             'config.thank_you.mode' => 'nullable|in:inline,redirect',

@@ -100,8 +100,16 @@ class LeadPipeline
             }
 
             $lead->update(['status' => LeadStatus::Accepted]);
+            $quality = \App\Services\Leads\LeadQualityService::analyzeLead($lead);
             $lead->metadata = array_merge($lead->metadata ?? [], [
-                'quality_score' => \App\Services\Buyers\BuyerEligibilityService::computeQualityScore($lead),
+                'quality_score' => $quality['score'],
+                'quality_breakdown' => [
+                    'grade' => $quality['grade'],
+                    'email' => $quality['email'],
+                    'hlr' => $quality['hlr'],
+                    'ip' => $quality['ip'],
+                    'completeness' => $quality['completeness'],
+                ],
             ]);
             $lead->save();
             $this->dedupe->index($lead, $campaign);

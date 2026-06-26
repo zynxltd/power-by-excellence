@@ -163,7 +163,7 @@ class DeliveriesFunctionalityTest extends TestCase
         $stats = $response->viewData('page')['props']['stats'];
         $this->assertSame($ukCount, $stats['total']);
 
-        $campaignNames = collect($response->viewData('page')['props']['deliveries'])
+        $campaignNames = collect($response->viewData('page')['props']['deliveries']['data'] ?? [])
             ->pluck('campaign.name')
             ->unique()
             ->implode(' ');
@@ -178,8 +178,9 @@ class DeliveriesFunctionalityTest extends TestCase
             ->get(route('deliveries.index', ['method' => 'store_lead']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('deliveries', fn ($rows) => count($rows) >= 1
+                ->where('deliveries.data', fn ($rows) => count($rows) >= 1
                     && collect($rows)->every(fn ($row) => ($row['method']['value'] ?? $row['method']) === 'store_lead'))
+                ->has('deliveries.links')
             );
     }
 
@@ -320,6 +321,35 @@ class DeliveriesFunctionalityTest extends TestCase
         $this->assertEquals(25.0, (float) $delivery->revenue_rules[0]['amount']);
         $this->assertSame('zipcode', $delivery->revenue_rules[1]['field']);
         $this->assertEquals(15.0, (float) $delivery->revenue_rules[1]['amount']);
+    }
+
+    public function test_delivery_index_paginates_results(): void
+    {
+        $campaign = Campaign::where('account_id', $this->ukAccount->id)->first();
+        $buyer = Buyer::where('account_id', $this->ukAccount->id)->first();
+
+        for ($i = 0; $i < 30; $i++) {
+            Delivery::create([
+                'campaign_id' => $campaign->id,
+                'buyer_id' => $buyer->id,
+                'name' => "Paginated Delivery {$i}",
+                'method' => 'store_lead',
+                'status' => 'active',
+                'revenue_type' => 'fixed',
+                'revenue_amount' => 10,
+            ]);
+        }
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->get(route('deliveries.index', ['view' => 'cards']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('deliveries.data', 24)
+                ->where('deliveries.total', fn ($total) => $total >= 30)
+                ->has('deliveries.links')
+                ->has('grouped')
+            );
     }
 
     public function test_analytics_success_rate_is_null_without_attempts(): void

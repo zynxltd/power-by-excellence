@@ -195,9 +195,9 @@ const mobileSections = computed(() => {
 
 <template>
     <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
-        <!-- Row 1: brand + utilities (never competes with nav for space) -->
-        <div class="mx-auto flex h-12 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
-            <div class="flex min-w-0 shrink-0 items-center gap-2">
+        <div class="relative mx-auto grid h-14 max-w-[1600px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 sm:px-6">
+            <!-- Left: mobile menu + brand -->
+            <div class="flex min-w-0 items-center gap-2 justify-self-start">
                 <button type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden" @click="mobileOpen = !mobileOpen">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
@@ -212,76 +212,11 @@ const mobileSections = computed(() => {
                 </Link>
             </div>
 
-            <div class="ml-auto flex shrink-0 items-center gap-1.5">
-                <Dropdown v-if="isSuperAdmin" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
-                    <template #trigger>
-                        <button
-                            type="button"
-                            class="flex h-9 max-w-[11rem] items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2 text-left text-slate-200 transition hover:bg-slate-800 sm:max-w-[13rem] xl:max-w-[15rem]"
-                            :title="account?.display_name ?? 'All partner platforms'"
-                        >
-                            <svg class="h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <span class="hidden min-w-0 truncate text-xs font-semibold md:inline">
-                                {{ account?.display_name ?? 'All platforms' }}
-                            </span>
-                            <svg class="hidden h-3.5 w-3.5 shrink-0 opacity-60 md:block" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </template>
-                    <template #content>
-                        <div class="border-b border-slate-800 px-4 py-2.5">
-                            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Tenant context</p>
-                            <p class="mt-0.5 text-sm font-medium text-white">{{ account?.display_name ?? 'All partner platforms' }}</p>
-                        </div>
-                        <button
-                            v-if="account"
-                            type="button"
-                            class="block w-full px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
-                            @click="clearTenantContext"
-                        >
-                            All platforms (central admin)
-                        </button>
-                        <Link v-if="isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner platforms list</Link>
-                        <Link v-if="isCentralHost" :href="route('accounts.billing.index')" :class="dropdownLinkClass">Tenant billing</Link>
-                        <Link v-if="account" :href="route('accounts.billing.edit', account.id)" :class="dropdownLinkClass">Billing for this platform</Link>
-                        <Link v-if="account" :href="route('dashboard')" :class="dropdownLinkClass">Tenant dashboard</Link>
-                    </template>
-                </Dropdown>
-
-                <NotificationBell />
-                <ThemeToggle variant="dark" />
-
-                <Dropdown align="right" width="48" teleport content-classes="py-1 bg-slate-900 text-slate-100">
-                    <template #trigger>
-                        <button
-                            type="button"
-                            class="flex h-9 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-1.5 transition hover:bg-slate-800 sm:px-2"
-                            :title="user?.name"
-                        >
-                            <div class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
-                                <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name" class="h-full w-full object-cover" />
-                                <span v-else class="flex h-full w-full items-center justify-center text-xs font-bold text-white">{{ userInitials }}</span>
-                            </div>
-                            <span class="hidden max-w-[7rem] truncate text-sm font-medium text-slate-200 lg:inline xl:max-w-[10rem]">{{ user?.name }}</span>
-                        </button>
-                    </template>
-                    <template #content>
-                        <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
-                        <Link :href="route('logout')" method="post" as="button" class="block w-full cursor-pointer border-0 bg-transparent px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800">Log Out</Link>
-                    </template>
-                </Dropdown>
-            </div>
-        </div>
-
-        <!-- Row 2: full primary navigation on its own line -->
-        <nav
-            v-if="!isBuyer && !isSupplier"
-            class="hidden border-t border-slate-800/80 md:block"
-        >
-            <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-center gap-0.5 px-4 py-1.5 sm:px-6">
+            <!-- Center: primary navigation (desktop) -->
+            <nav
+                v-if="!isBuyer && !isSupplier"
+                class="hidden min-w-0 max-w-[calc(100vw-20rem)] items-center justify-center gap-0.5 overflow-x-auto md:flex lg:max-w-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
                 <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))">Dashboard</Link>
 
                 <TopNavDropdown
@@ -366,24 +301,83 @@ const mobileSections = computed(() => {
                     <Link :href="route('help.index')" :class="dropdownLinkClass">Help Centre</Link>
                     <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
                 </TopNavDropdown>
-            </div>
-        </nav>
+            </nav>
 
-        <!-- Buyer / supplier: simple nav row -->
-        <nav v-else-if="isBuyer" class="hidden border-t border-slate-800/80 md:block">
-            <div class="mx-auto flex max-w-[1600px] items-center justify-center gap-1 px-4 py-1.5 sm:px-6">
+            <nav v-else-if="isBuyer" class="hidden items-center justify-center gap-1 md:flex">
                 <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">Dashboard</Link>
                 <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">My Leads</Link>
                 <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">Billing</Link>
-            </div>
-        </nav>
-        <nav v-else-if="isSupplier" class="hidden border-t border-slate-800/80 md:block">
-            <div class="mx-auto flex max-w-[1600px] items-center justify-center gap-1 px-4 py-1.5 sm:px-6">
+            </nav>
+            <nav v-else-if="isSupplier" class="hidden items-center justify-center gap-1 md:flex">
                 <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>
                 <Link :href="route('portal.supplier.leads')" :class="navLinkClass(route().current('portal.supplier.leads'))">My Leads</Link>
                 <Link :href="route('portal.supplier.billing')" :class="navLinkClass(route().current('portal.supplier.billing'))">Payouts</Link>
+            </nav>
+
+            <!-- Right: tenant switcher + utilities -->
+            <div class="flex shrink-0 items-center justify-end gap-1.5 justify-self-end">
+                <Dropdown v-if="isSuperAdmin" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
+                    <template #trigger>
+                        <button
+                            type="button"
+                            class="flex h-9 max-w-[11rem] items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2 text-left text-slate-200 transition hover:bg-slate-800 sm:max-w-[13rem] xl:max-w-[15rem]"
+                            :title="account?.display_name ?? 'All partner platforms'"
+                        >
+                            <svg class="h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span class="hidden min-w-0 truncate text-xs font-semibold md:inline">
+                                {{ account?.display_name ?? 'All platforms' }}
+                            </span>
+                            <svg class="hidden h-3.5 w-3.5 shrink-0 opacity-60 md:block" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </template>
+                    <template #content>
+                        <div class="border-b border-slate-800 px-4 py-2.5">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Tenant context</p>
+                            <p class="mt-0.5 text-sm font-medium text-white">{{ account?.display_name ?? 'All partner platforms' }}</p>
+                        </div>
+                        <button
+                            v-if="account"
+                            type="button"
+                            class="block w-full px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
+                            @click="clearTenantContext"
+                        >
+                            All platforms (central admin)
+                        </button>
+                        <Link v-if="isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner platforms list</Link>
+                        <Link v-if="isCentralHost" :href="route('accounts.billing.index')" :class="dropdownLinkClass">Tenant billing</Link>
+                        <Link v-if="account" :href="route('accounts.billing.edit', account.id)" :class="dropdownLinkClass">Billing for this platform</Link>
+                        <Link v-if="account" :href="route('dashboard')" :class="dropdownLinkClass">Tenant dashboard</Link>
+                    </template>
+                </Dropdown>
+
+                <NotificationBell />
+                <ThemeToggle variant="dark" />
+
+                <Dropdown align="right" width="48" teleport content-classes="py-1 bg-slate-900 text-slate-100">
+                    <template #trigger>
+                        <button
+                            type="button"
+                            class="flex h-9 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-1.5 transition hover:bg-slate-800 sm:px-2"
+                            :title="user?.name"
+                        >
+                            <div class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
+                                <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name" class="h-full w-full object-cover" />
+                                <span v-else class="flex h-full w-full items-center justify-center text-xs font-bold text-white">{{ userInitials }}</span>
+                            </div>
+                            <span class="hidden max-w-[7rem] truncate text-sm font-medium text-slate-200 lg:inline xl:max-w-[10rem]">{{ user?.name }}</span>
+                        </button>
+                    </template>
+                    <template #content>
+                        <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
+                        <Link :href="route('logout')" method="post" as="button" class="block w-full cursor-pointer border-0 bg-transparent px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800">Log Out</Link>
+                    </template>
+                </Dropdown>
             </div>
-        </nav>
+        </div>
 
         <!-- Mobile navigation -->
         <nav v-if="mobileOpen && !isBuyer && !isSupplier" class="max-h-[70vh] overflow-y-auto border-t border-slate-800 bg-slate-950 px-3 py-3 md:hidden">

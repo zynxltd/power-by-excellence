@@ -65,6 +65,8 @@ class TenantBillingFunctionalityTest extends TestCase
                 'billing_status' => 'active',
                 'billing_notes' => 'Signed annual contract',
                 'billing_alert_emails' => 'billing@powerbyexcellence.test',
+                'subscription_plan' => 'growth',
+                'fraud_protection_enabled' => true,
             ])
             ->assertRedirect(route('accounts.billing.edit', $this->ukAccount));
 

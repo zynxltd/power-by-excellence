@@ -75,6 +75,10 @@ class PostbackController extends Controller
 
     public function destroy(Postback $postback): RedirectResponse
     {
+        if (($postback->config['synced_from'] ?? null) === 'supplier_default_postback') {
+            return back()->with('error', 'This postback is managed from the supplier form. Edit the supplier to change or remove it.');
+        }
+
         $postback->delete();
 
         return back()->with('success', 'Postback removed.');

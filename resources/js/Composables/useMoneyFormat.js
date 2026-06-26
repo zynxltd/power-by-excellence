@@ -54,5 +54,24 @@ export function useMoneyFormat(overrideCurrency = null) {
         }).format(Number(amount ?? 0));
     };
 
-    return { currency, locale, formatMoney, formatNumber };
+    const formatMoneyMulti = (rows, options = {}) => formatMoneyMultiRows(rows, formatMoney, options);
+
+    return { currency, locale, formatMoney, formatNumber, formatMoneyMulti };
+}
+
+export function formatMoneyMultiRows(rows, formatMoney, options = {}) {
+    if (!rows?.length) {
+        return '—';
+    }
+
+    const { decimals = 0, field = 'revenue' } = options;
+
+    if (rows.length === 1) {
+        return formatMoney(rows[0][field], { decimals, currency: rows[0].currency });
+    }
+
+    return rows
+        .filter((row) => Number(row[field] ?? 0) !== 0)
+        .map((row) => formatMoney(row[field], { decimals, currency: row.currency }))
+        .join(' · ') || '—';
 }

@@ -58,7 +58,6 @@ Route::prefix('v1')->middleware([\App\Http\Middleware\LogApiRequest::class])->gr
         return response()->json(['Success' => true, 'Approved' => true]);
     });
 
-    Route::post('/integrations/stripe/webhook', \App\Http\Controllers\Api\Integrations\StripeWebhookController::class);
     Route::match(['get', 'post'], '/integrations/{provider}/webhook/{accountSlug}', [\App\Http\Controllers\Api\Integrations\LeadSourceWebhookController::class, 'verify'])
         ->whereIn('provider', ['facebook', 'google', 'tiktok']);
     Route::post('/integrations/{provider}/ingest/{accountSlug}', [\App\Http\Controllers\Api\Integrations\LeadSourceWebhookController::class, 'ingest'])

@@ -23,6 +23,10 @@ class Lead extends Model
         'source_id',
         'sub_supplier_id',
         'sold_to_buyer_id',
+        'winning_delivery_id',
+        'redirect_url',
+        'redirect_offered_at',
+        'redirect_followed_at',
         'status',
         'reject_reason',
         'field_data',
@@ -47,6 +51,8 @@ class Lead extends Model
             'metadata' => 'array',
             'received_at' => 'datetime',
             'distributed_at' => 'datetime',
+            'redirect_offered_at' => 'datetime',
+            'redirect_followed_at' => 'datetime',
             'quarantined_until' => 'datetime',
         ];
     }

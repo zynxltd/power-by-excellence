@@ -1,6 +1,6 @@
 <script setup>
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     form: Object,
@@ -10,13 +10,16 @@ const props = defineProps({
     thankYou: Object,
     submitted: Boolean,
     submission: Object,
+    embed: { type: Boolean, default: false },
+    tracking: { type: Object, default: () => ({}) },
+    trackingParams: { type: Array, default: () => [] },
 });
 
 const currentStep = ref(0);
 const activeSteps = computed(() => props.steps ?? []);
 const isLastStep = computed(() => currentStep.value >= activeSteps.value.length - 1);
 
-const initialData = () => {
+const initialFieldData = () => {
     const data = {};
     for (const step of activeSteps.value) {
         for (const field of step.fields ?? []) {
@@ -26,7 +29,29 @@ const initialData = () => {
     return data;
 };
 
-const leadForm = useForm(initialData());
+const trackingPayload = () => {
+    const payload = { ...(props.tracking ?? {}) };
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        for (const key of props.trackingParams ?? []) {
+            const value = params.get(key);
+            if (value) payload[key] = value;
+        }
+    }
+    if (payload.subid && !payload.ssid) payload.ssid = payload.subid;
+    return payload;
+};
+
+const leadForm = useForm({
+    ...initialFieldData(),
+    ...trackingPayload(),
+    embed: props.embed ? '1' : '',
+});
+
+onMounted(() => {
+    Object.assign(leadForm, trackingPayload());
+    if (props.embed) leadForm.embed = '1';
+});
 
 const progress = computed(() => ((currentStep.value + 1) / Math.max(activeSteps.value.length, 1)) * 100);
 
@@ -38,27 +63,48 @@ const back = () => {
     if (currentStep.value > 0) currentStep.value--;
 };
 
-const submit = () => leadForm.post(props.submitUrl, { preserveScroll: true });
-
-const resetForm = () => {
-    leadForm.reset();
-    leadForm.clearErrors();
-    currentStep.value = 0;
-    router.visit(route('forms.show', props.form.slug), { preserveState: false });
+const submit = () => {
+    if (props.embed) leadForm.embed = '1';
+    leadForm.post(props.submitUrl, { preserveScroll: true });
 };
 
-// Simple confetti burst on thank you
-const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti ?? true));
+const resetForm = () => {
+    const query = window.location.search;
+    router.visit(route('forms.show', props.form.slug) + query, { preserveState: false });
+};
+
+const notifyParent = () => {
+    if (!props.embed || window.parent === window || !props.submitted) return;
+    window.parent.postMessage({
+        type: 'pbe:form:submitted',
+        slug: props.form.slug,
+        queue_id: props.submission?.queue_id ?? null,
+        uuid: props.submission?.uuid ?? null,
+    }, '*');
+};
+
+watch(() => props.submitted, (value) => {
+    if (value) notifyParent();
+}, { immediate: true });
+
+const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti ?? true) && !props.embed);
 </script>
 
 <template>
     <Head :title="submitted ? thankYou?.title ?? 'Thank you' : form.name" />
-    <div class="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-10 dark:from-slate-950 dark:to-slate-900">
+    <div
+        :class="[
+            'relative min-h-screen overflow-hidden',
+            embed
+                ? 'bg-white px-3 py-4 dark:bg-slate-950'
+                : 'bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-10 dark:from-slate-950 dark:to-slate-900',
+        ]"
+    >
         <div v-if="showConfetti" class="confetti pointer-events-none absolute inset-0 z-10" aria-hidden="true">
             <span v-for="n in 24" :key="n" class="confetti-piece" :style="{ '--i': n }" />
         </div>
 
-        <div class="relative z-20 mx-auto max-w-lg">
+        <div :class="['relative z-20 mx-auto', embed ? 'max-w-full' : 'max-w-lg']">
             <!-- Thank you screen -->
             <div
                 v-if="submitted"
@@ -100,6 +146,9 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                     <p v-if="activeSteps[currentStep]?.description" class="mt-1 text-sm text-slate-500">{{ activeSteps[currentStep].description }}</p>
 
                     <form class="mt-6 space-y-5" @submit.prevent="isLastStep ? submit() : next()">
+                        <input v-for="key in trackingParams" :key="key" type="hidden" :name="key" :value="leadForm[key] ?? ''" />
+                        <input v-if="embed" type="hidden" name="embed" value="1" />
+
                         <div v-for="field in activeSteps[currentStep]?.fields ?? []" :key="field.name">
                             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {{ field.label }}<span v-if="field.required" class="text-rose-500"> *</span>
@@ -156,7 +205,7 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                 </div>
             </template>
 
-            <p class="mt-4 text-center text-xs text-slate-400">Powered by PowerByExcellence</p>
+            <p v-if="!embed" class="mt-4 text-center text-xs text-slate-400">Powered by PowerByExcellence</p>
         </div>
     </div>
 </template>

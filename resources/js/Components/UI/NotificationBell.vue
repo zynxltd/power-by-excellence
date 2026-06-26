@@ -45,10 +45,16 @@ const markAll = () => {
     });
 };
 
-const markOne = (id) => {
+const markOne = (id, href = null) => {
     router.post(route('notifications.read', id), {}, {
         preserveScroll: true,
-        onSuccess: fetchNotifications,
+        onSuccess: () => {
+            fetchNotifications();
+            if (href) {
+                open.value = false;
+                router.visit(href);
+            }
+        },
     });
 };
 
@@ -106,7 +112,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick));
                     :key="n.id"
                     type="button"
                     :class="['w-full border-b border-slate-50 px-4 py-3 text-left last:border-0 dark:border-slate-800/80', !n.is_read ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50']"
-                    @click="markOne(n.id)"
+                    @click="markOne(n.id, n.href)"
                 >
                     <div class="flex items-start gap-2">
                         <span :class="['mt-1.5 h-2 w-2 shrink-0 rounded-full', severityDot(n.severity)]" />

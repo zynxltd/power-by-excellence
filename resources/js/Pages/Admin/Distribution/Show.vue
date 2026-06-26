@@ -41,10 +41,20 @@ const tierGroups = computed(() =>
         <PageHeader :title="config.name" description="Visual ping tree — tiered routing with delivery nodes.">
             <template #actions>
                 <StatusBadge :status="config.is_active ? 'active' : 'inactive'" />
+                <StatusBadge v-if="config.is_locked" status="locked" />
                 <AppButton variant="secondary" :href="route('distribution.index')">All configs</AppButton>
-                <AppButton :href="route('distribution.edit', config.id)">Edit</AppButton>
+                <AppButton :href="route('distribution.edit', config.id)">
+                    {{ config.is_locked ? 'View (locked)' : 'Edit' }}
+                </AppButton>
             </template>
         </PageHeader>
+
+        <div
+            v-if="config.is_locked"
+            class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+            This ping tree is <strong>locked</strong> to prevent accidental changes. Unlock from the edit page to modify tiers.
+        </div>
 
         <CampaignWorkflowNav
             v-if="campaignWorkflow"

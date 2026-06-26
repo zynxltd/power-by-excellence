@@ -25,7 +25,12 @@ const form = useForm({
     billing_lock_reason: props.account.billing_lock_reason ?? '',
     billing_notes: props.account.billing_notes ?? '',
     billing_alert_emails: props.account.billing_alert_emails ?? '',
+    subscription_plan: props.account.subscription_plan ?? 'starter',
+    fraud_protection_enabled: props.account.fraud_protection_enabled ?? false,
 });
+
+const fraud = computed(() => props.account.fraud_protection ?? {});
+const showFraudAddon = computed(() => form.subscription_plan === 'starter');
 
 const isLocked = computed(() => props.account.status === 'locked');
 
@@ -95,6 +100,36 @@ const quickUnlock = () => {
         <Panel class="max-w-3xl">
             <FormErrorSummary :errors="form.errors" />
             <form class="space-y-6" @submit.prevent="submit">
+                <div class="rounded-xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Plan &amp; Fraud Protection</h3>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Controls which fraud checks run on lead ingest for this tenant.</p>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2">
+                        <div>
+                            <InputLabel value="Subscription plan" />
+                            <select v-model="form.subscription_plan" class="form-select mt-1 w-full">
+                                <option value="starter">Starter — fraud add-on +£29/mo</option>
+                                <option value="growth">Growth — fraud included (25k/mo)</option>
+                                <option value="enterprise">Enterprise — fraud included (custom cap)</option>
+                            </select>
+                        </div>
+                        <div v-if="showFraudAddon">
+                            <InputLabel value="Fraud Protection add-on" />
+                            <label class="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                <input v-model="form.fraud_protection_enabled" type="checkbox" class="rounded border-slate-300" />
+                                Enable (+£29/mo, up to 5k validated leads)
+                            </label>
+                        </div>
+                        <div v-else class="flex items-end">
+                            <p class="text-sm text-emerald-700 dark:text-emerald-300">Fraud Protection included on {{ form.subscription_plan }} plan.</p>
+                        </div>
+                    </div>
+                    <p v-if="fraud.usage_count != null" class="mt-3 text-xs text-slate-500">
+                        Current usage: {{ fraud.usage_count?.toLocaleString() }} validated leads
+                        <span v-if="fraud.monthly_cap"> / {{ fraud.monthly_cap?.toLocaleString() }} cap</span>
+                        this month.
+                    </p>
+                </div>
+
                 <div class="rounded-xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-950/20">
                     <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Contract &amp; rent</h3>
                     <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Internal record of what this tenant pays you monthly under their signed contract.</p>

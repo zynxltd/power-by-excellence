@@ -30,10 +30,10 @@ class ApiDocsFunctionalityTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/ApiDocs/Index')
                 ->has('apiBaseUrl')
-                ->has('endpoints', 8)
+                ->has('endpoints', 13)
                 ->has('statusFields', 11)
                 ->has('leadStatuses', 9)
-                ->has('guides', 5)
+                ->has('guides', 6)
                 ->where('selectedCampaign.id', $campaign->id)
                 ->where('selectedCampaign.reference', 'loans-uk')
                 ->has('selectedSpec.fields')

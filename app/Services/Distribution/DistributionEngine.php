@@ -394,6 +394,8 @@ class DistributionEngine
             'distributed_at' => now(),
         ]);
 
+        app(\App\Services\Leads\LeadRedirectService::class)->offerRedirect($lead->fresh());
+
         if ($buyerId) {
             $buyer = \App\Models\Buyer::find($buyerId);
             if ($buyer) {

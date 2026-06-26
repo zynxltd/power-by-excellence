@@ -6,28 +6,74 @@ use App\Models\Delivery;
 use App\Models\DistributionConfig;
 use App\Services\Billing\BuyerBillingService;
 use App\Services\Caps\CapService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DeliveryAnalyticsService
 {
-    public function statsFor(Delivery $delivery): array
+    /**
+     * @return array<int, array{last_24h_total: int, last_24h_success: int, success_rate: ?float, avg_revenue: float, avg_duration_ms: float}>
+     */
+    public function bulkStatsFor(array $deliveryIds): array
     {
+        if ($deliveryIds === []) {
+            return [];
+        }
+
         $since = now()->subDay();
 
-        $logs = $delivery->logs()->where('created_at', '>=', $since);
-        $total = (clone $logs)->count();
-        $success = (clone $logs)->where('status', 'success')->count();
+        $rows = DB::table('delivery_logs')
+            ->whereIn('delivery_id', $deliveryIds)
+            ->where('created_at', '>=', $since)
+            ->groupBy('delivery_id')
+            ->selectRaw("
+                delivery_id,
+                count(*) as last_24h_total,
+                sum(case when status = 'success' then 1 else 0 end) as last_24h_success,
+                avg(case when status = 'success' then revenue end) as avg_revenue,
+                avg(duration_ms) as avg_duration_ms
+            ")
+            ->get();
 
-        return [
-            'last_24h_total' => $total,
-            'last_24h_success' => $success,
-            'success_rate' => $total > 0 ? round(($success / $total) * 100, 1) : null,
-            'avg_revenue' => round((float) (clone $logs)->where('status', 'success')->avg('revenue'), 2),
-            'avg_duration_ms' => round((float) (clone $logs)->avg('duration_ms'), 0),
-        ];
+        $stats = [];
+        foreach ($deliveryIds as $id) {
+            $stats[$id] = [
+                'last_24h_total' => 0,
+                'last_24h_success' => 0,
+                'success_rate' => null,
+                'avg_revenue' => 0.0,
+                'avg_duration_ms' => 0.0,
+            ];
+        }
+
+        foreach ($rows as $row) {
+            $total = (int) $row->last_24h_total;
+            $success = (int) $row->last_24h_success;
+            $stats[(int) $row->delivery_id] = [
+                'last_24h_total' => $total,
+                'last_24h_success' => $success,
+                'success_rate' => $total > 0 ? round(($success / $total) * 100, 1) : null,
+                'avg_revenue' => round((float) ($row->avg_revenue ?? 0), 2),
+                'avg_duration_ms' => round((float) ($row->avg_duration_ms ?? 0), 0),
+            ];
+        }
+
+        return $stats;
     }
 
-    public function healthFor(Delivery $delivery): string
+    public function statsFor(Delivery $delivery): array
+    {
+        return $this->bulkStatsFor([$delivery->id])[$delivery->id]
+            ?? [
+                'last_24h_total' => 0,
+                'last_24h_success' => 0,
+                'success_rate' => null,
+                'avg_revenue' => 0.0,
+                'avg_duration_ms' => 0.0,
+            ];
+    }
+
+    public function healthFor(Delivery $delivery, ?array $stats = null): string
     {
         if ($delivery->status !== 'active') {
             return 'inactive';
@@ -46,7 +92,7 @@ class DeliveryAnalyticsService
             return 'warning';
         }
 
-        $stats = $this->statsFor($delivery);
+        $stats ??= $this->statsFor($delivery);
         if ($stats['last_24h_total'] > 0 && ($stats['success_rate'] ?? 100) < 50) {
             return 'warning';
         }
@@ -56,6 +102,39 @@ class DeliveryAnalyticsService
         }
 
         return 'healthy';
+    }
+
+    /**
+     * @return array{healthy: int, warning: int, critical: int, inactive: int}
+     */
+    public function healthCountsFor(Collection $deliveries): array
+    {
+        $counts = ['healthy' => 0, 'warning' => 0, 'critical' => 0, 'inactive' => 0];
+        if ($deliveries->isEmpty()) {
+            return $counts;
+        }
+
+        $bulkStats = $this->bulkStatsFor($deliveries->pluck('id')->all());
+
+        foreach ($deliveries as $delivery) {
+            $health = $this->healthFor($delivery, $bulkStats[$delivery->id] ?? null);
+            $counts[$health] = ($counts[$health] ?? 0) + 1;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @return array{health: string, stats: array<string, mixed>}
+     */
+    public function enrichDelivery(Delivery $delivery, ?array $stats = null): array
+    {
+        $array = $delivery->toArray();
+        $stats ??= $this->bulkStatsFor([$delivery->id])[$delivery->id] ?? $this->statsFor($delivery);
+        $array['stats'] = $stats;
+        $array['health'] = $this->healthFor($delivery, $stats);
+
+        return $array;
     }
 
     public function isInPingTree(Delivery $delivery): bool

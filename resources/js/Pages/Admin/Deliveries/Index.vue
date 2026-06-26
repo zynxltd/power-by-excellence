@@ -4,18 +4,19 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
+import DeliveryCard from '@/Components/Delivery/DeliveryCard.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
+import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
-    deliveries: Array,
+    deliveries: Object,
     grouped: Array,
     stats: Object,
     filters: Object,
@@ -23,8 +24,6 @@ const props = defineProps({
     view: { type: String, default: 'cards' },
     campaignWorkflow: { type: Object, default: null },
 });
-
-const { formatMoney } = useMoneyFormat();
 
 const localFilters = ref({ ...props.filters, view: props.view });
 
@@ -45,6 +44,8 @@ const healthStyles = {
 };
 
 const methodValue = (d) => d.method?.value ?? d.method;
+
+const deliveryRows = computed(() => props.deliveries?.data ?? []);
 
 const applyFilters = () => {
     router.get(route('deliveries.index'), localFilters.value, { preserveState: true, replace: true });
@@ -79,6 +80,22 @@ const statCards = computed(() => [
     })),
 ]);
 
+const pageSummary = computed(() => {
+    const total = props.deliveries?.total ?? 0;
+    const from = props.deliveries?.from ?? 0;
+    const to = props.deliveries?.to ?? 0;
+
+    if (!total) {
+        return '0 deliveries';
+    }
+
+    if (total <= (props.deliveries?.per_page ?? 24)) {
+        return `${total} deliver${total === 1 ? 'y' : 'ies'}`;
+    }
+
+    return `Showing ${from}–${to} of ${total} deliveries`;
+});
+
 watch(() => props.filters, (f) => {
     localFilters.value = { ...f, view: props.view };
 });
@@ -104,7 +121,7 @@ watch(() => props.view, (v) => {
             class="mb-6"
         />
 
-        <CompactStatStrip :items="statCards" :columns="statCards.length" class="mb-6" />
+        <CompactStatStrip :items="statCards" class="mb-6" />
 
         <Panel title="Filters" class="mb-6">
             <div class="grid gap-4 md:grid-cols-6">
@@ -182,83 +199,25 @@ watch(() => props.view, (v) => {
 
         <!-- Cards view -->
         <div v-if="view === 'cards'" class="space-y-8">
+            <div class="flex items-center justify-end">
+                <span class="text-xs text-slate-500">{{ pageSummary }}</span>
+            </div>
+
             <section v-for="group in grouped" :key="group.campaign">
-                <div class="mb-3 flex items-center justify-between">
+                <div class="mb-3 flex items-center justify-between gap-3">
                     <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">{{ group.campaign }}</h2>
-                    <span class="text-xs text-slate-400">{{ group.items.length }} deliver{{ group.items.length === 1 ? 'y' : 'ies' }}</span>
+                    <span class="text-xs text-slate-400">{{ group.items.length }} on this page</span>
                 </div>
 
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <article
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <DeliveryCard
                         v-for="d in group.items"
                         :key="d.id"
-                        class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-700"
-                    >
-                        <div class="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <Link
-                                        :href="route('deliveries.show', d.id)"
-                                        class="block truncate text-base font-semibold text-slate-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
-                                    >
-                                        {{ d.name }}
-                                    </Link>
-                                    <p class="mt-1 text-xs text-slate-500">{{ d.buyer?.name ?? 'No buyer linked' }}</p>
-                                </div>
-                                <div class="flex shrink-0 flex-col items-end gap-1.5">
-                                    <StatusBadge :status="d.status" />
-                                    <span
-                                        :class="['rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', healthStyles[d.health] ?? healthStyles.inactive]"
-                                    >
-                                        {{ d.health ?? 'inactive' }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-3 px-5 py-4">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <DeliveryMethodBadge :method="methodValue(d)" />
-                                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                    {{ d.revenue_type?.replace(/_/g, ' ') }}
-                                    <span v-if="d.revenue_type === 'fixed'" class="text-emerald-600 dark:text-emerald-400">{{ formatMoney(d.revenue_amount, { currency: d.campaign?.currency }) }}</span>
-                                </span>
-                            </div>
-
-                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                                <span>Priority {{ d.priority }}</span>
-                                <span v-if="d.routing_mode" class="capitalize">{{ d.routing_mode.replace(/_/g, ' ') }}</span>
-                                <span v-if="d.stats?.success_rate != null">{{ d.stats.success_rate }}% success (24h)</span>
-                                <span v-if="d.logs_count">{{ d.logs_count }} runs</span>
-                            </div>
-
-                            <p class="text-xs text-slate-400">
-                                Updated <FormattedDate :value="d.updated_at" format="relative" />
-                            </p>
-                        </div>
-
-                        <div class="flex border-t border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/30">
-                            <button
-                                type="button"
-                                class="flex-1 px-4 py-2.5 text-center text-xs font-medium text-cyan-600 hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-950/30"
-                                @click="testDelivery(d.id)"
-                            >
-                                Test
-                            </button>
-                            <Link
-                                :href="route('deliveries.show', d.id)"
-                                class="flex-1 border-l border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:border-slate-800 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
-                            >
-                                Details →
-                            </Link>
-                            <Link
-                                :href="route('deliveries.edit', d.id)"
-                                class="flex-1 border-l border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
-                            >
-                                Edit
-                            </Link>
-                        </div>
-                    </article>
+                        :delivery="d"
+                        :health-styles="healthStyles"
+                        :method-labels="methodLabels"
+                        @test="testDelivery"
+                    />
                 </div>
             </section>
 
@@ -266,11 +225,18 @@ watch(() => props.view, (v) => {
                 <p class="text-xs text-slate-600 dark:text-slate-400">Create your first delivery to start routing leads to buyers.</p>
                 <AppButton class="mt-4" :href="route('deliveries.create')">Create delivery</AppButton>
             </Panel>
+
+            <Panel v-else :padding="false">
+                <Pagination :links="deliveries?.links ?? []" />
+            </Panel>
         </div>
 
         <!-- Table view -->
         <Panel v-else :padding="false">
-            <DataTable :empty="!deliveries?.length" empty-message="No deliveries match your filters.">
+            <template #header>
+                <span class="text-xs text-slate-500">{{ pageSummary }}</span>
+            </template>
+            <DataTable :empty="!deliveryRows.length" empty-message="No deliveries match your filters.">
                 <template #head>
                     <th class="text-left">Name</th>
                     <th class="text-left">Campaign</th>
@@ -278,10 +244,11 @@ watch(() => props.view, (v) => {
                     <th class="text-left">Method</th>
                     <th class="text-left">Status</th>
                     <th class="text-left">Health</th>
+                    <th class="text-left">Success (24h)</th>
                     <th class="text-left">Updated</th>
                     <th class="text-right">Actions</th>
                 </template>
-                <ClickableTableRow v-for="d in deliveries" :key="d.id" :href="route('deliveries.show', d.id)">
+                <ClickableTableRow v-for="d in deliveryRows" :key="d.id" :href="route('deliveries.show', d.id)">
                     <td class="font-medium text-slate-900 dark:text-white">{{ d.name }}</td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.campaign?.name }}</td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '—' }}</td>
@@ -292,12 +259,16 @@ watch(() => props.view, (v) => {
                             {{ d.health ?? 'inactive' }}
                         </span>
                     </td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">
+                        {{ d.stats?.success_rate != null ? `${d.stats.success_rate}%` : '—' }}
+                    </td>
                     <td class=""><FormattedDate :value="d.updated_at" format="relative" /></td>
                     <td class="text-right" @click.stop>
                         <Link :href="route('deliveries.edit', d.id)" class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Edit</Link>
                     </td>
                 </ClickableTableRow>
             </DataTable>
+            <Pagination :links="deliveries?.links ?? []" />
         </Panel>
     </AuthenticatedLayout>
 </template>

@@ -6,6 +6,8 @@ use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\DistributionConfig;
+use App\Services\Logging\PlatformLogger;
+use App\Services\Security\AuditLogService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Campaign\CampaignFieldCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -106,6 +108,8 @@ class DistributionController extends Controller
         $validated = $this->validateConfig($request);
         $config = DistributionConfig::create($validated);
 
+        $this->logConfigChange($request, 'created', $config);
+
         return redirect()->route('distribution.show', $config)->with('success', 'Ping tree configuration created.');
     }
 
@@ -125,18 +129,68 @@ class DistributionController extends Controller
 
     public function update(Request $request, DistributionConfig $distribution): RedirectResponse
     {
+        $this->ensureEditable($distribution);
+
         $this->resolveCampaign($distribution);
+        $before = $this->configSnapshot($distribution);
         $distribution->update($this->validateConfig($request));
+
+        $this->logConfigChange($request, 'updated', $distribution->fresh(), $before);
 
         return redirect()->route('distribution.show', $distribution)->with('success', 'Ping tree configuration updated.');
     }
 
     public function destroy(DistributionConfig $distribution): RedirectResponse
     {
+        $this->ensureEditable($distribution);
+
         $this->resolveCampaign($distribution);
+        $before = $this->configSnapshot($distribution);
+        $configId = $distribution->id;
         $distribution->delete();
 
+        PlatformLogger::info('distribution_config.deleted', [
+            'distribution_config_id' => $configId,
+            'campaign_id' => $before['campaign_id'] ?? null,
+            'name' => $before['name'] ?? null,
+            'user_id' => auth()->id(),
+        ]);
+
+        app(AuditLogService::class)->record(
+            'distribution_config.deleted',
+            'distribution_config',
+            $configId,
+            $before,
+        );
+
         return redirect()->route('distribution.index')->with('success', 'Configuration removed.');
+    }
+
+    public function toggleLock(Request $request, DistributionConfig $distribution): RedirectResponse
+    {
+        $this->resolveCampaign($distribution);
+
+        $validated = $request->validate([
+            'locked' => 'required|boolean',
+        ]);
+
+        $distribution->update(['is_locked' => $validated['locked']]);
+
+        return back()->with(
+            'success',
+            $validated['locked']
+                ? 'Ping tree locked — editing and deletion are disabled.'
+                : 'Ping tree unlocked — changes may affect live routing.',
+        );
+    }
+
+    protected function ensureEditable(DistributionConfig $distribution): void
+    {
+        abort_if(
+            $distribution->is_locked,
+            422,
+            'This ping tree is locked. Unlock it before making changes.',
+        );
     }
 
     protected function validateConfig(Request $request): array
@@ -194,5 +248,44 @@ class DistributionController extends Controller
         abort_unless($campaign, 404, 'Ping tree campaign not found or not accessible on this platform.');
 
         return $campaign;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function configSnapshot(DistributionConfig $config): array
+    {
+        $groups = $config->config['groups'] ?? [];
+
+        return [
+            'id' => $config->id,
+            'name' => $config->name,
+            'campaign_id' => $config->campaign_id,
+            'is_active' => $config->is_active,
+            'is_locked' => $config->is_locked,
+            'tier_count' => count($groups),
+            'delivery_count' => collect($groups)->sum(fn (array $group) => count($group['delivery_ids'] ?? [])),
+        ];
+    }
+
+    protected function logConfigChange(Request $request, string $action, DistributionConfig $config, ?array $before = null): void
+    {
+        $snapshot = $this->configSnapshot($config);
+
+        PlatformLogger::info("distribution_config.{$action}", [
+            ...$snapshot,
+            'user_id' => $request->user()?->id,
+            'before' => $before,
+        ]);
+
+        app(AuditLogService::class)->record(
+            "distribution_config.{$action}",
+            'distribution_config',
+            $config->id,
+            [
+                'after' => $snapshot,
+                'before' => $before,
+            ],
+        );
     }
 }

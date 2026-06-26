@@ -108,7 +108,7 @@ class SettingsFunctionalityTest extends TestCase
     {
         $this->ukAccount->update([
             'settings' => array_merge($this->ukAccount->settings ?? [], [
-                'stripe' => ['enabled' => true, 'mode' => 'test'],
+                'lead_sources' => ['facebook' => ['enabled' => true]],
                 'validation_integration' => ['enabled' => true, 'email_validation' => true],
             ]),
         ]);
@@ -125,7 +125,7 @@ class SettingsFunctionalityTest extends TestCase
             ->assertRedirect();
 
         $settings = $this->ukAccount->fresh()->settings;
-        $this->assertTrue($settings['stripe']['enabled']);
+        $this->assertTrue($settings['lead_sources']['facebook']['enabled']);
         $this->assertTrue($settings['validation_integration']['email_validation']);
         $this->assertFalse($settings['require_buyer_prepay']);
     }

@@ -42,7 +42,6 @@ use App\Http\Controllers\Admin\QuarantineAdminController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\LeadSourceIntegrationController;
-use App\Http\Controllers\Admin\StripeIntegrationController;
 use App\Http\Controllers\Admin\ValidationIntegrationController;
 use App\Http\Controllers\Admin\PostbackController;
 use App\Http\Controllers\Admin\WebhookController;
@@ -84,7 +83,7 @@ Route::middleware('marketing.central')->group(function () {
             'canLogin' => Route::has('login'),
             'seo' => [
                 'title' => 'Pricing — PowerByExcellence Lead Distribution',
-                'description' => 'Starter, Growth, and Enterprise plans for lead distribution with ping-tree routing and real-time bidding.',
+                'description' => 'Starter, Growth, and Enterprise plans for lead distribution with ping-tree routing, real-time bidding, and fraud protection on Growth.',
             ],
         ]);
     })->name('pricing');
@@ -108,8 +107,11 @@ Route::get('/sdk/pbe-leads.js', function () {
     ]);
 })->name('sdk.javascript');
 
-Route::get('/forms/{slug}', [PublicFormController::class, 'show'])->name('forms.show');
-Route::post('/forms/{slug}', [PublicFormController::class, 'submit'])->name('forms.submit');
+Route::middleware('hosted-form.embed')->group(function () {
+    Route::get('/forms/{slug}', [PublicFormController::class, 'show'])->name('forms.show');
+    Route::post('/forms/{slug}', [PublicFormController::class, 'submit'])->name('forms.submit');
+});
+Route::get('/r/{lead:uuid}', \App\Http\Controllers\LeadRedirectController::class)->name('lead.redirect');
 Route::get('/god-mode/handoff/{token}', GodModeHandoffController::class)->name('god-mode.handoff');
 
 Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
@@ -148,6 +150,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('billing-export', [BillingController::class, 'exportAll'])->name('billing.export-all');
     Route::post('billing/{buyer}/top-up', [BillingController::class, 'topUp'])->name('billing.top-up');
 
+    Route::post('distribution/{distribution}/lock', [DistributionController::class, 'toggleLock'])->name('distribution.lock');
     Route::resource('distribution', DistributionController::class);
 
     Route::get('routing/simulator', [RoutingSimulatorController::class, 'index'])->name('routing.simulator');
@@ -191,8 +194,6 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('integrations/validation', [ValidationIntegrationController::class, 'edit'])->name('integrations.validation');
     Route::put('integrations/validation', [ValidationIntegrationController::class, 'update'])->name('integrations.validation.update');
     Route::post('integrations/validation/test', [ValidationIntegrationController::class, 'test'])->name('integrations.validation.test');
-    Route::get('integrations/stripe', [StripeIntegrationController::class, 'edit'])->name('integrations.stripe');
-    Route::put('integrations/stripe', [StripeIntegrationController::class, 'update'])->name('integrations.stripe.update');
     Route::get('integrations/lead-sources/{provider}', [LeadSourceIntegrationController::class, 'edit'])->name('integrations.lead-source');
     Route::put('integrations/lead-sources/{provider}', [LeadSourceIntegrationController::class, 'update'])->name('integrations.lead-source.update');
 

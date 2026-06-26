@@ -29,12 +29,12 @@ const testMode = ref(true);
 const campaignId = ref(props.selectedCampaign?.id ?? '');
 
 const tabs = [
-    { key: 'overview', label: 'Overview', icon: '📋' },
-    { key: 'auth', label: 'Authentication', icon: '🔐' },
-    { key: 'ingest', label: 'Lead ingest', icon: '📥' },
-    { key: 'status', label: 'Status polling', icon: '🔄' },
-    { key: 'fields', label: 'Response fields', icon: '📊' },
-    { key: 'campaigns', label: 'Campaign schemas', icon: '⚙️' },
+    { key: 'overview', label: 'Overview' },
+    { key: 'auth', label: 'Authentication' },
+    { key: 'ingest', label: 'Lead ingest' },
+    { key: 'status', label: 'Status polling' },
+    { key: 'fields', label: 'Response fields' },
+    { key: 'campaigns', label: 'Campaign schemas' },
 ];
 
 const exampleLeadId = computed(() => props.sampleResponse?.lead_id ?? 'your-lead-uuid');
@@ -100,14 +100,19 @@ const loadCampaign = () => {
     }
     router.get(route('api-docs.index', { campaign_id: campaignId.value }), {}, { preserveState: true });
 };
+
+const methodClass = (method) => ({
+    GET: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    POST: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
+}[method?.toUpperCase()] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300');
 </script>
 
 <template>
-    <Head title="API Documentation" />
+    <Head title="REST API" />
     <AuthenticatedLayout>
         <PageHeader
-            title="API Documentation"
-            :description="`Lead ingest, status polling, and integration reference for ${accountName}.`"
+            title="REST API"
+            :description="`Lead ingest, status polling, and integration reference for ${accountName}. All requests use JSON over HTTPS.`"
         >
             <template #actions>
                 <AppButton :href="route('api-keys.index')" variant="secondary">API Keys</AppButton>
@@ -119,7 +124,10 @@ const loadCampaign = () => {
             <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase text-slate-500">Base URL</p>
                 <p class="mt-1 break-all font-mono text-sm text-indigo-600 dark:text-indigo-400">{{ apiBaseUrl }}</p>
-                <p v-if="tenantHost" class="mt-1 text-xs text-slate-500">Host: {{ tenantHost }}</p>
+                <p v-if="tenantHost" class="mt-1 text-xs text-slate-500">Tenant host: {{ tenantHost }}</p>
+                <button type="button" class="mt-2 text-xs font-medium text-indigo-600 hover:underline" @click="copyText(apiBaseUrl, 'base')">
+                    {{ copied === 'base' ? 'Copied' : 'Copy base URL' }}
+                </button>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <p class="text-xs font-semibold uppercase text-slate-500">Primary endpoint</p>
@@ -131,6 +139,23 @@ const loadCampaign = () => {
                 <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ campaigns.length }}</p>
                 <p class="text-xs text-slate-500">Each has its own field schema</p>
             </div>
+        </div>
+
+        <div class="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900 lg:hidden">
+            <button
+                v-for="tab in tabs"
+                :key="tab.key"
+                type="button"
+                :class="[
+                    'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition',
+                    activeTab === tab.key
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400',
+                ]"
+                @click="activeTab = tab.key"
+            >
+                {{ tab.label }}
+            </button>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-12">
@@ -149,7 +174,6 @@ const loadCampaign = () => {
                             ]"
                             @click="activeTab = tab.key"
                         >
-                            <span>{{ tab.icon }}</span>
                             {{ tab.label }}
                         </button>
                     </nav>
@@ -189,12 +213,13 @@ const loadCampaign = () => {
                         <div class="divide-y divide-slate-100 dark:divide-slate-800">
                             <div v-for="ep in endpoints" :key="ep.key" class="px-4 py-3">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ ep.method }}</span>
-                                    <span class="font-mono text-sm text-indigo-600 dark:text-indigo-400">{{ apiBaseUrl }}{{ ep.path }}</span>
+                                    <span :class="methodClass(ep.method)" class="rounded px-2 py-0.5 font-mono text-xs font-bold">{{ ep.method }}</span>
+                                    <span class="font-mono text-sm text-slate-700 dark:text-slate-300">{{ ep.path }}</span>
                                     <span v-if="ep.scope" class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">{{ ep.scope }}</span>
                                 </div>
                                 <p class="mt-1 text-sm font-medium text-slate-900 dark:text-white">{{ ep.summary }}</p>
                                 <p class="mt-0.5 text-sm text-slate-500">{{ ep.description }}</p>
+                                <p class="mt-1 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ apiBaseUrl }}{{ ep.path }}</p>
                             </div>
                         </div>
                     </Panel>
@@ -204,9 +229,10 @@ const loadCampaign = () => {
                 <div v-show="activeTab === 'auth'" class="space-y-6">
                     <Panel title="Bearer token format">
                         <p class="font-mono text-sm text-slate-700 dark:text-slate-300">Authorization: Bearer {prefix}|{secret}</p>
+                        <p class="mt-2 font-mono text-sm text-slate-700 dark:text-slate-300">X-API-Key: {prefix}|{secret}</p>
                         <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">
                             When you create a key, the full token is shown once. The prefix identifies the key record; the secret is verified server-side.
-                            Never commit tokens to source control.
+                            Never commit tokens to source control. Keys only work against this tenant's API base URL above.
                         </p>
                         <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/50">
                             <p class="font-semibold text-slate-700 dark:text-slate-300">Example</p>
@@ -266,9 +292,19 @@ const loadCampaign = () => {
 
                     <div class="grid gap-6 lg:grid-cols-2">
                         <Panel :title="testMode ? 'Request body (test)' : 'Request body (live)'">
+                            <template #header>
+                                <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="copyText(JSON.stringify(liveSample, null, 2), 'body')">
+                                    {{ copied === 'body' ? 'Copied' : 'Copy' }}
+                                </button>
+                            </template>
                             <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">{{ JSON.stringify(liveSample, null, 2) }}</pre>
                         </Panel>
                         <Panel title="cURL">
+                            <template #header>
+                                <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="copyText(ingestCurl, 'ingest')">
+                                    {{ copied === 'ingest' ? 'Copied' : 'Copy' }}
+                                </button>
+                            </template>
                             <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ ingestCurl }}</pre>
                         </Panel>
                     </div>

@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -11,10 +12,29 @@ import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { nextTick, ref } from 'vue';
+import { pushToast } from '@/Composables/useToast';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, nextTick, ref, watch } from 'vue';
 
-const props = defineProps({ users: Object, buyers: Array, suppliers: Array, modules: Array, portalUrl: String });
+const page = usePage();
+const currentUserId = computed(() => page.props.auth?.user?.id);
+const isImpersonating = computed(() => Boolean(page.props.auth?.impersonator));
+
+const props = defineProps({
+    users: Object,
+    buyers: Array,
+    suppliers: Array,
+    modules: Array,
+    portalUrl: String,
+    filters: { type: Object, default: () => ({}) },
+    summary: { type: Object, default: () => ({}) },
+});
+
+const showCreate = ref(false);
+const showAdvancedCreate = ref(false);
+const showAdvancedEdit = ref(false);
+const showCreatePassword = ref(false);
+const showEditPassword = ref(false);
 
 const form = useForm({
     name: '',
@@ -39,14 +59,116 @@ const editForm = useForm({
     allowed_modules: [],
 });
 
-const submit = () => form.post(route('users.store'), { onSuccess: () => form.reset('password') });
-const destroy = (id) => { if (confirm('Delete this user?')) router.delete(route('users.destroy', id)); };
-const suspend = (id) => { if (confirm('Suspend this user? They will not be able to sign in.')) router.post(route('users.suspend', id)); };
+const filterForm = useForm({
+    search: props.filters?.search ?? '',
+    role: props.filters?.role ?? '',
+    status: props.filters?.status ?? '',
+});
+
+const roleOptions = [
+    { value: 'account_admin', label: 'Account Admin', description: 'Full platform access', accent: 'indigo' },
+    { value: 'staff', label: 'Staff', description: 'Limited module access', accent: 'violet' },
+    { value: 'buyer_portal', label: 'Buyer Portal', description: 'Buyer performance & leads', accent: 'cyan' },
+    { value: 'supplier_portal', label: 'Supplier Portal', description: 'Affiliate reporting', accent: 'amber' },
+];
+
+const statStrip = computed(() => [
+    { label: 'Total users', value: props.summary?.total ?? 0, accent: 'indigo' },
+    { label: 'Active', value: props.summary?.active ?? 0, accent: 'emerald' },
+    { label: 'Suspended', value: props.summary?.suspended ?? 0, accent: 'rose' },
+    { label: 'Admins', value: props.summary?.admins ?? 0, accent: 'violet' },
+    { label: 'Portal users', value: props.summary?.portal ?? 0, accent: 'cyan' },
+]);
+
+const needsAdvancedCreate = computed(() =>
+    form.role === 'staff'
+    || ['buyer_portal', 'supplier_portal'].includes(form.role),
+);
+
+const needsAdvancedEdit = computed(() =>
+    editForm.role === 'staff'
+    || ['buyer_portal', 'supplier_portal'].includes(editForm.role),
+);
+
+watch(() => form.role, () => {
+    if (!needsAdvancedCreate.value) {
+        showAdvancedCreate.value = false;
+    }
+});
+
+watch(() => Object.keys(form.errors).length, (count) => {
+    if (count > 0) {
+        showCreate.value = true;
+    }
+});
+
+const openCreate = () => {
+    showCreate.value = true;
+    editingId.value = null;
+    if (!form.password) {
+        generatePassword(form);
+    }
+};
+
+const closeCreate = () => {
+    showCreate.value = false;
+    showAdvancedCreate.value = false;
+    form.clearErrors();
+};
+
+const submit = () => {
+    form.post(route('users.store'), {
+        onSuccess: () => {
+            pushToast('User created.', 'success');
+            form.reset('password', 'name', 'email', 'buyer_id', 'supplier_id');
+            form.role = 'account_admin';
+            form.send_credentials = true;
+            closeCreate();
+        },
+        onError: () => pushToast('Could not create user — check the form.', 'error'),
+    });
+};
+
+const applyFilters = () => {
+    filterForm.get(route('users.index'), { preserveState: true, preserveScroll: true });
+};
+
+const clearFilters = () => {
+    filterForm.search = '';
+    filterForm.role = '';
+    filterForm.status = '';
+    applyFilters();
+};
+
+const destroy = (id) => {
+    if (confirm('Delete this user?')) {
+        router.delete(route('users.destroy', id), {
+            onError: () => pushToast('Could not delete user.', 'error'),
+        });
+    }
+};
+const suspend = (id) => {
+    if (confirm('Suspend this user? They will not be able to sign in.')) {
+        router.post(route('users.suspend', id), {}, {
+            onError: () => pushToast('Could not suspend user.', 'error'),
+        });
+    }
+};
 const activate = (id) => router.post(route('users.activate', id));
-const emailCredentials = (id) => { if (confirm('Generate a new password and email credentials to this user?')) router.post(route('users.email-credentials', id)); };
+const emailCredentials = (id) => {
+    if (confirm('Generate a new password and email credentials to this user?')) {
+        router.post(route('users.email-credentials', id), {}, {
+            onError: () => pushToast('Could not email credentials.', 'error'),
+        });
+    }
+};
+
+const isCurrentUser = (user) => user.id === currentUserId.value;
 
 const startEdit = async (user) => {
+    showCreate.value = false;
     editingId.value = user.id;
+    showAdvancedEdit.value = user.role === 'staff' || ['buyer_portal', 'supplier_portal'].includes(user.role);
     editForm.clearErrors();
     editForm.name = user.name;
     editForm.email = user.email;
@@ -61,7 +183,12 @@ const startEdit = async (user) => {
 
 const saveEdit = () => {
     editForm.put(route('users.update', editingId.value), {
-        onSuccess: () => { editingId.value = null; },
+        onSuccess: () => {
+            pushToast('User updated.', 'success');
+            editingId.value = null;
+            showAdvancedEdit.value = false;
+        },
+        onError: () => pushToast('Could not update user — check the form.', 'error'),
     });
 };
 
@@ -72,6 +199,36 @@ const toggleModule = (target, key) => {
     } else {
         target.allowed_modules = [...list, key];
     }
+};
+
+const generatePassword = (target) => {
+    const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$';
+    let password = '';
+    for (let i = 0; i < 14; i += 1) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    target.password = password;
+};
+
+const copyPassword = async (password) => {
+    if (!password) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(password);
+        pushToast('Password copied to clipboard.', 'success');
+    } catch {
+        pushToast('Could not copy password.', 'error');
+    }
+};
+
+const roleCardClass = (role, selected) => {
+    const base = 'rounded-xl border p-3 text-left transition';
+    if (!selected) {
+        return `${base} border-slate-200 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-indigo-600 dark:hover:bg-slate-800/50`;
+    }
+    return `${base} border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500/30 dark:border-indigo-500 dark:bg-indigo-950/40`;
 };
 
 const roleLabel = (role) => ({
@@ -86,109 +243,258 @@ const roleLabel = (role) => ({
 <template>
     <Head title="Users" />
     <AuthenticatedLayout>
-        <PageHeader title="Users" description="Manage team members, portal users, and access roles. Email credentials to buyers and suppliers for seamless portal onboarding." />
+        <PageHeader title="Users" description="Manage team members, portal users, and access roles. Email credentials to buyers and suppliers for seamless portal onboarding.">
+            <template #actions>
+                <AppButton v-if="portalUrl" variant="secondary" :href="portalUrl" target="_blank">Portal login URL</AppButton>
+                <AppButton @click="showCreate ? closeCreate() : openCreate()">
+                    {{ showCreate ? 'Cancel' : '+ Add user' }}
+                </AppButton>
+            </template>
+        </PageHeader>
 
         <TenantContextBanner />
+
+        <CompactStatStrip :items="statStrip" class="mb-6" />
+
         <div class="space-y-6">
-            <Panel title="Create User">
-                <form @submit.prevent="submit" class="space-y-4">
+            <Panel v-if="showCreate" title="Create user" class="ring-2 ring-indigo-500/20">
+                <form class="space-y-5" @submit.prevent="submit">
                     <FormErrorSummary :errors="form.errors" />
+
+                    <div>
+                        <InputLabel value="Role" />
+                        <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                            <button
+                                v-for="role in roleOptions"
+                                :key="role.value"
+                                type="button"
+                                :class="roleCardClass(role.value, form.role === role.value)"
+                                @click="form.role = role.value"
+                            >
+                                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ role.label }}</p>
+                                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ role.description }}</p>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div><InputLabel value="Name" /><TextInput v-model="form.name" class="mt-1 w-full" required /><InputError class="mt-1" :message="form.errors.name" /></div>
-                        <div><InputLabel value="Email" /><TextInput v-model="form.email" type="email" class="mt-1 w-full" required /><InputError class="mt-1" :message="form.errors.email" /></div>
-                        <div><InputLabel value="Password" /><TextInput v-model="form.password" type="password" class="mt-1 w-full" required /><InputError class="mt-1" :message="form.errors.password" /></div>
                         <div>
-                            <InputLabel value="Role" />
-                            <select v-model="form.role" class="form-select">
-                                <option value="account_admin">Account Admin</option>
-                                <option value="staff">Staff</option>
-                                <option value="buyer_portal">Buyer Portal</option>
-                                <option value="supplier_portal">Supplier Portal</option>
-                            </select>
+                            <InputLabel value="Name" />
+                            <TextInput v-model="form.name" class="mt-1 w-full" required />
+                            <InputError class="mt-1" :message="form.errors.name" />
                         </div>
-                        <div v-if="form.role === 'buyer_portal'">
-                            <InputLabel value="Link to Buyer" />
-                            <select v-model="form.buyer_id" class="form-select" required>
-                                <option value="">Select buyer</option>
-                                <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }} ({{ b.reference }})</option>
-                            </select>
+                        <div>
+                            <InputLabel value="Email" />
+                            <TextInput v-model="form.email" type="email" class="mt-1 w-full" required />
+                            <InputError class="mt-1" :message="form.errors.email" />
                         </div>
-                        <div v-if="form.role === 'supplier_portal'">
-                            <InputLabel value="Link to Supplier" />
-                            <select v-model="form.supplier_id" class="form-select" required>
-                                <option value="">Select supplier</option>
-                                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
-                            </select>
+                        <div class="md:col-span-2">
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <InputLabel value="Password" />
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400" @click="generatePassword(form)">
+                                            Generate secure password
+                                        </button>
+                                        <button
+                                            v-if="form.password"
+                                            type="button"
+                                            class="text-xs font-medium text-slate-600 hover:underline dark:text-slate-300"
+                                            @click="copyPassword(form.password)"
+                                        >
+                                            Copy
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-xs font-medium text-slate-600 hover:underline dark:text-slate-300"
+                                            @click="showCreatePassword = !showCreatePassword"
+                                        >
+                                            {{ showCreatePassword ? 'Hide' : 'Show' }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <TextInput
+                                    v-model="form.password"
+                                    :type="showCreatePassword ? 'text' : 'password'"
+                                    class="mt-2 w-full font-mono"
+                                    placeholder="Leave blank to auto-generate on save"
+                                />
+                                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                    A 14-character password is generated automatically when you open this form. Leave blank and the server will create one on save.
+                                </p>
+                                <InputError class="mt-1" :message="form.errors.password" />
+
+                                <label class="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                    <input v-model="form.send_credentials" type="checkbox" class="mt-1 rounded" />
+                                    <span>
+                                        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">Email login credentials on create</span>
+                                        <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                                            Sends login URL, email address, and password to the user immediately after creation.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
-                        <label v-if="['buyer_portal', 'supplier_portal'].includes(form.role)" class="flex items-center gap-2 text-sm md:col-span-2">
-                            <input v-model="form.send_credentials" type="checkbox" class="rounded" />
-                            Email portal login credentials on create
-                        </label>
                     </div>
-                    <div v-if="form.role === 'staff'" class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                        <InputLabel value="Module access" />
-                        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            <label v-for="mod in modules" :key="mod.key" class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                <input type="checkbox" class="mt-1 rounded" :checked="form.allowed_modules.includes(mod.key)" @change="toggleModule(form, mod.key)" />
-                                <span><strong class="text-slate-800 dark:text-slate-200">{{ mod.label }}</strong><br><span class="text-xs">{{ mod.description }}</span></span>
-                            </label>
+
+                    <div v-if="needsAdvancedCreate">
+                        <button
+                            type="button"
+                            class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                            @click="showAdvancedCreate = !showAdvancedCreate"
+                        >
+                            <span>Advanced options</span>
+                            <span class="text-slate-400">{{ showAdvancedCreate ? '▲' : '▼' }}</span>
+                        </button>
+
+                        <div v-show="showAdvancedCreate" class="mt-3 space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                            <div v-if="form.role === 'buyer_portal'">
+                                <InputLabel value="Link to buyer" />
+                                <select v-model="form.buyer_id" class="form-select mt-1 w-full" required>
+                                    <option value="">Select buyer</option>
+                                    <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }} ({{ b.reference }})</option>
+                                </select>
+                                <InputError class="mt-1" :message="form.errors.buyer_id" />
+                            </div>
+                            <div v-if="form.role === 'supplier_portal'">
+                                <InputLabel value="Link to supplier" />
+                                <select v-model="form.supplier_id" class="form-select mt-1 w-full" required>
+                                    <option value="">Select supplier</option>
+                                    <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
+                                </select>
+                                <InputError class="mt-1" :message="form.errors.supplier_id" />
+                            </div>
+                            <div v-if="form.role === 'staff'">
+                                <InputLabel value="Module access" />
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    <label v-for="mod in modules" :key="mod.key" class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                        <input type="checkbox" class="mt-1 rounded" :checked="form.allowed_modules.includes(mod.key)" @change="toggleModule(form, mod.key)" />
+                                        <span>
+                                            <strong class="text-slate-800 dark:text-slate-200">{{ mod.label }}</strong>
+                                            <br><span class="text-xs">{{ mod.description }}</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <PrimaryButton>Create User</PrimaryButton>
+
+                    <div class="flex flex-wrap gap-2">
+                        <PrimaryButton :loading="form.processing" :disabled="form.processing">Create user</PrimaryButton>
+                        <AppButton type="button" variant="secondary" @click="closeCreate">Cancel</AppButton>
+                    </div>
                 </form>
             </Panel>
 
             <div v-if="editingId" ref="editPanel">
-                <Panel title="Edit User" class="ring-2 ring-indigo-500/40">
-                <form @submit.prevent="saveEdit" class="space-y-4">
-                    <FormErrorSummary :errors="editForm.errors" />
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div><InputLabel value="Name" /><TextInput v-model="editForm.name" class="mt-1 w-full" required /></div>
-                        <div><InputLabel value="Email" /><TextInput v-model="editForm.email" type="email" class="mt-1 w-full" required /></div>
-                        <div><InputLabel value="New password (optional)" /><TextInput v-model="editForm.password" type="password" class="mt-1 w-full" /></div>
+                <Panel title="Edit user" class="ring-2 ring-indigo-500/40">
+                    <form class="space-y-5" @submit.prevent="saveEdit">
+                        <FormErrorSummary :errors="editForm.errors" />
+
                         <div>
                             <InputLabel value="Role" />
-                            <select v-model="editForm.role" class="form-select">
-                                <option value="account_admin">Account Admin</option>
-                                <option value="staff">Staff</option>
-                                <option value="buyer_portal">Buyer Portal</option>
-                                <option value="supplier_portal">Supplier Portal</option>
-                            </select>
+                            <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                <button
+                                    v-for="role in roleOptions"
+                                    :key="`edit-${role.value}`"
+                                    type="button"
+                                    :class="roleCardClass(role.value, editForm.role === role.value)"
+                                    @click="editForm.role = role.value"
+                                >
+                                    <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ role.label }}</p>
+                                    <p class="mt-0.5 text-xs text-slate-500">{{ role.description }}</p>
+                                </button>
+                            </div>
                         </div>
-                        <div v-if="editForm.role === 'buyer_portal'">
-                            <InputLabel value="Link to Buyer" />
-                            <select v-model="editForm.buyer_id" class="form-select" required>
-                                <option value="">Select buyer</option>
-                                <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }} ({{ b.reference }})</option>
-                            </select>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div><InputLabel value="Name" /><TextInput v-model="editForm.name" class="mt-1 w-full" required /></div>
+                            <div><InputLabel value="Email" /><TextInput v-model="editForm.email" type="email" class="mt-1 w-full" required /></div>
+                            <div>
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <InputLabel value="New password (optional)" class="flex-1" />
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="generatePassword(editForm)">Generate</button>
+                                        <button v-if="editForm.password" type="button" class="text-xs font-medium text-slate-600 hover:underline" @click="copyPassword(editForm.password)">Copy</button>
+                                        <button type="button" class="text-xs font-medium text-slate-600 hover:underline" @click="showEditPassword = !showEditPassword">{{ showEditPassword ? 'Hide' : 'Show' }}</button>
+                                    </div>
+                                </div>
+                                <TextInput v-model="editForm.password" :type="showEditPassword ? 'text' : 'password'" class="mt-1 w-full font-mono" />
+                            </div>
                         </div>
-                        <div v-if="editForm.role === 'supplier_portal'">
-                            <InputLabel value="Link to Supplier" />
-                            <select v-model="editForm.supplier_id" class="form-select" required>
-                                <option value="">Select supplier</option>
-                                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
-                            </select>
+
+                        <div v-if="needsAdvancedEdit">
+                            <button
+                                type="button"
+                                class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                                @click="showAdvancedEdit = !showAdvancedEdit"
+                            >
+                                <span>Advanced options</span>
+                                <span class="text-slate-400">{{ showAdvancedEdit ? '▲' : '▼' }}</span>
+                            </button>
+                            <div v-show="showAdvancedEdit" class="mt-3 space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                                <div v-if="editForm.role === 'buyer_portal'">
+                                    <InputLabel value="Link to buyer" />
+                                    <select v-model="editForm.buyer_id" class="form-select mt-1 w-full" required>
+                                        <option value="">Select buyer</option>
+                                        <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }} ({{ b.reference }})</option>
+                                    </select>
+                                </div>
+                                <div v-if="editForm.role === 'supplier_portal'">
+                                    <InputLabel value="Link to supplier" />
+                                    <select v-model="editForm.supplier_id" class="form-select mt-1 w-full" required>
+                                        <option value="">Select supplier</option>
+                                        <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
+                                    </select>
+                                </div>
+                                <div v-if="editForm.role === 'staff'">
+                                    <InputLabel value="Module access" />
+                                    <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                        <label v-for="mod in modules" :key="mod.key" class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                            <input type="checkbox" class="mt-1 rounded" :checked="editForm.allowed_modules.includes(mod.key)" @change="toggleModule(editForm, mod.key)" />
+                                            <span><strong class="text-slate-800 dark:text-slate-200">{{ mod.label }}</strong></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div v-if="editForm.role === 'staff'" class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                        <InputLabel value="Module access" />
-                        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            <label v-for="mod in modules" :key="mod.key" class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                <input type="checkbox" class="mt-1 rounded" :checked="editForm.allowed_modules.includes(mod.key)" @change="toggleModule(editForm, mod.key)" />
-                                <span><strong class="text-slate-800 dark:text-slate-200">{{ mod.label }}</strong></span>
-                            </label>
+
+                        <div class="flex gap-2">
+                            <PrimaryButton :loading="editForm.processing">Save changes</PrimaryButton>
+                            <AppButton type="button" variant="secondary" @click="editingId = null">Cancel</AppButton>
                         </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <PrimaryButton>Save changes</PrimaryButton>
-                        <AppButton type="button" variant="secondary" @click="editingId = null">Cancel</AppButton>
-                    </div>
-                </form>
+                    </form>
                 </Panel>
             </div>
 
-            <Panel title="All Users" :padding="false">
-                <DataTable :empty="!users?.data?.length">
+            <Panel title="All users" :padding="false">
+                <div class="border-b border-slate-100 p-4 dark:border-slate-800">
+                    <form class="flex flex-wrap items-end gap-3" @submit.prevent="applyFilters">
+                        <div class="min-w-[12rem] flex-1">
+                            <InputLabel value="Search" />
+                            <TextInput v-model="filterForm.search" type="search" placeholder="Name or email…" class="mt-1 w-full" />
+                        </div>
+                        <div>
+                            <InputLabel value="Role" />
+                            <select v-model="filterForm.role" class="form-select mt-1">
+                                <option value="">All roles</option>
+                                <option v-for="role in roleOptions" :key="`filter-${role.value}`" :value="role.value">{{ role.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value="Status" />
+                            <select v-model="filterForm.status" class="form-select mt-1">
+                                <option value="">All</option>
+                                <option value="active">Active</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                        <AppButton type="submit" variant="secondary">Filter</AppButton>
+                        <AppButton v-if="filters.search || filters.role || filters.status" type="button" variant="ghost" @click="clearFilters">Clear</AppButton>
+                    </form>
+                </div>
+
+                <DataTable :empty="!users?.data?.length" empty-message="No users match your filters.">
                     <template #head>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
@@ -222,10 +528,23 @@ const roleLabel = (role) => ({
                         <td class="px-6 py-4 text-right">
                             <div class="flex flex-wrap justify-end gap-1">
                                 <AppButton variant="ghost" @click="startEdit(u)">Edit</AppButton>
-                                <AppButton v-if="['buyer_portal', 'supplier_portal'].includes(u.role)" variant="ghost" @click="emailCredentials(u.id)">Email login</AppButton>
-                                <AppButton v-if="!u.is_suspended" variant="ghost" @click="suspend(u.id)">Suspend</AppButton>
+                                <AppButton v-if="!isCurrentUser(u)" variant="ghost" @click="emailCredentials(u.id)">Email login</AppButton>
+                                <AppButton
+                                    v-if="!u.is_suspended && !isCurrentUser(u)"
+                                    variant="ghost"
+                                    @click="suspend(u.id)"
+                                >
+                                    Suspend
+                                </AppButton>
+                                <span
+                                    v-else-if="!u.is_suspended && isCurrentUser(u)"
+                                    class="px-2 py-1 text-xs text-slate-400"
+                                    :title="isImpersonating ? 'End impersonation to manage this account as super admin' : 'You cannot suspend your own account'"
+                                >
+                                    You
+                                </span>
                                 <AppButton v-else variant="ghost" @click="activate(u.id)">Activate</AppButton>
-                                <AppButton variant="ghost" @click="destroy(u.id)">Delete</AppButton>
+                                <AppButton v-if="!isCurrentUser(u)" variant="ghost" @click="destroy(u.id)">Delete</AppButton>
                             </div>
                         </td>
                     </tr>

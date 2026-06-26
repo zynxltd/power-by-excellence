@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer;
 use App\Models\User;
 use App\Mail\PortalCredentialsMail;
+use App\Services\Integrations\BuyerWebhookSync;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
@@ -115,6 +116,7 @@ class BuyerController extends Controller
         unset($validated['send_portal_credentials']);
 
         $buyer = Buyer::create($validated);
+        app(BuyerWebhookSync::class)->sync($buyer, $validated['settings']['sold_webhook_url'] ?? null);
         $user = $this->syncPortalUser($buyer, $portal, $sendCredentials);
 
         if ($sendCredentials && $user) {
@@ -133,8 +135,16 @@ class BuyerController extends Controller
             ->where('role', UserRole::BuyerPortal)
             ->first(['id', 'email', 'name']);
 
+        $buyerPayload = $buyer->toArray();
+        $soldWebhookUrl = app(BuyerWebhookSync::class)->urlForBuyer($buyer);
+        if ($soldWebhookUrl) {
+            $buyerPayload['settings'] = array_merge($buyerPayload['settings'] ?? [], [
+                'sold_webhook_url' => $soldWebhookUrl,
+            ]);
+        }
+
         return Inertia::render('Admin/Buyers/Form', [
-            'buyer' => $buyer,
+            'buyer' => $buyerPayload,
             'portalUser' => $portalUser,
             'currencies' => $this->currencies(),
             'defaultCurrency' => $buyer->account?->default_currency ?? 'GBP',
@@ -151,6 +161,7 @@ class BuyerController extends Controller
         unset($validated['send_portal_credentials']);
 
         $buyer->update($validated);
+        app(BuyerWebhookSync::class)->sync($buyer, $validated['settings']['sold_webhook_url'] ?? null);
         $user = $this->syncPortalUser($buyer, $portal, $sendCredentials);
 
         if ($sendCredentials && $user) {
@@ -215,6 +226,7 @@ class BuyerController extends Controller
             'settings.default_cpc_override' => 'nullable|numeric|min:0',
             'settings.low_credit_alert' => 'nullable|numeric|min:0',
             'settings.conversion_postback_url' => 'nullable|url|max:500',
+            'settings.sold_webhook_url' => 'nullable|url|max:500',
             'settings.notify_on_sale' => 'nullable|boolean',
             'settings.geo_countries' => 'nullable|array',
             'settings.geo_countries.*' => 'string|size:2',

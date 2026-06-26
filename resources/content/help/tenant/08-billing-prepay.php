@@ -70,7 +70,7 @@ Each financial movement creates a ledger row:
 
 | Type | Direction | Trigger |
 |------|-----------|---------|
-| `credit` | + | Admin top-up, Stripe payment |
+| `credit` | + | Admin top-up (bank wire / manual) |
 | `debit` | − | Sold lead revenue |
 | `adjustment` | ± | Manual correction |
 | `refund` | + | Returned lead credit |
@@ -106,15 +106,15 @@ Per-buyer `caps` JSON supports volume and **spend** limits tracked in `cap_count
 
 When cap hit, buyer is ineligible at ping time — same as insufficient credit (logs `skipped`).
 
-## Stripe integration (optional)
+## Buyer payments
 
-If Stripe is configured at `/integrations/stripe`:
+Buyer credit is topped up manually by platform admins after bank wire or invoiced payment. Tenants manage their own buyer billing relationships — there is no built-in card payment gateway.
 
-1. Buyers can self-serve top-up in portal
-2. Webhook credits balance on successful payment
-3. Admin sees Stripe-linked transactions in ledger
+1. Buyer sends payment per your agreed terms (bank wire, invoice, etc.)
+2. Admin credits the buyer at **Billing → {buyer}** → **Top up**
+3. Ledger records a `credit` transaction with your reference / invoice number
 
-Test mode keys should be used in staging only.
+Buyers see balance and history in the portal but cannot self-serve card top-ups.
 
 ## Billing lock
 
@@ -150,7 +150,7 @@ Buyers with portal access see:
 |------|------|---------|
 | Balance | `/portal/buyer/billing` | Current credit |
 | Transactions | `/portal/buyer/transactions` | Ledger history |
-| Top-up | `/portal/buyer/billing` | Stripe button if enabled |
+| Top-up | `/portal/buyer/billing` | View balance — contact admin to top up |
 
 Buyers cannot edit caps or see other buyers' data.
 
@@ -163,7 +163,6 @@ Buyers cannot edit caps or see other buyers' data.
 | Balance wrong | Manual adjustment needed | Add adjustment transaction with note |
 | Portal shows 0 leads but debits exist | Different buyer link | Verify portal user → buyer association |
 | Locked out of admin | Account billing_status | `/billing/lock` → resolve → unlock |
-| Stripe top-up not crediting | Webhook misconfigured | Check `/integrations/stripe` logs |
 
 ## Monthly reconciliation checklist
 

@@ -5,12 +5,15 @@ import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     form: Object,
     fieldTypes: Array,
     apiSpec: Object,
     specFieldOptions: Array,
+    suppliers: { type: Array, default: () => [] },
+    embed: { type: Object, default: () => ({}) },
 });
 
 const defaultThankYou = () => ({
@@ -43,9 +46,31 @@ const f = useForm({
         multi_step: props.form.config?.multi_step ?? true,
         steps: defaultSteps(),
         css: props.form.config?.css ?? '',
+        allowed_domains: props.form.config?.allowed_domains ?? [],
+        default_supplier_id: props.form.config?.default_supplier_id ?? '',
+        default_sid: props.form.config?.default_sid ?? '',
+        embed_height: props.form.config?.embed_height ?? 720,
         thank_you: defaultThankYou(),
     },
 });
+
+const allowedDomainsText = computed({
+    get: () => (f.config.allowed_domains ?? []).join('\n'),
+    set: (value) => {
+        f.config.allowed_domains = value
+            .split('\n')
+            .map((line) => line.trim().replace(/^https?:\/\//, '').split('/')[0])
+            .filter(Boolean);
+    },
+});
+
+const copyText = async (text) => {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        // ignore
+    }
+};
 
 const addStep = () => {
     f.config.steps.push({
@@ -139,6 +164,61 @@ const addFieldFromSpec = (step, specName) => {
                             <input v-model="f.config.thank_you.button_text" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
                         </div>
                     </template>
+                </div>
+            </Panel>
+
+            <Panel title="Embed & affiliate tracking">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Host on your site via a direct link or <strong>iframe</strong>. Pass <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">sid</code>,
+                    <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">ssid</code>/<code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">subid</code>,
+                    and click IDs on the URL — they are stored on the lead for postbacks and supplier reporting.
+                </p>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-medium">Default supplier (optional)</label>
+                        <select v-model="f.config.default_supplier_id" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+                            <option value="">— None —</option>
+                            <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Default SID (optional)</label>
+                        <input v-model="f.config.default_sid" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800" placeholder="google_search" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-medium">Allowed parent domains (iframe embed)</label>
+                        <textarea v-model="allowedDomainsText" rows="3" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800" placeholder="partner.example.com&#10;affiliates.example.com" />
+                        <p class="mt-1 text-xs text-slate-500">One hostname per line. Empty = embed allowed on any site. When set, only these domains can iframe the form (browser-enforced).</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Iframe height (px)</label>
+                        <input v-model.number="f.config.embed_height" type="number" min="320" max="2000" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-4">
+                    <div>
+                        <div class="mb-1 flex items-center justify-between gap-2">
+                            <label class="text-xs font-semibold uppercase text-slate-500">Direct link</label>
+                            <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.directUrl)">Copy</button>
+                        </div>
+                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.directUrl }}</code>
+                    </div>
+                    <div>
+                        <div class="mb-1 flex items-center justify-between gap-2">
+                            <label class="text-xs font-semibold uppercase text-slate-500">Iframe URL (with tracking example)</label>
+                            <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeUrl)">Copy</button>
+                        </div>
+                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeUrl }}</code>
+                        <p class="mt-1 text-xs text-slate-500">Query params: {{ embed.trackingParams?.join(', ') }}</p>
+                    </div>
+                    <div>
+                        <div class="mb-1 flex items-center justify-between gap-2">
+                            <label class="text-xs font-semibold uppercase text-slate-500">Iframe HTML</label>
+                            <button type="button" class="text-xs text-indigo-600" @click="copyText(embed.iframeHtml)">Copy</button>
+                        </div>
+                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ embed.iframeHtml }}</code>
+                    </div>
                 </div>
             </Panel>
 

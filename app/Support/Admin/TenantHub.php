@@ -87,7 +87,7 @@ class TenantHub
                     ['label' => 'Billing', 'href' => route('billing.index'), 'description' => 'Buyer credits'],
                     ['label' => 'Reports', 'href' => route('reports.index'), 'description' => 'Performance analytics'],
                     ['label' => 'API keys', 'href' => route('api-keys.index'), 'description' => 'Ingest authentication'],
-                    ['label' => 'Integrations', 'href' => route('integrations.index'), 'description' => 'Stripe, lead sources'],
+                    ['label' => 'Integrations', 'href' => route('integrations.index'), 'description' => 'Webhooks, lead sources, fraud detection'],
                     ['label' => 'Webhooks', 'href' => route('webhooks.index'), 'description' => 'Outbound events'],
                     ['label' => 'Postbacks', 'href' => route('postbacks.index'), 'description' => 'Conversion postbacks'],
                     ['label' => 'Import data', 'href' => route('imports.index'), 'description' => 'CSV bulk import'],

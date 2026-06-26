@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\LeadStatus;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
+use App\Support\Tenancy\AccountContext;
 use Illuminate\Database\Eloquent\Builder;
 
 class LiveStats
@@ -81,6 +82,11 @@ class LiveStats
                 ->when($campaignId, fn ($q) => $q->where('leads.campaign_id', $campaignId))
                 ->whereDate('leads.distributed_at', today())
                 ->sum('lead_financials.revenue'),
+            'revenue_by_currency' => TenantFinancialSummary::totalsByCurrency(
+                AccountContext::id(),
+                todayOnly: true,
+                campaignId: $campaignId,
+            ),
             'reject_rate' => $leadsToday > 0 ? round(($rejectedToday / $leadsToday) * 100, 1) : 0.0,
             'queue_breakdown' => $queueBreakdown,
             'pipeline_summary' => self::pipelineSummary($campaignId),

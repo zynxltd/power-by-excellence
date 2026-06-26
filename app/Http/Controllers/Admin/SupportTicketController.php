@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
+use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -54,6 +55,12 @@ class SupportTicketController extends Controller
         ]);
 
         $ticket->update(['status' => 'pending']);
+
+        app(PlatformNotificationService::class)->notifySupportStaffReply(
+            $request->user(),
+            $ticket,
+            $validated['body'],
+        );
 
         return back()->with('success', 'Reply sent.');
     }

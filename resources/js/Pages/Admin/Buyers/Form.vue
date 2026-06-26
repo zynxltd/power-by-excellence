@@ -63,6 +63,7 @@ const form = useForm({
         default_cpc_override: props.buyer?.settings?.default_cpc_override ?? '',
         low_credit_alert: props.buyer?.settings?.low_credit_alert ?? '',
         conversion_postback_url: props.buyer?.settings?.conversion_postback_url ?? '',
+        sold_webhook_url: props.buyer?.settings?.sold_webhook_url ?? '',
         notify_on_sale: props.buyer?.settings?.notify_on_sale ?? false,
         geo_countries: (props.buyer?.settings?.geo_countries ?? []).join(', '),
     },
@@ -259,8 +260,14 @@ const submit = () => {
                         <TextInput v-model="form.settings.low_credit_alert" type="number" step="0.01" min="0" class="mt-1 w-full" />
                     </div>
                     <div class="mt-4">
+                        <InputLabel value="Sold webhook URL (optional)" />
+                        <TextInput v-model="form.settings.sold_webhook_url" class="mt-1 w-full font-mono text-sm" placeholder="https://buyer-crm.com/webhooks/sold" />
+                        <p class="mt-1 text-xs text-slate-500">JSON POST when this buyer wins a lead. Also appears under Tools → Webhooks. For conversion feedback after sale, use the postback URL below.</p>
+                    </div>
+                    <div class="mt-4">
                         <InputLabel value="Conversion postback URL (optional)" />
                         <TextInput v-model="form.settings.conversion_postback_url" class="mt-1 w-full font-mono text-sm" placeholder="https://buyer-crm.com/conversion?lead=[lead_uuid]" />
+                        <p class="mt-1 text-xs text-slate-500">Fired when you report a conversion back (funded, contacted, etc.) — not on initial sale.</p>
                     </div>
                     <label class="mt-4 flex items-center gap-2 text-sm font-medium">
                         <input v-model="form.settings.exclusive_only" type="checkbox" class="rounded" />

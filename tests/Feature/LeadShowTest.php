@@ -69,6 +69,9 @@ class LeadShowTest extends TestCase
                 ->where('lead.delivery_logs.0.ping_request.url', 'https://buyer.test/ping')
                 ->where('lead.delivery_logs.0.post_response.error', 'rejected')
                 ->where('lead.delivery_logs.0.delivery.tier', 2)
+                ->has('leadQuality.score')
+                ->has('leadQuality.email.label')
+                ->has('leadQuality.hlr.label')
             );
     }
 }

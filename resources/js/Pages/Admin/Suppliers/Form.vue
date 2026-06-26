@@ -169,7 +169,7 @@ const submit = () => {
                     <div class="mt-4">
                         <InputLabel value="Default postback URL" />
                         <TextInput v-model="form.default_postback_url" class="mt-1 w-full font-mono text-sm" placeholder="https://affiliate.example/postback?click_id=[lead_uuid]" />
-                        <p class="mt-1 text-xs text-slate-500">Tags: [lead_uuid], [sid], [ssid], [revenue], [payout]</p>
+                        <p class="mt-1 text-xs text-slate-500">Synced to <a :href="route('postbacks.index')" class="text-indigo-600 hover:underline">Postback Manager</a> for sold, accepted, rejected, and unsold events. Tags: [lead_uuid], [sid], [ssid], [revenue], [payout]</p>
                     </div>
                     <div class="mt-4 flex justify-between">
                         <AppButton type="button" variant="secondary" @click="prevStep">← Back</AppButton>

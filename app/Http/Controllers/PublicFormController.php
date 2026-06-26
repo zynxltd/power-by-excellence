@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller as BaseController;
 use App\Jobs\ProcessLeadJob;
 use App\Models\HostedForm;
+use App\Services\Forms\HostedFormEmbedService;
 use App\Services\Leads\LeadIngestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,9 +14,13 @@ use Inertia\Response;
 
 class PublicFormController extends BaseController
 {
-    public function show(string $slug): Response
+    public function __construct(
+        protected HostedFormEmbedService $embedService,
+    ) {}
+
+    public function show(Request $request, string $slug): Response
     {
-        return Inertia::render('Forms/Show', $this->formPageProps($slug));
+        return Inertia::render('Forms/Show', $this->formPageProps($request, $slug));
     }
 
     public function submit(Request $request, string $slug): Response|RedirectResponse
@@ -23,18 +28,16 @@ class PublicFormController extends BaseController
         $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
         $form->load('campaign');
 
-        $allowed = $form->config['allowed_domains'] ?? [];
-        if (! empty($allowed)) {
-            $origin = parse_url($request->headers->get('referer', ''), PHP_URL_HOST);
-            if ($origin && ! in_array($origin, $allowed, true)) {
-                abort(403, 'Domain not allowed');
-            }
-        }
+        $this->embedService->assertSubmitRefererAllowed($form, $request);
+
+        $tracking = $this->embedService->resolveTracking($form, $request, $request->only(HostedFormEmbedService::TRACKING_QUERY_PARAMS));
 
         $lead = app(LeadIngestService::class)->ingest([
             'campaign_reference' => $form->campaign->reference,
             'source' => 'hosted_form:'.$form->slug,
-            ...$request->except(['_token']),
+            'embed' => $request->boolean('embed') || $request->query('embed') ? '1' : null,
+            ...$tracking,
+            ...$request->except(['_token', ...HostedFormEmbedService::TRACKING_QUERY_PARAMS, 'embed']),
         ]);
 
         ProcessLeadJob::dispatch($lead->id);
@@ -50,7 +53,7 @@ class PublicFormController extends BaseController
             return redirect()->away($redirectUrl);
         }
 
-        return Inertia::render('Forms/Show', array_merge($this->formPageProps($slug), [
+        return Inertia::render('Forms/Show', array_merge($this->formPageProps($request, $slug), [
             'submitted' => true,
             'submission' => [
                 'queue_id' => $lead->queue_id,
@@ -59,7 +62,10 @@ class PublicFormController extends BaseController
         ]));
     }
 
-    protected function formPageProps(string $slug): array
+    /**
+     * @return array<string, mixed>
+     */
+    protected function formPageProps(Request $request, string $slug): array
     {
         $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
         $form->load('campaign.fields');
@@ -78,6 +84,9 @@ class PublicFormController extends BaseController
             ])->values()->all(),
         ]];
 
+        $embed = $request->boolean('embed');
+        $tracking = $this->embedService->resolveTracking($form, $request);
+
         return [
             'form' => $form->only(['id', 'name', 'slug']),
             'steps' => $steps,
@@ -86,6 +95,9 @@ class PublicFormController extends BaseController
             'thankYou' => $this->thankYouConfig($form),
             'submitted' => false,
             'submission' => null,
+            'embed' => $embed,
+            'tracking' => $tracking,
+            'trackingParams' => HostedFormEmbedService::TRACKING_QUERY_PARAMS,
         ];
     }
 

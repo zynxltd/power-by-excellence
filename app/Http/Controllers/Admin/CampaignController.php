@@ -8,10 +8,13 @@ use App\Models\CampaignField;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Admin\TenantHub;
+use App\Support\CampaignPresenter;
+use App\Support\CampaignRegion;
 use App\Support\VerticalCatalog;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,7 +29,8 @@ class CampaignController extends Controller
             'campaigns' => Campaign::with('account')
                 ->withCount('leads')
                 ->orderBy('name')
-                ->paginate(25),
+                ->paginate(25)
+                ->through(fn (Campaign $campaign) => CampaignPresenter::forList($campaign)),
             'showTenantColumn' => ! AccountContext::id() && $request->user()?->isSuperAdmin(),
         ]);
     }
@@ -40,6 +44,7 @@ class CampaignController extends Controller
             'defaults' => $this->accountDefaults($request),
             'verticals' => VerticalCatalog::options(),
             'biddingModes' => $this->biddingModes(),
+            'countries' => CampaignRegion::countryLabels(),
         ]);
     }
 
@@ -54,6 +59,7 @@ class CampaignController extends Controller
         $validated['account_id'] = $account->id;
 
         $campaign = Campaign::create($validated);
+        $this->persistCampaignLogo($request, $campaign);
 
         foreach (VerticalCatalog::fieldsFor($validated['vertical_id'] ?? null) as $i => $field) {
             CampaignField::create(array_merge($field, ['campaign_id' => $campaign->id, 'sort_order' => $i]));
@@ -100,10 +106,11 @@ class CampaignController extends Controller
         $campaign->load('account');
 
         return Inertia::render('Admin/Campaigns/Form', [
-            'campaign' => $campaign,
+            'campaign' => $this->formatCampaignForForm($campaign),
             'defaults' => $this->accountDefaults($request),
             'verticals' => VerticalCatalog::options(),
             'biddingModes' => $this->biddingModes(),
+            'countries' => CampaignRegion::countryLabels(),
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign),
             'activeDistributionConfigId' => $campaign->distributionConfigs()->where('is_active', true)->value('id'),
@@ -117,6 +124,7 @@ class CampaignController extends Controller
         $validated = $this->validateCampaign($request, $campaign);
 
         $campaign->update($validated);
+        $this->persistCampaignLogo($request, $campaign);
 
         return redirect()->route('campaigns.show', $campaign)->with('success', 'Campaign updated.');
     }
@@ -150,11 +158,23 @@ class CampaignController extends Controller
 
     protected function validateCampaign(Request $request, ?Campaign $campaign = null): array
     {
+        $geoCountries = $request->input('geo_countries');
+        if (is_string($geoCountries)) {
+            $geoCountries = json_decode($geoCountries, true);
+        }
+
         $request->merge([
             'country' => strtoupper(trim((string) $request->input('country', ''))),
             'currency' => strtoupper(trim((string) $request->input('currency', ''))),
             'reference' => strtolower(trim((string) $request->input('reference', ''))),
             'use_advanced_distribution' => $request->boolean('use_advanced_distribution'),
+            'multi_geo' => $request->boolean('multi_geo'),
+            'geo_countries' => collect(is_array($geoCountries) ? $geoCountries : [])
+                ->map(fn ($code) => strtoupper(trim((string) $code)))
+                ->filter(fn ($code) => strlen($code) === 2)
+                ->unique()
+                ->values()
+                ->all(),
         ]);
 
         $accountId = AccountContext::id()
@@ -188,6 +208,11 @@ class CampaignController extends Controller
             'caps.daily_spend_cap' => 'nullable|numeric|min:0',
             'caps.monthly_spend_cap' => 'nullable|numeric|min:0',
             'dedupe_config' => 'nullable|array',
+            'multi_geo' => 'boolean',
+            'geo_countries' => 'nullable|array',
+            'geo_countries.*' => ['string', 'size:2', 'regex:/^[A-Z]{2}$/'],
+            'logo' => 'nullable|image|max:2048',
+            'remove_logo' => 'boolean',
         ], [
             'name.required' => 'Campaign name is required.',
             'reference.required' => 'API reference is required.',
@@ -207,7 +232,45 @@ class CampaignController extends Controller
 
         $validated['caps'] = array_filter($validated['caps'] ?? [], fn ($v) => $v !== null && $v !== '');
 
+        if (empty($validated['multi_geo'])) {
+            $validated['multi_geo'] = false;
+            $validated['geo_countries'] = null;
+        }
+
         return $validated;
+    }
+
+    protected function persistCampaignLogo(Request $request, Campaign $campaign): void
+    {
+        if ($request->boolean('remove_logo') && $campaign->logo_path) {
+            Storage::disk('public')->delete($campaign->logo_path);
+            $campaign->logo_path = null;
+            $campaign->save();
+        }
+
+        if (! $request->hasFile('logo')) {
+            return;
+        }
+
+        if ($campaign->logo_path) {
+            Storage::disk('public')->delete($campaign->logo_path);
+        }
+
+        $campaign->logo_path = $request->file('logo')->store('campaign-logos', 'public');
+        $campaign->save();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function formatCampaignForForm(Campaign $campaign): array
+    {
+        return array_merge($campaign->toArray(), [
+            'logo_url' => $campaign->logo_path
+                ? Storage::disk('public')->url($campaign->logo_path)
+                : null,
+            'region' => CampaignRegion::forCampaign($campaign),
+        ]);
     }
 
     protected function prepareCampaignPayload(Request $request): void

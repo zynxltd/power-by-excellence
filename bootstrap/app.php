@@ -48,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'central.host' => \App\Http\Middleware\EnsureCentralHost::class,
             'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
+            'hosted-form.embed' => \App\Http\Middleware\HostedFormEmbedHeaders::class,
         ]);
 
         $middleware->priority([

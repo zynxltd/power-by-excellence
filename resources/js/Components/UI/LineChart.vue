@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { chartXTicks, xPositionPercent } from '@/utils/chartTicks';
 
 const props = defineProps({
     labels: { type: Array, default: () => [] },
+    dates: { type: Array, default: () => [] },
     datasets: { type: Array, default: () => [] },
     height: { type: Number, default: 260 },
     drilldownRoute: { type: String, default: '' },
@@ -137,19 +139,39 @@ const tooltip = computed(() => {
     };
 });
 
-const onMouseMove = (event) => {
+const indexFromEvent = (event) => {
     const svg = event.currentTarget;
     const rect = svg.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const len = props.labels.length;
-    if (!len) return;
+    if (!len) {
+        return null;
+    }
 
-    const index = len <= 1
+    return len <= 1
         ? 0
         : Math.max(0, Math.min(len - 1, Math.round(((x - padding.left) / innerWidth.value) * (len - 1))));
+};
+
+const drilldownParams = (index) => {
+    const date = props.dates[index];
+    if (date) {
+        return { from_date: date, to_date: date };
+    }
+
+    return { day_index: index };
+};
+
+const onMouseMove = (event) => {
+    const index = indexFromEvent(event);
+    if (index === null) {
+        return;
+    }
 
     const primary = props.datasets[0];
-    if (!primary) return;
+    if (!primary) {
+        return;
+    }
 
     const point = pointsFor(primary)[index];
     hover.value = point ? { ...point, index } : null;
@@ -157,6 +179,19 @@ const onMouseMove = (event) => {
 
 const onMouseLeave = () => {
     hover.value = null;
+};
+
+const onClick = (event) => {
+    if (!props.drilldownRoute) {
+        return;
+    }
+
+    const index = indexFromEvent(event);
+    if (index === null) {
+        return;
+    }
+
+    router.get(props.drilldownRoute, drilldownParams(index));
 };
 </script>
 
@@ -184,9 +219,11 @@ const onMouseLeave = () => {
                 <svg
                     :viewBox="`0 0 100 ${height}`"
                     class="h-full w-full overflow-visible"
+                    :class="drilldownRoute ? 'cursor-pointer' : ''"
                     preserveAspectRatio="none"
                     @mousemove="onMouseMove"
                     @mouseleave="onMouseLeave"
+                    @click="onClick"
                 >
                 <defs>
                     <linearGradient v-for="(dataset, di) in datasets" :key="`grad-${di}`" :id="`line-grad-${di}`" x1="0" y1="0" x2="0" y2="1">

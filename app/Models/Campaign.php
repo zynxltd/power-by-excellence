@@ -14,8 +14,11 @@ class Campaign extends Model
         'account_id',
         'type',
         'name',
+        'logo_path',
         'reference',
         'country',
+        'multi_geo',
+        'geo_countries',
         'currency',
         'status',
         'vertical_id',
@@ -45,6 +48,8 @@ class Campaign extends Model
             'api_spec' => 'array',
             'reference_locked' => 'boolean',
             'use_advanced_distribution' => 'boolean',
+            'multi_geo' => 'boolean',
+            'geo_countries' => 'array',
         ];
     }
 

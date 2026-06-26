@@ -35,7 +35,7 @@ class ReportsRigorTest extends TestCase
 
     public function test_valid_periods_are_accepted(): void
     {
-        foreach ([7, 14, 28, 30] as $days) {
+        foreach ([7, 14, 28, 30, 60, 90] as $days) {
             $request = Request::create('/reports', 'GET', ['days' => $days]);
             $this->assertSame($days, ReportMetrics::fromRequest($request)->days());
         }

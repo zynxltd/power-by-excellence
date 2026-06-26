@@ -94,42 +94,11 @@ class LeadController extends Controller
         }
     }
 
-    protected function resolveRedirectUrl(Lead $lead): ?string
-    {
-        $soldDelivery = $lead->deliveryLogs()
-            ->with('delivery:id,config,campaign_id')
-            ->where('status', 'success')
-            ->latest()
-            ->first();
-
-        if (! $soldDelivery) {
-            return null;
-        }
-
-        $lead->loadMissing('campaign.distributionConfigs');
-
-        if ($lead->campaign?->use_advanced_distribution) {
-            $config = $lead->campaign->distributionConfigs->firstWhere('is_active', true);
-
-            foreach ($config?->config['groups'] ?? [] as $group) {
-                if (in_array($soldDelivery->delivery_id, $group['delivery_ids'] ?? [], true)) {
-                    if (filled($group['redirect_url'] ?? null)) {
-                        return $group['redirect_url'];
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        return $soldDelivery->delivery?->config['redirect_url']
-            ?? $soldDelivery->delivery?->config['accept_url']
-            ?? null;
-    }
-
     protected function formatResponse(Lead $lead): array
     {
-        $redirectUrl = $this->resolveRedirectUrl($lead);
+        $redirectUrl = $lead->status->value === 'sold'
+            ? app(\App\Services\Leads\LeadRedirectService::class)->publicRedirectUrl($lead->fresh())
+            : null;
 
         return [
             'status' => $lead->status->value,

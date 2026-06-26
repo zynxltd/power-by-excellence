@@ -34,6 +34,7 @@ class LiveStatsTest extends TestCase
                 'ping_posts_today',
                 'failed_today',
                 'revenue_today',
+                'revenue_by_currency',
                 'reject_rate',
                 'processing_count',
                 'queue_breakdown',

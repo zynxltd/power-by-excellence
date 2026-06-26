@@ -48,7 +48,7 @@ const statusClass = (status) => ({
     <AuthenticatedLayout>
         <PageHeader
             title="Postback Manager"
-            description="Fire tracking pixels and affiliate postbacks to suppliers on lead events — accepted, sold, rejected, and delivery success."
+            description="Fire tracking pixels and affiliate postbacks to suppliers on lead events. Supplier default URLs from the supplier form sync here automatically."
         />
 
         <div class="space-y-6">
@@ -118,6 +118,12 @@ const statusClass = (status) => ({
                                 {{ p.is_active ? 'Active' : 'Paused' }}
                             </span>
                             <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ p.method?.toUpperCase() }}</span>
+                            <span
+                                v-if="p.config?.synced_from === 'supplier_default_postback'"
+                                class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                            >
+                                Supplier form
+                            </span>
                         </div>
                         <p class="mt-1 truncate font-mono text-xs text-slate-500">{{ p.url }}</p>
                         <p class="mt-1 text-xs text-slate-400">

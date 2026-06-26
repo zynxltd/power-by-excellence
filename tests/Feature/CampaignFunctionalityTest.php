@@ -8,7 +8,10 @@ use App\Models\HostedForm;
 use App\Models\User;
 use App\Services\Caps\CapService;
 use App\Services\Buyers\BuyerEligibilityService;
+use App\Support\CampaignRegion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CampaignFunctionalityTest extends TestCase
@@ -228,5 +231,80 @@ class CampaignFunctionalityTest extends TestCase
         $service = app(BuyerEligibilityService::class);
 
         $this->assertFalse($service->canDeliver($lead->load('campaign'), $delivery->fresh(['buyer'])));
+    }
+
+    public function test_campaign_logo_upload_and_region_on_index(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->admin)->post(route('campaigns.store'), [
+            'name' => 'Logo Campaign',
+            'reference' => 'logo-campaign',
+            'country' => 'US',
+            'currency' => 'USD',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+            'logo' => UploadedFile::fake()->image('logo.png', 120, 120),
+        ])->assertRedirect();
+
+        $campaign = Campaign::where('reference', 'logo-campaign')->first();
+        $this->assertNotNull($campaign->logo_path);
+        Storage::disk('public')->assertExists($campaign->logo_path);
+
+        $region = CampaignRegion::forCampaign($campaign);
+        $this->assertFalse($region['is_multi']);
+        $this->assertSame('US', $region['code']);
+        $this->assertSame('🇺🇸', $region['emoji']);
+
+        $this->actingAs($this->admin)
+            ->get(route('campaigns.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Campaigns/Index')
+                ->where('campaigns.data', function ($rows) use ($campaign) {
+                    $row = collect($rows)->firstWhere('reference', 'logo-campaign');
+
+                    return $row
+                        && $row['logo_url'] === Storage::disk('public')->url($campaign->logo_path)
+                        && ($row['region']['code'] ?? null) === 'US';
+                })
+            );
+    }
+
+    public function test_campaign_multi_geo_uses_world_flag(): void
+    {
+        $campaign = Campaign::create([
+            'account_id' => $this->admin->account_id,
+            'name' => 'Global Campaign',
+            'reference' => 'global-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+            'status' => 'active',
+            'multi_geo' => true,
+            'geo_countries' => ['US', 'CA'],
+        ]);
+
+        $region = CampaignRegion::forCampaign($campaign);
+        $this->assertTrue($region['is_multi']);
+        $this->assertSame('world', $region['type']);
+        $this->assertSame('🌍', $region['emoji']);
+
+        $this->actingAs($this->admin)->put(route('campaigns.update', $campaign), [
+            'name' => 'Global Campaign',
+            'reference' => 'global-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+            'multi_geo' => true,
+            'geo_countries' => ['US', 'AU'],
+        ])->assertRedirect();
+
+        $campaign->refresh();
+        $this->assertSame(['US', 'AU'], $campaign->geo_countries);
     }
 }

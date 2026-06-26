@@ -8,6 +8,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import CampaignRowAvatar from '@/Components/Campaign/CampaignRowAvatar.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -53,8 +54,12 @@ defineProps({
                 </template>
                 <ClickableTableRow v-for="c in campaigns.data" :key="c.id" :href="route('campaigns.show', c.id)">
                     <td>
-                        <p class="font-medium text-slate-900 dark:text-white">{{ c.name }}</p>
-                        <p v-if="c.vertical_id" class="text-xs text-slate-500">{{ c.vertical_id }}</p>
+                        <CampaignRowAvatar
+                            :name="c.name"
+                            :subtitle="c.vertical_id || null"
+                            :logo-url="c.logo_url"
+                            :region="c.region"
+                        />
                     </td>
                     <td v-if="showTenantColumn" class="text-xs text-slate-600 dark:text-slate-400">
                         {{ c.account?.brand_name || c.account?.name || '—' }}

@@ -93,6 +93,128 @@ class ReportsFunctionalityTest extends TestCase
         $this->assertSame(40.0, $kpis['margin_pct']);
         $this->assertNotEquals($kpis['epl'], $kpis['cpl']);
         $this->assertNotEquals($kpis['epc'], $kpis['cpa']);
+        $this->assertSame([], $summary['kpis_by_currency']);
+    }
+
+    public function test_kpis_by_currency_when_multiple_currencies_in_period(): void
+    {
+        $account = Account::create([
+            'name' => 'Multi Currency Metrics',
+            'slug' => 'multi-currency-metrics',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+            'is_active' => true,
+        ]);
+
+        $gbpCampaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'GBP Campaign',
+            'reference' => 'gbp-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $usdCampaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'USD Campaign',
+            'reference' => 'usd-campaign',
+            'country' => 'US',
+            'currency' => 'USD',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $today = today();
+
+        $this->createLead($gbpCampaign, 'sold', $today, 100, 60, 40);
+        $this->createLead($gbpCampaign, 'sold', $today, 50, 30, 20);
+        $this->createLead($usdCampaign, 'sold', $today, 80, 40, 40);
+
+        $metrics = new ReportMetrics($account->id, $today->copy()->subDays(6), 7);
+        $summary = $metrics->summary($metrics->dailyCharts());
+
+        $this->assertCount(2, $summary['kpis_by_currency']);
+
+        $gbp = collect($summary['kpis_by_currency'])->firstWhere('currency', 'GBP');
+        $usd = collect($summary['kpis_by_currency'])->firstWhere('currency', 'USD');
+
+        $this->assertSame(75.0, $gbp['epl']);
+        $this->assertSame(75.0, $gbp['epc']);
+        $this->assertSame(40.0, $gbp['margin_pct']);
+        $this->assertSame(80.0, $usd['epl']);
+        $this->assertSame(80.0, $usd['epc']);
+        $this->assertSame(50.0, $usd['margin_pct']);
+    }
+
+    public function test_summary_includes_lead_quality_metrics(): void
+    {
+        $account = Account::create([
+            'name' => 'Quality Metrics Isolated',
+            'slug' => 'quality-metrics-isolated',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+            'is_active' => true,
+        ]);
+
+        $campaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'Quality KPI Campaign',
+            'reference' => 'quality-kpi-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $today = today();
+
+        Lead::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'status' => 'accepted',
+            'field_data' => [
+                'email' => 'excellent@test.test',
+                'phone1' => '07700900123',
+                'zipcode' => 'SW1A 1AA',
+                'lastname' => 'Excellent',
+            ],
+            'metadata' => [
+                'quality_score' => 90,
+                'email_validation' => ['passed' => true],
+                'hlr_validation' => ['passed' => true],
+            ],
+            'received_at' => $today,
+        ]);
+
+        Lead::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'status' => 'rejected',
+            'field_data' => ['email' => 'poor@test.test'],
+            'metadata' => [
+                'quality_score' => 35,
+                'email_validation' => ['passed' => false],
+                'hlr_validation' => ['passed' => false],
+            ],
+            'received_at' => $today,
+        ]);
+
+        $metrics = new ReportMetrics($account->id, $today->copy()->subDays(6), 7);
+        $quality = $metrics->summary($metrics->dailyCharts())['quality'];
+
+        $this->assertSame(2, $quality['leads_scored']);
+        $this->assertSame(62.5, $quality['avg_score']);
+        $this->assertSame(1, $quality['excellent']);
+        $this->assertSame(1, $quality['poor']);
+        $this->assertSame(2, $quality['email_checked']);
+        $this->assertSame(50.0, $quality['email_pass_rate']);
+        $this->assertSame(2, $quality['hlr_checked']);
+        $this->assertSame(50.0, $quality['hlr_pass_rate']);
     }
 
     public function test_reports_page_renders_coherent_summary_for_tenant(): void
@@ -104,17 +226,126 @@ class ReportsFunctionalityTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Reports/Index')
                 ->where('currency', 'GBP')
+                ->has('filters')
+                ->has('filterOptions.campaigns')
                 ->has('charts.labels')
                 ->has('summary.kpis.epl')
                 ->has('summary.kpis.cpl')
+                ->has('summary.quality.avg_score')
+                ->has('summary.quality.email_pass_rate')
+                ->has('summary.quality.hlr_pass_rate')
+                ->has('summary.revenue_by_currency')
                 ->has('byBuyer')
                 ->has('bySupplier')
                 ->has('byCampaign')
                 ->has('tierSummary')
-                ->has('pingTree.campaign_name')
+                ->has('pingTreeCampaigns')
                 ->where('summary.leads_period', fn ($count) => $count >= 1)
                 ->where('summary.kpis.margin_pct', fn ($pct) => $pct >= 0 && $pct <= 100)
             );
+    }
+
+    public function test_tenant_reports_page_accepts_custom_date_range_filter(): void
+    {
+        $this->tenantRequest()
+            ->actingAs($this->admin)
+            ->get(route('reports.index', [
+                'date_from' => '2026-03-10',
+                'date_to' => '2026-03-20',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Reports/Index')
+                ->where('filters.date_from', '2026-03-10')
+                ->where('filters.date_to', '2026-03-20')
+                ->where('periodLabel', fn (string $label) => str_contains($label, 'Mar'))
+            );
+    }
+
+    public function test_custom_date_range_filter_scopes_metrics(): void
+    {
+        $account = Account::create([
+            'name' => 'Range Report',
+            'slug' => 'range-report',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+            'is_active' => true,
+        ]);
+
+        $campaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'Range Campaign',
+            'reference' => 'range-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $this->createLead($campaign, 'sold', Carbon::parse('2026-03-10'), 50, 30, 20);
+        $this->createLead($campaign, 'sold', Carbon::parse('2026-03-20'), 70, 40, 30);
+        $this->createLead($campaign, 'sold', Carbon::parse('2026-04-01'), 999, 500, 499);
+
+        $request = \Illuminate\Http\Request::create('/reports', 'GET', [
+            'date_from' => '2026-03-10',
+            'date_to' => '2026-03-20',
+        ]);
+        $request->attributes->set('account', $account);
+        $metrics = ReportMetrics::fromRequest($request);
+        $summary = $metrics->summary($metrics->dailyCharts());
+
+        $this->assertSame(2, $summary['sold_period']);
+        $this->assertSame(120.0, $summary['revenue_period']);
+        $this->assertStringContainsString('Mar', $metrics->periodLabel());
+    }
+
+    public function test_multi_currency_revenue_is_reported_per_currency_not_summed_in_ui_payload(): void
+    {
+        $account = Account::create([
+            'name' => 'Multi Currency Report',
+            'slug' => 'multi-currency-report',
+            'default_currency' => 'CAD',
+            'default_country' => 'CA',
+            'is_active' => true,
+        ]);
+
+        $cadCampaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'Canada Home',
+            'reference' => 'ca-home',
+            'country' => 'CA',
+            'currency' => 'CAD',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $usdCampaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'US Auto',
+            'reference' => 'us-auto',
+            'country' => 'US',
+            'currency' => 'USD',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $today = today();
+        $this->createLead($cadCampaign, 'sold', $today, 100, 60, 40);
+        $this->createLead($usdCampaign, 'sold', $today, 50, 30, 20);
+
+        $metrics = new ReportMetrics($account->id, $today->copy()->subDays(6), 7, null, $today);
+        $summary = $metrics->summary($metrics->dailyCharts());
+
+        $this->assertTrue(collect($summary['revenue_by_currency'])->pluck('currency')->contains('CAD'));
+        $this->assertTrue(collect($summary['revenue_by_currency'])->pluck('currency')->contains('USD'));
+        $this->assertSame(150.0, $summary['revenue_period']);
+
+        $cadOnly = new ReportMetrics($account->id, $today->copy()->subDays(6), 7, null, $today, null, 'CAD');
+        $cadSummary = $cadOnly->summary($cadOnly->dailyCharts());
+        $this->assertSame(100.0, $cadSummary['revenue_period']);
     }
 
     public function test_monthly_filter_scopes_charts_to_calendar_month(): void
@@ -206,19 +437,14 @@ class ReportsFunctionalityTest extends TestCase
         $this->assertFalse($ids->contains($usCampaign->id));
     }
 
-    public function test_ping_tree_panel_prefers_ten_tier_config_name(): void
+    public function test_ping_tree_campaigns_lists_all_active_ping_trees_for_tenant(): void
     {
-        $campaign = Campaign::where('reference', 'auto-insurance-uk')->first();
-
         $this->tenantRequest()
             ->actingAs($this->admin)
             ->get(route('reports.index', ['days' => 28]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('pingTree.campaign_id', $campaign->id)
-                ->where('pingTree.config_name', fn ($name) => str_contains(strtolower($name ?? ''), '10-tier')
-                    || str_contains(strtolower($name ?? ''), 'ping tree'))
-                ->where('pingTree.tier_count', fn ($count) => $count >= 1)
+                ->where('pingTreeCampaigns', fn ($campaigns) => count($campaigns) >= 1)
             );
     }
 

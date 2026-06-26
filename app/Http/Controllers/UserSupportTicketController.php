@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller as BaseController;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
+use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -57,6 +58,17 @@ class UserSupportTicketController extends BaseController
             'is_staff' => false,
         ]);
 
+        $account = $request->user()->account;
+        if ($account) {
+            app(PlatformNotificationService::class)->notifySupportTenantMessage(
+                $account,
+                $request->user(),
+                $ticket,
+                'support.ticket_created',
+                $validated['body'],
+            );
+        }
+
         return redirect()->route('support.show', $ticket)->with('success', 'Ticket created.');
     }
 
@@ -90,6 +102,17 @@ class UserSupportTicketController extends BaseController
         ]);
 
         $ticket->update(['status' => 'open']);
+
+        $account = $request->user()->account;
+        if ($account) {
+            app(PlatformNotificationService::class)->notifySupportTenantMessage(
+                $account,
+                $request->user(),
+                $ticket,
+                'support.tenant_reply',
+                $validated['body'],
+            );
+        }
 
         return back()->with('success', 'Message sent.');
     }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
+use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -101,5 +102,48 @@ class SupportTicketTest extends TestCase
         ]);
 
         $this->assertSame('pending', $ticket->fresh()->status);
+    }
+
+    public function test_super_admin_reply_notifies_tenant_platform(): void
+    {
+        $ticket = SupportTicket::create([
+            'user_id' => $this->tenantAdmin->id,
+            'account_id' => $this->tenantAdmin->account_id,
+            'portal_role' => 'admin',
+            'subject' => 'Routing help',
+            'priority' => 'normal',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($this->superAdmin)
+            ->post(route('support.admin.reply', $ticket), ['body' => 'Configure your delivery method first.'])
+            ->assertRedirect();
+
+        $this->assertSame(1, app(PlatformNotificationService::class)->unreadCount($this->tenantAdmin));
+
+        $this->actingAs($this->tenantAdmin)
+            ->getJson(route('notifications.inbox'))
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1)
+            ->assertJsonPath('notifications.0.title', 'Support replied: Routing help')
+            ->assertJsonPath('notifications.0.type', 'support');
+    }
+
+    public function test_tenant_ticket_creation_notifies_super_admin(): void
+    {
+        $this->actingAs($this->tenantAdmin)
+            ->post(route('support.store'), [
+                'subject' => 'API limits',
+                'body' => 'What are the rate limits?',
+                'priority' => 'normal',
+            ])
+            ->assertRedirect();
+
+        $this->assertGreaterThanOrEqual(1, app(PlatformNotificationService::class)->unreadCount($this->superAdmin));
+
+        $this->actingAs($this->superAdmin)
+            ->getJson(route('notifications.inbox'))
+            ->assertOk()
+            ->assertJsonFragment(['title' => 'New support ticket: API limits']);
     }
 }

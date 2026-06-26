@@ -5,9 +5,11 @@ namespace App\Services\Platform;
 use App\Models\Account;
 use App\Models\PlatformNotification;
 use App\Models\PlatformNotificationRead;
+use App\Models\SupportTicket;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class PlatformNotificationService
 {
@@ -51,6 +53,63 @@ class PlatformNotificationService
             'body' => $body,
             'expires_at' => $expiresAt,
         ]);
+    }
+
+    public function notifySupportStaffReply(User $staff, SupportTicket $ticket, string $body): PlatformNotification
+    {
+        return PlatformNotification::create([
+            'account_id' => $ticket->account_id,
+            'created_by_user_id' => $staff->id,
+            'audience' => 'tenant',
+            'type' => 'support',
+            'severity' => 'info',
+            'title' => 'Support replied: '.$ticket->subject,
+            'body' => Str::limit(trim($body), 200),
+            'metadata' => [
+                'action' => 'support.staff_reply',
+                'support_ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+            ],
+        ]);
+    }
+
+    public function notifySupportTenantMessage(
+        Account $account,
+        User $tenantUser,
+        SupportTicket $ticket,
+        string $action,
+        string $body,
+    ): PlatformNotification {
+        $title = $action === 'support.ticket_created'
+            ? 'New support ticket: '.$ticket->subject
+            : 'Support ticket reply: '.$ticket->subject;
+
+        return $this->logTenantActivity(
+            $account,
+            $tenantUser,
+            $action,
+            $title,
+            Str::limit(trim($body), 200),
+            [
+                'support_ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+            ],
+        );
+    }
+
+    public function hrefFor(User $user, PlatformNotification $notification): ?string
+    {
+        $ticketId = $notification->metadata['support_ticket_id'] ?? null;
+
+        if (! $ticketId) {
+            return null;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return route('support.admin.show', $ticketId);
+        }
+
+        return route('support.show', $ticketId);
     }
 
     /**

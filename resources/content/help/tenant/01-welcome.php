@@ -38,7 +38,7 @@ Unlike a shared SaaS login, each partner platform is a **fully isolated tenant**
 | **Reports & Finance** | Revenue, margin, buyer/supplier performance | `/reports`, `/finance` |
 | **Billing** | Buyer credits, top-ups, transaction ledger | `/billing` |
 | **Portals** | Self-service for buyers and suppliers | `/portal/buyer`, `/portal/supplier` |
-| **Integrations** | API keys, validation services, Stripe | `/api-keys`, `/integrations` |
+| **Integrations** | API keys, validation services, lead sources | `/api-keys`, `/integrations` |
 
 ### How modules connect
 

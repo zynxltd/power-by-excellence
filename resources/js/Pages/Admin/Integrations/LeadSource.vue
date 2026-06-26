@@ -41,9 +41,17 @@ watch(
     { deep: true },
 );
 
-const isConfigured = computed(() => (
-    form.enabled && form.campaign_id && form.verify_token
-));
+const isConfigured = computed(() => {
+    if (!form.enabled || !form.campaign_id) {
+        return false;
+    }
+
+    if (props.meta?.requires_verify_token) {
+        return Boolean(form.verify_token);
+    }
+
+    return true;
+});
 
 const copyText = async (key, value) => {
     if (!value) {
@@ -69,11 +77,24 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
             </template>
         </PageHeader>
 
+        <Panel class="mb-6" title="How this connects">
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                This integration uses <strong>webhook push</strong> — {{ meta.name }} (or a tool like Zapier/Make) POSTs lead data to your platform.
+                There is no in-app OAuth “Connect with Google” button; you configure the webhook or ingest URL in the ad platform or automation tool.
+            </p>
+            <p v-if="meta.oauth === false && provider === 'facebook'" class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Meta Lead Ads also needs a <strong>Page access token</strong> (pasted below) so we can fetch full lead fields from the Graph API when webhooks fire.
+            </p>
+            <ol v-if="meta.setup_steps?.length" class="mt-3 list-decimal space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400">
+                <li v-for="(step, index) in meta.setup_steps" :key="index">{{ step }}</li>
+            </ol>
+        </Panel>
+
         <div
             v-if="isConfigured"
             class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
         >
-            Integration enabled. Use the verify token below in Facebook’s webhook setup, then paste your Page access token to pull lead fields automatically.
+            {{ meta.configured_message }}
         </div>
 
         <div class="grid gap-6 lg:grid-cols-2">
@@ -92,9 +113,9 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                         </select>
                         <InputError class="mt-1" :message="form.errors.campaign_id" />
                     </div>
-                    <div>
+                    <div v-if="meta.show_verify_token">
                         <div class="flex items-center justify-between gap-2">
-                            <InputLabel value="Verify token" />
+                            <InputLabel :value="meta.verify_token_label" />
                             <button
                                 v-if="form.verify_token"
                                 type="button"
@@ -105,12 +126,12 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                             </button>
                         </div>
                         <input v-model="form.verify_token" type="text" class="form-input mt-1 w-full font-mono text-sm" placeholder="Save to generate" />
-                        <p class="mt-1 text-xs text-slate-500">Paste this into Facebook’s webhook “Verify token” field. Auto-generated when left blank on save.</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ meta.verify_token_help }}</p>
                         <InputError class="mt-1" :message="form.errors.verify_token" />
                     </div>
-                    <div v-if="provider === 'facebook'">
+                    <div v-if="meta.show_page_access_token">
                         <div class="flex items-center justify-between gap-2">
-                            <InputLabel value="Page access token (optional)" />
+                            <InputLabel :value="meta.page_access_token_label" />
                             <button
                                 v-if="form.page_access_token"
                                 type="button"
@@ -121,7 +142,7 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                             </button>
                         </div>
                         <input v-model="form.page_access_token" type="password" class="form-input mt-1 w-full font-mono text-sm" autocomplete="off" />
-                        <p class="mt-1 text-xs text-slate-500">Required to fetch lead name/email/phone from Facebook when webhooks fire. Without it, only direct ingest works.</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ meta.page_access_token_help }}</p>
                         <InputError class="mt-1" :message="form.errors.page_access_token" />
                     </div>
                     <AppButton type="submit" :disabled="form.processing">Save settings</AppButton>
@@ -142,7 +163,7 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                             </button>
                         </div>
                         <code class="mt-1 block break-all rounded-lg bg-slate-100 p-3 text-xs dark:bg-slate-800">{{ webhookUrl }}</code>
-                        <p class="mt-1 text-xs text-slate-500">Use in Facebook App → Webhooks → Page → leadgen.</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ meta.webhook_help }}</p>
                     </div>
                     <div>
                         <div class="flex items-center justify-between gap-2">
@@ -156,7 +177,7 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                             </button>
                         </div>
                         <code class="mt-1 block break-all rounded-lg bg-slate-100 p-3 text-xs dark:bg-slate-800">{{ ingestUrl }}</code>
-                        <p class="mt-1 text-xs text-slate-500">POST JSON with campaign field names (email, firstname, phone1, etc.) for testing or Zapier.</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ meta.ingest_help }}</p>
                     </div>
                 </div>
             </Panel>

@@ -265,19 +265,6 @@ class ApiFunctionalityTest extends TestCase
 
     public function test_integration_webhooks(): void
     {
-        $this->postJson('/api/v1/integrations/stripe/webhook', ['type' => 'test'])
-            ->assertStatus(403);
-
-        $this->account->update([
-            'settings' => array_merge($this->account->settings ?? [], [
-                'stripe' => ['enabled' => true],
-            ]),
-        ]);
-
-        $this->postJson('/api/v1/integrations/stripe/webhook', ['type' => 'test'])
-            ->assertOk()
-            ->assertJsonPath('received', true);
-
         $this->getJson('/api/v1/integrations/google/webhook/'.$this->account->slug)
             ->assertOk()
             ->assertJsonPath('provider', 'google');

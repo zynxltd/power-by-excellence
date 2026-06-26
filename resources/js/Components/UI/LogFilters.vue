@@ -7,6 +7,7 @@ const props = defineProps({
     routeName: { type: String, required: true },
     filters: { type: Object, default: () => ({}) },
     showDateRange: { type: Boolean, default: true },
+    showMonth: { type: Boolean, default: false },
     showDays: { type: Boolean, default: true },
     showStatus: { type: Boolean, default: false },
     statusOptions: { type: Array, default: () => [] },
@@ -22,8 +23,12 @@ const props = defineProps({
     showEventType: { type: Boolean, default: false },
     showFeedType: { type: Boolean, default: false },
     showTenant: { type: Boolean, default: false },
+    showCampaign: { type: Boolean, default: false },
+    showCurrency: { type: Boolean, default: false },
     deliveries: { type: Array, default: () => [] },
     buyers: { type: Array, default: () => [] },
+    campaigns: { type: Array, default: () => [] },
+    currencies: { type: Array, default: () => [] },
     actionOptions: { type: Array, default: () => [] },
     levelOptions: { type: Array, default: () => [] },
     categoryOptions: { type: Array, default: () => [] },
@@ -52,11 +57,29 @@ watch(() => props.filters, (f) => {
     local.value = { ...f };
 }, { deep: true });
 
-const apply = () => {
-    const params = Object.fromEntries(
-        Object.entries(local.value).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+const buildParams = () => {
+    const params = { ...local.value };
+
+    if (params.date_from && params.date_to) {
+        delete params.days;
+        delete params.month;
+    } else if (params.month) {
+        delete params.days;
+        delete params.date_from;
+        delete params.date_to;
+    } else if (params.days) {
+        delete params.date_from;
+        delete params.date_to;
+        delete params.month;
+    }
+
+    return Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
     );
-    router.get(route(props.routeName), params, { preserveState: true, replace: true });
+};
+
+const apply = () => {
+    router.get(route(props.routeName), buildParams(), { preserveState: true, replace: true });
 };
 
 const clear = () => {
@@ -68,8 +91,27 @@ const setDays = (days) => {
     local.value.days = days;
     local.value.date_from = '';
     local.value.date_to = '';
+    local.value.month = '';
     apply();
 };
+
+const setMonth = () => {
+    if (!local.value.month) {
+        return;
+    }
+
+    local.value.days = '';
+    local.value.date_from = '';
+    local.value.date_to = '';
+    apply();
+};
+
+const usingPresetDays = computed(() => (
+    Boolean(local.value.days)
+    && !local.value.date_from
+    && !local.value.date_to
+    && !local.value.month
+));
 </script>
 
 <template>
@@ -79,12 +121,12 @@ const setDays = (days) => {
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Period</label>
                 <div class="flex rounded-lg border border-slate-200 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-800">
                     <button
-                        v-for="d in [1, 7, 14, 28]"
+                        v-for="d in [1, 7, 14, 28, 30, 60, 90]"
                         :key="d"
                         type="button"
                         :class="[
                             'rounded-md px-2.5 py-1.5 text-xs font-semibold transition',
-                            Number(local.days) === d && !local.date_from
+                            usingPresetDays && Number(local.days) === d
                                 ? 'bg-indigo-600 text-white'
                                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700',
                         ]"
@@ -93,6 +135,16 @@ const setDays = (days) => {
                         {{ d === 1 ? '24h' : d + 'd' }}
                     </button>
                 </div>
+            </div>
+
+            <div v-if="showMonth" class="shrink-0">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly report</label>
+                <input
+                    v-model="local.month"
+                    type="month"
+                    class="form-input min-w-[9rem]"
+                    @change="setMonth"
+                />
             </div>
 
             <template v-if="showDateRange">
@@ -207,6 +259,24 @@ const setDays = (days) => {
                 <select v-model="local.action" class="form-select w-full">
                     <option value="">All actions</option>
                     <option v-for="a in actionOptions" :key="a" :value="a">{{ a }}</option>
+                </select>
+            </div>
+
+            <div v-if="showCampaign" class="min-w-[12rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</label>
+                <select v-model="local.campaign_id" class="form-select w-full">
+                    <option value="">All campaigns</option>
+                    <option v-for="c in campaigns" :key="c.id" :value="c.id">
+                        {{ c.name }} ({{ c.currency }})
+                    </option>
+                </select>
+            </div>
+
+            <div v-if="showCurrency" class="min-w-[8rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Currency</label>
+                <select v-model="local.currency" class="form-select w-full">
+                    <option value="">All currencies</option>
+                    <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
                 </select>
             </div>
 

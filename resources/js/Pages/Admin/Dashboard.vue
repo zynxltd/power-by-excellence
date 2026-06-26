@@ -22,19 +22,22 @@ const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
 const canCreateCampaign = computed(() => Boolean(page.props.auth.account));
 
 const props = defineProps({
-    stats: Object,
-    recentLeads: Object,
-    charts: Object,
+    showTenantDashboard: { type: Boolean, default: true },
+    stats: { type: Object, default: null },
+    recentLeads: { type: Object, default: null },
+    charts: { type: Object, default: null },
     chartDays: { type: Number, default: 7 },
     currency: { type: String, default: 'GBP' },
-    tenantOverview: Array,
+    tenantOverview: { type: Object, default: null },
     showTenantColumn: Boolean,
+    revenueByCurrency: { type: Array, default: () => [] },
+    hasMultipleCurrencies: { type: Boolean, default: false },
     quickLinkGroups: Array,
 });
 
 
 const chartDaysLocal = ref(props.chartDays);
-const { formatMoney } = useMoneyFormat(props.currency);
+const { formatMoney, formatMoneyMulti } = useMoneyFormat(props.currency);
 const { stats: liveStats } = useLiveStats();
 const isNavigating = inject('isNavigating', ref(false));
 
@@ -43,9 +46,13 @@ watch(() => props.chartDays, (days) => {
 });
 
 const stats = computed(() => ({
-    ...props.stats,
+    ...(props.stats ?? {}),
     ...(liveStats.value ?? {}),
 }));
+
+const revenueByCurrency = computed(() => liveStats.value?.revenue_by_currency ?? props.revenueByCurrency ?? []);
+const showMultiCurrencyRevenue = computed(() => props.hasMultipleCurrencies || revenueByCurrency.value.length > 1);
+const hasDashboardMetrics = computed(() => props.showTenantDashboard && (props.stats || liveStats.value));
 
 const applyChartDays = (d) => {
     chartDaysLocal.value = d;
@@ -57,15 +64,29 @@ const chartDatasets = computed(() => [
     { label: 'Sold', data: props.charts?.sold ?? [], color: '#059669', colorTo: '#34d399', gradient: true },
 ]);
 
-const statLinks = computed(() => [
+const statLinks = computed(() => {
+    if (!hasDashboardMetrics.value) {
+        return [];
+    }
+
+    return [
     { label: 'Leads Today', value: stats.value.leads_today, href: route('leads.index'), accent: 'indigo' },
     { label: 'Sold Today', value: stats.value.sold_today, href: route('leads.index', { status: 'sold' }), accent: 'emerald' },
     { label: 'Unsold Today', value: stats.value.unsold_today, href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
-    { label: 'Revenue Today', value: formatMoney(stats.value.revenue_today), href: route('billing.index'), accent: 'cyan' },
-    { label: 'Reject Rate', value: stats.value.reject_rate + '%', href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
+    {
+        label: showMultiCurrencyRevenue.value ? 'Revenue today' : 'Revenue Today',
+        title: showMultiCurrencyRevenue.value ? 'Shown per currency — campaigns may use different markets' : undefined,
+        value: showMultiCurrencyRevenue.value
+            ? formatMoneyMulti(revenueByCurrency.value, { decimals: 2 })
+            : formatMoney(stats.value.revenue_today ?? 0),
+        href: route('billing.index'),
+        accent: 'cyan',
+    },
+    { label: 'Reject Rate', value: `${stats.value.reject_rate ?? 0}%`, href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
     { label: 'Quarantined', value: stats.value.quarantined, href: route('leads.index', { status: 'quarantined' }), accent: 'amber' },
     { label: 'Pending', value: stats.value.pending, href: route('operations.index'), accent: 'indigo' },
-]);
+    ];
+});
 
 const switchToTenant = (accountId) => {
     router.post(route('accounts.switch'), { account_id: accountId }, { preserveScroll: true });
@@ -92,8 +113,17 @@ const switchToTenant = (accountId) => {
 
         <TenantContextBanner />
 
-        <Panel v-if="tenantOverview?.length" title="Partner platforms" class="mb-4" :padding="false">
-            <DataTable :empty="!tenantOverview?.length" :loading="isNavigating">
+        <Panel v-if="tenantOverview?.data?.length" class="mb-4" :padding="false">
+            <template #header>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="font-semibold text-slate-900 dark:text-white">Partner platforms</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        {{ tenantOverview.total }} total
+                        <span v-if="tenantOverview.last_page > 1"> · page {{ tenantOverview.current_page }} of {{ tenantOverview.last_page }}</span>
+                    </p>
+                </div>
+            </template>
+            <DataTable :empty="!tenantOverview?.data?.length" :loading="isNavigating">
                 <template #head>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Platform</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Campaigns</th>
@@ -103,7 +133,7 @@ const switchToTenant = (accountId) => {
                     <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                 </template>
                 <tr
-                    v-for="tenant in tenantOverview"
+                    v-for="tenant in tenantOverview.data"
                     :key="tenant.id"
                     :class="tenant.is_active ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''"
                 >
@@ -131,11 +161,22 @@ const switchToTenant = (accountId) => {
                     </td>
                 </tr>
             </DataTable>
+            <Pagination :links="tenantOverview.links" />
         </Panel>
 
-        <CompactStatStrip :items="statLinks" :columns="7" class="mb-4" />
+        <div
+            v-if="isSuperAdmin && !showTenantDashboard"
+            class="mb-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+        >
+            Today's leads, revenue, and charts are scoped to a single partner platform.
+            <strong>Switch to a tenant</strong> in the table above, or open
+            <Link :href="route('command-center.index')" class="font-semibold text-amber-900 underline dark:text-amber-200">Command Center</Link>
+            for cross-tenant health.
+        </div>
 
-        <div class="mb-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+        <CompactStatStrip v-if="showTenantDashboard" :items="statLinks" :columns="7" class="mb-4" />
+
+        <div v-if="showTenantDashboard" class="mb-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
             <Panel
                 v-for="group in quickLinkGroups"
                 :key="group.title"
@@ -146,7 +187,7 @@ const switchToTenant = (accountId) => {
             </Panel>
         </div>
 
-        <div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+        <div v-if="showTenantDashboard" class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
             <Panel class="lg:col-span-8">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -166,6 +207,7 @@ const switchToTenant = (accountId) => {
                 </template>
                 <LineChart
                     :labels="charts.labels"
+                    :dates="charts.dates"
                     :datasets="chartDatasets"
                     :height="220"
                     :value-formatter="(v) => v"
@@ -182,7 +224,7 @@ const switchToTenant = (accountId) => {
             </Panel>
         </div>
 
-        <Panel title="Recent Leads" class="mt-6" :padding="false">
+        <Panel v-if="showTenantDashboard" title="Recent Leads" class="mt-6" :padding="false">
             <DataTable :empty="!recentLeads?.data?.length" empty-message="No leads yet. Submit via API or CSV import." :loading="isNavigating">
                 <template #head>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">UUID</th>

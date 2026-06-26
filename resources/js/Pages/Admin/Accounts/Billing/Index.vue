@@ -44,6 +44,8 @@ const overdueCount = computed(() => props.accounts.filter((a) => a.status === 'p
                 <template #head>
                     <th class="text-left">Platform</th>
                     <th class="text-left">Status</th>
+                    <th class="text-left">Plan</th>
+                    <th class="text-left">Fraud</th>
                     <th class="text-left">Monthly rent</th>
                     <th class="text-left">Due date</th>
                     <th class="text-left">Contract</th>
@@ -61,6 +63,11 @@ const overdueCount = computed(() => props.accounts.filter((a) => a.status === 'p
                     <td>
                         <StatusBadge :status="a.status" />
                         <p v-if="!a.can_accept_leads" class="mt-1 text-xs text-rose-600 dark:text-rose-400">API &amp; ingest suspended</p>
+                    </td>
+                    <td class="text-slate-600 dark:text-slate-400 capitalize">{{ a.subscription_plan || 'starter' }}</td>
+                    <td class="text-slate-600 dark:text-slate-400">
+                        <span v-if="a.fraud_protection?.entitled" class="text-emerald-600 dark:text-emerald-400">Active</span>
+                        <span v-else class="text-slate-400">Off</span>
                     </td>
                     <td class="text-slate-700 dark:text-slate-300">
                         <span v-if="a.monthly_rent != null && a.monthly_rent !== ''">

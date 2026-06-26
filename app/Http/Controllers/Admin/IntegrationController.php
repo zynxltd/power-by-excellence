@@ -19,14 +19,30 @@ class IntegrationController extends Controller
         $webhookCount = Webhook::count();
         $apiKeyCount = ApiKey::where('is_active', true)->count();
 
+        $account = null;
+
         try {
-            $settings = $this->resolveAdminAccount($request)->settings ?? [];
+            $account = $this->resolveAdminAccount($request);
+            $settings = $account->settings ?? [];
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
             $settings = [];
         }
 
-        $stripeEnabled = (bool) (($settings['stripe']['enabled'] ?? false) && ! empty($settings['stripe']['publishable_key'] ?? ''));
+        $fraud = $account
+            ? app(\App\Services\Billing\FraudProtectionService::class)->summary($account)
+            : ['entitled' => false, 'can_validate' => false];
+
         $leadSources = $settings['lead_sources'] ?? [];
+        $validation = $settings['validation_integration'] ?? [];
+        $validationProvider = $validation['provider'] ?? config('validation.driver', 'demo');
+        $hasIpqsKey = filled(app(\App\Services\Validation\ValidationProviderResolver::class)->ipqsConfig($account)['api_key'] ?? null);
+        $validationConnected = $fraud['entitled'] && $validationProvider === 'ipqs' && $hasIpqsKey;
+        $validationStatus = match (true) {
+            ! $fraud['entitled'] => 'upgrade',
+            ($fraud['cap_reached'] ?? false) => 'cap_reached',
+            $validationConnected => 'connected',
+            default => 'available',
+        };
 
         $integrations = [
             [
@@ -48,20 +64,11 @@ class IntegrationController extends Controller
                 'icon' => 'api',
             ],
             [
-                'id' => 'stripe',
-                'name' => 'Stripe Payments',
-                'category' => 'Billing',
-                'description' => 'Card payments and automatic buyer top-ups. Connect Stripe to enable self-serve billing.',
-                'status' => $stripeEnabled ? 'connected' : 'available',
-                'route' => 'integrations.stripe',
-                'icon' => 'stripe',
-            ],
-            [
                 'id' => 'email_validation',
-                'name' => 'Email Validation (HLR)',
+                'name' => 'Fraud Detection',
                 'category' => 'Validation',
-                'description' => 'Real-time email deliverability and mobile HLR checks on lead ingest.',
-                'status' => 'available',
+                'description' => 'Email, phone, IP/proxy/VPN, and URL fraud checks on lead ingest.',
+                'status' => $validationStatus,
                 'route' => 'integrations.validation',
                 'icon' => 'validation',
             ],
@@ -69,7 +76,7 @@ class IntegrationController extends Controller
                 'id' => 'facebook',
                 'name' => 'Facebook Lead Ads',
                 'category' => 'Lead Sources',
-                'description' => 'Sync Facebook Lead Ad form submissions directly into campaigns.',
+                'description' => 'Meta webhook + Page token. Receive Lead Ad form submissions into campaigns.',
                 'status' => ($leadSources['facebook']['enabled'] ?? false) ? 'connected' : 'available',
                 'route' => 'integrations.lead-source',
                 'route_params' => ['provider' => 'facebook'],
@@ -79,7 +86,7 @@ class IntegrationController extends Controller
                 'id' => 'google',
                 'name' => 'Google Ads Lead Forms',
                 'category' => 'Lead Sources',
-                'description' => 'Import leads from Google Ads lead form extensions.',
+                'description' => 'Webhook or Zapier/Make ingest. Import Google Ads lead form submissions.',
                 'status' => ($leadSources['google']['enabled'] ?? false) ? 'connected' : 'available',
                 'route' => 'integrations.lead-source',
                 'route_params' => ['provider' => 'google'],
@@ -89,7 +96,7 @@ class IntegrationController extends Controller
                 'id' => 'tiktok',
                 'name' => 'TikTok Lead Gen',
                 'category' => 'Lead Sources',
-                'description' => 'Sync TikTok instant form leads into campaigns in real time.',
+                'description' => 'Webhook or direct ingest. Sync TikTok instant form leads into campaigns.',
                 'status' => ($leadSources['tiktok']['enabled'] ?? false) ? 'connected' : 'available',
                 'route' => 'integrations.lead-source',
                 'route_params' => ['provider' => 'tiktok'],

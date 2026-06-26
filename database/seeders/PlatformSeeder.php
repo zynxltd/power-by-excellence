@@ -21,6 +21,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Api\ApiKeyService;
 use App\Services\Billing\BuyerBillingService;
+use App\Services\Billing\FraudProtectionService;
 use App\Support\VerticalCatalog;
 use Illuminate\Database\Seeder;
 
@@ -51,7 +52,7 @@ class PlatformSeeder extends Seeder
             'timezone' => $platform['timezone'],
             'default_currency' => $platform['default_currency'],
             'default_country' => $platform['default_country'],
-            'settings' => [
+            'settings' => app(FraudProtectionService::class)->provisionSettingsForPlan([
                 'require_buyer_prepay' => false,
                 'validation_integration' => [
                     'enabled' => true,
@@ -59,7 +60,7 @@ class PlatformSeeder extends Seeder
                     'hlr_validation' => true,
                     'quarantine_on_fail' => true,
                 ],
-            ],
+            ], $platform['subscription_plan'] ?? 'growth'),
         ]);
 
         $user = User::factory()->create([

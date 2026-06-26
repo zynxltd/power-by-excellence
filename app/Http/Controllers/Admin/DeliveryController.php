@@ -22,7 +22,62 @@ class DeliveryController extends Controller
 {
     public function index(Request $request, DeliveryAnalyticsService $analytics): Response
     {
-        $query = Delivery::with(['campaign', 'buyer'])->withCount('logs');
+        $query = $this->filteredDeliveriesQuery($request);
+
+        $statsBase = (clone $query);
+        $healthDeliveries = (clone $query)->with('buyer')->get();
+        $healthCounts = $analytics->healthCountsFor($healthDeliveries);
+
+        $view = $request->input('view', 'cards');
+        $perPage = $view === 'table' ? 25 : 24;
+
+        $paginator = $query
+            ->with(['campaign', 'buyer'])
+            ->withCount('logs')
+            ->orderByDesc('updated_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $bulkStats = $analytics->bulkStatsFor($paginator->getCollection()->pluck('id')->all());
+        $enriched = $paginator->getCollection()->map(
+            fn (Delivery $d) => $analytics->enrichDelivery($d, $bulkStats[$d->id] ?? null)
+        );
+        $paginator->setCollection($enriched);
+
+        $grouped = $enriched->groupBy(fn ($d) => $d['campaign']['name'] ?? 'Unassigned');
+
+        return Inertia::render('Admin/Deliveries/Index', [
+            'deliveries' => $paginator,
+            'grouped' => $grouped->map(fn ($items, $campaign) => [
+                'campaign' => $campaign,
+                'items' => $items->values(),
+            ])->values(),
+            'stats' => [
+                'total' => $statsBase->count(),
+                'active' => (clone $statsBase)->where('status', 'active')->count(),
+                'by_method' => (clone $statsBase)->selectRaw('method, count(*) as total')->groupBy('method')->pluck('total', 'method'),
+                'healthy' => $healthCounts['healthy'],
+                'warning' => $healthCounts['warning'],
+                'critical' => $healthCounts['critical'],
+            ],
+            'filters' => $request->only(['campaign_id', 'method', 'status', 'buyer_id', 'vertical_id', 'search']),
+            'filterOptions' => [
+                'campaigns' => VerticalCatalog::decorateCampaigns(
+                    Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id'])
+                ),
+                'verticals' => VerticalCatalog::options(),
+                'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference', 'email']),
+                'methods' => collect(['direct_post', 'ping_post', 'email_ping_post', 'store_lead', 'email', 'sms']),
+                'statuses' => ['active', 'inactive', 'saved'],
+            ],
+            'view' => $view,
+            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
+        ]);
+    }
+
+    protected function filteredDeliveriesQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = Delivery::query();
 
         if ($accountId = AccountContext::id()) {
             $query->whereHas('campaign', fn ($q) => $q->where('account_id', $accountId));
@@ -48,43 +103,7 @@ class DeliveryController extends Controller
             $query->where('name', 'like', '%'.$request->input('search').'%');
         }
 
-        $deliveries = $query->orderByDesc('updated_at')->get()->map(function (Delivery $d) use ($analytics) {
-            $array = $d->toArray();
-            $array['health'] = $analytics->healthFor($d);
-            $array['stats'] = $analytics->statsFor($d);
-
-            return $array;
-        });
-
-        $grouped = $deliveries->groupBy(fn ($d) => $d['campaign']['name'] ?? 'Unassigned');
-
-        return Inertia::render('Admin/Deliveries/Index', [
-            'deliveries' => $deliveries->values(),
-            'grouped' => $grouped->map(fn ($items, $campaign) => [
-                'campaign' => $campaign,
-                'items' => $items->values(),
-            ])->values(),
-            'stats' => [
-                'total' => $deliveries->count(),
-                'active' => $deliveries->where('status', 'active')->count(),
-                'by_method' => $deliveries->groupBy('method')->map->count(),
-                'healthy' => $deliveries->where('health', 'healthy')->count(),
-                'warning' => $deliveries->where('health', 'warning')->count(),
-                'critical' => $deliveries->where('health', 'critical')->count(),
-            ],
-            'filters' => $request->only(['campaign_id', 'method', 'status', 'buyer_id', 'vertical_id', 'search']),
-            'filterOptions' => [
-                'campaigns' => VerticalCatalog::decorateCampaigns(
-                    Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id'])
-                ),
-                'verticals' => VerticalCatalog::options(),
-                'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference', 'email']),
-                'methods' => collect(['direct_post', 'ping_post', 'email_ping_post', 'store_lead', 'email', 'sms']),
-                'statuses' => ['active', 'inactive', 'saved'],
-            ],
-            'view' => $request->input('view', 'cards'),
-            'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
-        ]);
+        return $query;
     }
 
     public function show(Delivery $delivery, DeliveryAnalyticsService $analytics): Response

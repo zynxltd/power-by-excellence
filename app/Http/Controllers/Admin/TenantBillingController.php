@@ -47,9 +47,16 @@ class TenantBillingController extends Controller
             'billing_lock_reason' => 'nullable|string|max:500',
             'billing_notes' => 'nullable|string|max:2000',
             'billing_alert_emails' => 'nullable|string|max:500',
+            'subscription_plan' => 'required|in:starter,growth,enterprise',
+            'fraud_protection_enabled' => 'boolean',
         ]);
 
         $settings = $account->settings ?? [];
+        $settings = app(\App\Services\Billing\FraudProtectionService::class)->provisionSettingsForPlan(
+            $settings,
+            $validated['subscription_plan'],
+            $request->boolean('fraud_protection_enabled'),
+        );
         $settings['monthly_rent'] = $validated['monthly_rent'] ?? null;
         $settings['contract_reference'] = $validated['contract_reference'] ?? null;
         $settings['billing_due_at'] = $validated['billing_due_at'] ?? null;
@@ -123,6 +130,8 @@ class TenantBillingController extends Controller
             'currency' => $account->default_currency,
             'is_active' => $account->is_active,
             'can_accept_leads' => $summary['can_accept_leads'],
+            'subscription_plan' => $settings['subscription_plan'] ?? 'starter',
+            'fraud_protection' => app(\App\Services\Billing\FraudProtectionService::class)->summary($account),
         ];
     }
 
@@ -153,6 +162,9 @@ class TenantBillingController extends Controller
             'billing_alert_emails' => $settings['billing_alert_emails'] ?? '',
             'can_accept_leads' => $summary['can_accept_leads'],
             'can_process_leads' => $summary['can_process_leads'],
+            'subscription_plan' => $settings['subscription_plan'] ?? 'starter',
+            'fraud_protection_enabled' => (bool) (($settings['fraud_protection'] ?? [])['enabled'] ?? false),
+            'fraud_protection' => app(\App\Services\Billing\FraudProtectionService::class)->summary($account),
         ];
     }
 }

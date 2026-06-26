@@ -10,10 +10,11 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import PingTreeConfigCard from '@/Components/UI/PingTreeConfigCard.vue';
+import CampaignFieldsPreview from '@/Components/Campaign/CampaignFieldsPreview.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -66,21 +67,7 @@ const campaignStatStrip = computed(() => [
             <template #header>
                 <span class="text-xs text-slate-500">{{ fieldCount }} fields · {{ pingFieldCount }} ping</span>
             </template>
-            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p class="text-sm text-slate-500">Fields used for API ingest, validation, and form builder.</p>
-                <Link :href="route('campaigns.api-spec', campaign.id)" class="text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
-                    Edit API spec →
-                </Link>
-            </div>
-            <div class="flex max-h-32 flex-wrap gap-2 overflow-y-auto pr-1">
-                <span
-                    v-for="f in campaign.fields"
-                    :key="f.id"
-                    class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                    {{ f.name }}<span v-if="f.ping_field" class="ml-1 text-indigo-600 dark:text-indigo-400">(ping)</span>
-                </span>
-            </div>
+            <CampaignFieldsPreview :fields="campaign.fields ?? []" :campaign-id="campaign.id" />
         </Panel>
 
         <Panel v-if="configCount" title="Ping Tree Configuration" class="mt-6">

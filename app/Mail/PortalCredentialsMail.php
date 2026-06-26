@@ -23,7 +23,7 @@ class PortalCredentialsMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your {$this->platformName} portal login",
+            subject: "Your {$this->platformName} login credentials",
         );
     }
 

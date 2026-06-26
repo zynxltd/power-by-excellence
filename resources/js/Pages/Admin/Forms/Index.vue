@@ -35,7 +35,7 @@ const submit = () => {
 <template>
     <Head title="Form Builder" />
     <AuthenticatedLayout>
-        <PageHeader title="Form Builder" description="Hosted lead capture forms — domain lock, custom CSS, redirects.">
+        <PageHeader title="Form Builder" description="Hosted lead capture — direct links, iframe embeds, SID tracking, and redirects.">
             <template #actions>
                 <AppButton @click="showCreate = !showCreate">{{ showCreate ? 'Cancel' : 'New Form' }}</AppButton>
             </template>

@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\AccessLog;
 use App\Models\ApiKey;
 use App\Models\ApiRequestLog;
+use App\Services\Demo\LargePingTreeBuilder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -52,7 +53,11 @@ class DemoHistoricalDataSeeder extends Seeder
                 continue;
             }
 
-            $this->seedTenTierDistribution($campaign, $account);
+            if ($account->slug === 'emea-loans') {
+                $this->seedLargePingTree($campaign, $account, 35);
+            } else {
+                $this->seedTenTierDistribution($campaign, $account);
+            }
             $this->seedHistoricalLeads($account, $campaign);
             $this->seedPortalActivity($account);
             $this->seedApiRequestLogs($account);
@@ -220,6 +225,16 @@ class DemoHistoricalDataSeeder extends Seeder
         DistributionConfig::where('campaign_id', $campaign->id)
             ->where('name', 'Hybrid Ping Tree')
             ->update(['is_active' => false]);
+    }
+
+    protected function seedLargePingTree(Campaign $campaign, Account $account, int $tiers = 35): void
+    {
+        $distribution = DistributionConfig::updateOrCreate(
+            ['campaign_id' => $campaign->id, 'name' => "{$tiers}-Tier Enterprise Ping Tree"],
+            ['is_active' => true, 'is_locked' => false, 'config' => ['groups' => []]]
+        );
+
+        app(LargePingTreeBuilder::class)->build($campaign, $account, $distribution, $tiers);
     }
 
     protected function seedHistoricalLeads(Account $account, Campaign $campaign): void

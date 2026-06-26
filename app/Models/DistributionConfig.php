@@ -13,6 +13,7 @@ class DistributionConfig extends Model
         'name',
         'config',
         'is_active',
+        'is_locked',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class DistributionConfig extends Model
         return [
             'config' => 'array',
             'is_active' => 'boolean',
+            'is_locked' => 'boolean',
         ];
     }
 

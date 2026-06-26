@@ -2,9 +2,11 @@
 
 namespace App\Services\Validation;
 
-class DemoValidationProvider
+use App\Services\Validation\Contracts\ValidationProvider;
+
+class DemoValidationProvider implements ValidationProvider
 {
-    public function validateEmail(?string $email): ValidationResult
+    public function validateEmail(?string $email, ?ValidationContext $context = null): ValidationResult
     {
         if (blank($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ValidationResult::fail('Invalid email format', ['check' => 'syntax']);
@@ -36,7 +38,7 @@ class DemoValidationProvider
         ]);
     }
 
-    public function validateHlr(?string $phone): ValidationResult
+    public function validateHlr(?string $phone, ?ValidationContext $context = null): ValidationResult
     {
         if (blank($phone)) {
             return ValidationResult::fail('Phone number missing', ['check' => 'hlr']);
@@ -65,6 +67,59 @@ class DemoValidationProvider
             'status' => $statuses[array_rand($statuses)],
             'network' => $networks[array_rand($networks)],
             'duration_ms' => random_int(45, 320),
+        ]);
+    }
+
+    public function validateIp(?string $ip, ?ValidationContext $context = null): ValidationResult
+    {
+        if (blank($ip) || ! filter_var($ip, FILTER_VALIDATE_IP)) {
+            return ValidationResult::fail('IP address missing or invalid', ['provider' => 'demo', 'check' => 'ip']);
+        }
+
+        foreach (config('validation.demo.high_risk_ip_prefixes', ['10.66.', '198.51.100.']) as $prefix) {
+            if (str_starts_with($ip, $prefix)) {
+                return ValidationResult::fail('High-risk IP range (demo)', [
+                    'provider' => 'demo',
+                    'check' => 'ip',
+                    'fraud_score' => 95,
+                    'status' => 'high_risk',
+                ]);
+            }
+        }
+
+        return ValidationResult::pass([
+            'provider' => 'demo',
+            'check' => 'ip',
+            'fraud_score' => random_int(5, 25),
+            'status' => 'clean',
+        ]);
+    }
+
+    public function validateUrl(?string $url, ?ValidationContext $context = null): ValidationResult
+    {
+        if (blank($url)) {
+            return ValidationResult::fail('URL missing', ['provider' => 'demo', 'check' => 'url']);
+        }
+
+        $host = parse_url(str_contains($url, '://') ? $url : 'https://'.$url, PHP_URL_HOST) ?: $url;
+
+        foreach (config('validation.demo.malicious_url_hosts', []) as $bad) {
+            if (str_contains(strtolower($host), strtolower($bad))) {
+                return ValidationResult::fail('Malicious URL (demo)', [
+                    'provider' => 'demo',
+                    'check' => 'url',
+                    'risk_score' => 95,
+                    'status' => 'high_risk',
+                ]);
+            }
+        }
+
+        return ValidationResult::pass([
+            'provider' => 'demo',
+            'check' => 'url',
+            'risk_score' => random_int(0, 20),
+            'domain' => $host,
+            'status' => 'clean',
         ]);
     }
 }

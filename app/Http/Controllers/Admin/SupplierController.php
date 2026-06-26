@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\Source;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\Integrations\SupplierPostbackSync;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
@@ -129,6 +130,10 @@ class SupplierController extends Controller
 
         $this->syncSources($supplier, $sources);
         $this->syncPortalUser($supplier, $portal);
+        app(SupplierPostbackSync::class)->sync(
+            $supplier,
+            $supplier->affiliate_settings['default_postback_url'] ?? null
+        );
 
         return redirect()->route('suppliers.show', $supplier)->with('success', 'Supplier created.');
     }
@@ -166,6 +171,10 @@ class SupplierController extends Controller
 
         $this->syncSources($supplier, $sources);
         $this->syncPortalUser($supplier, $portal);
+        app(SupplierPostbackSync::class)->sync(
+            $supplier,
+            $supplier->affiliate_settings['default_postback_url'] ?? null
+        );
 
         return redirect()->route('suppliers.show', $supplier)->with('success', 'Supplier updated.');
     }

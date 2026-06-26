@@ -95,6 +95,6 @@ class TierRedirectUrlTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('status', LeadStatus::Sold->value)
-            ->assertJsonPath('redirect_url', 'https://tier.example/thanks');
+            ->assertJsonPath('redirect_url', url('/r/'.$lead->fresh()->uuid));
     }
 }

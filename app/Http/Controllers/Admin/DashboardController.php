@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Campaign;
 use App\Models\Lead;
 use App\Support\Tenancy\AccountContext;
+use App\Support\TenantFinancialSummary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -19,33 +20,32 @@ class DashboardController extends Controller
         $chartDays = (int) $request->input('chart_days', 7);
         $chartDays = in_array($chartDays, [7, 14, 30], true) ? $chartDays : 7;
 
-        $stats = [
-            'leads_today' => Lead::whereDate('received_at', today())->count(),
-            'sold_today' => Lead::whereDate('distributed_at', today())->where('status', 'sold')->count(),
-            'unsold_today' => Lead::whereDate('received_at', today())->where('status', 'unsold')->count(),
-            'revenue_today' => (float) DB::table('lead_financials')
-                ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
-                ->whereDate('leads.distributed_at', today())
-                ->sum('lead_financials.revenue'),
-            'reject_rate' => $this->rejectRate(),
-            'quarantined' => Lead::where('status', 'quarantined')->count(),
-            'pending' => Lead::where('status', 'pending')->count(),
-        ];
+        $showTenantDashboard = $this->showTenantDashboard($request);
 
-        $recentLeads = Lead::with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account'])
-            ->orderByDesc('received_at')
-            ->paginate(15)
-            ->withQueryString();
+        $stats = $showTenantDashboard ? $this->dashboardStats() : null;
+
+        $recentLeads = $showTenantDashboard
+            ? Lead::with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account'])
+                ->orderByDesc('received_at')
+                ->paginate(15)
+                ->withQueryString()
+            : null;
 
         $account = $request->attributes->get('account') ?? $request->user()?->account;
         $currency = $account?->default_currency ?? 'GBP';
+        $accountId = $account?->id ?? AccountContext::id();
+
+        $revenueByCurrency = $showTenantDashboard
+            ? TenantFinancialSummary::totalsByCurrency($accountId, todayOnly: true)
+            : [];
 
         $tenantOverview = null;
         if ($request->user()?->isSuperAdmin()) {
             $tenantOverview = Account::withCount(['campaigns', 'leads', 'buyers', 'suppliers'])
                 ->orderBy('name')
-                ->get()
-                ->map(fn (Account $a) => [
+                ->paginate(10, ['*'], 'tenant_page')
+                ->withQueryString()
+                ->through(fn (Account $a) => [
                     'id' => $a->id,
                     'name' => $a->brand_name ?: $a->name,
                     'slug' => $a->slug,
@@ -59,15 +59,17 @@ class DashboardController extends Controller
                         ->count(),
                     'is_active' => AccountContext::id() === $a->id,
                 ]);
-
         }
 
         return Inertia::render('Admin/Dashboard', [
+            'showTenantDashboard' => $showTenantDashboard,
             'stats' => $stats,
             'recentLeads' => $recentLeads,
-            'charts' => $this->chartData($chartDays),
+            'charts' => $showTenantDashboard ? $this->chartData($chartDays) : null,
             'chartDays' => $chartDays,
             'currency' => $currency,
+            'revenueByCurrency' => $revenueByCurrency,
+            'hasMultipleCurrencies' => count($revenueByCurrency) > 1,
             'tenantOverview' => $tenantOverview,
             'showTenantColumn' => ! AccountContext::id() && $request->user()?->isSuperAdmin(),
             'quickLinkGroups' => $this->quickLinkGroups($request),
@@ -100,7 +102,7 @@ class DashboardController extends Controller
 
         return [
             [
-                'title' => 'Tenant management',
+                'title' => 'Platform management',
                 'links' => $tenantLinks,
             ],
             [
@@ -136,12 +138,14 @@ class DashboardController extends Controller
     protected function chartData(int $days = 7): array
     {
         $labels = [];
+        $dates = [];
         $leads = [];
         $sold = [];
 
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = today()->subDays($i);
             $labels[] = $date->format('D j');
+            $dates[] = $date->toDateString();
             $leads[] = Lead::whereDate('received_at', $date)->count();
             $sold[] = Lead::whereDate('distributed_at', $date)->where('status', 'sold')->count();
         }
@@ -155,10 +159,39 @@ class DashboardController extends Controller
 
         return [
             'labels' => $labels,
+            'dates' => $dates,
             'leads' => $leads,
             'sold' => $sold,
             'status_breakdown' => $statusBreakdown,
             'chart_days' => $days,
+        ];
+    }
+
+    protected function showTenantDashboard(Request $request): bool
+    {
+        if (! $request->user()?->isSuperAdmin()) {
+            return true;
+        }
+
+        return AccountContext::id() !== null;
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    protected function dashboardStats(): array
+    {
+        return [
+            'leads_today' => Lead::whereDate('received_at', today())->count(),
+            'sold_today' => Lead::whereDate('distributed_at', today())->where('status', 'sold')->count(),
+            'unsold_today' => Lead::whereDate('received_at', today())->where('status', 'unsold')->count(),
+            'revenue_today' => (float) Lead::query()
+                ->join('lead_financials', 'leads.id', '=', 'lead_financials.lead_id')
+                ->whereDate('leads.distributed_at', today())
+                ->sum('lead_financials.revenue'),
+            'reject_rate' => $this->rejectRate(),
+            'quarantined' => Lead::where('status', 'quarantined')->count(),
+            'pending' => Lead::where('status', 'pending')->count(),
         ];
     }
 

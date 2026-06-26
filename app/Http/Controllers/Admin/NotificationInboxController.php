@@ -24,6 +24,7 @@ class NotificationInboxController extends Controller
                 'severity' => $n->severity,
                 'type' => $n->type,
                 'is_read' => (bool) $n->getAttribute('is_read'),
+                'href' => $service->hrefFor($user, $n),
                 'account' => $n->account ? [
                     'id' => $n->account->id,
                     'name' => $n->account->brand_name ?: $n->account->name,

@@ -27,20 +27,6 @@ const valueClass = (accent) => {
     return map[accent] ?? 'text-slate-900 dark:text-white';
 };
 
-const accentBorder = (accent) => {
-    const map = {
-        emerald: 'border-l-emerald-500',
-        amber: 'border-l-amber-500',
-        rose: 'border-l-rose-500',
-        orange: 'border-l-orange-500',
-        cyan: 'border-l-cyan-500',
-        indigo: 'border-l-indigo-500',
-        violet: 'border-l-violet-500',
-    };
-
-    return map[accent] ?? 'border-l-slate-300 dark:border-l-slate-600';
-};
-
 const accentGlow = (accent) => {
     const map = {
         emerald: 'from-emerald-500/8 to-transparent',
@@ -77,8 +63,7 @@ const accentGlow = (accent) => {
                     :href="item.href ?? undefined"
                     :title="item.title ?? undefined"
                     :class="[
-                        'relative min-w-0 overflow-hidden rounded-xl border border-slate-200/80 border-l-[3px] bg-gradient-to-br to-white p-2.5 dark:border-slate-800 dark:to-slate-900',
-                        accentBorder(item.accent),
+                        'relative min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br to-white p-2.5 dark:border-slate-800 dark:to-slate-900',
                         accentGlow(item.accent),
                         item.href ? 'cursor-pointer transition hover:border-indigo-200 hover:shadow-md dark:hover:border-indigo-700' : '',
                     ]"

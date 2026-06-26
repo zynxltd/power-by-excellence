@@ -74,6 +74,46 @@ class PlatformApiDocsService
                 'summary' => 'Revenue report',
                 'description' => 'Revenue and margin aggregates for a date range.',
             ],
+            [
+                'key' => 'quarantine-list',
+                'method' => 'GET',
+                'path' => '/quarantine',
+                'scope' => 'quarantine.manage',
+                'summary' => 'List quarantined leads',
+                'description' => 'Paginated list of leads held for manual review.',
+            ],
+            [
+                'key' => 'quarantine-release',
+                'method' => 'POST',
+                'path' => '/quarantine/{lead_id}/release',
+                'scope' => 'quarantine.manage',
+                'summary' => 'Release from quarantine',
+                'description' => 'Re-queue a quarantined lead for distribution.',
+            ],
+            [
+                'key' => 'quarantine-reject',
+                'method' => 'POST',
+                'path' => '/quarantine/{lead_id}/reject',
+                'scope' => 'quarantine.manage',
+                'summary' => 'Reject quarantined lead',
+                'description' => 'Permanently reject a quarantined lead with an optional reason.',
+            ],
+            [
+                'key' => 'buyer-feedback',
+                'method' => 'POST',
+                'path' => '/buyers/{buyer_reference}/feedback',
+                'scope' => 'buyers.manage',
+                'summary' => 'Buyer conversion feedback',
+                'description' => 'Report funded, contacted, or returned status for a sold lead. May fire the buyer conversion postback.',
+            ],
+            [
+                'key' => 'buyer-credit',
+                'method' => 'POST',
+                'path' => '/buyers/{buyer_reference}/credit',
+                'scope' => 'buyers.manage',
+                'summary' => 'Top up buyer credit',
+                'description' => 'Add prepaid credit to a buyer account via API.',
+            ],
         ];
     }
 
@@ -206,6 +246,10 @@ class PlatformApiDocsService
             [
                 'title' => 'Buyer rejections vs platform rejections',
                 'body' => 'reject_reason on the lead API is only for ingest/validation failures. When a buyer rejects a ping or post during routing, the lead may still end unsold — the buyer\'s message is stored in Delivery Logs (ping_response / post_response JSON), not in reject_reason.',
+            ],
+            [
+                'title' => 'Authentication headers',
+                'body' => 'Send your API key as Authorization: Bearer {prefix}|{secret} or as X-API-Key: {prefix}|{secret}. Both formats are equivalent. Keys are tenant-scoped — use the hostname shown on this page (not the central admin domain).',
             ],
             [
                 'title' => 'Rate limits',

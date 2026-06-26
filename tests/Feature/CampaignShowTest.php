@@ -22,6 +22,31 @@ class CampaignShowTest extends TestCase
         $this->admin = User::where('email', 'uk@powerbyexcellence.test')->first();
     }
 
+    public function test_campaign_show_includes_all_campaign_fields(): void
+    {
+        $campaign = Campaign::first();
+
+        foreach (range(1, 30) as $i) {
+            $campaign->fields()->create([
+                'name' => "extra_field_{$i}",
+                'label' => "Extra Field {$i}",
+                'type' => 'text',
+                'required' => $i <= 3,
+                'ping_field' => $i % 5 === 0,
+                'sort_order' => 100 + $i,
+            ]);
+        }
+
+        $expectedCount = $campaign->fields()->count();
+
+        $this->actingAs($this->admin)
+            ->get(route('campaigns.show', $campaign))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('campaign.fields', fn ($fields) => count($fields) === $expectedCount)
+            );
+    }
+
     public function test_campaign_show_includes_paginated_deliveries(): void
     {
         $campaign = Campaign::first();

@@ -57,7 +57,7 @@ class LeadSourceIntegrationController extends Controller
             'field_mapping' => 'nullable|array',
         ]);
 
-        if (empty($validated['verify_token'])) {
+        if (empty($validated['verify_token']) && ($this->providers()[$provider]['requires_verify_token'] ?? false)) {
             $validated['verify_token'] = Str::random(32);
         }
 
@@ -74,22 +74,76 @@ class LeadSourceIntegrationController extends Controller
     }
 
     /**
-     * @return array<string, array{name: string, description: string}>
+     * @return array<string, array<string, mixed>>
      */
     protected function providers(): array
     {
         return [
             'facebook' => [
                 'name' => 'Facebook Lead Ads',
-                'description' => 'Receive leads from Facebook Lead Ad forms via webhook subscription.',
+                'description' => 'Receive leads from Meta Lead Ad forms via webhook subscription.',
+                'connection_type' => 'webhook',
+                'oauth' => false,
+                'configured_message' => 'Integration enabled. Add the verify token and webhook URL in your Meta App, then paste a Page access token so lead fields are fetched automatically.',
+                'setup_steps' => [
+                    'Create or open a Meta App at developers.facebook.com.',
+                    'Subscribe to Page → leadgen webhooks and paste the verify token below.',
+                    'Paste the webhook URL from this page into the Meta App webhook settings.',
+                    'Generate a Page access token with leads_retrieval permission and paste it below.',
+                ],
+                'show_verify_token' => true,
+                'verify_token_label' => 'Verify token',
+                'verify_token_help' => 'Paste into Meta App → Webhooks → Page → leadgen → Verify token. Auto-generated when left blank on save.',
+                'show_page_access_token' => true,
+                'page_access_token_label' => 'Page access token',
+                'page_access_token_help' => 'Required to fetch lead name, email, and phone from Meta when webhooks fire. Generate in Meta Business Suite or the Graph API explorer.',
+                'webhook_help' => 'Callback URL for Meta App → Webhooks → Page → leadgen.',
+                'ingest_help' => 'POST JSON with campaign field names (email, firstname, phone1, etc.) for testing, Zapier, or Make.',
+                'requires_verify_token' => true,
             ],
             'google' => [
                 'name' => 'Google Ads Lead Forms',
-                'description' => 'Import leads from Google Ads lead form extensions using webhook push.',
+                'description' => 'Import leads from Google Ads lead form extensions via webhook push or automation tools.',
+                'connection_type' => 'webhook',
+                'oauth' => false,
+                'configured_message' => 'Integration enabled. Point Google Ads lead-form webhooks or an automation tool (Zapier, Make) at the URLs on the right.',
+                'setup_steps' => [
+                    'In Google Ads, open your lead form asset and configure webhook delivery (or use Zapier/Make as a bridge).',
+                    'Paste the webhook URL or direct ingest URL into Google Ads or your automation tool.',
+                    'Map Google lead fields to your campaign fields (email, firstname, phone1, zipcode, etc.).',
+                    'Send a test lead and confirm it appears under Leads for the target campaign.',
+                ],
+                'show_verify_token' => false,
+                'verify_token_label' => null,
+                'verify_token_help' => null,
+                'show_page_access_token' => false,
+                'page_access_token_label' => null,
+                'page_access_token_help' => null,
+                'webhook_help' => 'Receive POST payloads from Google Ads webhook delivery or middleware that forwards lead-form submissions.',
+                'ingest_help' => 'POST JSON with campaign field names. Easiest path for Zapier, Make, or custom scripts — no Meta-style verify handshake.',
+                'requires_verify_token' => false,
             ],
             'tiktok' => [
                 'name' => 'TikTok Lead Gen',
-                'description' => 'Sync TikTok instant form leads into your campaigns in real time.',
+                'description' => 'Sync TikTok instant form leads into your campaigns via webhook or direct ingest.',
+                'connection_type' => 'webhook',
+                'oauth' => false,
+                'configured_message' => 'Integration enabled. Configure TikTok Events Manager or an automation tool to POST leads to the URLs on the right.',
+                'setup_steps' => [
+                    'In TikTok Ads Manager, open your instant form and set up webhook or CRM integration.',
+                    'Paste the webhook URL or direct ingest URL from this page.',
+                    'Map TikTok form fields to campaign fields (email, firstname, phone1, etc.).',
+                    'Submit a test lead and verify it appears under Leads.',
+                ],
+                'show_verify_token' => false,
+                'verify_token_label' => null,
+                'verify_token_help' => null,
+                'show_page_access_token' => false,
+                'page_access_token_label' => null,
+                'page_access_token_help' => null,
+                'webhook_help' => 'Receive POST payloads from TikTok lead-gen webhooks or a forwarding service.',
+                'ingest_help' => 'POST JSON with campaign field names for testing, Zapier, Make, or custom integrations.',
+                'requires_verify_token' => false,
             ],
         ];
     }

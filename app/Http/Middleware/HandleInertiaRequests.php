@@ -45,6 +45,9 @@ class HandleInertiaRequests extends Middleware
                 'billing' => fn () => ($account = $this->resolveAccount($request))
                     ? app(\App\Services\Billing\AccountBillingService::class)->summary($account)
                     : null,
+                'fraudProtection' => fn () => ($account = $this->resolveAccount($request))
+                    ? app(\App\Services\Billing\FraudProtectionService::class)->summary($account)
+                    : null,
                 'isSuperAdmin' => fn () => $user?->isSuperAdmin() ?? false,
                 'isBuyerPortal' => fn () => $user?->isBuyerPortal() ?? false,
                 'isSupplierPortal' => fn () => $user?->isSupplierPortal() ?? false,
@@ -64,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'demo_success' => fn () => $request->session()->get('demo_success'),
+                'api_token' => fn () => $request->session()->get('api_token'),
             ],
             'notifications' => [
                 'unread_count' => fn () => $user

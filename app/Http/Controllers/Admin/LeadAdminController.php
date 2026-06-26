@@ -9,6 +9,7 @@ use App\Support\LeadQueueMetrics;
 use App\Support\Queue\LeadJobDispatcher;
 use App\Models\Campaign;
 use App\Models\Lead;
+use App\Services\Leads\LeadQualityService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\CsvExport;
 use App\Support\Tenancy\AccountContext;
@@ -28,10 +29,17 @@ class LeadAdminController extends Controller
             ->with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account'])
             ->orderByDesc('received_at');
 
+        $leads = $query->paginate(25)->withQueryString();
+        $leads->getCollection()->transform(function (Lead $lead) {
+            $lead->setAttribute('quality', LeadQualityService::analyzeLead($lead));
+
+            return $lead;
+        });
+
         return Inertia::render('Admin/Leads/Index', [
-            'leads' => $query->paginate(25)->withQueryString(),
+            'leads' => $leads,
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference']),
-            'filters' => $request->only(['status', 'campaign_id', 'account_id', 'search', 'from_date', 'to_date']),
+            'filters' => $request->only(['status', 'campaign_id', 'account_id', 'search', 'from_date', 'to_date', 'quality_min']),
             'statuses' => ['pending', 'processing', 'sold', 'unsold', 'rejected', 'quarantined', 'duplicate'],
             'pipelineSummary' => $this->pipelineSummary($baseQuery),
             'showTenantColumn' => $this->showTenantColumn($request),
@@ -79,6 +87,7 @@ class LeadAdminController extends Controller
 
         return Inertia::render('Admin/Leads/Show', [
             'lead' => $lead,
+            'leadQuality' => LeadQualityService::analyzeLead($lead),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($lead->campaign),
             'pipelineStages' => $this->pipelineStages($lead),
             'outcomeDetail' => $this->outcomeDetail($lead),
@@ -168,13 +177,17 @@ class LeadAdminController extends Controller
             ->limit(5000)
             ->get();
 
-        $csv = "uuid,campaign,status,firstname,lastname,email,phone,zipcode,revenue,buyer,received_at,distributed_at\n";
+        $csv = "uuid,campaign,status,quality_score,email_status,hlr_status,firstname,lastname,email,phone,zipcode,revenue,buyer,received_at,distributed_at\n";
 
         foreach ($leads as $lead) {
+            $quality = LeadQualityService::analyzeLead($lead);
             $csv .= CsvExport::escapeRow([
                 $lead->uuid,
                 $lead->campaign?->reference ?? '',
                 $lead->status->value,
+                $quality['score'],
+                $quality['email']['label'],
+                $quality['hlr']['label'],
                 $lead->getField('firstname'),
                 $lead->getField('lastname'),
                 $lead->getField('email'),
@@ -226,6 +239,11 @@ class LeadAdminController extends Controller
 
         if ($request->filled('to_date')) {
             $query->whereDate('received_at', '<=', $request->to_date);
+        }
+
+        if ($request->filled('quality_min')) {
+            $min = max(0, min(100, (int) $request->input('quality_min')));
+            $query->whereRaw("CAST(json_extract(metadata, '$.quality_score') AS INTEGER) >= ?", [$min]);
         }
 
         return $query;

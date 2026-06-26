@@ -134,28 +134,6 @@ class BuyerEligibilityService
 
     public static function computeQualityScore(Lead $lead): int
     {
-        $meta = $lead->metadata ?? [];
-        $score = 100;
-
-        if (isset($meta['email_validation']) && ! ($meta['email_validation']['passed'] ?? true)) {
-            $score -= 30;
-        }
-
-        if (isset($meta['hlr_validation']) && ! ($meta['hlr_validation']['passed'] ?? true)) {
-            $score -= 25;
-        }
-
-        if (isset($meta['field_validation']) && ! ($meta['field_validation']['passed'] ?? true)) {
-            $score -= 20;
-        }
-
-        $fields = $lead->allFields();
-        foreach (['email', 'phone1', 'zipcode', 'lastname'] as $field) {
-            if (empty($fields[$field])) {
-                $score -= 5;
-            }
-        }
-
-        return max(0, min(100, $score));
+        return \App\Services\Leads\LeadQualityService::computeScore($lead);
     }
 }

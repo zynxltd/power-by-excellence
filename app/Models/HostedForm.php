@@ -35,8 +35,13 @@ class HostedForm extends Model
         return $this->belongsTo(Campaign::class);
     }
 
-    public function embedUrl(): string
+    public function embedUrl(array $params = [], bool $iframe = false): string
     {
-        return url('/forms/'.$this->slug);
+        return app(\App\Services\Forms\HostedFormEmbedService::class)->embedUrl($this, $params, $iframe);
+    }
+
+    public function iframeSnippet(array $params = [], int $height = 720): string
+    {
+        return app(\App\Services\Forms\HostedFormEmbedService::class)->iframeSnippet($this, $params, $height);
     }
 }

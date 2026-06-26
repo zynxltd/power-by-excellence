@@ -6,7 +6,20 @@ import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import Spinner from '@/Components/UI/Spinner.vue';
 
 const { stats, loading, intervalSeconds } = useLiveStats();
-const { formatMoney } = useMoneyFormat();
+const { formatMoney, formatMoneyMulti } = useMoneyFormat();
+
+const revenueLabel = computed(() => {
+    const rows = stats.value?.revenue_by_currency ?? [];
+    if (rows.length > 1) {
+        return formatMoneyMulti(rows, { decimals: 0 });
+    }
+
+    if (rows.length === 1) {
+        return formatMoney(rows[0].revenue, { decimals: 0, currency: rows[0].currency });
+    }
+
+    return formatMoney(stats.value?.revenue_today ?? 0, { decimals: 0 });
+});
 
 const items = computed(() => {
     if (!stats.value) {
@@ -18,7 +31,7 @@ const items = computed(() => {
         { label: 'Sold', value: stats.value.sold_today, href: route('leads.index', { status: 'sold' }), color: 'text-emerald-600 dark:text-emerald-400' },
         { label: 'Queue', value: stats.value.pending, href: route('operations.index'), color: 'text-amber-600 dark:text-amber-400' },
         { label: 'Quarantine', value: stats.value.quarantined, href: route('quarantine.index'), color: 'text-rose-600 dark:text-rose-400' },
-        { label: 'Revenue', value: formatMoney(stats.value.revenue_today, { decimals: 0 }), href: route('finance.index'), color: 'text-cyan-600 dark:text-cyan-400' },
+        { label: 'Revenue', value: revenueLabel.value, href: route('finance.index'), color: 'text-cyan-600 dark:text-cyan-400' },
     ];
 });
 

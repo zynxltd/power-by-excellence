@@ -68,60 +68,21 @@ class ToolsFunctionalityTest extends TestCase
             );
     }
 
-    public function test_stripe_integration_settings_persist_and_mask_secrets(): void
-    {
-        $this->tenantRequest()
-            ->actingAs($this->admin)
-            ->put(route('integrations.stripe.update'), [
-                'enabled' => true,
-                'mode' => 'test',
-                'publishable_key' => 'pk_test_123',
-                'secret_key' => 'sk_test_secret',
-                'webhook_secret' => 'whsec_test',
-                'buyer_self_serve_topup' => true,
-            ])
-            ->assertRedirect();
-
-        $stripe = $this->account->fresh()->settings['stripe'];
-        $this->assertTrue($stripe['enabled']);
-        $this->assertSame('pk_test_123', $stripe['publishable_key']);
-        $this->assertNotSame('sk_test_secret', $stripe['secret_key']);
-
-        $this->tenantRequest()
-            ->actingAs($this->admin)
-            ->get(route('integrations.stripe'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('stripe.secret_key', '••••••••')
-                ->where('stripe.publishable_key', 'pk_test_123')
-            );
-
-        $this->tenantRequest()
-            ->actingAs($this->admin)
-            ->put(route('integrations.stripe.update'), [
-                'enabled' => true,
-                'mode' => 'test',
-                'publishable_key' => 'pk_test_123',
-                'secret_key' => '••••••••',
-                'webhook_secret' => '••••••••',
-                'buyer_self_serve_topup' => true,
-            ])
-            ->assertRedirect();
-
-        $this->assertSame($stripe['secret_key'], $this->account->fresh()->settings['stripe']['secret_key']);
-    }
-
     public function test_validation_integration_update_and_test(): void
     {
         $this->tenantRequest()
             ->actingAs($this->admin)
             ->put(route('integrations.validation.update'), [
                 'enabled' => true,
+                'provider' => 'demo',
                 'email_validation' => true,
                 'hlr_validation' => false,
+                'ip_validation' => true,
+                'url_validation' => false,
                 'quarantine_on_fail' => true,
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
         $settings = $this->account->fresh()->settings['validation_integration'];
         $this->assertTrue($settings['email_validation']);

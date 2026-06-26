@@ -78,7 +78,7 @@
 - Buyer portal shows purchased leads and credit ledger
 - Supplier portal shows submitted leads and payout earnings
 - Portal roles are strictly isolated from admin and each other
-- Portal data respects multi-tenant boundaries (UK vs US)
+- Portal data respects tenant boundaries — users only see their partner platform's data
 
 ---
 
@@ -90,7 +90,7 @@
 | Admin user hits portal URL | Redirect based on role or 403 |
 | Buyer returns a lead | Return recorded; verify admin lead detail |
 | Supplier API key scoped | Can only ingest to own supplier's traffic |
-| US portal users | Only US platform data visible |
+| US portal users | Only their tenant platform's data visible — not other partner platforms |
 | Empty lead history | Tables show empty state, not error |
 | CSV download with no leads | Empty file or headers only |
 

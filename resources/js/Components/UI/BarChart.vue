@@ -6,6 +6,7 @@ import { chartXTicks, shortenChartLabel } from '@/utils/chartTicks';
 const props = defineProps({
     title: { type: String, default: '' },
     labels: { type: Array, default: () => [] },
+    dates: { type: Array, default: () => [] },
     datasets: { type: Array, default: () => [] },
     height: { type: Number, default: 260 },
     valueFormatter: { type: Function, default: null },
@@ -120,7 +121,12 @@ const onBarClick = (index) => {
         return;
     }
 
-    router.get(props.drilldownRoute, { day_index: index });
+    const date = props.dates[index];
+    const params = date
+        ? { from_date: date, to_date: date }
+        : { day_index: index };
+
+    router.get(props.drilldownRoute, params);
 };
 
 const tooltip = computed(() => {

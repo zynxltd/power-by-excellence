@@ -109,13 +109,15 @@ Repeat show-page review for:
 
 **Expected:** Campaign removed from list. Redirect to `/campaigns` with success flash.
 
-### 8. Multi-tenant isolation
+### 8. Multi-tenant isolation (super-admin)
 
 1. Log out
-2. Log in as `us@powerbyexcellence.test`
+2. Log in as `us@powerbyexcellence.test` (Partner Leads US tenant)
 3. Open `/campaigns`
 
-**Expected:** Only **Solar Leads** (`solar-us`) visible. No UK campaigns.
+**Expected:** Only US-scoped campaigns for that partner platform (e.g. **Solar** `solar-us`). No campaigns from Excellence Leads UK or other tenants.
+
+**Note:** UK vs US markets on a *single* partner platform are modeled as separate **campaigns** (country, currency, buyers per campaign) — not as separate tenants. Multi-tenancy is for isolating distinct partner businesses under super-admin.
 
 ---
 
@@ -125,7 +127,8 @@ Repeat show-page review for:
 - Campaign show page links deliveries and distribution configs
 - Auto Insurance campaign has active **10-Tier Enterprise Ping Tree**
 - Campaign reference used in API ingest as `campaign_reference`
-- UK and US platforms are fully isolated
+- Partner platforms (tenants) are fully isolated under super-admin
+- UK, US, and other geographies on one platform use separate campaigns
 
 ---
 

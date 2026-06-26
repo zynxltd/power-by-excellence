@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Campaign;
 use App\Models\HostedForm;
+use App\Models\Lead;
+use App\Models\Source;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -97,6 +100,8 @@ class FormBuilderFunctionalityTest extends TestCase
                 ->has('specFieldOptions')
                 ->has('campaignForms')
                 ->has('fieldTypes')
+                ->has('suppliers')
+                ->has('embed')
             );
     }
 
@@ -288,6 +293,111 @@ class FormBuilderFunctionalityTest extends TestCase
         ], [
             'Referer' => 'https://evil.example.com/page',
         ])->assertForbidden();
+    }
+
+    public function test_domain_locked_form_allows_submit_from_same_origin_iframe(): void
+    {
+        Queue::fake();
+
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Iframe locked',
+            'slug' => 'iframe-locked-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'allowed_domains' => ['trusted.example.com'],
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+
+        $this->post(route('forms.submit', $form->slug), [
+            'firstname' => 'Iframe',
+            'email' => 'iframe.'.uniqid().'@example.com',
+            'embed' => '1',
+        ], [
+            'Referer' => 'https://'.$appHost.'/forms/'.$form->slug.'?embed=1',
+        ])->assertOk();
+
+        Queue::assertPushed(\App\Jobs\ProcessLeadJob::class);
+    }
+
+    public function test_form_submission_resolves_sid_and_supplier_from_query_and_defaults(): void
+    {
+        Queue::fake();
+
+        $supplier = Supplier::where('account_id', $this->campaign->account_id)->first();
+        $source = Source::where('supplier_id', $supplier->id)->first();
+
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Tracked embed',
+            'slug' => 'tracked-embed-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'default_supplier_id' => $supplier->id,
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $email = 'tracked.'.uniqid().'@example.com';
+
+        $this->get(route('forms.show', ['slug' => $form->slug, 'sid' => $source->sid, 'click_id' => 'clk_123', 'embed' => '1']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('embed', true)
+                ->where('tracking.sid', $source->sid)
+                ->where('tracking.click_id', 'clk_123')
+            );
+
+        $show = $this->get(route('forms.show', ['slug' => $form->slug, 'sid' => $source->sid, 'embed' => '1']));
+        $version = $show->headers->get('X-Inertia-Version');
+
+        $this->post(route('forms.submit', $form->slug), [
+            'firstname' => 'Tracked',
+            'email' => $email,
+            'sid' => $source->sid,
+            'supplier_id' => (string) $supplier->id,
+            'click_id' => 'clk_123',
+            'embed' => '1',
+        ], [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version,
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->assertOk();
+
+        $lead = Lead::where('source', 'hosted_form:'.$form->slug)->latest()->first();
+        $this->assertNotNull($lead);
+        $this->assertSame($email, $lead->field_data['email'] ?? null);
+        $this->assertSame($supplier->id, $lead->supplier_id);
+        $this->assertSame($source->sid, $lead->sid);
+        $this->assertSame('clk_123', $lead->metadata['tracking']['click_id'] ?? null);
+        $this->assertSame('hosted_form:'.$form->slug, $lead->source);
+    }
+
+    public function test_domain_locked_form_sets_frame_ancestors_csp(): void
+    {
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'CSP form',
+            'slug' => 'csp-form',
+            'is_active' => true,
+            'config' => [
+                'allowed_domains' => ['partner.example.com'],
+                'steps' => $this->validSteps(),
+                'multi_step' => true,
+            ],
+        ]);
+
+        $this->get(route('forms.show', $form->slug))
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', "frame-ancestors 'self' https://partner.example.com");
     }
 
     public function test_redirect_thank_you_mode_redirects_away(): void

@@ -6,9 +6,10 @@ import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import LeadQualityBadge from '@/Components/UI/LeadQualityBadge.vue';
 import DeliveryAttemptLog from '@/Components/Delivery/DeliveryAttemptLog.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
@@ -18,9 +19,11 @@ const props = defineProps({
     processingMs: Number,
     navigation: Object,
     campaignWorkflow: { type: Object, default: null },
+    leadQuality: { type: Object, default: null },
 });
 
 const activeTab = ref('overview');
+const tabSection = ref(null);
 
 const { formatMoney } = useMoneyFormat();
 
@@ -64,11 +67,20 @@ const eventLabels = {
 const formatEvent = (type) => eventLabels[type] ?? type?.replace(/[._]/g, ' ') ?? type;
 
 const jumpToTab = (tab) => {
-    if (tab) activeTab.value = tab;
+    if (!tab) {
+        return;
+    }
+
+    activeTab.value = tab;
+
+    nextTick(() => {
+        tabSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 };
 
 const leadStatStrip = computed(() => [
     { label: 'Status', value: props.lead?.status ?? '—', accent: 'indigo' },
+    { label: 'Quality', value: props.leadQuality ? `${props.leadQuality.score} (${props.leadQuality.grade_label})` : '—', accent: 'violet' },
     { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '—', accent: 'cyan' },
     { label: 'Revenue', value: formatMoney(props.lead?.financials?.revenue ?? 0), accent: 'emerald' },
     { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '—', accent: 'amber' },
@@ -187,8 +199,8 @@ const stageLabel = (stage) => {
                         </ul>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <AppButton variant="secondary" @click="activeTab = 'deliveries'">View deliveries</AppButton>
-                        <AppButton variant="secondary" @click="activeTab = 'events'">View events</AppButton>
+                        <AppButton variant="secondary" @click="jumpToTab('deliveries')">View deliveries</AppButton>
+                        <AppButton variant="secondary" @click="jumpToTab('events')">View events</AppButton>
                         <AppButton v-if="lead.campaign" :href="route('distribution.index') + '?campaign_id=' + lead.campaign_id" variant="secondary">Ping tree</AppButton>
                     </div>
                 </div>
@@ -204,13 +216,13 @@ const stageLabel = (stage) => {
             </div>
         </Panel>
 
-        <CompactStatStrip :items="leadStatStrip" :columns="5" class="mt-6" />
+        <CompactStatStrip :items="leadStatStrip" class="mt-6" />
 
         <p v-if="processingStatus" class="mt-2 text-sm" :class="processingStatus.class">
             Pipeline target &lt;200ms — {{ processingStatus.label }}
         </p>
 
-        <div class="mt-6 flex gap-1 border-b border-slate-200 dark:border-slate-700">
+        <div ref="tabSection" class="mt-6 scroll-mt-24 flex gap-1 border-b border-slate-200 dark:border-slate-700">
             <button
                 v-for="tab in tabs"
                 :key="tab.key"
@@ -228,6 +240,49 @@ const stageLabel = (stage) => {
         </div>
 
         <Panel v-if="activeTab === 'overview'" title="Summary" class="mt-6">
+            <div v-if="leadQuality" class="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Lead quality score</p>
+                        <div class="mt-2 flex items-center gap-3">
+                            <LeadQualityBadge :quality="leadQuality" />
+                            <span class="text-sm text-slate-600 dark:text-slate-400">0–100 based on validation, fraud &amp; completeness</span>
+                        </div>
+                    </div>
+                    <AppButton :href="route('integrations.validation')" variant="secondary">Validation settings</AppButton>
+                </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                        <p class="text-[10px] font-semibold uppercase text-slate-500">Email</p>
+                        <p class="mt-1 text-sm font-medium" :class="leadQuality.email?.status === 'passed' ? 'text-emerald-600' : leadQuality.email?.status === 'failed' ? 'text-rose-600' : 'text-slate-600'">
+                            {{ leadQuality.email?.label }}
+                        </p>
+                        <p v-if="leadQuality.email?.fraud_score != null" class="text-xs text-slate-500">Fraud score: {{ leadQuality.email.fraud_score }}</p>
+                        <p v-else-if="leadQuality.email?.detail" class="text-xs text-slate-500">{{ leadQuality.email.detail }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                        <p class="text-[10px] font-semibold uppercase text-slate-500">HLR (mobile)</p>
+                        <p class="mt-1 text-sm font-medium" :class="leadQuality.hlr?.status === 'passed' ? 'text-emerald-600' : leadQuality.hlr?.status === 'failed' ? 'text-rose-600' : 'text-slate-600'">
+                            {{ leadQuality.hlr?.label }}
+                        </p>
+                        <p v-if="leadQuality.hlr?.fraud_score != null" class="text-xs text-slate-500">Fraud score: {{ leadQuality.hlr.fraud_score }}</p>
+                        <p v-else-if="leadQuality.hlr?.detail" class="text-xs text-slate-500">{{ leadQuality.hlr.detail }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                        <p class="text-[10px] font-semibold uppercase text-slate-500">IP fraud</p>
+                        <p class="mt-1 text-sm font-medium" :class="leadQuality.ip?.status === 'passed' ? 'text-emerald-600' : leadQuality.ip?.status === 'failed' ? 'text-rose-600' : 'text-slate-600'">
+                            {{ leadQuality.ip?.label }}
+                        </p>
+                        <p v-if="leadQuality.ip?.fraud_score != null" class="text-xs text-slate-500">Fraud score: {{ leadQuality.ip.fraud_score }}</p>
+                        <p v-else-if="leadQuality.ip?.detail" class="text-xs text-slate-500">{{ leadQuality.ip.detail }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                        <p class="text-[10px] font-semibold uppercase text-slate-500">Completeness</p>
+                        <p class="mt-1 text-sm font-medium text-slate-800 dark:text-slate-200">{{ leadQuality.completeness?.label }}</p>
+                        <p v-if="leadQuality.completeness?.missing?.length" class="text-xs text-amber-600">Missing: {{ leadQuality.completeness.missing.join(', ') }}</p>
+                    </div>
+                </div>
+            </div>
             <dl class="grid gap-4 sm:grid-cols-2">
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Received</dt><dd class="mt-1"><FormattedDate :value="lead.received_at" /></dd></div>
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Distributed</dt><dd class="mt-1"><FormattedDate :value="lead.distributed_at" /></dd></div>

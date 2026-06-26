@@ -46,6 +46,48 @@ const liveBids = [
     { buyer: 'GEICO Partners', amount: 19.5, width: 58 },
 ];
 
+const pingTreeTiers = [
+    {
+        tier: 1,
+        title: 'Parallel Auction',
+        mode: 'Ping-post',
+        subtitle: 'Highest bid wins · Floor £10',
+        detail: '3 buyers pinged in parallel',
+        indent: 'ml-0',
+        sold: true,
+        cardClass: 'border-violet-500/35 bg-gradient-to-br from-violet-500/20 via-violet-950/30 to-slate-900/80 ring-1 ring-violet-400/20',
+        iconBg: 'bg-violet-500/25 text-violet-300',
+        iconPath: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+        showBids: true,
+    },
+    {
+        tier: 2,
+        title: 'Waterfall',
+        mode: 'Sequential',
+        subtitle: 'Priority buyers in sequence',
+        detail: 'First accept wins the post',
+        indent: 'ml-5 sm:ml-8',
+        sold: false,
+        cardClass: 'border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 via-slate-900/60 to-slate-900/80',
+        iconBg: 'bg-indigo-500/20 text-indigo-300',
+        iconPath: 'M19 14l-7 7m0 0l-7-7m7 7V3',
+        showBids: false,
+    },
+    {
+        tier: 3,
+        title: 'Store Lead',
+        mode: 'Fallback',
+        subtitle: 'Archive if still unsold',
+        detail: 'Trigger auto-responder · retry later',
+        indent: 'ml-10 sm:ml-16',
+        sold: false,
+        cardClass: 'border-cyan-500/30 bg-gradient-to-br from-cyan-500/15 via-slate-900/60 to-slate-900/80',
+        iconBg: 'bg-cyan-500/20 text-cyan-300',
+        iconPath: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
+        showBids: false,
+    },
+];
+
 const stats = [
     { value: '<50ms', label: 'Lead processing' },
     { value: '99.9%', label: 'Platform uptime' },
@@ -75,7 +117,7 @@ const features = [
     {
         icon: 'building',
         title: 'Multi-Tenancy',
-        desc: 'Isolated partner platforms with their own campaigns, buyers, suppliers, API keys, and financial reporting.',
+        desc: 'Super-admins host isolated partner platforms — each with its own subdomain, buyers, suppliers, and financials. UK, US, and other markets run as campaigns within a platform.',
         color: 'from-violet-500/20 via-indigo-500/25 to-cyan-500/15 text-violet-600 marketing-dark:text-violet-400',
     },
     {
@@ -109,6 +151,16 @@ const features = [
         color: 'from-cyan-500/15 via-indigo-500/25 to-violet-500/20 text-cyan-700 marketing-dark:text-cyan-400',
     },
 ];
+
+const customSolution = {
+    title: 'Need a custom solution?',
+    desc: 'When off-the-shelf routing, integrations, or workflows are not enough, we design and deliver bespoke setups — custom ping trees, buyer adapters, data pipelines, white-label portals, and enterprise SLAs.',
+    points: [
+        'Custom delivery methods & buyer integrations',
+        'Migration from legacy routers and spreadsheets',
+        'Dedicated onboarding and solution architecture',
+    ],
+};
 
 const steps = [
     { title: 'Capture', desc: 'Leads arrive via API, CSV, or supplier integration with SID/SSID source tracking.', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' },
@@ -150,11 +202,11 @@ const testimonials = [
         metric: '3 tools replaced',
     },
     {
-        quote: 'Multi-tenant isolation means we run UK and US platforms from one super-admin without data bleed. Audit logs are a lifesaver.',
+        quote: 'Super-admin tenancy keeps partner platforms isolated — no data bleed between brands. We run UK and US on the same platform as separate campaigns, each with its own buyers and currency. Audit logs are a lifesaver.',
         name: 'Priya Nair',
         role: 'Platform Operations',
         company: 'Northstar Leads',
-        metric: '2 regions, 1 stack',
+        metric: 'Isolated tenants',
     },
 ];
 
@@ -162,7 +214,7 @@ const integrations = [
     { name: 'REST API', desc: 'Sync & async ingest', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
     { name: 'Webhooks', desc: 'Outbound events', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
     { name: 'CSV Import', desc: 'Bulk lead upload', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
-    { name: 'Stripe', desc: 'Buyer top-ups', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { name: 'Bank wire', desc: 'Manual buyer top-ups', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
     { name: 'Postbacks', desc: 'Affiliate pixels', icon: 'M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122' },
     { name: 'Hosted Forms', desc: 'No-code capture', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
 ];
@@ -181,7 +233,7 @@ const comparisonRows = [
 const securityFeatures = [
     {
         title: 'Tenant isolation',
-        desc: 'Each partner platform runs on its own subdomain with scoped data, API keys, and financials.',
+        desc: 'Super-admin only: each partner platform runs on its own subdomain with scoped data, API keys, and financials — separate from other tenants.',
         icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
     },
     {
@@ -202,8 +254,8 @@ const securityFeatures = [
 ];
 
 const pricingPreview = [
-    { name: 'Starter', price: '£299', highlight: '5k leads/mo', href: 'pricing' },
-    { name: 'Growth', price: '£799', highlight: '25k leads/mo', popular: true, href: 'pricing' },
+    { name: 'Starter', price: '£299', highlight: '5k leads/mo · fraud +£29', href: 'pricing' },
+    { name: 'Growth', price: '£799', highlight: '25k leads · fraud included', popular: true, href: 'pricing' },
     { name: 'Enterprise', price: 'Custom', highlight: 'Unlimited scale', href: 'pricing' },
 ];
 
@@ -213,8 +265,8 @@ const faqs = [
         a: 'Async ingest returns in under 50ms with a queue ID. Sync mode runs the full pipeline inline and returns the final status in one request — ideal for live buyer redirects.',
     },
     {
-        q: 'Can I run multiple partner platforms?',
-        a: 'Yes. Super-admins can host unlimited isolated tenant platforms from one account. Each gets its own campaigns, buyers, suppliers, branding, and billing.',
+        q: 'How are partner platforms and markets organised?',
+        a: 'Each partner platform is fully isolated with its own buyers, suppliers, and billing. Within one platform, run UK, US, and other markets as separate campaigns with their own currency and ping trees.',
     },
     {
         q: 'What delivery methods are supported?',
@@ -397,9 +449,9 @@ const toggleFaq = (index) => {
                         </div>
 
                         <!-- Floating metric chip -->
-                        <div class="absolute -bottom-4 -left-2 z-20 hidden animate-float-delayed rounded-xl border border-indigo-500/25 bg-white/95 px-4 py-3 shadow-lg shadow-indigo-500/10 backdrop-blur-md marketing-dark:border-indigo-500/30 marketing-dark:bg-slate-900/95 sm:block lg:-left-6">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-indigo-500">Queue depth</p>
-                            <p class="text-lg font-bold text-slate-900 marketing-dark:text-white">2 pending</p>
+                        <div class="absolute -bottom-4 -left-2 z-20 hidden animate-float-delayed rounded-xl border border-emerald-500/25 bg-white/95 px-4 py-3 shadow-lg shadow-emerald-500/10 backdrop-blur-md marketing-dark:border-emerald-500/30 marketing-dark:bg-slate-900/95 sm:block lg:-left-6">
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 marketing-dark:text-emerald-400">Route time</p>
+                            <p class="text-lg font-bold text-slate-900 marketing-dark:text-white">38<span class="text-sm font-semibold text-slate-500">ms</span></p>
                         </div>
                     </div>
                 </div>
@@ -474,6 +526,46 @@ const toggleFaq = (index) => {
                         <p class="mt-3 text-sm leading-relaxed text-slate-600 marketing-dark:text-slate-400">{{ f.desc }}</p>
                     </div>
                 </div>
+
+                <div class="mt-8 overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-violet-50/80 p-6 shadow-sm marketing-dark:border-indigo-500/25 marketing-dark:from-indigo-950/40 marketing-dark:via-slate-900/60 marketing-dark:to-violet-950/30 md:p-8">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="flex gap-5">
+                            <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-500/15 text-indigo-600 marketing-dark:text-indigo-400">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-indigo-600 marketing-dark:text-indigo-400">Last resort · we can build it</p>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900 marketing-dark:text-white md:text-2xl">{{ customSolution.title }}</h3>
+                                <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 marketing-dark:text-slate-400">{{ customSolution.desc }}</p>
+                                <ul class="mt-4 space-y-2">
+                                    <li
+                                        v-for="point in customSolution.points"
+                                        :key="point"
+                                        class="flex items-start gap-2 text-sm text-slate-700 marketing-dark:text-slate-300"
+                                    >
+                                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500 marketing-dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        {{ point }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+                            <a href="#demo" class="brand-btn-primary inline-flex items-center justify-center px-6 py-3 text-sm">
+                                Talk to us
+                            </a>
+                            <Link
+                                :href="route('pricing')"
+                                class="brand-btn-secondary inline-flex items-center justify-center px-6 py-3 text-sm"
+                            >
+                                Enterprise pricing
+                            </Link>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -530,20 +622,113 @@ const toggleFaq = (index) => {
                             </li>
                         </ul>
                     </div>
-                    <div class="brand-card-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Example ping tree</p>
-                        <div class="mt-4 space-y-3">
-                            <div class="rounded-xl border border-violet-500/30 bg-violet-500/10 p-4">
-                                <p class="text-sm font-semibold text-violet-300">Tier 1 — Parallel Auction</p>
-                                <p class="mt-1 text-xs text-slate-400">Highest bid wins · Floor £10</p>
+                    <div class="relative mx-auto w-full max-w-lg lg:max-w-none">
+                        <div class="pointer-events-none absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-violet-500/20 via-indigo-500/10 to-cyan-500/15 blur-2xl" />
+
+                        <div class="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-950 shadow-2xl shadow-indigo-900/25 ring-1 ring-slate-900/5 marketing-dark:border-white/10">
+                            <div class="flex items-center justify-between border-b border-white/10 bg-slate-900/90 px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                                    <div class="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+                                    <div class="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                                    <span class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Example ping tree</span>
+                                </div>
+                                <span class="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                                    Live route
+                                </span>
                             </div>
-                            <div class="ml-6 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-                                <p class="text-sm font-semibold text-indigo-300">Tier 2 — Waterfall</p>
-                                <p class="mt-1 text-xs text-slate-400">Priority buyers in sequence</p>
-                            </div>
-                            <div class="ml-12 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-                                <p class="text-sm font-semibold text-cyan-300">Tier 3 — Store Lead</p>
-                                <p class="mt-1 text-xs text-slate-400">Fallback storage if unsold</p>
+
+                            <div class="space-y-0 p-4 sm:p-5">
+                                <div class="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/50 px-3 py-2.5">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-semibold text-white">Lead ingested</p>
+                                        <p class="truncate text-[11px] text-slate-500">Auto Insurance UK · API · 38ms</p>
+                                    </div>
+                                    <span class="shrink-0 rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">Enter tree</span>
+                                </div>
+
+                                <template v-for="tier in pingTreeTiers" :key="tier.tier">
+                                    <div class="flex justify-center py-2">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <div class="h-3 w-px bg-gradient-to-b from-slate-600 to-slate-500" />
+                                            <span
+                                                :class="[
+                                                    'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                                    tier.sold ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-800 text-slate-500',
+                                                ]"
+                                            >
+                                                {{ tier.sold ? 'Sold · £28.50' : 'If unsold ↓' }}
+                                            </span>
+                                            <div class="h-3 w-px bg-gradient-to-b from-slate-500 to-transparent" />
+                                        </div>
+                                    </div>
+
+                                    <div :class="['relative', tier.indent]">
+                                        <div
+                                            :class="[
+                                                'rounded-xl border p-4 transition',
+                                                tier.cardClass,
+                                                tier.sold && 'shadow-lg shadow-violet-500/10',
+                                            ]"
+                                        >
+                                            <div class="flex items-start gap-3">
+                                                <div :class="['flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', tier.iconBg]">
+                                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tier.iconPath" />
+                                                    </svg>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                                                            Tier {{ tier.tier }}
+                                                        </span>
+                                                        <span class="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{{ tier.mode }}</span>
+                                                        <span
+                                                            v-if="tier.sold"
+                                                            class="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300"
+                                                        >
+                                                            Winner
+                                                        </span>
+                                                    </div>
+                                                    <p class="mt-1.5 text-sm font-semibold text-white">{{ tier.title }}</p>
+                                                    <p class="mt-0.5 text-xs text-slate-400">{{ tier.subtitle }}</p>
+                                                    <p class="mt-1 text-[11px] text-slate-500">{{ tier.detail }}</p>
+                                                </div>
+                                            </div>
+
+                                            <div v-if="tier.showBids" class="mt-3 space-y-2 border-t border-white/10 pt-3">
+                                                <div
+                                                    v-for="(bid, bidIndex) in liveBids"
+                                                    :key="bid.buyer"
+                                                    class="rounded-lg bg-slate-900/60 px-3 py-2"
+                                                >
+                                                    <div class="mb-1 flex items-center justify-between text-[11px]">
+                                                        <span :class="bidIndex === 0 ? 'font-semibold text-white' : 'text-slate-400'">{{ bid.buyer }}</span>
+                                                        <span :class="bidIndex === 0 ? 'font-bold text-emerald-400' : 'text-slate-500'">£{{ bid.amount.toFixed(2) }}</span>
+                                                    </div>
+                                                    <div class="h-1 overflow-hidden rounded-full bg-slate-800">
+                                                        <div
+                                                            class="h-full rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400"
+                                                            :class="bidIndex === 0 && 'shadow-sm shadow-emerald-500/30'"
+                                                            :style="{ width: `${bid.width}%` }"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div class="mt-4 flex items-center justify-between rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-3 py-2.5">
+                                    <p class="text-[11px] text-slate-500">Configurable per campaign · up to 10 tiers</p>
+                                    <span class="text-[11px] font-semibold text-cyan-400">42ms total</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -923,7 +1108,7 @@ const toggleFaq = (index) => {
             <div class="relative mx-auto max-w-4xl px-6 text-center">
                 <h2 class="text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Multi-tenant partner platforms</h2>
                 <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">
-                    Host multiple isolated lead networks from a single super-admin account. Each platform gets its own campaigns, buyers, suppliers, and financials.
+                    Super-admins host multiple isolated partner businesses from one account — each on its own subdomain with separate buyers, suppliers, and financials. UK, US, and other geographies are handled with campaigns inside a platform, not as separate tenants.
                 </p>
                 <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <a href="#demo" class="brand-btn-primary px-8 py-4 text-base">Book a Demo</a>

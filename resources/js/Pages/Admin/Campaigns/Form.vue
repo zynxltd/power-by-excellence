@@ -11,15 +11,17 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import CampaignRowAvatar from '@/Components/Campaign/CampaignRowAvatar.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     campaign: Object,
     defaults: { type: Object, default: () => ({ country: 'GB', currency: 'GBP' }) },
     verticals: { type: Array, default: () => [] },
     biddingModes: { type: Array, default: () => [] },
+    countries: { type: Object, default: () => ({}) },
     tenantHub: { type: Object, default: null },
     campaignWorkflow: { type: Object, default: null },
     activeDistributionConfigId: { type: [Number, String], default: null },
@@ -39,11 +41,15 @@ const { currentStep, goStep, stepStatus, nextStep, prevStep } = useFormSteps(ste
     isEdit: !!props.campaign,
 });
 
+const logoPreview = ref(props.campaign?.logo_url ?? null);
+
 const form = useForm({
     name: props.campaign?.name ?? '',
     reference: props.campaign?.reference ?? '',
     type: props.campaign?.type ?? 'standard',
     country: props.campaign?.country ?? props.defaults.country ?? account.value?.default_country ?? 'GB',
+    multi_geo: props.campaign?.multi_geo ?? false,
+    geo_countries: props.campaign?.geo_countries ?? [],
     currency: props.campaign?.currency ?? props.defaults.currency ?? account.value?.default_currency ?? 'GBP',
     status: props.campaign?.status ?? 'active',
     vertical_id: props.campaign?.vertical_id ?? '',
@@ -52,6 +58,8 @@ const form = useForm({
     bidding_mode: props.campaign?.bidding_mode ?? 'real_time_auction',
     sell_mode: props.campaign?.sell_mode ?? 'exclusive',
     use_advanced_distribution: props.campaign?.use_advanced_distribution ?? false,
+    logo: null,
+    remove_logo: false,
     caps: {
         daily: props.campaign?.caps?.daily ?? '',
         hourly: props.campaign?.caps?.hourly ?? '',
@@ -63,9 +71,48 @@ const form = useForm({
 const capCurrency = computed(() => String(form.currency || props.campaign?.currency || account.value?.default_currency || 'GBP').toUpperCase());
 
 const currencies = ['GBP', 'USD', 'EUR', 'AUD', 'CAD', 'NZD', 'ZAR', 'INR', 'AED'];
-const countries = {
-    GB: 'United Kingdom', US: 'United States', CA: 'Canada', AU: 'Australia',
-    DE: 'Germany', FR: 'France', IE: 'Ireland', NL: 'Netherlands', ZA: 'South Africa',
+
+const regionPreview = computed(() => {
+    if (form.multi_geo || (form.geo_countries?.length ?? 0) > 1) {
+        return { emoji: '🌍', label: 'Multi-geo' };
+    }
+
+    const code = form.geo_countries?.[0] || form.country;
+    const labels = props.countries;
+
+    return {
+        emoji: code && code.length === 2
+            ? String.fromCodePoint(...[...code.toUpperCase()].map((char) => 0x1F1E6 + char.charCodeAt(0) - 65))
+            : '🌍',
+        label: labels[code] ?? code,
+    };
+});
+
+const onLogoFile = (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    form.logo = file;
+    form.remove_logo = false;
+    logoPreview.value = URL.createObjectURL(file);
+};
+
+const removeLogo = () => {
+    form.logo = null;
+    form.remove_logo = true;
+    logoPreview.value = null;
+};
+
+const toggleGeoCountry = (code) => {
+    const selected = new Set(form.geo_countries ?? []);
+    if (selected.has(code)) {
+        selected.delete(code);
+    } else {
+        selected.add(code);
+    }
+    form.geo_countries = [...selected];
 };
 
 const selectedVertical = computed(() => props.verticals.find((v) => String(v.id) === String(form.vertical_id)));
@@ -125,6 +172,8 @@ const submit = () => {
     const options = {
         preserveScroll: true,
         onError: jumpToErrorStep,
+        forceFormData: Boolean(form.logo),
+        onSuccess: () => form.reset('logo'),
     };
 
     if (props.campaign) {
@@ -178,6 +227,16 @@ const submit = () => {
                             <dt class="text-slate-500">Market</dt>
                             <dd class="font-medium">{{ form.country }} · {{ form.currency }}</dd>
                         </div>
+                        <div v-if="form.name || logoPreview" class="pt-2">
+                            <dt class="text-slate-500">Preview</dt>
+                            <dd class="mt-2">
+                                <CampaignRowAvatar
+                                    :name="form.name || 'Campaign name'"
+                                    :logo-url="logoPreview"
+                                    :region="regionPreview"
+                                />
+                            </dd>
+                        </div>
                         <div v-if="selectedVertical">
                             <dt class="text-slate-500">Vertical</dt>
                             <dd class="font-medium">{{ selectedVertical.label }}</dd>
@@ -222,11 +281,30 @@ const submit = () => {
                             </p>
                             <InputError class="mt-1" :message="form.errors.reference" />
                         </div>
+                        <div class="md:col-span-2">
+                            <InputLabel value="Campaign logo" />
+                            <div
+                                v-if="logoPreview"
+                                class="mt-3 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800"
+                            >
+                                <img :src="logoPreview" alt="Campaign logo preview" class="h-12 w-12 rounded-lg object-cover" />
+                                <button type="button" class="text-sm text-rose-600 hover:text-rose-500" @click="removeLogo">Remove logo</button>
+                            </div>
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                class="mt-3 block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 dark:file:bg-indigo-500/15 dark:file:text-indigo-400"
+                                @change="onLogoFile"
+                            />
+                            <p class="mt-1 text-xs text-slate-500">PNG, JPG, SVG or WebP. Max 2MB. Shown as a thumbnail in the campaigns list.</p>
+                            <InputError class="mt-1" :message="form.errors.logo" />
+                        </div>
                         <div>
-                            <InputLabel value="Country (ISO)" />
-                            <select v-model="form.country" class="form-select w-full">
+                            <InputLabel value="Primary country (ISO)" />
+                            <select v-model="form.country" class="form-select w-full" :disabled="form.multi_geo">
                                 <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} — {{ label }}</option>
                             </select>
+                            <p class="mt-1 text-xs text-slate-500">Billing and default market. Used for the flag when not multi-geo.</p>
                             <InputError class="mt-1" :message="form.errors.country" />
                         </div>
                         <div>
@@ -235,6 +313,37 @@ const submit = () => {
                                 <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
                             </select>
                             <InputError class="mt-1" :message="form.errors.currency" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                                <input v-model="form.multi_geo" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600 dark:border-slate-600" />
+                                <span class="text-sm text-slate-600 dark:text-slate-400">
+                                    <strong>Multi-geo campaign</strong>
+                                    <span class="mt-1 block text-xs text-slate-500">
+                                        Shows a world flag. Select multiple countries below, or leave empty for worldwide.
+                                    </span>
+                                </span>
+                            </label>
+                            <InputError class="mt-1" :message="form.errors.multi_geo" />
+                        </div>
+                        <div v-if="form.multi_geo" class="md:col-span-2">
+                            <InputLabel value="Target countries (optional)" />
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button
+                                    v-for="(label, code) in countries"
+                                    :key="code"
+                                    type="button"
+                                    class="rounded-full border px-3 py-1 text-xs transition"
+                                    :class="form.geo_countries?.includes(code)
+                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/15 dark:text-indigo-300'
+                                        : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400'"
+                                    @click="toggleGeoCountry(code)"
+                                >
+                                    {{ String.fromCodePoint(...[...code].map((char) => 0x1F1E6 + char.charCodeAt(0) - 65)) }}
+                                    {{ code }}
+                                </button>
+                            </div>
+                            <InputError class="mt-1" :message="form.errors.geo_countries" />
                         </div>
                         <div class="md:col-span-2">
                             <InputLabel value="Vertical" />

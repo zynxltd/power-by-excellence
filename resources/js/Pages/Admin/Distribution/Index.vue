@@ -107,11 +107,17 @@ const tierSummary = (config) => {
                         </p>
                     </td>
                     <td class="">
-                        <StatusBadge :status="c.is_active ? 'active' : 'inactive'" />
+                        <div class="flex flex-wrap items-center gap-2">
+                            <StatusBadge :status="c.is_active ? 'active' : 'inactive'" />
+                            <StatusBadge v-if="c.is_locked" status="locked" />
+                        </div>
                     </td>
                     <td class="text-right" @click.stop>
-                        <Link :href="route('distribution.edit', c.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
-                            Edit →
+                        <Link
+                            :href="route('distribution.edit', c.id)"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                        >
+                            {{ c.is_locked ? 'View' : 'Edit' }} →
                         </Link>
                     </td>
                 </ClickableTableRow>

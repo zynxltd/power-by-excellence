@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiKey;
+use App\Models\Campaign;
 use App\Models\Supplier;
 use App\Services\Api\ApiKeyService;
 use App\Support\Admin\ResolvesAdminAccount;
+use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,15 +31,23 @@ class ApiKeyController extends Controller
     public function index(Request $request): Response
     {
         $account = $this->resolveAdminAccount($request);
+        $keysQuery = ApiKey::with('supplier:id,name')
+            ->where('account_id', $account->id);
 
         return Inertia::render('Admin/ApiKeys/Index', [
-            'apiKeys' => ApiKey::with('supplier:id,name')
-                ->where('account_id', $account->id)
-                ->orderByDesc('created_at')
-                ->get(),
+            'apiKeys' => (clone $keysQuery)->orderByDesc('created_at')->get(),
             'suppliers' => Supplier::where('account_id', $account->id)
                 ->orderBy('name')
-                ->get(['id', 'name']),
+                ->get(['id', 'name', 'reference']),
+            'apiBaseUrl' => TenantResolver::apiBaseUrl($account),
+            'campaigns' => Campaign::where('account_id', $account->id)
+                ->orderBy('name')
+                ->get(['id', 'name', 'reference']),
+            'stats' => [
+                'total' => (clone $keysQuery)->count(),
+                'administrator' => (clone $keysQuery)->where('type', 'administrator')->count(),
+                'supplier' => (clone $keysQuery)->where('type', 'supplier')->count(),
+            ],
         ]);
     }
 
@@ -79,7 +89,9 @@ class ApiKeyController extends Controller
             ['api_key_name' => $validated['name'], 'type' => $validated['type']]
         );
 
-        return back()->with('success', 'API key created. Token (copy now): '.$result['token']);
+        return back()
+            ->with('success', 'API key created. Copy the token below — it will not be shown again.')
+            ->with('api_token', $result['token']);
     }
 
     public function destroy(ApiKey $apiKey): RedirectResponse

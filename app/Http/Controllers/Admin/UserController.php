@@ -40,7 +40,34 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->paginate(25);
+        if ($search = trim($request->string('search')->toString())) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->string('role')->toString());
+        }
+
+        if ($request->filled('status')) {
+            $query->where('is_suspended', $request->string('status')->toString() === 'suspended');
+        }
+
+        $users = $query->paginate(25)->withQueryString();
+
+        $statsQuery = User::query()->orderBy('name');
+        if ($this->shouldHideSuperAdmins($request)) {
+            $statsQuery->where('role', '!=', UserRole::SuperAdmin);
+        }
+        if ($accountId) {
+            $statsQuery->where(function ($q) use ($accountId) {
+                $q->where('account_id', $accountId)
+                    ->orWhereHas('buyer', fn ($b) => $b->where('account_id', $accountId))
+                    ->orWhereHas('supplier', fn ($s) => $s->where('account_id', $accountId));
+            });
+        }
 
         $users->getCollection()->transform(fn (User $u) => [
             'id' => $u->id,
@@ -60,6 +87,18 @@ class UserController extends Controller
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
             'modules' => \App\Support\AdminModules::all(),
             'portalUrl' => $this->portalUrl($request),
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'role' => $request->input('role', ''),
+                'status' => $request->input('status', ''),
+            ],
+            'summary' => [
+                'total' => (clone $statsQuery)->count(),
+                'active' => (clone $statsQuery)->where('is_suspended', false)->count(),
+                'suspended' => (clone $statsQuery)->where('is_suspended', true)->count(),
+                'admins' => (clone $statsQuery)->where('role', UserRole::AccountAdmin)->count(),
+                'portal' => (clone $statsQuery)->whereIn('role', [UserRole::BuyerPortal, UserRole::SupplierPortal])->count(),
+            ],
         ]);
     }
 
@@ -72,7 +111,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => ['required', Password::defaults()],
+            'password' => ['nullable', Password::defaults()],
             'role' => ['required', Rule::in(array_column(UserRole::cases(), 'value'))],
             'buyer_id' => [
                 'nullable',
@@ -87,11 +126,15 @@ class UserController extends Controller
             'send_credentials' => 'boolean',
         ]);
 
+        $password = filled($validated['password'] ?? null)
+            ? $validated['password']
+            : Str::password(12);
+
         $user = User::create([
             'account_id' => $request->user()->account_id ?? session('current_account_id'),
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'],
+            'password' => $password,
             'role' => $validated['role'],
             'buyer_id' => $validated['buyer_id'] ?? null,
             'supplier_id' => $validated['supplier_id'] ?? null,
@@ -101,8 +144,8 @@ class UserController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        if ($request->boolean('send_credentials') && in_array($validated['role'], [UserRole::BuyerPortal->value, UserRole::SupplierPortal->value], true)) {
-            $this->mailCredentials($request, $user, $validated['password']);
+        if ($request->boolean('send_credentials')) {
+            $this->mailCredentials($request, $user, $password);
         }
 
         return back()->with('success', 'User created.'.($request->boolean('send_credentials') ? ' Credentials emailed.' : ''));
@@ -148,8 +191,13 @@ class UserController extends Controller
 
     public function suspend(User $user): RedirectResponse
     {
-        abort_if($user->id === auth()->id(), 403, 'Cannot suspend your own account.');
-        abort_if($user->isSuperAdmin(), 403, 'Cannot suspend a super admin.');
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot suspend your own account — end impersonation first or ask another admin.');
+        }
+
+        if ($user->isSuperAdmin()) {
+            return back()->with('error', 'Super admin accounts cannot be suspended.');
+        }
 
         $user->update(['is_suspended' => true, 'suspended_at' => now()]);
 
@@ -165,7 +213,7 @@ class UserController extends Controller
 
     public function emailCredentials(Request $request, User $user): RedirectResponse
     {
-        abort_unless(in_array($user->role, [UserRole::BuyerPortal, UserRole::SupplierPortal], true), 422, 'Credentials email is only for portal users.');
+        abort_if($user->isSuperAdmin(), 403, 'Cannot reset credentials for a super admin.');
 
         $password = Str::password(12);
         $user->update(['password' => $password]);
@@ -176,7 +224,9 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
-        abort_if($user->id === auth()->id(), 403, 'Cannot delete your own account.');
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
 
         $user->delete();
 

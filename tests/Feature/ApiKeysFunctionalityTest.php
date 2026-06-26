@@ -76,6 +76,9 @@ class ApiKeysFunctionalityTest extends TestCase
                 ->component('Admin/ApiKeys/Index')
                 ->has('apiKeys')
                 ->has('suppliers')
+                ->has('apiBaseUrl')
+                ->has('stats')
+                ->has('campaigns')
                 ->where('apiKeys', fn ($keys) => collect($keys)->every(
                     fn ($key) => $key['account_id'] === $this->ukAccount->id
                         && ! array_key_exists('key_hash', $key)
@@ -163,9 +166,9 @@ class ApiKeysFunctionalityTest extends TestCase
                 'supplier_id' => $supplier->id,
             ])
             ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertSessionHas('api_token');
 
-        $token = Str::after($response->getSession()->get('success'), 'Token (copy now): ');
+        $token = $response->getSession()->get('api_token');
         $key = ApiKey::where('name', 'Valid supplier key')->first();
         $this->assertSame($supplier->id, $key->supplier_id);
         $this->assertSame(['leads.create', 'leads.read'], $key->permissions);
