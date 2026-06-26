@@ -4,6 +4,7 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import LineChart from '@/Components/UI/LineChart.vue';
+import BarChart from '@/Components/UI/BarChart.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
@@ -123,6 +124,16 @@ const successRate = (row) => (!row.attempts ? '—' : `${Math.round((row.success
 const winRate = (row) => (!row.attempts ? '—' : `${Math.round((row.wins / row.attempts) * 100)}%`);
 const conversionRate = (row) => (!row.received ? '—' : `${Math.round((row.sold / row.received) * 100)}%`);
 const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.sold));
+
+const revenueDataset = computed(() => ([
+    {
+        label: 'Revenue',
+        data: props.charts?.revenue ?? [],
+        color: '#0891b2',
+        colorTo: '#22d3ee',
+        gradient: true,
+    },
+]));
 </script>
 
 <template>
@@ -186,20 +197,36 @@ const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.so
             </Panel>
             <Panel>
                 <template #header>
-                    <h3 class="font-semibold text-slate-900 dark:text-white">Revenue, payout &amp; margin — {{ days }} days</h3>
+                    <div>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Revenue — {{ days }} days</h3>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ currency }} · sold lead revenue by day</p>
+                    </div>
                 </template>
-                <LineChart
+                <BarChart
                     :labels="charts?.labels ?? []"
-                    :datasets="[
-                        { label: `Revenue (${currency})`, data: charts?.revenue ?? [], color: '#06b6d4' },
-                        { label: `Payout (${currency})`, data: charts?.payout ?? [], color: '#f59e0b' },
-                        { label: `Margin (${currency})`, data: charts?.margin ?? [], color: '#8b5cf6' },
-                    ]"
+                    :datasets="revenueDataset"
+                    :height="220"
+                    :scrollable="days > 14"
                     :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
-                    :drilldown-route="route('finance.index')"
+                    :drilldown-route="route('billing.index')"
                 />
             </Panel>
         </div>
+
+        <Panel class="mt-6">
+            <template #header>
+                <h3 class="font-semibold text-slate-900 dark:text-white">Payout &amp; margin — {{ days }} days</h3>
+            </template>
+            <LineChart
+                :labels="charts?.labels ?? []"
+                :datasets="[
+                    { label: `Payout (${currency})`, data: charts?.payout ?? [], color: '#f59e0b' },
+                    { label: `Margin (${currency})`, data: charts?.margin ?? [], color: '#8b5cf6' },
+                ]"
+                :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
+                :drilldown-route="route('finance.index')"
+            />
+        </Panel>
 
         <div v-if="leadStatusStrip.length" class="mt-6">
             <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Lead status breakdown</h2>

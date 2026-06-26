@@ -138,17 +138,12 @@ class DashboardController extends Controller
         $labels = [];
         $leads = [];
         $sold = [];
-        $revenue = [];
 
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = today()->subDays($i);
             $labels[] = $date->format('D j');
             $leads[] = Lead::whereDate('received_at', $date)->count();
             $sold[] = Lead::whereDate('distributed_at', $date)->where('status', 'sold')->count();
-            $revenue[] = (float) DB::table('lead_financials')
-                ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
-                ->whereDate('leads.distributed_at', $date)
-                ->sum('lead_financials.revenue');
         }
 
         $statusBreakdown = Lead::query()
@@ -162,7 +157,6 @@ class DashboardController extends Controller
             'labels' => $labels,
             'leads' => $leads,
             'sold' => $sold,
-            'revenue' => $revenue,
             'status_breakdown' => $statusBreakdown,
             'chart_days' => $days,
         ];

@@ -3,7 +3,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
-import BarChart from '@/Components/UI/BarChart.vue';
 import LineChart from '@/Components/UI/LineChart.vue';
 import DonutChart from '@/Components/UI/DonutChart.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
@@ -56,16 +55,6 @@ const chartDatasets = computed(() => [
     { label: 'Received', data: props.charts?.leads ?? [], color: '#6366f1', colorTo: '#818cf8', gradient: true },
     { label: 'Sold', data: props.charts?.sold ?? [], color: '#059669', colorTo: '#34d399', gradient: true },
 ]);
-
-const revenueDataset = computed(() => ([
-    {
-        label: 'Revenue',
-        data: props.charts?.revenue ?? [],
-        color: '#0891b2',
-        colorTo: '#22d3ee',
-        gradient: true,
-    },
-]));
 
 const statLinks = computed(() => [
     { label: 'Leads Today', value: stats.value.leads_today, href: route('leads.index'), accent: 'indigo' },
@@ -191,36 +180,6 @@ const switchToTenant = (accountId) => {
                 <DonutChart :items="charts.status_breakdown" :drilldown-route="route('leads.index')" :period-days="chartDaysLocal" />
             </Panel>
         </div>
-
-        <Panel class="mt-6">
-            <template #header>
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h3 class="font-semibold text-slate-900 dark:text-white">Revenue — {{ chartDaysLocal }} days</h3>
-                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ currency }} · sold lead revenue by day</p>
-                    </div>
-                    <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
-                        <button
-                            v-for="d in [7, 14, 30]"
-                            :key="`rev-${d}`"
-                            type="button"
-                            :class="['rounded-md px-2.5 py-1 text-xs font-semibold transition', chartDaysLocal === d ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
-                            @click="applyChartDays(d)"
-                        >
-                            {{ d }}d
-                        </button>
-                    </div>
-                </div>
-            </template>
-            <BarChart
-                :labels="charts.labels"
-                :datasets="revenueDataset"
-                :height="220"
-                :scrollable="chartDaysLocal > 14"
-                :value-formatter="(v) => formatMoney(v, { decimals: 0 })"
-                :drilldown-route="route('billing.index')"
-            />
-        </Panel>
 
         <Panel title="Recent Leads" class="mt-6" :padding="false">
             <DataTable :empty="!recentLeads?.data?.length" empty-message="No leads yet. Submit via API or CSV import." :loading="isNavigating">
