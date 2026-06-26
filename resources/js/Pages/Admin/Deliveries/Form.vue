@@ -15,7 +15,7 @@ import TextInput from '@/Components/TextInput.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps({
     delivery: Object,
@@ -57,6 +57,11 @@ const defaultConfig = () => ({
     redirect_url: '',
     accept_url: '',
     to: '',
+    cc: '',
+    bcc: '',
+    use_buyer_email: false,
+    ping_subject: 'Lead opportunity',
+    ping_body: 'Partial lead data:\nPostcode: [zipcode]',
     subject: 'New Lead: [firstname] [lastname]',
     body: 'Lead received:\nEmail: [email]\nPhone: [phone1]\nPostcode: [zipcode]',
     message: 'New lead: [firstname] from [zipcode]',
@@ -125,6 +130,27 @@ const workflowCampaign = computed(() => {
     return c ? { id: c.id, name: c.name, reference: c.reference } : null;
 });
 const selectedBuyer = computed(() => props.buyers?.find((b) => b.id === form.buyer_id));
+const buyerEmailPreview = computed(() => selectedBuyer.value?.email ?? null);
+const isEmailMethod = computed(() => ['email', 'email_ping_post'].includes(form.method));
+
+const fillBuyerEmail = () => {
+    if (!buyerEmailPreview.value) {
+        return;
+    }
+    form.config.use_buyer_email = true;
+};
+
+watch(() => form.method, (method) => {
+    if (!props.delivery && ['email', 'email_ping_post'].includes(method) && buyerEmailPreview.value) {
+        form.config.use_buyer_email = true;
+    }
+});
+
+watch(() => form.buyer_id, () => {
+    if (!props.delivery && isEmailMethod.value && buyerEmailPreview.value && !form.config.to) {
+        form.config.use_buyer_email = true;
+    }
+});
 
 const methods = ['store_lead', 'direct_post', 'ping_post', 'email_ping_post', 'email', 'sms'];
 
@@ -344,10 +370,58 @@ const submit = () => {
                                 </div>
                             </div>
                             <div v-else-if="form.method === 'store_lead'" class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/50">No URL needed — lead appears in buyer portal.</div>
-                            <div v-else-if="form.method === 'email'" class="space-y-3">
-                                <div><InputLabel value="Email to" /><TextInput v-model="form.config.to" type="email" class="mt-1 w-full" /></div>
-                                <div><InputLabel value="Subject" /><TextInput v-model="form.config.subject" class="mt-1 w-full" /></div>
-                                <div><InputLabel value="Body" /><textarea v-model="form.config.body" rows="4" class="form-input mt-1 w-full font-mono text-sm" /></div>
+                            <div v-else-if="isEmailMethod" class="space-y-4">
+                                <label class="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                                    <input v-model="form.config.use_buyer_email" type="checkbox" class="mt-1 rounded" />
+                                    <span class="text-sm text-slate-700 dark:text-slate-300">
+                                        <strong>Include buyer email</strong>
+                                        <span v-if="buyerEmailPreview" class="block text-xs font-normal text-slate-500">{{ buyerEmailPreview }}</span>
+                                        <span v-else class="block text-xs font-normal text-amber-600">Select a buyer with an email address, or add recipients below.</span>
+                                    </span>
+                                </label>
+                                <div class="flex flex-wrap gap-2">
+                                    <AppButton
+                                        v-if="buyerEmailPreview && !form.config.use_buyer_email"
+                                        type="button"
+                                        variant="secondary"
+                                        @click="fillBuyerEmail"
+                                    >
+                                        Use buyer email
+                                    </AppButton>
+                                </div>
+                                <div>
+                                    <InputLabel value="To (comma-separated)" />
+                                    <TextInput v-model="form.config.to" class="mt-1 w-full" placeholder="ops@buyer.com, alerts@buyer.com" />
+                                    <p class="mt-1 text-xs text-slate-500">Additional recipients beyond the buyer email.</p>
+                                </div>
+                                <div class="grid gap-3 md:grid-cols-2">
+                                    <div>
+                                        <InputLabel value="CC (comma-separated)" />
+                                        <TextInput v-model="form.config.cc" class="mt-1 w-full" placeholder="manager@buyer.com" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="BCC (comma-separated)" />
+                                        <TextInput v-model="form.config.bcc" class="mt-1 w-full" placeholder="archive@yourcompany.com" />
+                                    </div>
+                                </div>
+                                <div v-if="form.method === 'email'">
+                                    <InputLabel value="Subject" />
+                                    <TextInput v-model="form.config.subject" class="mt-1 w-full" />
+                                </div>
+                                <div v-if="form.method === 'email'">
+                                    <InputLabel value="Body" />
+                                    <textarea v-model="form.config.body" rows="4" class="form-input mt-1 w-full font-mono text-sm" />
+                                </div>
+                                <div v-if="form.method === 'email_ping_post'" class="grid gap-3">
+                                    <div>
+                                        <InputLabel value="Ping subject" />
+                                        <TextInput v-model="form.config.ping_subject" class="mt-1 w-full" placeholder="Lead opportunity" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Ping body" />
+                                        <textarea v-model="form.config.ping_body" rows="4" class="form-input mt-1 w-full font-mono text-sm" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div>

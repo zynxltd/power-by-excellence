@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\AccessLogController;
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\TenantBillingController;
+use App\Http\Controllers\Admin\ApiDocsController;
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\ApiRequestLogController;
 use App\Http\Controllers\Admin\AccountSettingsController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Admin\OperationsController;
 use App\Http\Controllers\Admin\PlatformNotificationAdminController;
 use App\Http\Controllers\Admin\AutomationController;
 use App\Http\Controllers\Admin\CommandCenterController;
+use App\Http\Controllers\Admin\PlatformEventsController;
 use App\Http\Controllers\Admin\SecurityLogController;
 use App\Http\Controllers\Admin\SupportTicketController;
 use App\Http\Controllers\Admin\QuarantineAdminController;
@@ -113,6 +116,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/live-stats', \App\Http\Controllers\Admin\LiveStatsController::class)->name('live-stats');
     Route::get('/command-center', [CommandCenterController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('command-center.index');
+    Route::get('/platform-events', [PlatformEventsController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('platform-events.index');
     Route::get('/live-feed', [LiveFeedController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('live-feed.index');
     Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
     Route::get('/logs/access', [AccessLogController::class, 'index'])->name('logs.access');
@@ -164,6 +168,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
     Route::get('campaigns/{campaign}/api-spec', [CampaignApiSpecController::class, 'edit'])->name('campaigns.api-spec');
     Route::put('campaigns/{campaign}/api-spec', [CampaignApiSpecController::class, 'update'])->name('campaigns.api-spec.update');
+    Route::post('campaigns/{campaign}/api-spec/lock', [CampaignApiSpecController::class, 'toggleLock'])->name('campaigns.api-spec.lock');
     Route::post('campaigns/{campaign}/api-spec/apply-form', [CampaignApiSpecController::class, 'applyToForm'])->name('campaigns.api-spec.apply-form');
     Route::post('campaigns/{campaign}/api-spec/load-template', [CampaignApiSpecController::class, 'loadVerticalTemplate'])->name('campaigns.api-spec.load-template');
     Route::post('campaigns/{campaign}/api-spec/load-premade', [CampaignApiSpecController::class, 'loadPremadeTemplate'])->name('campaigns.api-spec.load-premade');
@@ -217,6 +222,7 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::put('postbacks/{postback}', [PostbackController::class, 'update'])->name('postbacks.update');
     Route::delete('postbacks/{postback}', [PostbackController::class, 'destroy'])->name('postbacks.destroy');
 
+    Route::get('api-docs', [ApiDocsController::class, 'index'])->name('api-docs.index');
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
     Route::post('api-keys', [ApiKeyController::class, 'store'])->name('api-keys.store');
     Route::delete('api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
@@ -229,6 +235,11 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::post('users/{user}/email-credentials', [UserController::class, 'emailCredentials'])->name('users.email-credentials');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
+    Route::get('accounts/billing', [TenantBillingController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('accounts.billing.index');
+    Route::get('accounts/{account}/billing', [TenantBillingController::class, 'edit'])->middleware(['superadmin', 'central.host'])->name('accounts.billing.edit');
+    Route::put('accounts/{account}/billing', [TenantBillingController::class, 'update'])->middleware(['superadmin', 'central.host'])->name('accounts.billing.update');
+    Route::post('accounts/{account}/billing/lock', [TenantBillingController::class, 'lock'])->middleware(['superadmin', 'central.host'])->name('accounts.billing.lock');
+    Route::post('accounts/{account}/billing/unlock', [TenantBillingController::class, 'unlock'])->middleware(['superadmin', 'central.host'])->name('accounts.billing.unlock');
     Route::get('accounts', [AccountController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('accounts.index');
     Route::get('accounts/create', [AccountController::class, 'create'])->middleware(['superadmin', 'central.host'])->name('accounts.create');
     Route::post('accounts', [AccountController::class, 'store'])->middleware(['superadmin', 'central.host'])->name('accounts.store');

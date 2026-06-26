@@ -74,4 +74,24 @@ class RuleEngineTest extends TestCase
 
         $this->assertSame(['state is one of: CA, TX'], $summary);
     }
+
+    public function test_regex_operator_with_delimiters(): void
+    {
+        $engine = new RuleEngine;
+
+        $rules = ['field' => 'vehicle_make', 'op' => 'regex', 'value' => '/^BMW/i'];
+
+        $this->assertTrue($engine->matches($rules, ['vehicle_make' => 'BMW']));
+        $this->assertFalse($engine->matches($rules, ['vehicle_make' => 'Audi']));
+    }
+
+    public function test_regex_operator_wraps_bare_patterns(): void
+    {
+        $engine = new RuleEngine;
+
+        $rules = ['field' => 'postcode', 'op' => 'regex', 'value' => '^SW'];
+
+        $this->assertTrue($engine->matches($rules, ['postcode' => 'SW1A 1AA']));
+        $this->assertFalse($engine->matches($rules, ['postcode' => 'M1 1AA']));
+    }
 }

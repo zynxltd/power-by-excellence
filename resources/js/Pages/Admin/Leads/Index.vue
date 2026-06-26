@@ -182,26 +182,26 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
 
         <Panel :padding="false">
             <template #header>
-                <span class="text-sm text-slate-500">{{ leads.total }} leads matching filters</span>
+                <span class="text-xs text-slate-500">{{ leads.total }} leads matching filters</span>
             </template>
             <DataTable :empty="!leads.data?.length" empty-message="No leads match your filters." :loading="isNavigating">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">UUID</th>
-                    <th v-if="showTenantColumn" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Revenue</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Received</th>
+                    <th class="text-left">UUID</th>
+                    <th v-if="showTenantColumn" class="text-left">Platform</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Revenue</th>
+                    <th class="text-left">Received</th>
                 </template>
                 <ClickableTableRow v-for="lead in leads.data" :key="lead.id" :href="route('leads.show', lead.id)">
-                    <td class="px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 12) }}…</td>
-                    <td v-if="showTenantColumn" class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                    <td class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 12) }}…</td>
+                    <td v-if="showTenantColumn" class="text-xs text-slate-600 dark:text-slate-400">
                         {{ lead.account?.brand_name || lead.account?.name || lead.campaign?.account?.brand_name || '—' }}
                     </td>
-                    <td class="px-6 py-4 text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
-                    <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>
-                    <td class="px-6 py-4 font-medium">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
-                    <td class="px-6 py-4"><FormattedDate :value="lead.received_at" /></td>
+                    <td class="text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
+                    <td class=""><StatusBadge :status="lead.status" /></td>
+                    <td class="font-medium">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
+                    <td class=""><FormattedDate :value="lead.received_at" /></td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="leads.links" />

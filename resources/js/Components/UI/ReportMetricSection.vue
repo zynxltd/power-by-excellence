@@ -7,22 +7,11 @@ const props = defineProps({
     title: { type: String, required: true },
     description: { type: String, default: '' },
     items: { type: Array, required: true },
-    /** Max columns on large screens — items wrap into rows */
-    columns: { type: Number, default: 4 },
 });
 
-const gridClass = computed(() => {
-    const map = {
-        2: 'sm:grid-cols-2',
-        3: 'sm:grid-cols-2 lg:grid-cols-3',
-        4: 'sm:grid-cols-2 lg:grid-cols-4',
-        5: 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5',
-        6: 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
-        8: 'sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8',
-    };
-
-    return map[props.columns] ?? map[4];
-});
+const gridStyle = computed(() => ({
+    gridTemplateColumns: `repeat(${props.items.length}, minmax(6.5rem, 1fr))`,
+}));
 
 const valueClass = (accent) => {
     const map = {
@@ -76,32 +65,37 @@ const accentGlow = (accent) => {
             </div>
         </template>
 
-        <div :class="['grid grid-cols-1 gap-3', gridClass]">
-            <component
-                :is="item.href ? Link : 'div'"
-                v-for="item in items"
-                :key="item.label"
-                :href="item.href ?? undefined"
-                :title="item.title ?? undefined"
-                :class="[
-                    'relative overflow-hidden rounded-xl border border-slate-200/80 border-l-[3px] bg-gradient-to-br to-white p-3.5 dark:border-slate-800 dark:to-slate-900',
-                    accentBorder(item.accent),
-                    accentGlow(item.accent),
-                    item.href ? 'cursor-pointer transition hover:border-indigo-200 hover:shadow-md dark:hover:border-indigo-700' : '',
-                ]"
+        <div class="overflow-x-auto">
+            <div
+                class="grid min-w-full gap-2"
+                :style="gridStyle"
             >
-                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    {{ item.label }}
-                </p>
-                <p
+                <component
+                    :is="item.href ? Link : 'div'"
+                    v-for="item in items"
+                    :key="item.label"
+                    :href="item.href ?? undefined"
+                    :title="item.title ?? undefined"
                     :class="[
-                        'mt-1.5 text-xl font-bold tabular-nums leading-tight tracking-tight sm:text-2xl',
-                        valueClass(item.accent),
+                        'relative min-w-0 overflow-hidden rounded-xl border border-slate-200/80 border-l-[3px] bg-gradient-to-br to-white p-2.5 dark:border-slate-800 dark:to-slate-900',
+                        accentBorder(item.accent),
+                        accentGlow(item.accent),
+                        item.href ? 'cursor-pointer transition hover:border-indigo-200 hover:shadow-md dark:hover:border-indigo-700' : '',
                     ]"
                 >
-                    {{ item.value }}
-                </p>
-            </component>
+                    <p class="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {{ item.label }}
+                    </p>
+                    <p
+                        :class="[
+                            'mt-1 truncate text-lg font-bold tabular-nums leading-tight tracking-tight',
+                            valueClass(item.accent),
+                        ]"
+                    >
+                        {{ item.value }}
+                    </p>
+                </component>
+            </div>
         </div>
     </Panel>
 </template>

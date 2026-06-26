@@ -90,26 +90,26 @@ const tierSummary = (config) => {
         <Panel title="Active Ping Tree Configurations" :padding="false">
             <DataTable :empty="!configs?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tiers</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th class="text-left">Name</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Tiers</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-right">Actions</th>
                 </template>
                 <ClickableTableRow v-for="c in configs" :key="c.id" :href="route('distribution.show', c.id)">
-                    <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ c.name }}</td>
-                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ c.campaign?.name }}</td>
-                    <td class="px-6 py-4">
+                    <td class="font-medium text-slate-900 dark:text-white">{{ c.name }}</td>
+                    <td class="text-slate-600 dark:text-slate-400">{{ c.campaign?.name }}</td>
+                    <td class="">
                         <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ tierSummary(c) }}</p>
                         <p v-if="c.config?.groups?.length" class="mt-1 text-xs text-slate-500">
                             {{ c.config.groups[0]?.name }}
                             <span v-if="c.config.groups.length > 1">→ {{ c.config.groups[c.config.groups.length - 1]?.name }}</span>
                         </p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="">
                         <StatusBadge :status="c.is_active ? 'active' : 'inactive'" />
                     </td>
-                    <td class="px-6 py-4 text-right" @click.stop>
+                    <td class="text-right" @click.stop>
                         <Link :href="route('distribution.edit', c.id)" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                             Edit →
                         </Link>
@@ -121,16 +121,16 @@ const tierSummary = (config) => {
         <Panel title="Campaigns" class="mt-6" :padding="false">
             <DataTable :empty="!campaigns?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reference</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Mode</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Configs</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Reference</th>
+                    <th class="text-left">Mode</th>
+                    <th class="text-left">Configs</th>
+                    <th class="text-right">Actions</th>
                 </template>
                 <tr v-for="camp in campaigns" :key="camp.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ camp.name }}</td>
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ camp.reference }}</td>
-                    <td class="px-6 py-4">
+                    <td class="font-medium text-slate-900 dark:text-white">{{ camp.name }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ camp.reference }}</td>
+                    <td class="">
                         <span
                             :class="[
                                 'rounded-full px-2 py-0.5 text-xs font-medium',
@@ -142,9 +142,9 @@ const tierSummary = (config) => {
                             {{ camp.use_advanced_distribution ? 'Advanced (Ping Tree)' : 'Standard' }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ camp.distribution_configs_count }}</td>
-                    <td class="px-6 py-4 text-right space-x-3">
-                        <Link :href="route('campaigns.show', camp.id)" class="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">View</Link>
+                    <td class="text-slate-600 dark:text-slate-400">{{ camp.distribution_configs_count }}</td>
+                    <td class="text-right space-x-3">
+                        <Link :href="route('campaigns.show', camp.id)" class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">View</Link>
                         <Link :href="route('distribution.create') + '?campaign_id=' + camp.id" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">+ Config</Link>
                     </td>
                 </tr>

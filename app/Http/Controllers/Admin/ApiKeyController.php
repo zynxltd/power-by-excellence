@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Account;
 use App\Models\ApiKey;
 use App\Models\Supplier;
 use App\Services\Api\ApiKeyService;
+use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,6 +15,8 @@ use Inertia\Response;
 
 class ApiKeyController extends Controller
 {
+    use ResolvesAdminAccount;
+
     protected const PERMISSIONS = [
         'leads.create',
         'leads.read',
@@ -26,7 +28,7 @@ class ApiKeyController extends Controller
 
     public function index(Request $request): Response
     {
-        $account = $this->resolveAccount($request);
+        $account = $this->resolveAdminAccount($request);
 
         return Inertia::render('Admin/ApiKeys/Index', [
             'apiKeys' => ApiKey::with('supplier:id,name')
@@ -41,7 +43,7 @@ class ApiKeyController extends Controller
 
     public function store(Request $request, ApiKeyService $service): RedirectResponse
     {
-        $account = $this->resolveAccount($request);
+        $account = $this->resolveAdminAccount($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -85,26 +87,5 @@ class ApiKeyController extends Controller
         $apiKey->delete();
 
         return back()->with('success', 'API key revoked.');
-    }
-
-    protected function resolveAccount(Request $request): Account
-    {
-        $account = $request->attributes->get('account')
-            ?? $request->attributes->get('host_account');
-
-        if ($account instanceof Account) {
-            return $account;
-        }
-
-        $user = $request->user();
-
-        if ($user?->isSuperAdmin() && $request->session()->has('current_account_id')) {
-            return Account::findOrFail($request->session()->get('current_account_id'));
-        }
-
-        $account = $user?->resolveAccount();
-        abort_unless($account, 403, 'Select a partner platform to manage API keys.');
-
-        return $account;
     }
 }

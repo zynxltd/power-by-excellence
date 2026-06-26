@@ -3,18 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Account;
+use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AccountSettingsController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function edit(Request $request): Response
     {
-        $account = $this->currentAccount($request);
+        $account = $this->resolveAdminAccount($request);
 
         return Inertia::render('Admin/Settings/Edit', [
             'account' => array_merge(
@@ -35,7 +36,7 @@ class AccountSettingsController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $account = $this->currentAccount($request);
+        $account = $this->resolveAdminAccount($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -74,46 +75,6 @@ class AccountSettingsController extends Controller
         ]);
 
         return back()->with('success', 'Platform settings updated.');
-    }
-
-    protected function currentAccount(Request $request): Account
-    {
-        $account = $request->attributes->get('account');
-
-        if ($account instanceof Account) {
-            return $account;
-        }
-
-        if ($id = \App\Support\Tenancy\AccountContext::id()) {
-            $account = Account::find($id);
-            if ($account) {
-                return $account;
-            }
-        }
-
-        $user = $request->user();
-
-        if ($user?->account_id) {
-            $account = Account::find($user->account_id);
-            if ($account) {
-                return $account;
-            }
-        }
-
-        if ($user?->isSuperAdmin() && $request->session()->has('current_account_id')) {
-            $account = Account::find($request->session()->get('current_account_id'));
-            if ($account) {
-                return $account;
-            }
-        }
-
-        if ($user?->isSuperAdmin()) {
-            throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                to_route('accounts.index')->with('error', 'Select a partner platform before opening settings.')
-            );
-        }
-
-        abort(403, 'No platform context. Switch tenant or sign in on a partner domain.');
     }
 
     protected function messages(): array

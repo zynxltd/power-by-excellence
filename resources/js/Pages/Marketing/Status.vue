@@ -59,7 +59,7 @@ const componentStatusLabel = (s) => ({
                     <p class="brand-kicker">Platform health</p>
                     <h1 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">System status</h1>
                     <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">
-                        Automated checks run every 15 minutes. A full daily audit is stored at 06:00 UTC for uptime reporting.
+                        Live health for lead ingest, processing, and buyer delivery. Checks refresh every 15 minutes.
                     </p>
                 </div>
 
@@ -102,7 +102,8 @@ const componentStatusLabel = (s) => ({
                 </div>
 
                 <div class="mt-12">
-                    <h3 class="text-lg font-semibold text-slate-900 marketing-dark:text-white">Infrastructure components</h3>
+                    <h3 class="text-lg font-semibold text-slate-900 marketing-dark:text-white">Platform services</h3>
+                    <p class="mt-1 text-sm text-slate-500">What matters for your leads, buyers, and partner portals.</p>
                     <div class="mt-4 space-y-3">
                         <div
                             v-for="component in status?.components ?? []"

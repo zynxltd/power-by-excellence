@@ -21,6 +21,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
             description="Each tenant runs on its own subdomain. Switch context, open the tenant portal, or impersonate the tenant admin."
         >
             <template #actions>
+                <AppButton :href="route('accounts.billing.index')" variant="secondary">Tenant billing</AppButton>
                 <AppButton :href="route('accounts.create')" variant="primary">New platform</AppButton>
                 <AppButton v-if="currentAccountId" variant="secondary" @click="clearTenantContext">
                     Exit tenant · central admin
@@ -47,11 +48,11 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
         <Panel :padding="false">
             <DataTable :empty="!accounts?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Domain</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaigns</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Leads</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th class="text-left">Platform</th>
+                    <th class="text-left">Domain</th>
+                    <th class="text-left">Campaigns</th>
+                    <th class="text-left">Leads</th>
+                    <th class="text-right">Actions</th>
                 </template>
                 <tr
                     v-for="a in accounts"
@@ -61,14 +62,14 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
                         a.id === currentAccountId ? 'bg-indigo-50/80 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
                     ]"
                 >
-                    <td class="px-6 py-4">
+                    <td class="">
                         <p class="font-medium text-slate-900 dark:text-white">{{ a.name }}</p>
                         <p class="text-xs text-slate-500">{{ a.slug }}</p>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ a.domain }}</td>
-                    <td class="px-6 py-4 text-slate-600">{{ a.campaigns_count }} · {{ a.leads_count }} leads</td>
-                    <td class="px-6 py-4 text-slate-600">{{ a.buyers_count }} buyers · {{ a.suppliers_count }} suppliers</td>
-                    <td class="px-6 py-4 text-right">
+                    <td class="font-mono text-xs text-slate-500">{{ a.domain }}</td>
+                    <td class="text-slate-600">{{ a.campaigns_count }} · {{ a.leads_count }} leads</td>
+                    <td class="text-slate-600">{{ a.buyers_count }} buyers · {{ a.suppliers_count }} suppliers</td>
+                    <td class="text-right">
                         <div class="flex flex-wrap justify-end gap-2">
                             <template v-if="a.id === currentAccountId">
                                 <span class="text-sm font-semibold text-indigo-600">Active</span>

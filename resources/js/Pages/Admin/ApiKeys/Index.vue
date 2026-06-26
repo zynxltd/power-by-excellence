@@ -43,7 +43,11 @@ const formatPermissions = (permissions) => {
         <PageHeader
             title="API Keys"
             description="Bearer tokens for lead ingest and integrations. Copy new tokens immediately — they are only shown once."
-        />
+        >
+            <template #actions>
+                <AppButton :href="route('api-docs.index')" variant="secondary">API Documentation</AppButton>
+            </template>
+        </PageHeader>
 
         <div v-if="page.props.flash?.success" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
             {{ page.props.flash.success }}
@@ -78,25 +82,25 @@ const formatPermissions = (permissions) => {
             <Panel title="Active keys" :padding="false">
                 <DataTable :empty="!apiKeys?.length" empty-message="No API keys yet. Generate one above for ingest or integrations.">
                     <template #head>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Supplier</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Access</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Prefix</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Last used</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                        <th class="text-left">Name</th>
+                        <th class="text-left">Type</th>
+                        <th class="text-left">Supplier</th>
+                        <th class="text-left">Access</th>
+                        <th class="text-left">Prefix</th>
+                        <th class="text-left">Last used</th>
+                        <th class="text-right">Actions</th>
                     </template>
                     <tr v-for="k in apiKeys" :key="k.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ k.name }}</td>
-                        <td class="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{{ k.type }}</td>
-                        <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ k.supplier?.name ?? '—' }}</td>
-                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ formatPermissions(k.permissions) }}</td>
-                        <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ k.key_prefix }}…</td>
-                        <td class="px-6 py-4 text-slate-500">
+                        <td class="font-medium text-slate-900 dark:text-white">{{ k.name }}</td>
+                        <td class="capitalize text-slate-600 dark:text-slate-400">{{ k.type }}</td>
+                        <td class="text-slate-600 dark:text-slate-400">{{ k.supplier?.name ?? '—' }}</td>
+                        <td class="text-xs text-slate-600 dark:text-slate-400">{{ formatPermissions(k.permissions) }}</td>
+                        <td class="font-mono text-xs text-slate-500">{{ k.key_prefix }}…</td>
+                        <td class="text-slate-500">
                             <FormattedDate v-if="k.last_used_at" :value="k.last_used_at" format="relative" />
                             <span v-else>Never</span>
                         </td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="text-right">
                             <AppButton variant="ghost" @click="destroy(k.id)">Revoke</AppButton>
                         </td>
                     </tr>

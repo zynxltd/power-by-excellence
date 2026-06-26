@@ -350,7 +350,7 @@ class PlatformOpsCheck
 
             return $this->result(
                 'queue',
-                'Horizon',
+                'Queue worker',
                 $failed > 0 ? 'warning' : ($horizonRunning ? 'ok' : 'warning'),
                 ($horizonRunning ? 'Horizon running' : 'Horizon inactive')." · driver: {$driver}"
                     .($failed > 0 ? " · {$failed} failed job(s)" : ''),

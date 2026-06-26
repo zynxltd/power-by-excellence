@@ -37,19 +37,19 @@ defineProps({
         <Panel :padding="false">
             <DataTable :empty="!logs?.data?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">When</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">IP</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Path</th>
+                    <th class="text-left">When</th>
+                    <th class="text-left">User</th>
+                    <th class="text-left">Action</th>
+                    <th class="text-left">IP</th>
+                    <th class="text-left">Path</th>
                 </template>
                 <tr v-for="log in logs.data" :key="log.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-6 py-4"><FormattedDate :value="log.created_at" /></td>
-                    <td class="px-6 py-4">
+                    <td class=""><FormattedDate :value="log.created_at" /></td>
+                    <td class="">
                         <p class="font-medium text-slate-900 dark:text-white">{{ log.user?.name ?? 'Unknown' }}</p>
                         <p class="text-xs text-slate-500">{{ log.user?.email }}</p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="">
                         <span
                             :class="[
                                 'rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
@@ -61,8 +61,8 @@ defineProps({
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500">{{ log.path ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
+                    <td class="text-xs text-slate-500">{{ log.path ?? '—' }}</td>
                 </tr>
             </DataTable>
             <Pagination :links="logs.links" />

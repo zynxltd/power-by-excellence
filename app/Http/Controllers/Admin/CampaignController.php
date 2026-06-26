@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignField;
+use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Admin\TenantHub;
 use App\Support\VerticalCatalog;
@@ -17,6 +18,8 @@ use Inertia\Response;
 
 class CampaignController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function index(Request $request): Response
     {
         return Inertia::render('Admin/Campaigns/Index', [
@@ -30,6 +33,8 @@ class CampaignController extends Controller
 
     public function create(Request $request): Response
     {
+        $this->resolveAdminAccount($request);
+
         return Inertia::render('Admin/Campaigns/Form', [
             'campaign' => null,
             'defaults' => $this->accountDefaults($request),
@@ -40,7 +45,13 @@ class CampaignController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $account = $this->resolveAdminAccount($request);
+        AccountContext::set($account);
+        $request->attributes->set('account', $account);
+
+        $this->prepareCampaignPayload($request);
         $validated = $this->validateCampaign($request);
+        $validated['account_id'] = $account->id;
 
         $campaign = Campaign::create($validated);
 
@@ -101,6 +112,8 @@ class CampaignController extends Controller
 
     public function update(Request $request, Campaign $campaign): RedirectResponse
     {
+        $this->resolveAdminAccount($request);
+        $this->prepareCampaignPayload($request);
         $validated = $this->validateCampaign($request, $campaign);
 
         $campaign->update($validated);
@@ -144,9 +157,11 @@ class CampaignController extends Controller
             'use_advanced_distribution' => $request->boolean('use_advanced_distribution'),
         ]);
 
-        $accountId = AccountContext::id();
+        $accountId = AccountContext::id()
+            ?? $campaign?->account_id
+            ?? $this->resolveOptionalAdminAccount($request)?->id;
 
-        return $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'reference' => [
                 'required',
@@ -184,6 +199,30 @@ class CampaignController extends Controller
             'currency.size' => 'Currency must be exactly 3 letters.',
             'payout_amount.required' => 'Payout amount is required.',
             'floor_price.required' => 'Floor price is required.',
+        ]);
+
+        if (empty($validated['vertical_id'])) {
+            $validated['vertical_id'] = null;
+        }
+
+        $validated['caps'] = array_filter($validated['caps'] ?? [], fn ($v) => $v !== null && $v !== '');
+
+        return $validated;
+    }
+
+    protected function prepareCampaignPayload(Request $request): void
+    {
+        $caps = $request->input('caps');
+        if (! is_array($caps)) {
+            return;
+        }
+
+        $request->merge([
+            'caps' => array_map(
+                fn ($value) => $value === '' ? null : $value,
+                $caps,
+            ),
+            'vertical_id' => $request->input('vertical_id') ?: null,
         ]);
     }
 

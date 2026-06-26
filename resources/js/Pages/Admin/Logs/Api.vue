@@ -64,31 +64,31 @@ const apiStatStrip = computed(() => [
         <Panel title="Request log" :padding="false">
             <DataTable :empty="!logs?.data?.length" empty-message="No API requests logged yet.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">When</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Method</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Path</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Time</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Error</th>
+                    <th class="text-left">When</th>
+                    <th class="text-left">Method</th>
+                    <th class="text-left">Path</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Time</th>
+                    <th class="text-left">Error</th>
                 </template>
                 <template v-for="log in logs.data" :key="log.id">
                     <tr
                         class="cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
                         @click="expandedId = expandedId === log.id ? null : log.id"
                     >
-                        <td class="px-6 py-4"><FormattedDate :value="log.created_at" /></td>
-                        <td class="px-6 py-4 font-mono text-xs">{{ log.method }}</td>
-                        <td class="px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ log.path }}</td>
-                        <td class="px-6 py-4">
+                        <td class=""><FormattedDate :value="log.created_at" /></td>
+                        <td class="font-mono text-xs">{{ log.method }}</td>
+                        <td class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ log.path }}</td>
+                        <td class="">
                             <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(log.status_code)]">
                                 {{ log.status_code }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 font-mono text-sm" :class="timingClass(log.duration_ms)">{{ log.duration_ms }}ms</td>
-                        <td class="max-w-xs truncate px-6 py-4 text-sm text-rose-600 dark:text-rose-400">{{ log.error_message ?? '—' }}</td>
+                        <td class="font-mono text-xs" :class="timingClass(log.duration_ms)">{{ log.duration_ms }}ms</td>
+                        <td class="max-w-xs truncate text-sm text-rose-600 dark:text-rose-400">{{ log.error_message ?? '—' }}</td>
                     </tr>
                     <tr v-if="expandedId === log.id" class="bg-slate-50 dark:bg-slate-900/50">
-                        <td colspan="6" class="px-6 py-4">
+                        <td colspan="6" class="">
                             <div class="grid gap-4 text-sm md:grid-cols-2">
                                 <div>
                                     <p class="text-xs font-semibold uppercase text-slate-500">API Key</p>

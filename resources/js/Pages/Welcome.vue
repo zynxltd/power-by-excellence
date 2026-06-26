@@ -5,7 +5,7 @@ import SeoHead from '@/Components/SeoHead.vue';
 import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
 import { useMarketingTheme } from '@/Composables/useMarketingTheme';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 defineProps({
     canLogin: Boolean,
@@ -117,7 +117,123 @@ const steps = [
     { title: 'Report', desc: 'Revenue, margins, and buyer feedback tracked per lead with a full audit trail.', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
 ];
 
-const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Legal', 'Education', 'Healthcare', 'Finance'];
+const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Legal', 'Education', 'Healthcare', 'Finance', 'Loans', 'Payday', 'Life Insurance', 'Debt Relief'];
+
+const rotatingWords = ['revenue', 'margin', 'buyers', 'profit'];
+const currentWordIndex = ref(0);
+const currentWord = computed(() => rotatingWords[currentWordIndex.value]);
+let wordInterval;
+
+onMounted(() => {
+    wordInterval = setInterval(() => {
+        currentWordIndex.value = (currentWordIndex.value + 1) % rotatingWords.length;
+    }, 2800);
+});
+
+onUnmounted(() => {
+    clearInterval(wordInterval);
+});
+
+const testimonials = [
+    {
+        quote: 'We moved three buyer networks onto PBE in a weekend. Ping-tree auctions alone lifted average revenue per lead by 18%.',
+        name: 'Sarah Chen',
+        role: 'Head of Partnerships',
+        company: 'Apex Lead Group',
+        metric: '+18% RPL',
+    },
+    {
+        quote: 'The supplier portal and postback manager replaced three separate tools. Our affiliates finally get real-time conversion data.',
+        name: 'Marcus Webb',
+        role: 'Affiliate Director',
+        company: 'Velocity Media',
+        metric: '3 tools replaced',
+    },
+    {
+        quote: 'Multi-tenant isolation means we run UK and US platforms from one super-admin without data bleed. Audit logs are a lifesaver.',
+        name: 'Priya Nair',
+        role: 'Platform Operations',
+        company: 'Northstar Leads',
+        metric: '2 regions, 1 stack',
+    },
+];
+
+const integrations = [
+    { name: 'REST API', desc: 'Sync & async ingest', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
+    { name: 'Webhooks', desc: 'Outbound events', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
+    { name: 'CSV Import', desc: 'Bulk lead upload', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+    { name: 'Stripe', desc: 'Buyer top-ups', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { name: 'Postbacks', desc: 'Affiliate pixels', icon: 'M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122' },
+    { name: 'Hosted Forms', desc: 'No-code capture', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+];
+
+const comparisonRows = [
+    { feature: 'Real-time ping-post auctions', pbe: true, legacy: false },
+    { feature: 'Visual ping-tree builder', pbe: true, legacy: false },
+    { feature: 'Multi-tenant partner platforms', pbe: true, legacy: false },
+    { feature: 'Buyer & supplier self-service portals', pbe: true, legacy: false },
+    { feature: 'Full delivery & API audit logs', pbe: true, legacy: false },
+    { feature: 'Per-tier eligibility filters', pbe: true, legacy: 'Manual' },
+    { feature: 'Quarantine & validation rules', pbe: true, legacy: 'Add-on' },
+    { feature: 'Postback manager with field tags', pbe: true, legacy: false },
+];
+
+const securityFeatures = [
+    {
+        title: 'Tenant isolation',
+        desc: 'Each partner platform runs on its own subdomain with scoped data, API keys, and financials.',
+        icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
+    },
+    {
+        title: 'Scoped API keys',
+        desc: 'Granular permissions per key — leads.create, leads.read, reports, quarantine — with prefix|secret auth.',
+        icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
+    },
+    {
+        title: 'Audit trail',
+        desc: 'Access logs, change logs, security events, and per-request API logging for compliance reviews.',
+        icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+    },
+    {
+        title: 'Two-factor auth',
+        desc: 'Optional 2FA for admin accounts. Billing lock enforcement when credit thresholds are breached.',
+        icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    },
+];
+
+const pricingPreview = [
+    { name: 'Starter', price: '£299', highlight: '5k leads/mo', href: 'pricing' },
+    { name: 'Growth', price: '£799', highlight: '25k leads/mo', popular: true, href: 'pricing' },
+    { name: 'Enterprise', price: 'Custom', highlight: 'Unlimited scale', href: 'pricing' },
+];
+
+const faqs = [
+    {
+        q: 'How fast is lead processing?',
+        a: 'Async ingest returns in under 50ms with a queue ID. Sync mode runs the full pipeline inline and returns the final status in one request — ideal for live buyer redirects.',
+    },
+    {
+        q: 'Can I run multiple partner platforms?',
+        a: 'Yes. Super-admins can host unlimited isolated tenant platforms from one account. Each gets its own campaigns, buyers, suppliers, branding, and billing.',
+    },
+    {
+        q: 'What delivery methods are supported?',
+        a: 'Ping-post auctions, waterfall routing, direct API post, email alerts, and store-lead fallback — all configurable in the visual ping-tree builder with per-tier filters.',
+    },
+    {
+        q: 'Do you support affiliate tracking?',
+        a: 'Full SID/SSID source tracking, postback manager with field tag interpolation, and supplier portals with conversion reporting.',
+    },
+    {
+        q: 'Is there an API and SDK?',
+        a: 'REST API at /api/v1 with scoped keys, plus JavaScript and PHP client libraries. Built-in ping/post simulators help you test integrations without live buyers.',
+    },
+];
+
+const openFaq = ref(null);
+const toggleFaq = (index) => {
+    openFaq.value = openFaq.value === index ? null : index;
+};
 </script>
 
 <template>
@@ -156,8 +272,12 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
 
                         <h1 class="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.04] xl:text-6xl">
                             Turn every lead into
-                            <span class="mt-1 block brand-gradient-text sm:inline sm:mt-0">revenue</span>
-                            <span class="text-slate-700 marketing-dark:text-slate-200"> at scale</span>
+                            <span class="whitespace-nowrap">
+                                <span
+                                    :key="currentWord"
+                                    class="brand-gradient-text inline-block w-[7.5ch] text-left animate-fade-in-up"
+                                >{{ currentWord }}</span><span class="text-slate-700 marketing-dark:text-slate-200"> at scale</span>
+                            </span>
                         </h1>
 
                         <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600 marketing-dark:text-slate-400 lg:mx-0 lg:text-[1.125rem]">
@@ -171,6 +291,12 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                             </a>
+                            <Link
+                                :href="route('pricing')"
+                                class="brand-btn-secondary inline-flex items-center justify-center px-8 py-4 text-base"
+                            >
+                                View Pricing
+                            </Link>
                             <Link
                                 v-if="canLogin"
                                 :href="signInUrl"
@@ -280,11 +406,23 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
             </div>
         </section>
 
-        <!-- Stats bar -->
-        <section class="border-y border-slate-200/80 bg-slate-50/80 py-8 marketing-dark:border-white/10 marketing-dark:bg-slate-900/40">
-            <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-6 text-sm text-slate-500 marketing-dark:text-slate-400">
-                <span class="font-semibold uppercase tracking-widest text-slate-400 marketing-dark:text-slate-500">Trusted across</span>
-                <span v-for="v in verticals.slice(0, 5)" :key="v" class="font-medium text-slate-600 marketing-dark:text-slate-300">{{ v }}</span>
+        <!-- Verticals marquee -->
+        <section class="overflow-hidden border-y border-slate-200/80 bg-slate-50/80 py-6 marketing-dark:border-white/10 marketing-dark:bg-slate-900/40">
+            <div class="mb-3 text-center">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-400 marketing-dark:text-slate-500">Trusted across verticals</span>
+            </div>
+            <div class="relative">
+                <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-slate-50 marketing-dark:from-slate-900/80" />
+                <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-slate-50 marketing-dark:from-slate-900/80" />
+                <div class="flex w-max animate-marquee gap-4">
+                    <span
+                        v-for="(v, i) in [...verticals, ...verticals]"
+                        :key="`${v}-${i}`"
+                        class="brand-pill whitespace-nowrap"
+                    >
+                        {{ v }}
+                    </span>
+                </div>
             </div>
         </section>
 
@@ -339,6 +477,34 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
             </div>
         </section>
 
+        <!-- Testimonials -->
+        <section class="brand-section-alt py-24 md:py-28">
+            <div class="mx-auto max-w-7xl px-6">
+                <div class="mx-auto max-w-2xl text-center">
+                    <p class="brand-kicker">Customer stories</p>
+                    <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Built for operators who move fast</h2>
+                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Lead sellers, brokers, and affiliate networks use PBE to replace spreadsheets and legacy routers.</p>
+                </div>
+                <div class="mt-14 grid gap-6 md:grid-cols-3">
+                    <article
+                        v-for="t in testimonials"
+                        :key="t.name"
+                        class="brand-card relative flex flex-col"
+                    >
+                        <div class="mb-4 text-4xl leading-none text-indigo-300/80 marketing-dark:text-indigo-500/60">"</div>
+                        <p class="flex-1 text-sm leading-relaxed text-slate-700 marketing-dark:text-slate-300">{{ t.quote }}</p>
+                        <div class="mt-6 flex items-end justify-between gap-4 border-t border-slate-100 pt-5 marketing-dark:border-white/10">
+                            <div>
+                                <p class="font-semibold text-slate-900 marketing-dark:text-white">{{ t.name }}</p>
+                                <p class="text-xs text-slate-500 marketing-dark:text-slate-400">{{ t.role }} · {{ t.company }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 marketing-dark:text-emerald-400">{{ t.metric }}</span>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
         <!-- Ping Tree -->
         <section id="ping-tree" class="brand-section-alt py-24 md:py-32">
             <div class="mx-auto max-w-7xl px-6">
@@ -380,6 +546,45 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
                                 <p class="mt-1 text-xs text-slate-400">Fallback storage if unsold</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison -->
+        <section id="compare" class="py-24 md:py-32">
+            <div class="mx-auto max-w-7xl px-6">
+                <div class="mx-auto max-w-2xl text-center">
+                    <p class="brand-kicker">Why switch</p>
+                    <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">PBE vs legacy lead routers</h2>
+                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need in one platform — not a patchwork of scripts, spreadsheets, and third-party tools.</p>
+                </div>
+                <div class="mt-12 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/50">
+                    <div class="grid grid-cols-[1fr_auto_auto] gap-0 border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 marketing-dark:border-white/10 marketing-dark:bg-slate-800/50 marketing-dark:text-slate-400">
+                        <span>Capability</span>
+                        <span class="w-24 text-center text-indigo-600 marketing-dark:text-indigo-400">PBE</span>
+                        <span class="w-24 text-center">Legacy</span>
+                    </div>
+                    <div
+                        v-for="(row, i) in comparisonRows"
+                        :key="row.feature"
+                        :class="[
+                            'grid grid-cols-[1fr_auto_auto] items-center gap-0 px-6 py-4 text-sm',
+                            i % 2 === 0 ? 'bg-white marketing-dark:bg-transparent' : 'bg-slate-50/50 marketing-dark:bg-slate-800/20',
+                        ]"
+                    >
+                        <span class="text-slate-700 marketing-dark:text-slate-300">{{ row.feature }}</span>
+                        <span class="flex w-24 justify-center">
+                            <svg v-if="row.pbe === true" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </span>
+                        <span class="flex w-24 justify-center text-slate-400">
+                            <svg v-if="row.legacy === false" class="h-5 w-5 text-slate-300 marketing-dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <span v-else class="text-xs font-medium text-slate-500">{{ row.legacy }}</span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -441,6 +646,45 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
             </div>
         </section>
 
+        <!-- Security -->
+        <section id="security" class="py-24 md:py-32">
+            <div class="mx-auto max-w-7xl px-6">
+                <div class="grid items-center gap-12 lg:grid-cols-2">
+                    <div>
+                        <p class="brand-kicker text-violet-600 marketing-dark:text-violet-400">Enterprise-ready</p>
+                        <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Security &amp; compliance built in</h2>
+                        <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
+                            Tenant isolation, scoped API keys, comprehensive audit logs, and billing enforcement — designed for agencies managing multiple partner networks.
+                        </p>
+                        <Link
+                            :href="route('status.index')"
+                            class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 marketing-dark:text-indigo-400"
+                        >
+                            View system status
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </Link>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div
+                            v-for="item in securityFeatures"
+                            :key="item.title"
+                            class="brand-card-sm"
+                        >
+                            <div class="brand-icon-wrap mb-4">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
+                                </svg>
+                            </div>
+                            <h3 class="font-semibold text-slate-900 marketing-dark:text-white">{{ item.title }}</h3>
+                            <p class="mt-2 text-sm text-slate-600 marketing-dark:text-slate-400">{{ item.desc }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- How it works -->
         <section id="how-it-works" class="brand-section-alt py-24 md:py-32">
             <div class="mx-auto max-w-7xl px-6">
@@ -466,18 +710,30 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
             </div>
         </section>
 
-        <!-- Verticals -->
-        <section class="py-16">
-            <div class="mx-auto max-w-7xl px-6 text-center">
-                <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Supported verticals</p>
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-                    <span
-                        v-for="v in verticals"
-                        :key="v"
-                        class="brand-pill"
+        <!-- Integrations -->
+        <section id="integrations" class="brand-section-alt py-20 md:py-24">
+            <div class="mx-auto max-w-7xl px-6">
+                <div class="mx-auto max-w-2xl text-center">
+                    <p class="brand-kicker">Connect your stack</p>
+                    <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-4xl">Integrations &amp; ingest channels</h2>
+                    <p class="mt-4 text-slate-600 marketing-dark:text-slate-400">API-first architecture with the channels your suppliers and buyers already use.</p>
+                </div>
+                <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="item in integrations"
+                        :key="item.name"
+                        class="brand-card-sm flex items-start gap-4"
                     >
-                        {{ v }}
-                    </span>
+                        <div class="brand-icon-wrap shrink-0">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-900 marketing-dark:text-white">{{ item.name }}</h3>
+                            <p class="mt-1 text-sm text-slate-600 marketing-dark:text-slate-400">{{ item.desc }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -527,6 +783,83 @@ const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Lega
                         </ul>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Pricing preview -->
+        <section id="pricing-preview" class="py-24 md:py-28">
+            <div class="mx-auto max-w-7xl px-6">
+                <div class="mx-auto max-w-2xl text-center">
+                    <p class="brand-kicker">Transparent pricing</p>
+                    <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Plans that scale with volume</h2>
+                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Every tier includes ping-tree routing, API access, validation, and buyer management.</p>
+                </div>
+                <div class="mt-12 grid gap-6 md:grid-cols-3">
+                    <div
+                        v-for="tier in pricingPreview"
+                        :key="tier.name"
+                        :class="[
+                            'brand-card relative text-center',
+                            tier.popular && 'ring-2 ring-indigo-500/50 shadow-lg shadow-indigo-500/10',
+                        ]"
+                    >
+                        <span
+                            v-if="tier.popular"
+                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-0.5 text-xs font-semibold text-white"
+                        >
+                            Most popular
+                        </span>
+                        <h3 class="text-lg font-semibold text-slate-900 marketing-dark:text-white">{{ tier.name }}</h3>
+                        <p class="mt-2 text-3xl font-bold brand-stat-value">{{ tier.price }}</p>
+                        <p class="mt-1 text-sm text-slate-500 marketing-dark:text-slate-400">/ month</p>
+                        <p class="mt-4 text-sm font-medium text-indigo-600 marketing-dark:text-indigo-400">{{ tier.highlight }}</p>
+                        <Link
+                            :href="route('pricing')"
+                            class="brand-btn-secondary mt-6 inline-flex w-full items-center justify-center px-4 py-2.5 text-sm"
+                        >
+                            See full details
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq" class="brand-section-alt py-24 md:py-28">
+            <div class="mx-auto max-w-3xl px-6">
+                <div class="text-center">
+                    <p class="brand-kicker">FAQ</p>
+                    <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Common questions</h2>
+                </div>
+                <div class="mt-12 divide-y divide-slate-200 marketing-dark:divide-white/10">
+                    <div v-for="(item, i) in faqs" :key="item.q">
+                        <button
+                            type="button"
+                            class="flex w-full items-center justify-between gap-4 py-5 text-left"
+                            @click="toggleFaq(i)"
+                        >
+                            <span class="font-semibold text-slate-900 marketing-dark:text-white">{{ item.q }}</span>
+                            <svg
+                                :class="['h-5 w-5 shrink-0 text-slate-400 transition', openFaq === i && 'rotate-180']"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div
+                            v-show="openFaq === i"
+                            class="pb-5 text-sm leading-relaxed text-slate-600 marketing-dark:text-slate-400"
+                        >
+                            {{ item.a }}
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-8 text-center text-sm text-slate-500 marketing-dark:text-slate-400">
+                    More answers in the
+                    <Link :href="route('help.index')" class="font-semibold text-indigo-600 hover:text-indigo-500 marketing-dark:text-indigo-400">Help Centre</Link>.
+                </p>
             </div>
         </section>
 

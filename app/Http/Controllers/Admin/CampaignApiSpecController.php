@@ -36,6 +36,7 @@ class CampaignApiSpecController extends Controller
             'spec' => $spec,
             'sampleRequest' => $sample,
             'sampleResponse' => $specService->sampleResponse(),
+            'sampleStatusResponse' => $specService->sampleStatusResponse(),
             'curl' => $specService->buildCurl($tenantRoot, null, $spec, $sample),
             'fieldTypes' => $this->fieldTypes(),
             'formTypes' => $this->formTypes(),
@@ -50,6 +51,8 @@ class CampaignApiSpecController extends Controller
 
     public function update(Request $request, Campaign $campaign, CampaignApiSpecService $specService): RedirectResponse
     {
+        $this->ensureApiSpecEditable($campaign, $specService);
+
         $validated = $request->validate([
             'spec' => 'required|array',
             'spec.version' => 'nullable|string',
@@ -68,6 +71,7 @@ class CampaignApiSpecController extends Controller
         ]);
 
         $spec = array_merge($specService->defaultSpec($campaign), $validated['spec']);
+        $spec['locked'] = $specService->isLocked($campaign);
         $spec['fields'] = collect($spec['fields'])->map(
             fn (array $f, int $i) => $specService->normalizeField($f, $i)
         )->values()->all();
@@ -81,8 +85,28 @@ class CampaignApiSpecController extends Controller
         return back()->with('success', 'API spec saved'.($request->boolean('sync_fields') ? ' and campaign fields synced.' : '.'));
     }
 
+    public function toggleLock(Request $request, Campaign $campaign, CampaignApiSpecService $specService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'locked' => 'required|boolean',
+        ]);
+
+        $spec = $specService->defaultSpec($campaign);
+        $spec['locked'] = $validated['locked'];
+        $campaign->update(['api_spec' => $spec]);
+
+        return back()->with(
+            'success',
+            $validated['locked']
+                ? 'API spec locked — editing and saving are disabled.'
+                : 'API spec unlocked — changes may affect live integrations.',
+        );
+    }
+
     public function applyToForm(Request $request, Campaign $campaign, CampaignApiSpecService $specService): RedirectResponse
     {
+        $this->ensureApiSpecEditable($campaign, $specService);
+
         $validated = $request->validate([
             'hosted_form_id' => 'required|exists:hosted_forms,id',
         ]);
@@ -106,6 +130,8 @@ class CampaignApiSpecController extends Controller
 
     public function loadVerticalTemplate(Request $request, Campaign $campaign, CampaignApiSpecService $specService): RedirectResponse
     {
+        $this->ensureApiSpecEditable($campaign, $specService);
+
         $validated = $request->validate([
             'vertical_id' => 'required|string',
         ]);
@@ -116,6 +142,7 @@ class CampaignApiSpecController extends Controller
             fn (array $f, int $i) => $specService->normalizeField($f, $i)
         )->values()->all();
         $spec['description'] = 'Template from '.\App\Support\VerticalCatalog::label($validated['vertical_id']);
+        $spec['locked'] = false;
 
         $campaign->update(['api_spec' => $spec, 'vertical_id' => $validated['vertical_id']]);
 
@@ -124,6 +151,8 @@ class CampaignApiSpecController extends Controller
 
     public function loadPremadeTemplate(Request $request, Campaign $campaign, CampaignApiSpecService $specService): RedirectResponse
     {
+        $this->ensureApiSpecEditable($campaign, $specService);
+
         $validated = $request->validate([
             'template_key' => 'required|string',
         ]);
@@ -133,6 +162,7 @@ class CampaignApiSpecController extends Controller
 
         $spec = array_merge($specService->defaultSpec($campaign), [
             'description' => $template['description'],
+            'locked' => false,
             'fields' => collect($template['fields'])->map(
                 fn (array $f, int $i) => $specService->normalizeField($f, $i)
             )->values()->all(),
@@ -201,6 +231,15 @@ class CampaignApiSpecController extends Controller
                 ],
             ],
         ];
+    }
+
+    protected function ensureApiSpecEditable(Campaign $campaign, CampaignApiSpecService $specService): void
+    {
+        abort_if(
+            $specService->isLocked($campaign),
+            422,
+            'API spec is locked. Unlock it before making changes.',
+        );
     }
 
     protected function fieldTypes(): array

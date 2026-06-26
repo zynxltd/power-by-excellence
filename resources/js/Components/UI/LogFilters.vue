@@ -1,7 +1,7 @@
 <script setup>
 import AppButton from '@/Components/UI/AppButton.vue';
 import { router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     routeName: { type: String, required: true },
@@ -17,9 +17,33 @@ const props = defineProps({
     showSearch: { type: Boolean, default: false },
     showPath: { type: Boolean, default: false },
     showAction: { type: Boolean, default: false },
+    showLevel: { type: Boolean, default: false },
+    showCategory: { type: Boolean, default: false },
+    showEventType: { type: Boolean, default: false },
+    showFeedType: { type: Boolean, default: false },
+    showTenant: { type: Boolean, default: false },
     deliveries: { type: Array, default: () => [] },
     buyers: { type: Array, default: () => [] },
     actionOptions: { type: Array, default: () => [] },
+    levelOptions: { type: Array, default: () => [] },
+    categoryOptions: { type: Array, default: () => [] },
+    eventTypes: { type: Array, default: () => [] },
+    typeOptions: { type: Array, default: () => [] },
+    tenants: { type: Array, default: () => [] },
+    searchLabel: { type: String, default: '' },
+    searchPlaceholder: { type: String, default: '' },
+});
+
+const searchLabel = computed(() => {
+    if (props.searchLabel) return props.searchLabel;
+    if (props.showAction) return 'Search';
+    return 'Lead UUID';
+});
+
+const searchPlaceholder = computed(() => {
+    if (props.searchPlaceholder) return props.searchPlaceholder;
+    if (props.showAction) return 'Email, IP, path…';
+    return 'Search UUID…';
 });
 
 const local = ref({ ...props.filters });
@@ -128,9 +152,49 @@ const setDays = (days) => {
                 </select>
             </div>
 
+            <div v-if="showFeedType" class="min-w-[10rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Type</label>
+                <select v-model="local.type" class="form-select w-full">
+                    <option value="">All activity</option>
+                    <option v-for="t in typeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+            </div>
+
+            <div v-if="showTenant" class="min-w-[10rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant</label>
+                <select v-model="local.account_id" class="form-select w-full">
+                    <option value="">All platforms</option>
+                    <option v-for="t in tenants" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+            </div>
+
+            <div v-if="showLevel" class="min-w-[8rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Level</label>
+                <select v-model="local.level" class="form-select w-full">
+                    <option value="">All levels</option>
+                    <option v-for="l in levelOptions" :key="l.value" :value="l.value">{{ l.label }}</option>
+                </select>
+            </div>
+
+            <div v-if="showCategory" class="min-w-[10rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Category</label>
+                <select v-model="local.category" class="form-select w-full">
+                    <option value="">All categories</option>
+                    <option v-for="c in categoryOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+                </select>
+            </div>
+
+            <div v-if="showEventType" class="min-w-[12rem]">
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Event type</label>
+                <select v-model="local.event_type" class="form-select w-full">
+                    <option value="">All event types</option>
+                    <option v-for="t in eventTypes" :key="t" :value="t">{{ t }}</option>
+                </select>
+            </div>
+
             <div v-if="showSearch" class="min-w-[12rem] flex-1">
-                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">{{ showAction ? 'Search' : 'Lead UUID' }}</label>
-                <input v-model="local.q" type="search" :placeholder="showAction ? 'Email, IP, path…' : 'Search UUID…'" class="form-input w-full" />
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">{{ searchLabel }}</label>
+                <input v-model="local.q" type="search" :placeholder="searchPlaceholder" class="form-input w-full" />
             </div>
 
             <div v-if="showPath" class="min-w-[12rem] flex-1">

@@ -50,6 +50,7 @@ class AdminModules
             'dashboard' => 'dashboard',
             'live-stats' => 'operations',
             'command-center.*' => 'dashboard',
+            'platform-events.*' => 'logs',
             'accounts.*' => 'tenant',
             'buyers.*' => 'tenant',
             'suppliers.*' => 'tenant',

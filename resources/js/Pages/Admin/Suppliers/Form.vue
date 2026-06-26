@@ -69,7 +69,29 @@ const submit = () => {
     form.sources = form.sources
         .map((s) => ({ ...s, sid: String(s.sid).toLowerCase().replace(/[^a-z0-9_-]/g, '') }))
         .filter((s) => s.sid);
-    props.supplier ? form.put(route('suppliers.update', props.supplier.id)) : form.post(route('suppliers.store'));
+
+    if (!form.reference?.trim() || !form.name?.trim()) {
+        goStep('basics');
+        return;
+    }
+
+    const options = {
+        preserveScroll: true,
+        onError: () => {
+            const errors = form.errors ?? {};
+            if (errors.reference || errors.name || errors.status) {
+                goStep('basics');
+            } else if (errors.rev_share_percent || errors.default_postback_url || errors.enable_sub_suppliers) {
+                goStep('affiliate');
+            } else if (Object.keys(errors).some((k) => k.startsWith('sources'))) {
+                goStep('sources');
+            } else {
+                goStep('portal');
+            }
+        },
+    };
+
+    props.supplier ? form.put(route('suppliers.update', props.supplier.id), options) : form.post(route('suppliers.store'), options);
 };
 </script>
 
@@ -102,7 +124,7 @@ const submit = () => {
                 </Panel>
             </template>
 
-            <form class="space-y-6" @submit.prevent="submit">
+            <form class="space-y-6" novalidate @submit.prevent="submit">
                 <FormErrorSummary :errors="form.errors" />
 
                 <Panel v-show="currentStep === 'basics'" title="1. Supplier profile">

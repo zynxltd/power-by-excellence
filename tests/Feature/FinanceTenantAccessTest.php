@@ -55,4 +55,15 @@ class FinanceTenantAccessTest extends TestCase
             ->get('http://insurance-ca.powerbyexcellence.test/finance')
             ->assertOk();
     }
+
+    public function test_super_admin_on_central_without_tenant_redirects_to_accounts(): void
+    {
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test'])
+            ->actingAs($super)
+            ->get(route('finance.index'))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'Select a partner platform first.');
+    }
 }

@@ -132,6 +132,17 @@ class SuppliersFunctionalityTest extends TestCase
             );
     }
 
+    public function test_super_admin_on_central_without_tenant_redirects_from_suppliers_index(): void
+    {
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test'])
+            ->actingAs($super)
+            ->get(route('suppliers.index'))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'Select a partner platform first.');
+    }
+
     public function test_sub_suppliers_sync_on_update(): void
     {
         $supplier = Supplier::create([

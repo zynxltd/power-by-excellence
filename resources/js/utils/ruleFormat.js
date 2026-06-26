@@ -4,6 +4,7 @@ const OPERATOR_LABELS = {
     in: 'is one of',
     not_in: 'is not one of',
     contains: 'contains',
+    regex: 'matches regex',
     gt: 'is greater than',
     gte: 'is at least',
     lt: 'is less than',
@@ -72,10 +73,13 @@ export function hasActiveRules(rules) {
 }
 
 export const FILTER_PRESETS = [
-    { key: 'postcode', field: 'zipcode', op: 'contains', value: 'SW', label: 'Postcode prefix' },
+    { key: 'postcode', field: 'postcode', op: 'contains', value: 'SW', label: 'UK postcode prefix' },
+    { key: 'zipcode', field: 'zipcode', op: 'contains', value: '902', label: 'US zip prefix' },
     { key: 'loan_min', field: 'loan_amount', op: 'gte', value: '5000', label: 'Min loan amount' },
     { key: 'state', field: 'state', op: 'in', value: 'CA,TX,FL', label: 'Allowed states' },
-    { key: 'email', field: 'email', op: 'contains', value: '@gmail.com', label: 'Email domain' },
+    { key: 'email', field: 'email', op: 'contains', value: '@gmail.com', label: 'Email contains' },
+    { key: 'phone', field: 'phone', op: 'exists', value: '', label: 'Phone provided' },
+    { key: 'make_bmw', field: 'vehicle_make', op: 'regex', value: '/^BMW/i', label: 'Vehicle make BMW' },
 ];
 
 export { OPERATOR_LABELS };

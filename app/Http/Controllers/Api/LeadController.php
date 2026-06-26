@@ -19,6 +19,7 @@ class LeadController extends Controller
             'campaign_reference' => 'required_without:campaign_id|string',
             'campaign_id' => 'required_without:campaign_reference',
             'sync' => 'boolean',
+            'test' => 'boolean',
         ]);
 
         /** @var ApiKey|null $apiKey */
@@ -93,22 +94,48 @@ class LeadController extends Controller
         }
     }
 
-    protected function formatResponse(Lead $lead): array
+    protected function resolveRedirectUrl(Lead $lead): ?string
     {
         $soldDelivery = $lead->deliveryLogs()
-            ->with('delivery:id,config')
+            ->with('delivery:id,config,campaign_id')
             ->where('status', 'success')
             ->latest()
             ->first();
 
-        $redirectUrl = $soldDelivery?->delivery?->config['redirect_url']
-            ?? $soldDelivery?->delivery?->config['accept_url']
+        if (! $soldDelivery) {
+            return null;
+        }
+
+        $lead->loadMissing('campaign.distributionConfigs');
+
+        if ($lead->campaign?->use_advanced_distribution) {
+            $config = $lead->campaign->distributionConfigs->firstWhere('is_active', true);
+
+            foreach ($config?->config['groups'] ?? [] as $group) {
+                if (in_array($soldDelivery->delivery_id, $group['delivery_ids'] ?? [], true)) {
+                    if (filled($group['redirect_url'] ?? null)) {
+                        return $group['redirect_url'];
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return $soldDelivery->delivery?->config['redirect_url']
+            ?? $soldDelivery->delivery?->config['accept_url']
             ?? null;
+    }
+
+    protected function formatResponse(Lead $lead): array
+    {
+        $redirectUrl = $this->resolveRedirectUrl($lead);
 
         return [
             'status' => $lead->status->value,
             'lead_id' => $lead->uuid,
             'queue_id' => $lead->queue_id,
+            'test_mode' => (bool) ($lead->metadata['test_mode'] ?? false),
             'reject_reason' => $lead->reject_reason,
             'buyer_reference' => $lead->soldToBuyer?->reference,
             'revenue' => $lead->financials?->revenue,

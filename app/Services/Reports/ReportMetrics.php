@@ -2,6 +2,7 @@
 
 namespace App\Services\Reports;
 
+use App\Support\Tenancy\AccountContext;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,10 @@ class ReportMetrics
 
     public static function fromRequest(\Illuminate\Http\Request $request): self
     {
+        $accountId = $request->attributes->get('account')?->id
+            ?? AccountContext::id()
+            ?? $request->user()?->account_id;
+
         $month = $request->string('month')->toString();
         $days = (int) $request->input('days', 28);
         $days = in_array($days, [7, 14, 28, 30], true) ? $days : 28;
@@ -25,7 +30,7 @@ class ReportMetrics
             $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
 
             return new self(
-                $request->attributes->get('account')?->id ?? $request->user()?->account_id,
+                $accountId,
                 $start->copy(),
                 $start->daysInMonth,
                 $start,
@@ -33,7 +38,7 @@ class ReportMetrics
         }
 
         return new self(
-            $request->attributes->get('account')?->id ?? $request->user()?->account_id,
+            $accountId,
             today()->subDays($days),
             $days,
             null,

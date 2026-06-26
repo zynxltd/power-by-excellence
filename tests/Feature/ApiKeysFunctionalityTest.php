@@ -84,16 +84,24 @@ class ApiKeysFunctionalityTest extends TestCase
             );
     }
 
-    public function test_super_admin_on_central_without_tenant_gets_403(): void
+    public function test_super_admin_on_central_without_tenant_redirects_to_accounts(): void
     {
         $this->centralHost()
             ->actingAs($this->superAdmin)
             ->get(route('api-keys.index'))
-            ->assertForbidden();
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error');
     }
 
     public function test_super_admin_with_tenant_context_can_manage_keys(): void
     {
+        $this->centralHost()
+            ->actingAs($this->superAdmin)
+            ->withSession(['current_account_id' => $this->ukAccount->id])
+            ->get(route('api-keys.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Admin/ApiKeys/Index'));
+
         $this->centralHost()
             ->actingAs($this->superAdmin)
             ->withSession(['current_account_id' => $this->ukAccount->id])

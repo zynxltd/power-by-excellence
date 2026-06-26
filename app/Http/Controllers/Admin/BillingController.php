@@ -8,6 +8,7 @@ use App\Models\Buyer;
 use App\Models\BuyerTransaction;
 use App\Services\Billing\AccountBillingService;
 use App\Services\Billing\BuyerBillingService;
+use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,11 @@ use Inertia\Response;
 
 class BillingController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function index(Request $request): Response
     {
-        $account = $this->currentAccount($request);
+        $account = $this->resolveAdminAccount($request);
         $requirePrepay = $account->settings['require_buyer_prepay'] ?? false;
 
         $buyersQuery = Buyer::where('account_id', $account->id)->orderBy('name');
@@ -63,7 +66,7 @@ class BillingController extends Controller
 
     public function show(Request $request, Buyer $buyer): Response
     {
-        $account = $this->currentAccount($request);
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
         $currency = $buyer->resolvedCurrency();
 
         return Inertia::render('Admin/Billing/Show', [
@@ -89,6 +92,8 @@ class BillingController extends Controller
 
     public function topUp(Request $request, Buyer $buyer): RedirectResponse
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01|max:999999',
             'description' => 'nullable|string|max:255',
@@ -124,6 +129,8 @@ class BillingController extends Controller
 
     public function export(Request $request, Buyer $buyer)
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $currency = $buyer->resolvedCurrency();
 
         $transactions = $buyer->transactions()->orderByDesc('created_at')->limit(5000)->get();
@@ -146,7 +153,7 @@ class BillingController extends Controller
 
     public function exportAll(Request $request)
     {
-        $account = $this->currentAccount($request);
+        $account = $this->resolveAdminAccount($request);
 
         $transactions = BuyerTransaction::query()
             ->with('buyer:id,name,reference,currency,account_id')
@@ -177,30 +184,9 @@ class BillingController extends Controller
 
     public function unlockAccount(Request $request): RedirectResponse
     {
-        $account = $this->currentAccount($request);
+        $account = $this->resolveAdminAccount($request);
         app(AccountBillingService::class)->unlock($account);
 
         return redirect()->route('dashboard')->with('success', 'Account billing unlocked.');
-    }
-
-    protected function currentAccount(Request $request): Account
-    {
-        $account = $request->attributes->get('account')
-            ?? $request->attributes->get('host_account');
-
-        if ($account instanceof Account) {
-            return $account;
-        }
-
-        $user = $request->user();
-
-        if ($user?->isSuperAdmin() && $request->session()->has('current_account_id')) {
-            return Account::findOrFail($request->session()->get('current_account_id'));
-        }
-
-        $account = $user?->resolveAccount();
-        abort_unless($account, 403, 'Select a partner platform to view billing.');
-
-        return $account;
     }
 }

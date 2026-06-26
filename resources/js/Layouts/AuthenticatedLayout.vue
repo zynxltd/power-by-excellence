@@ -14,7 +14,7 @@ const page = usePage();
 const impersonator = computed(() => page.props.auth?.impersonator);
 const godMode = computed(() => page.props.auth?.godMode);
 const showSessionBanner = computed(() => impersonator.value || godMode.value);
-const showLiveStats = computed(() => !page.props.auth?.isBuyerPortal && !page.props.auth?.isSupplierPortal);
+const showLiveStats = computed(() => page.props.auth?.showLiveStats ?? false);
 
 const liveStats = provideLiveStats();
 provide(liveStats.provideKey, liveStats);

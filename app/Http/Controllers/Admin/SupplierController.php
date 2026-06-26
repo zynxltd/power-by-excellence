@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\Source;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,8 +19,12 @@ use Inertia\Response;
 
 class SupplierController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function index(Request $request): Response
     {
+        $this->resolveAdminAccount($request);
+
         $query = Supplier::query()
             ->with('sources')
             ->withCount('sources')
@@ -64,8 +69,10 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function show(Supplier $supplier): Response
+    public function show(Request $request, Supplier $supplier): Response
     {
+        $this->resolveAdminAccountForTenant($request, $supplier->account_id);
+
         $supplier->load(['sources', 'sources.subSuppliers']);
 
         $recentLeads = Lead::where('supplier_id', $supplier->id)
@@ -93,8 +100,10 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $this->resolveAdminAccount($request);
+
         return Inertia::render('Admin/Suppliers/Form', [
             'supplier' => null,
             'portalUser' => null,
@@ -103,6 +112,10 @@ class SupplierController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $account = $this->resolveAdminAccount($request);
+        AccountContext::set($account);
+        $request->attributes->set('account', $account);
+
         $validated = $this->validateSupplier($request);
         $sources = $validated['sources'] ?? [];
         $portal = $this->extractPortalFields($validated);
@@ -120,8 +133,10 @@ class SupplierController extends Controller
         return redirect()->route('suppliers.show', $supplier)->with('success', 'Supplier created.');
     }
 
-    public function edit(Supplier $supplier): Response
+    public function edit(Request $request, Supplier $supplier): Response
     {
+        $this->resolveAdminAccountForTenant($request, $supplier->account_id);
+
         $supplier->load(['sources.subSuppliers']);
         $portalUser = User::query()
             ->where('supplier_id', $supplier->id)
@@ -136,6 +151,8 @@ class SupplierController extends Controller
 
     public function update(Request $request, Supplier $supplier): RedirectResponse
     {
+        $this->resolveAdminAccountForTenant($request, $supplier->account_id);
+
         $validated = $this->validateSupplier($request, $supplier);
         $sources = $validated['sources'] ?? [];
         $portal = $this->extractPortalFields($validated);
@@ -153,8 +170,10 @@ class SupplierController extends Controller
         return redirect()->route('suppliers.show', $supplier)->with('success', 'Supplier updated.');
     }
 
-    public function destroy(Supplier $supplier): RedirectResponse
+    public function destroy(Request $request, Supplier $supplier): RedirectResponse
     {
+        $this->resolveAdminAccountForTenant($request, $supplier->account_id);
+
         $supplier->delete();
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier deleted.');
@@ -166,7 +185,9 @@ class SupplierController extends Controller
             'reference' => strtolower(trim((string) $request->input('reference', ''))),
         ]);
 
-        $accountId = AccountContext::id();
+        $accountId = AccountContext::id()
+            ?? $supplier?->account_id
+            ?? $this->resolveOptionalAdminAccount($request)?->id;
 
         return $request->validate([
             'reference' => [

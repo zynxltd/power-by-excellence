@@ -57,7 +57,7 @@ class RouteHealthTest extends TestCase
 
         $host->actingAs($buyer)->get('/portal/buyer')->assertOk();
         $host->actingAs($buyer)->get('/portal/buyer/billing')->assertOk();
-        $host->actingAs($buyer)->get('/dashboard')->assertForbidden();
+        $host->actingAs($buyer)->get('/dashboard')->assertRedirect(route('portal.buyer.dashboard'));
     }
 
     public function test_super_admin_routes(): void

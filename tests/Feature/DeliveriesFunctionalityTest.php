@@ -258,8 +258,9 @@ class DeliveriesFunctionalityTest extends TestCase
         $this->ukHost()
             ->actingAs($this->ukAdmin)
             ->post(route('deliveries.test', $delivery))
-            ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertRedirect(route('deliveries.show', ['delivery' => $delivery, 'tab' => 'logs']))
+            ->assertSessionHas('success')
+            ->assertSessionHas('test_lead_uuid');
 
         $this->assertGreaterThan($before, DeliveryLog::where('delivery_id', $delivery->id)->count());
     }

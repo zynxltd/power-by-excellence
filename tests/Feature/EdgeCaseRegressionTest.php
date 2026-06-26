@@ -37,10 +37,10 @@ class EdgeCaseRegressionTest extends TestCase
 
         $h()->actingAs($admin)->get('/portal/buyer')->assertForbidden();
         $h()->actingAs($admin)->get('/portal/supplier')->assertForbidden();
-        $h()->actingAs($buyer)->get('/dashboard')->assertForbidden();
-        $h()->actingAs($buyer)->get('/portal/supplier')->assertForbidden();
-        $h()->actingAs($supplier)->get('/dashboard')->assertForbidden();
-        $h()->actingAs($supplier)->get('/portal/buyer')->assertForbidden();
+        $h()->actingAs($buyer)->get('/dashboard')->assertRedirect(route('portal.buyer.dashboard'));
+        $h()->actingAs($buyer)->get('/portal/supplier')->assertRedirect(route('portal.buyer.dashboard'));
+        $h()->actingAs($supplier)->get('/dashboard')->assertRedirect(route('portal.supplier.dashboard'));
+        $h()->actingAs($supplier)->get('/portal/buyer')->assertRedirect(route('portal.supplier.dashboard'));
     }
 
     public function test_supplier_portal_role_guard(): void

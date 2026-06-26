@@ -110,7 +110,7 @@ const statusClass = (status) => ({
 
             <Panel title="Configured Postbacks">
                 <div v-if="!postbacks?.data?.length" class="py-8 text-center text-sm text-slate-500">No postbacks yet.</div>
-                <div v-for="p in postbacks.data" :key="p.id" class="flex flex-col gap-2 border-b border-slate-100 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                <div v-for="p in postbacks.data" :key="p.id" class="flex flex-col gap-1.5 border-b border-slate-100 py-2.5 last:border-0 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <p class="font-medium text-slate-900 dark:text-white">{{ p.name }}</p>

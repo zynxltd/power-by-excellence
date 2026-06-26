@@ -154,7 +154,7 @@ class RuleEngine
             'in' => in_array((string) $actual, $this->valueList($expected), true),
             'not_in' => ! in_array((string) $actual, $this->valueList($expected), true),
             'contains' => str_contains((string) $actual, (string) $expected),
-            'regex' => (bool) @preg_match($expected, (string) $actual),
+            'regex' => $this->matchesRegex((string) $expected, (string) $actual),
             'exists' => filled($actual),
             'empty' => blank($actual),
             default => false,
@@ -179,5 +179,20 @@ class RuleEngine
     protected function valueListLabel(mixed $expected): string
     {
         return implode(', ', $this->valueList($expected));
+    }
+
+    protected function matchesRegex(string $pattern, string $actual): bool
+    {
+        $pattern = trim($pattern);
+
+        if ($pattern === '') {
+            return false;
+        }
+
+        if (! preg_match('/^\/.+\/[imsxADSUXJu]*$/', $pattern)) {
+            $pattern = '/'.$pattern.'/i';
+        }
+
+        return (bool) @preg_match($pattern, $actual);
     }
 }

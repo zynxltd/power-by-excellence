@@ -68,19 +68,31 @@ const mobileSections = computed(() => {
     }
 
     if (isSuperAdmin.value && isCentralHost.value) {
-        sections.push({ id: 'command', label: 'Command Center', href: route('command-center.index'), links: [] });
+        sections.push({
+            id: 'command',
+            label: 'Command',
+            links: [
+                { label: 'Command Center', href: route('command-center.index') },
+                { label: 'Platform Events', href: route('platform-events.index') },
+            ],
+        });
     }
 
     if (canAccess('tenant')) {
+        const tenantLinks = [
+            ...(isSuperAdmin.value && isCentralHost.value ? [{ label: 'Partner Platforms', href: route('accounts.index') }] : []),
+            ...(isSuperAdmin.value && isCentralHost.value ? [{ label: 'Tenant Billing', href: route('accounts.billing.index') }] : []),
+            ...(account.value || !isSuperAdmin.value || !isCentralHost.value ? [
+                { label: 'Buyers', href: route('buyers.index') },
+                { label: 'Suppliers', href: route('suppliers.index') },
+            ] : []),
+            { label: 'Users', href: route('users.index') },
+        ];
+
         sections.push({
             id: 'tenant',
             label: 'Tenant',
-            links: [
-                ...(isSuperAdmin.value && isCentralHost.value ? [{ label: 'Partner Platforms', href: route('accounts.index') }] : []),
-                { label: 'Buyers', href: route('buyers.index') },
-                { label: 'Suppliers', href: route('suppliers.index') },
-                { label: 'Users', href: route('users.index') },
-            ],
+            links: tenantLinks,
         });
     }
 
@@ -131,6 +143,7 @@ const mobileSections = computed(() => {
             links: [
                 ...(isSuperAdmin.value && isCentralHost.value ? [
                     { label: 'Live Feed', href: route('live-feed.index') },
+                    { label: 'Platform Events', href: route('platform-events.index') },
                     { label: 'Notifications', href: route('notifications.admin.index') },
                 ] : []),
                 { label: 'Delivery Logs', href: route('logs.delivery') },
@@ -147,6 +160,7 @@ const mobileSections = computed(() => {
             id: 'tools',
             label: 'Tools',
             links: [
+                { label: 'API Documentation', href: route('api-docs.index') },
                 { label: 'Integrations', href: route('integrations.index') },
                 { label: 'API Keys', href: route('api-keys.index') },
                 { label: 'Webhooks', href: route('webhooks.index') },
@@ -231,6 +245,8 @@ const mobileSections = computed(() => {
                             All platforms (central admin)
                         </button>
                         <Link v-if="isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner platforms list</Link>
+                        <Link v-if="isCentralHost" :href="route('accounts.billing.index')" :class="dropdownLinkClass">Tenant billing</Link>
+                        <Link v-if="account" :href="route('accounts.billing.edit', account.id)" :class="dropdownLinkClass">Billing for this platform</Link>
                         <Link v-if="account" :href="route('dashboard')" :class="dropdownLinkClass">Tenant dashboard</Link>
                     </template>
                 </Dropdown>
@@ -268,18 +284,23 @@ const mobileSections = computed(() => {
             <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-center gap-0.5 px-4 py-1.5 sm:px-6">
                 <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))">Dashboard</Link>
 
-                <Link
+                <TopNavDropdown
                     v-if="isSuperAdmin && isCentralHost"
-                    :href="route('command-center.index')"
-                    :class="navLinkClass(route().current('command-center.*'))"
+                    id="command"
+                    label="Command"
+                    :active="isAdminRoute(['command-center.*', 'platform-events.*'])"
                 >
-                    Command Center
-                </Link>
+                    <Link :href="route('command-center.index')" :class="dropdownLinkClass">Command Center</Link>
+                    <Link :href="route('platform-events.index')" :class="dropdownLinkClass">Platform Events</Link>
+                </TopNavDropdown>
 
                 <TopNavDropdown v-if="canAccess('tenant')" id="tenant" label="Tenant" :active="isAdminRoute(['accounts.*', 'buyers.*', 'suppliers.*', 'users.*'])">
                     <Link v-if="isSuperAdmin && isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner Platforms</Link>
-                    <Link :href="route('buyers.index')" :class="dropdownLinkClass">Buyers</Link>
-                    <Link :href="route('suppliers.index')" :class="dropdownLinkClass">Suppliers</Link>
+                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('accounts.billing.index')" :class="dropdownLinkClass">Tenant Billing</Link>
+                    <template v-if="account || !isSuperAdmin || !isCentralHost">
+                        <Link :href="route('buyers.index')" :class="dropdownLinkClass">Buyers</Link>
+                        <Link :href="route('suppliers.index')" :class="dropdownLinkClass">Suppliers</Link>
+                    </template>
                     <Link :href="route('users.index')" :class="dropdownLinkClass">Users</Link>
                 </TopNavDropdown>
 
@@ -303,8 +324,9 @@ const mobileSections = computed(() => {
                     <Link :href="route('automation.index')" :class="dropdownLinkClass">Automation Hub</Link>
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('logs')" id="logs" label="Logs" :active="isAdminRoute(['logs.*', 'live-feed.*', 'notifications.admin.*'])">
+                <TopNavDropdown v-if="canAccess('logs')" id="logs" label="Logs" :active="isAdminRoute(['logs.*', 'live-feed.*', 'platform-events.*', 'notifications.admin.*'])">
                     <Link v-if="isSuperAdmin && isCentralHost" :href="route('live-feed.index')" :class="dropdownLinkClass">Live Feed</Link>
+                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('platform-events.index')" :class="dropdownLinkClass">Platform Events</Link>
                     <Link v-if="isSuperAdmin && isCentralHost" :href="route('notifications.admin.index')" :class="dropdownLinkClass">Notifications</Link>
                     <Link :href="route('logs.delivery')" :class="dropdownLinkClass">Delivery Logs</Link>
                     <Link :href="route('logs.api')" :class="dropdownLinkClass">API Logs</Link>
@@ -313,7 +335,8 @@ const mobileSections = computed(() => {
                     <Link :href="route('logs.security')" :class="dropdownLinkClass">Security Logs</Link>
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*'])">
+                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['api-docs.*', 'integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*'])">
+                    <Link :href="route('api-docs.index')" :class="dropdownLinkClass">API Documentation</Link>
                     <Link :href="route('integrations.index')" :class="dropdownLinkClass">Integrations</Link>
                     <Link :href="route('api-keys.index')" :class="dropdownLinkClass">API Keys</Link>
                     <Link :href="route('webhooks.index')" :class="dropdownLinkClass">Webhooks</Link>

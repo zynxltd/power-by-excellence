@@ -106,6 +106,13 @@ class LeadPipeline
             $lead->save();
             $this->dedupe->index($lead, $campaign);
 
+            if ($lead->metadata['test_mode'] ?? false) {
+                PlatformLogger::leadEvent($lead, 'lead.test_mode', 'Test lead accepted — validation passed, no deliveries fired');
+                $this->recordDuration($lead, $startedAt);
+
+                return $lead->fresh();
+            }
+
             app(\App\Services\Postbacks\PostbackDispatcher::class)->dispatch($lead->fresh(), 'lead.accepted');
 
             if ($lead->quarantined_until && $lead->quarantined_until->isFuture()) {
@@ -153,7 +160,9 @@ class LeadPipeline
         ]);
         PlatformLogger::leadEvent($lead, 'lead.rejected', $reason, [], 'warning');
 
-        app(\App\Services\Postbacks\PostbackDispatcher::class)->dispatch($lead->fresh(), 'lead.rejected');
+        if (! ($lead->metadata['test_mode'] ?? false)) {
+            app(\App\Services\Postbacks\PostbackDispatcher::class)->dispatch($lead->fresh(), 'lead.rejected');
+        }
 
         return $lead;
     }

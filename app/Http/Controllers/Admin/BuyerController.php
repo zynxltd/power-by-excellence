@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer;
 use App\Models\User;
 use App\Mail\PortalCredentialsMail;
+use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Support\Facades\Mail;
@@ -19,8 +20,12 @@ use Inertia\Response;
 
 class BuyerController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function index(Request $request): Response
     {
+        $this->resolveAdminAccount($request);
+
         $query = Buyer::query()
             ->withCount(['deliveries', 'leads'])
             ->orderBy('name');
@@ -53,8 +58,10 @@ class BuyerController extends Controller
         ]);
     }
 
-    public function show(Buyer $buyer): Response
+    public function show(Request $request, Buyer $buyer): Response
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $buyer->loadCount(['leads', 'deliveries', 'transactions']);
 
         $recentLeads = $buyer->leads()
@@ -84,9 +91,9 @@ class BuyerController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        $account = AccountContext::get();
+        $this->resolveAdminAccount($request);
 
         return Inertia::render('Admin/Buyers/Form', [
             'buyer' => null,
@@ -98,6 +105,10 @@ class BuyerController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $account = $this->resolveAdminAccount($request);
+        AccountContext::set($account);
+        $request->attributes->set('account', $account);
+
         $validated = $this->validateBuyer($request);
         $portal = $this->extractPortalFields($validated);
         $sendCredentials = (bool) ($validated['send_portal_credentials'] ?? false);
@@ -113,8 +124,10 @@ class BuyerController extends Controller
         return redirect()->route('buyers.show', $buyer)->with('success', 'Buyer created.');
     }
 
-    public function edit(Buyer $buyer): Response
+    public function edit(Request $request, Buyer $buyer): Response
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $portalUser = User::query()
             ->where('buyer_id', $buyer->id)
             ->where('role', UserRole::BuyerPortal)
@@ -130,6 +143,8 @@ class BuyerController extends Controller
 
     public function update(Request $request, Buyer $buyer): RedirectResponse
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $validated = $this->validateBuyer($request, $buyer);
         $portal = $this->extractPortalFields($validated);
         $sendCredentials = (bool) ($validated['send_portal_credentials'] ?? false);
@@ -145,8 +160,10 @@ class BuyerController extends Controller
         return redirect()->route('buyers.show', $buyer)->with('success', 'Buyer updated.');
     }
 
-    public function destroy(Buyer $buyer): RedirectResponse
+    public function destroy(Request $request, Buyer $buyer): RedirectResponse
     {
+        $this->resolveAdminAccountForTenant($request, $buyer->account_id);
+
         $buyer->delete();
 
         return redirect()->route('buyers.index')->with('success', 'Buyer deleted.');
@@ -158,7 +175,9 @@ class BuyerController extends Controller
             'reference' => strtolower(trim((string) $request->input('reference', ''))),
         ]);
 
-        $accountId = AccountContext::id();
+        $accountId = AccountContext::id()
+            ?? $buyer?->account_id
+            ?? $this->resolveOptionalAdminAccount($request)?->id;
 
         $validated = $request->validate([
             'reference' => [

@@ -61,7 +61,7 @@ const clearFilters = () => {
 };
 
 const testDelivery = (id) => {
-    if (confirm('Run a test delivery using the latest lead for this campaign?')) {
+    if (confirm('Run a live test against this buyer endpoint using the latest lead for this campaign?\n\nResults appear on the delivery Logs tab (not the Leads list).')) {
         router.post(route('deliveries.test', id));
     }
 };
@@ -203,7 +203,7 @@ watch(() => props.view, (v) => {
                                     >
                                         {{ d.name }}
                                     </Link>
-                                    <p class="mt-1 text-sm text-slate-500">{{ d.buyer?.name ?? 'No buyer linked' }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ d.buyer?.name ?? 'No buyer linked' }}</p>
                                 </div>
                                 <div class="flex shrink-0 flex-col items-end gap-1.5">
                                     <StatusBadge :status="d.status" />
@@ -263,7 +263,7 @@ watch(() => props.view, (v) => {
             </section>
 
             <Panel v-if="!grouped?.length" title="No deliveries yet">
-                <p class="text-sm text-slate-600 dark:text-slate-400">Create your first delivery to start routing leads to buyers.</p>
+                <p class="text-xs text-slate-600 dark:text-slate-400">Create your first delivery to start routing leads to buyers.</p>
                 <AppButton class="mt-4" :href="route('deliveries.create')">Create delivery</AppButton>
             </Panel>
         </div>
@@ -272,28 +272,28 @@ watch(() => props.view, (v) => {
         <Panel v-else :padding="false">
             <DataTable :empty="!deliveries?.length" empty-message="No deliveries match your filters.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Buyer</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Method</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Health</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Updated</th>
-                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                    <th class="text-left">Name</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Buyer</th>
+                    <th class="text-left">Method</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Health</th>
+                    <th class="text-left">Updated</th>
+                    <th class="text-right">Actions</th>
                 </template>
                 <ClickableTableRow v-for="d in deliveries" :key="d.id" :href="route('deliveries.show', d.id)">
-                    <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ d.name }}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ d.campaign?.name }}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '—' }}</td>
-                    <td class="px-6 py-4"><DeliveryMethodBadge :method="methodValue(d)" /></td>
-                    <td class="px-6 py-4"><StatusBadge :status="d.status" /></td>
-                    <td class="px-6 py-4">
+                    <td class="font-medium text-slate-900 dark:text-white">{{ d.name }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.campaign?.name }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '—' }}</td>
+                    <td class=""><DeliveryMethodBadge :method="methodValue(d)" /></td>
+                    <td class=""><StatusBadge :status="d.status" /></td>
+                    <td class="">
                         <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold capitalize', healthStyles[d.health] ?? healthStyles.inactive]">
                             {{ d.health ?? 'inactive' }}
                         </span>
                     </td>
-                    <td class="px-6 py-4"><FormattedDate :value="d.updated_at" format="relative" /></td>
-                    <td class="px-6 py-4 text-right" @click.stop>
+                    <td class=""><FormattedDate :value="d.updated_at" format="relative" /></td>
+                    <td class="text-right" @click.stop>
                         <Link :href="route('deliveries.edit', d.id)" class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Edit</Link>
                     </td>
                 </ClickableTableRow>

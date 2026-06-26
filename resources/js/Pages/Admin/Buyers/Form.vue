@@ -80,7 +80,29 @@ const submit = () => {
         .split(',')
         .map((c) => c.trim().toUpperCase())
         .filter(Boolean);
-    props.buyer ? form.put(route('buyers.update', props.buyer.id)) : form.post(route('buyers.store'));
+
+    if (!form.reference?.trim() || !form.name?.trim()) {
+        goStep('basics');
+        return;
+    }
+
+    const options = {
+        preserveScroll: true,
+        onError: () => {
+            const errors = form.errors ?? {};
+            if (errors.reference || errors.name || errors.email || errors.status || errors.currency) {
+                goStep('basics');
+            } else if (Object.keys(errors).some((k) => k.startsWith('caps.'))) {
+                goStep('billing');
+            } else if (Object.keys(errors).some((k) => k.startsWith('settings.'))) {
+                goStep('advanced');
+            } else {
+                goStep('portal');
+            }
+        },
+    };
+
+    props.buyer ? form.put(route('buyers.update', props.buyer.id), options) : form.post(route('buyers.store'), options);
 };
 </script>
 
@@ -113,7 +135,7 @@ const submit = () => {
                 </Panel>
             </template>
 
-            <form class="space-y-6" @submit.prevent="submit">
+            <form class="space-y-6" novalidate @submit.prevent="submit">
                 <FormErrorSummary :errors="form.errors" />
 
                 <Panel v-show="currentStep === 'basics'" title="1. Buyer profile">
@@ -266,7 +288,7 @@ const submit = () => {
                     </div>
                     <div class="mt-4">
                         <InputLabel :value="`New portal password (${buyer ? 'optional' : 'required if email set'})`" />
-                        <TextInput v-model="form.portal_password" type="password" class="mt-1 w-full" :required="!buyer && !!form.portal_email" />
+                        <TextInput v-model="form.portal_password" type="password" class="mt-1 w-full" />
                         <InputError class="mt-1" :message="form.errors.portal_password" />
                     </div>
                     <label class="mt-4 flex items-center gap-2 text-sm font-medium">

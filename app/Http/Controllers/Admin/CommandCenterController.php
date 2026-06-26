@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
-use App\Models\LeadEvent;
 use App\Models\User;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Platform\PlatformOpsCheck;
@@ -103,7 +102,6 @@ class CommandCenterController extends Controller
             'healthSummary' => $healthSummary,
             'currentAccountId' => session('current_account_id'),
             'tenants' => $tenants,
-            'recentEvents' => $this->recentLeadEvents(30),
             'opsChecks' => $opsCheck->run(),
             'platformStatus' => app(PlatformStatusService::class)->publicPayload(),
         ]);
@@ -178,24 +176,4 @@ class CommandCenterController extends Controller
 
         return (int) DB::table('failed_jobs')->count();
     }
-
-    protected function recentLeadEvents(int $limit): array
-    {
-        return LeadEvent::query()
-            ->with(['lead' => fn ($q) => $q->withoutGlobalScopes()->with('account:id,name')])
-            ->orderByDesc('created_at')
-            ->limit($limit)
-            ->get()
-            ->map(fn (LeadEvent $e) => [
-                'id' => $e->id,
-                'event_type' => $e->event_type,
-                'message' => $e->message,
-                'created_at' => $e->created_at?->toDateTimeString(),
-                'lead_id' => $e->lead_id,
-                'lead_uuid' => $e->lead?->uuid,
-                'tenant' => $e->lead?->account?->name,
-            ])
-            ->all();
-    }
-
 }

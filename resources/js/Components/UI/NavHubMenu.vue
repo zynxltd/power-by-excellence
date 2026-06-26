@@ -56,6 +56,14 @@ const closeMenu = () => nav?.close();
             >
                 Command Center
             </Link>
+            <Link
+                v-if="isCentralHost"
+                :href="route('platform-events.index')"
+                class="block rounded-md px-2 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+                @click="closeMenu"
+            >
+                Platform events
+            </Link>
             <button
                 v-if="tenantHub.id && !tenantHub.is_active"
                 type="button"

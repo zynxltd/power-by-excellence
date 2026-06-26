@@ -55,6 +55,7 @@ class DistributionCrudTest extends TestCase
                     'name' => 'Tier 1 Auction',
                     'mode' => 'parallel_auction',
                     'floor_price' => 10,
+                    'redirect_url' => 'https://example.com/tier-thanks',
                     'delivery_ids' => [$delivery->id],
                 ],
             ],
@@ -63,6 +64,7 @@ class DistributionCrudTest extends TestCase
         $config->refresh();
         $this->assertSame('Updated Ping Tree', $config->name);
         $this->assertSame('parallel_auction', $config->config['groups'][0]['mode']);
+        $this->assertSame('https://example.com/tier-thanks', $config->config['groups'][0]['redirect_url']);
 
         $this->delete(route('distribution.destroy', $config))->assertRedirect(route('distribution.index'));
         $this->assertNull($config->fresh());

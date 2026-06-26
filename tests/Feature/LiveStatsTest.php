@@ -47,4 +47,25 @@ class LiveStatsTest extends TestCase
     {
         $this->get(route('live-stats'))->assertRedirect(route('login'));
     }
+
+    public function test_super_admin_without_tenant_context_cannot_fetch_live_stats(): void
+    {
+        $superAdmin = User::where('email', 'admin@powerbyexcellence.test')->first();
+
+        $this->actingAs($superAdmin)
+            ->getJson(route('live-stats'))
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_with_tenant_context_can_fetch_live_stats(): void
+    {
+        $superAdmin = User::where('email', 'admin@powerbyexcellence.test')->first();
+        $account = \App\Models\Account::where('slug', 'excellence-uk')->first();
+
+        $this->actingAs($superAdmin)
+            ->withSession(['current_account_id' => $account->id])
+            ->getJson(route('live-stats'))
+            ->assertOk()
+            ->assertJsonStructure(['leads_today', 'sold_today', 'pending', 'quarantined']);
+    }
 }

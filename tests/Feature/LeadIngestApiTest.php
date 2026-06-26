@@ -10,6 +10,7 @@ use App\Models\CampaignField;
 use App\Models\Delivery;
 use App\Enums\DeliveryMethod;
 use App\Models\Buyer;
+use App\Models\Lead;
 use App\Services\Api\ApiKeyService;
 use App\Services\Leads\LeadPipeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -115,6 +116,30 @@ class LeadIngestApiTest extends TestCase
             ->assertJsonPath('status', LeadStatus::Sold->value);
 
         $this->assertDatabaseHas('lead_financials', ['revenue' => 20]);
+    }
+
+    public function test_test_mode_skips_live_delivery(): void
+    {
+        $response = $this->postJson('/api/v1/leads', [
+            'campaign_reference' => 'test-campaign',
+            'sync' => true,
+            'test' => true,
+            'firstname' => 'Test',
+            'lastname' => 'Mode',
+            'email' => 'testmode.'.uniqid().'@example.com',
+            'phone1' => '07700900888',
+            'zipcode' => 'EC1A 1BB',
+        ], ['Authorization' => 'Bearer '.$this->apiToken]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', LeadStatus::Accepted->value)
+            ->assertJsonPath('test_mode', true)
+            ->assertJsonPath('buyer_reference', null);
+
+        $lead = Lead::where('uuid', $response->json('lead_id'))->first();
+        $this->assertNotNull($lead);
+        $this->assertDatabaseMissing('lead_financials', ['lead_id' => $lead->id]);
+        $this->assertSame(0, \App\Models\DeliveryLog::where('lead_id', $lead->id)->count());
     }
 
     public function test_duplicate_lead_rejected(): void

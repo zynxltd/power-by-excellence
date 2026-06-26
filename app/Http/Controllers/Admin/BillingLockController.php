@@ -4,16 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Billing\AccountBillingService;
+use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BillingLockController extends Controller
 {
+    use ResolvesAdminAccount;
+
     public function __invoke(Request $request, AccountBillingService $billing): Response
     {
-        $account = $request->attributes->get('account') ?? $request->user()?->account;
-        abort_unless($account, 403);
+        $account = $this->resolveAdminAccount($request);
 
         return Inertia::render('Admin/Billing/Lock', [
             'billing' => $billing->summary($account),

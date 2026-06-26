@@ -30,7 +30,7 @@ defineProps({
                 </div>
             </div>
         </Transition>
-        <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
+        <table class="admin-compact-table min-w-full divide-y divide-slate-100 text-xs dark:divide-slate-800">
             <thead>
                 <tr class="bg-slate-50/80 dark:bg-slate-800/50">
                     <slot name="head" />
@@ -40,7 +40,7 @@ defineProps({
                 <slot />
             </tbody>
         </table>
-        <div v-if="empty && !loading" class="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+        <div v-if="empty && !loading" class="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
             {{ emptyMessage }}
         </div>
     </div>

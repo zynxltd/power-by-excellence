@@ -16,12 +16,15 @@ const isAuthenticated = computed(() => !!page.props.auth?.user);
 const systemStatus = computed(() => page.props.systemStatus);
 
 const mobileOpen = ref(false);
-const productOpen = ref(false);
-const resourcesOpen = ref(false);
 
 const closeMobile = () => {
     mobileOpen.value = false;
 };
+
+const dropdownPanelClass = 'rounded-xl border border-indigo-500/20 bg-slate-900 py-2 shadow-brand-lg';
+const dropdownItemClass = 'block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300';
+const dropdownTriggerClass = 'flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition group-hover:bg-white/5 group-hover:text-violet-200';
+const dropdownMenuClass = 'invisible absolute left-0 top-full z-50 pt-1 opacity-0 transition duration-150 group-hover:visible group-hover:opacity-100';
 
 const navLinkClass = (isActive) => [
     'rounded-lg px-3 py-2 text-sm font-medium transition',
@@ -40,43 +43,39 @@ const navLinkClass = (isActive) => [
 
             <!-- Desktop -->
             <div class="hidden items-center gap-1 lg:flex">
-                <div class="relative" @mouseenter="productOpen = true" @mouseleave="productOpen = false">
-                    <button
-                        type="button"
-                        class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-violet-200"
-                    >
+                <div class="group relative">
+                    <button type="button" :class="dropdownTriggerClass">
                         Product
-                        <svg class="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        <svg class="h-4 w-4 opacity-60 transition group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                     </button>
-                    <div
-                        v-show="productOpen"
-                        class="absolute left-0 top-full z-50 mt-1 w-52 rounded-xl border border-indigo-500/20 bg-slate-900 py-2 shadow-brand-lg"
-                    >
-                        <a href="/#features" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">Features</a>
-                        <a href="/#ping-tree" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">Ping Tree</a>
-                        <a href="/#postbacks" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">Postbacks</a>
-                        <a href="/#sdk" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">SDK</a>
+                    <div :class="[dropdownMenuClass, 'w-52']">
+                        <div :class="dropdownPanelClass">
+                            <a href="/#features" :class="dropdownItemClass">Features</a>
+                            <a href="/#ping-tree" :class="dropdownItemClass">Ping Tree</a>
+                            <a href="/#compare" :class="dropdownItemClass">Compare</a>
+                            <a href="/#security" :class="dropdownItemClass">Security</a>
+                            <a href="/#integrations" :class="dropdownItemClass">Integrations</a>
+                            <a href="/#postbacks" :class="dropdownItemClass">Postbacks</a>
+                            <a href="/#sdk" :class="dropdownItemClass">SDK</a>
+                        </div>
                     </div>
                 </div>
 
                 <Link :href="route('pricing')" :class="navLinkClass(active === 'pricing')">Pricing</Link>
                 <Link :href="route('blog.index')" :class="navLinkClass(active === 'blog')">Blog</Link>
 
-                <div class="relative" @mouseenter="resourcesOpen = true" @mouseleave="resourcesOpen = false">
-                    <button
-                        type="button"
-                        class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-violet-200"
-                    >
+                <div class="group relative">
+                    <button type="button" :class="dropdownTriggerClass">
                         Resources
-                        <svg class="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        <svg class="h-4 w-4 opacity-60 transition group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                     </button>
-                    <div
-                        v-show="resourcesOpen"
-                        class="absolute left-0 top-full z-50 mt-1 w-48 rounded-xl border border-indigo-500/20 bg-slate-900 py-2 shadow-brand-lg"
-                    >
-                        <a href="/#how-it-works" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">How it works</a>
-                        <Link :href="route('help.index')" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">Help Centre</Link>
-                        <Link :href="route('status.index')" class="block px-4 py-2 text-sm text-slate-300 hover:bg-indigo-500/10 hover:text-cyan-300">System status</Link>
+                    <div :class="[dropdownMenuClass, 'w-48']">
+                        <div :class="dropdownPanelClass">
+                            <a href="/#how-it-works" :class="dropdownItemClass">How it works</a>
+                            <a href="/#faq" :class="dropdownItemClass">FAQ</a>
+                            <Link :href="route('help.index')" :class="dropdownItemClass">Help Centre</Link>
+                            <Link :href="route('status.index')" :class="dropdownItemClass">System status</Link>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -64,6 +64,7 @@ class DistributionController extends Controller
                 'name' => $group['name'] ?? 'Tier '.($index + 1),
                 'mode' => $group['mode'] ?? 'waterfall',
                 'floor_price' => $group['floor_price'] ?? null,
+                'redirect_url' => $group['redirect_url'] ?? null,
                 'rules' => $group['rules'] ?? null,
                 'deliveries' => collect($deliveryIds)->map(function ($id) use ($deliveriesById) {
                     $d = $deliveriesById->get($id);
@@ -93,7 +94,7 @@ class DistributionController extends Controller
     {
         return Inertia::render('Admin/Distribution/Form', [
             'config' => null,
-            'campaigns' => Campaign::with(['deliveries', 'fields'])->orderBy('name')->get(),
+            'campaigns' => Campaign::with(['deliveries.buyer', 'fields'])->orderBy('name')->get(),
             'routingModes' => $this->routingModes(),
             'filterFieldOptions' => CampaignFieldCatalog::forCampaignId($request->integer('campaign_id') ?: null),
             'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
@@ -115,7 +116,7 @@ class DistributionController extends Controller
 
         return Inertia::render('Admin/Distribution/Form', [
             'config' => $distribution,
-            'campaigns' => Campaign::with(['deliveries', 'fields'])->orderBy('name')->get(),
+            'campaigns' => Campaign::with(['deliveries.buyer', 'fields'])->orderBy('name')->get(),
             'routingModes' => $this->routingModes(),
             'filterFieldOptions' => CampaignFieldCatalog::forCampaign($campaign),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
@@ -148,6 +149,7 @@ class DistributionController extends Controller
             'groups.*.name' => 'required|string|max:255',
             'groups.*.mode' => 'required|string',
             'groups.*.floor_price' => 'nullable|numeric|min:0',
+            'groups.*.redirect_url' => 'nullable|url|max:2048',
             'groups.*.delivery_ids' => 'required|array|min:1',
             'groups.*.delivery_ids.*' => 'integer',
             'groups.*.rules' => 'nullable|array',
@@ -163,6 +165,7 @@ class DistributionController extends Controller
                 'name' => $group['name'],
                 'mode' => $group['mode'],
                 'floor_price' => $group['floor_price'] ?? null,
+                'redirect_url' => filled($group['redirect_url'] ?? null) ? $group['redirect_url'] : null,
                 'delivery_ids' => $group['delivery_ids'],
                 'rules' => $rules,
             ], fn ($v) => $v !== null);

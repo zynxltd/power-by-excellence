@@ -103,12 +103,7 @@ class PlatformStatusService
             'label' => $data['label'],
             'checked_at' => $data['checked_at'],
             'uptime_30d' => $data['uptime_30d'],
-            'components' => collect($data['checks'] ?? [])->map(fn (array $check) => [
-                'key' => $check['key'],
-                'name' => $check['label'],
-                'status' => $check['status'],
-                'message' => $check['message'],
-            ])->values()->all(),
+            'components' => $this->tenantFacingComponents($data['checks'] ?? []),
             'metrics' => [
                 'avg_processing_ms' => $data['metrics']['avg_processing_ms'] ?? null,
                 'processing_target_ms' => $data['metrics']['processing_target_ms'] ?? null,
@@ -118,6 +113,149 @@ class PlatformStatusService
                 'post_success_rate' => $data['metrics']['post_success_rate'] ?? null,
             ],
         ];
+    }
+
+    /**
+     * Customer-facing service list — no internal env/config checks (domains, Horizon, Redis, etc.).
+     *
+     * @param  list<array{key: string, label: string, status: string, message: string, category?: string}>  $checks
+     * @return list<array{key: string, name: string, status: string, message: string}>
+     */
+    protected function tenantFacingComponents(array $checks): array
+    {
+        $byKey = collect($checks)->keyBy('key');
+
+        $database = $byKey->get('database');
+        $queue = $byKey->get('queue');
+        $processing = $byKey->get('processing_speed');
+        $postQuality = $byKey->get('post_quality');
+        $internalErrors = $byKey->get('internal_errors');
+
+        $apiStatus = $this->worstStatus([
+            $database['status'] ?? 'ok',
+            $queue['status'] ?? 'ok',
+        ]);
+
+        $components = [
+            [
+                'key' => 'lead_api',
+                'name' => 'Lead ingest API',
+                'status' => $apiStatus,
+                'message' => match ($apiStatus) {
+                    'critical' => 'Lead ingest is unavailable — we are investigating',
+                    'warning' => 'Lead ingest may be delayed',
+                    default => 'Accepting leads via API and webhooks',
+                },
+            ],
+            [
+                'key' => 'lead_processing',
+                'name' => 'Lead processing',
+                'status' => $processing['status'] ?? 'ok',
+                'message' => $this->friendlyProcessingMessage($processing),
+            ],
+            [
+                'key' => 'buyer_delivery',
+                'name' => 'Buyer delivery',
+                'status' => $postQuality['status'] ?? 'ok',
+                'message' => $this->friendlyPostMessage($postQuality),
+            ],
+            [
+                'key' => 'platform_reliability',
+                'name' => 'Platform reliability',
+                'status' => $internalErrors['status'] ?? 'ok',
+                'message' => $this->friendlyReliabilityMessage($internalErrors),
+            ],
+            [
+                'key' => 'partner_portals',
+                'name' => 'Partner portals',
+                'status' => $apiStatus,
+                'message' => $apiStatus === 'ok'
+                    ? 'Admin, buyer, and supplier portals are available'
+                    : 'Some portal features may be unavailable',
+            ],
+        ];
+
+        return $components;
+    }
+
+    /**
+     * @param  array{message?: string, status?: string}|null  $check
+     */
+    protected function friendlyProcessingMessage(?array $check): string
+    {
+        if (! $check) {
+            return 'Validation and routing within target latency';
+        }
+
+        $message = (string) ($check['message'] ?? '');
+
+        if (str_contains($message, 'No samples')) {
+            return 'Validation and routing within target latency';
+        }
+
+        if (preg_match('/Avg ([\d.]+)ms/', $message, $matches)) {
+            return "Average lead processing {$matches[1]}ms";
+        }
+
+        return 'Lead validation and distribution active';
+    }
+
+    /**
+     * @param  array{message?: string, status?: string}|null  $check
+     */
+    protected function friendlyPostMessage(?array $check): string
+    {
+        if (! $check) {
+            return 'Ping-post and direct post delivery to buyers';
+        }
+
+        $message = (string) ($check['message'] ?? '');
+
+        if (str_contains($message, 'No posts today')) {
+            return 'No buyer posts recorded yet today';
+        }
+
+        if (preg_match('/([\d.]+)% success/', $message, $matches)) {
+            return "{$matches[1]}% of buyer posts succeeded today";
+        }
+
+        if (str_contains($message, 'below')) {
+            return 'Monitoring buyer post success — low volume today';
+        }
+
+        return 'Ping-post and direct post delivery to buyers';
+    }
+
+    /**
+     * @param  array{message?: string, status?: string}|null  $check
+     */
+    protected function friendlyReliabilityMessage(?array $check): string
+    {
+        if (! $check || ($check['status'] ?? 'ok') === 'ok') {
+            return 'No platform delivery errors detected today';
+        }
+
+        if (preg_match('/(\d+) platform delivery error/', (string) ($check['message'] ?? ''), $matches)) {
+            return "{$matches[1]} delivery error(s) detected today — under investigation";
+        }
+
+        return 'Some delivery errors detected today';
+    }
+
+    /**
+     * @param  list<string>  $statuses
+     */
+    protected function worstStatus(array $statuses): string
+    {
+        if (in_array('critical', $statuses, true)) {
+            return 'critical';
+        }
+
+        if (in_array('warning', $statuses, true)) {
+            return 'warning';
+        }
+
+        return 'ok';
     }
 
     /**

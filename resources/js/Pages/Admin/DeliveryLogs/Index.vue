@@ -69,27 +69,27 @@ const logStatStrip = computed(() => [
         <Panel title="Delivery attempts" :padding="false">
             <DataTable :empty="!logs?.data?.length" empty-message="No delivery logs match your filters.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Time</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Delivery</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Lead</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Method</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Ms</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
+                    <th class="text-left">Time</th>
+                    <th class="text-left">Delivery</th>
+                    <th class="text-left">Lead</th>
+                    <th class="text-left">Method</th>
+                    <th class="text-left">Status</th>
+                    <th class="text-left">Ms</th>
+                    <th class="text-left">Revenue</th>
                 </template>
                 <ClickableTableRow v-for="log in logs.data" :key="log.id" :href="route('logs.delivery.show', log.id)">
-                    <td class="px-6 py-4"><FormattedDate :value="log.created_at" /></td>
-                    <td class="px-6 py-4 text-sm text-slate-900 dark:text-white">{{ log.delivery ?? '—' }}</td>
-                    <td class="px-6 py-4">
+                    <td class=""><FormattedDate :value="log.created_at" /></td>
+                    <td class="text-xs text-slate-900 dark:text-white">{{ log.delivery ?? '—' }}</td>
+                    <td class="">
                         <span class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ log.lead_uuid?.slice(0, 10) }}…</span>
                         <p class="text-xs text-slate-500">{{ log.campaign }}</p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="">
                         <span :class="['rounded-full px-2 py-0.5 text-xs font-medium', log.method === 'ping-post' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800']">{{ log.method }}</span>
                     </td>
-                    <td class="px-6 py-4"><StatusBadge :status="log.status" /></td>
-                    <td class="px-6 py-4 font-mono text-sm" :class="log.duration_ms > 1500 ? 'text-rose-600' : 'text-slate-600'">{{ log.duration_ms ?? '—' }}</td>
-                    <td class="px-6 py-4 text-sm font-medium">{{ log.revenue ? formatMoney(log.revenue) : '—' }}</td>
+                    <td class=""><StatusBadge :status="log.status" /></td>
+                    <td class="font-mono text-xs" :class="log.duration_ms > 1500 ? 'text-rose-600' : 'text-slate-600'">{{ log.duration_ms ?? '—' }}</td>
+                    <td class="text-sm font-medium">{{ log.revenue ? formatMoney(log.revenue) : '—' }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="logs.links" />

@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                 'isSuperAdmin' => fn () => $user?->isSuperAdmin() ?? false,
                 'isBuyerPortal' => fn () => $user?->isBuyerPortal() ?? false,
                 'isSupplierPortal' => fn () => $user?->isSupplierPortal() ?? false,
+                'showLiveStats' => fn () => $this->shouldShowLiveStats($request),
                 'selectedTenantId' => fn () => $request->session()->get('current_account_id'),
                 'impersonator' => fn () => $request->session()->get('impersonator_id')
                     ? User::find($request->session()->get('impersonator_id'))?->only(['id', 'name', 'email'])
@@ -72,6 +73,9 @@ class HandleInertiaRequests extends Middleware
             'urls' => [
                 'marketingSignIn' => fn () => $this->marketingSignInUrl($request),
                 'centralLogin' => fn () => 'https://'.TenantResolver::baseDomain().'/login',
+                'centralAdmin' => fn () => $user?->isSuperAdmin()
+                    ? rtrim(TenantResolver::centralUrl(''), '/')
+                    : null,
             ],
             'platform' => fn () => $this->platformContext($request),
             'tenantHub' => fn () => TenantHub::forAccount(
@@ -137,6 +141,25 @@ class HandleInertiaRequests extends Middleware
         }
 
         return route('login');
+    }
+
+    protected function shouldShowLiveStats(Request $request): bool
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isBuyerPortal() || $user->isSupplierPortal()) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin() && ! $this->resolveAccount($request)) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function resolveCampaignId(Request $request): ?int

@@ -35,6 +35,20 @@ class SettingsFunctionalityTest extends TestCase
         return $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test']);
     }
 
+    protected function centralHost()
+    {
+        return $this->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test']);
+    }
+
+    public function test_super_admin_on_central_without_tenant_redirects_to_accounts(): void
+    {
+        $this->centralHost()
+            ->actingAs($this->superAdmin)
+            ->get(route('settings.edit'))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'Select a partner platform first.');
+    }
+
     public function test_settings_routes_map_to_settings_module(): void
     {
         $this->assertSame('settings', AdminModules::moduleForRoute('settings.edit'));

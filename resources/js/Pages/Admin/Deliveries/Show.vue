@@ -8,8 +8,8 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
@@ -21,12 +21,24 @@ const props = defineProps({
     pingTreeLinks: Array,
     performance: Object,
     campaignWorkflow: { type: Object, default: null },
+    initialTab: { type: String, default: 'overview' },
 });
+
+const page = usePage();
+const testLeadUuid = computed(() => page.props.flash?.test_lead_uuid ?? null);
+const testLeadId = computed(() => page.props.flash?.test_lead_id ?? null);
 
 const { formatMoney } = useMoneyFormat(props.delivery?.campaign?.currency);
 
-const activeTab = ref('overview');
+const activeTab = ref(props.initialTab === 'logs' ? 'logs' : 'overview');
 const expandedLogId = ref(null);
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'logs') {
+        activeTab.value = 'logs';
+    }
+});
 
 const healthStyles = {
     healthy: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -212,6 +224,16 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
 
         <!-- Logs tab -->
         <div v-show="activeTab === 'logs'">
+            <div
+                v-if="testLeadUuid"
+                class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100"
+            >
+                Test used lead <code class="rounded bg-white/80 px-1 font-mono text-xs dark:bg-slate-900">{{ testLeadUuid }}</code>.
+                Expand the newest log row below for ping/post request and response payloads.
+                <Link v-if="testLeadId" :href="route('leads.show', testLeadId)" class="ml-1 font-semibold underline">View lead →</Link>
+                ·
+                <Link :href="route('logs.delivery', { delivery_id: delivery.id })" class="font-semibold underline">All delivery logs →</Link>
+            </div>
             <Panel title="Delivery logs" :padding="false">
                 <DataTable :empty="!logRows().length" empty-message="No delivery logs yet.">
                     <template #head>

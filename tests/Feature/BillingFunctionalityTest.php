@@ -85,12 +85,43 @@ class BillingFunctionalityTest extends TestCase
             );
     }
 
-    public function test_super_admin_on_central_without_tenant_gets_403_on_billing(): void
+    public function test_super_admin_on_central_without_tenant_redirects_to_accounts(): void
     {
         $this->centralHost()
             ->actingAs($this->superAdmin)
             ->get(route('billing.index'))
-            ->assertForbidden();
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error', 'Select a partner platform first.');
+    }
+
+    public function test_super_admin_on_central_without_tenant_can_open_buyer_billing(): void
+    {
+        $this->centralHost()
+            ->actingAs($this->superAdmin)
+            ->get(route('billing.show', $this->ukBuyer))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Billing/Show')
+                ->where('buyer.id', $this->ukBuyer->id)
+            )
+            ->assertSessionHas('current_account_id', $this->ukAccount->id);
+    }
+
+    public function test_super_admin_on_central_without_tenant_can_top_up_buyer_billing(): void
+    {
+        $before = (float) $this->ukBuyer->credit_balance;
+
+        $this->centralHost()
+            ->actingAs($this->superAdmin)
+            ->post(route('billing.top-up', $this->ukBuyer), [
+                'amount' => 10,
+                'type' => 'credit',
+                'description' => 'Cross-tenant top-up',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals($before + 10, (float) $this->ukBuyer->fresh()->credit_balance);
     }
 
     public function test_billing_show_and_top_up_update_ledger(): void

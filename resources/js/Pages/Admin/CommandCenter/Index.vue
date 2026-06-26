@@ -15,7 +15,6 @@ const props = defineProps({
     healthSummary: Object,
     currentAccountId: Number,
     tenants: Array,
-    recentEvents: Array,
     opsChecks: Array,
     platformStatus: Object,
 });
@@ -25,9 +24,30 @@ const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
 
 const today = new Date().toISOString().slice(0, 10);
 
-const deliveryLogUrl = (params = {}) => route('logs.delivery', { days: 1, ...params });
+const centralAdminBase = computed(() => page.props.urls?.centralAdmin);
 
-const leadUrl = (params = {}) => route('leads.index', { from_date: today, to_date: today, ...params });
+const centralAdminUrl = (path, params = {}) => {
+    if (!centralAdminBase.value) {
+        return null;
+    }
+
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+            query.set(key, String(value));
+        }
+    });
+
+    const qs = query.toString();
+
+    return `${centralAdminBase.value}${path}${qs ? `?${qs}` : ''}`;
+};
+
+const deliveryLogUrl = (params = {}) => centralAdminUrl('/logs/delivery', { days: 1, ...params })
+    ?? route('logs.delivery', { days: 1, ...params });
+
+const leadUrl = (params = {}) => centralAdminUrl('/leads', { from_date: today, to_date: today, ...params })
+    ?? route('leads.index', { from_date: today, to_date: today, ...params });
 
 const switchTenant = (accountId) => {
     router.post(route('accounts.switch'), { account_id: accountId }, { preserveScroll: true });
@@ -122,6 +142,7 @@ const platformStatItems = computed(() => {
         >
             <template #actions>
                 <Link v-if="isSuperAdmin" :href="route('accounts.index')" class="text-sm font-medium text-indigo-600 hover:underline">Partner platforms →</Link>
+                <Link :href="route('platform-events.index')" class="text-sm font-medium text-indigo-600 hover:underline">Platform events →</Link>
                 <Link :href="route('operations.index')" class="text-sm font-medium text-indigo-600 hover:underline">Live ops →</Link>
             </template>
         </PageHeader>
@@ -318,24 +339,6 @@ const platformStatItems = computed(() => {
                     </td>
                 </tr>
             </DataTable>
-        </Panel>
-
-        <Panel title="Recent platform events" class="mt-6" :padding="false">
-            <div v-if="!recentEvents?.length" class="p-6 text-sm text-slate-500">No events yet.</div>
-            <div v-for="e in recentEvents" :key="e.id" class="border-b border-slate-100 px-3 py-2 last:border-0 dark:border-slate-800">
-                <div class="flex items-start justify-between gap-2">
-                    <div>
-                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ e.event_type }}</p>
-                        <p class="text-sm text-slate-600 dark:text-slate-400">{{ e.message }}</p>
-                        <p class="mt-1 text-xs text-slate-500">{{ e.tenant }} · <Link v-if="e.lead_id" :href="route('leads.show', e.lead_id)" class="text-indigo-600 hover:underline">{{ e.lead_uuid?.slice(0, 8) }}</Link></p>
-                    </div>
-                    <FormattedDate :value="e.created_at" class="shrink-0 text-xs" />
-                </div>
-            </div>
-            <p class="border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500 dark:border-slate-800">
-                Threshold alert history lives under
-                <Link :href="route('automation.index', { tab: 'alerts' })" class="font-medium text-indigo-600 hover:underline">Automation → Event Alerts</Link>.
-            </p>
         </Panel>
     </AuthenticatedLayout>
 </template>

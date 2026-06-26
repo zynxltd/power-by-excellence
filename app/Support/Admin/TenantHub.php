@@ -52,7 +52,8 @@ class TenantHub
                 'links' => array_values(array_filter([
                     ['label' => 'All campaigns', 'href' => route('campaigns.index'), 'description' => 'Campaign list for active tenant'],
                     $campaignId ? ['label' => 'This campaign', 'href' => route('campaigns.show', $campaignId), 'description' => 'Campaign overview'] : null,
-                    $campaignId ? ['label' => 'API spec', 'href' => route('campaigns.api-spec', $campaignId), 'description' => 'Ingest schema and docs'] : null,
+                    ['label' => 'API documentation', 'href' => route('api-docs.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Lead ingest reference and examples'],
+                    $campaignId ? ['label' => 'API spec editor', 'href' => route('campaigns.api-spec', $campaignId), 'description' => 'Edit campaign field schema'] : null,
                     $campaignId ? ['label' => 'Ping tree', 'href' => route('distribution.create').$campaignQuery, 'description' => 'Distribution routing'] : null,
                     $campaignId ? ['label' => 'Add delivery', 'href' => route('deliveries.create').'?campaign_id='.$campaignId, 'description' => 'New buyer delivery'] : null,
                     ['label' => 'Lead pipeline', 'href' => route('leads.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Search and inspect leads'],

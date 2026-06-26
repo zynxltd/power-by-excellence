@@ -11,9 +11,10 @@ class CampaignApiSpecService
     public function defaultSpec(Campaign $campaign): array
     {
         $campaign->loadMissing('fields');
+        $locked = (bool) ($campaign->api_spec['locked'] ?? false);
 
         if (! empty($campaign->api_spec['fields'])) {
-            return $campaign->api_spec;
+            return array_merge($campaign->api_spec, ['locked' => $locked]);
         }
 
         $fields = $campaign->fields->isNotEmpty()
@@ -22,6 +23,7 @@ class CampaignApiSpecService
 
         return [
             'version' => '1.0',
+            'locked' => $locked,
             'description' => "Lead ingest API for {$campaign->name}",
             'endpoint' => [
                 'method' => 'POST',
@@ -56,6 +58,11 @@ class CampaignApiSpecService
             'enum' => $field['enum'] ?? [],
             'form_type' => $field['form_type'] ?? $this->mapFormType($name, $type),
         ];
+    }
+
+    public function isLocked(Campaign $campaign): bool
+    {
+        return (bool) ($campaign->api_spec['locked'] ?? false);
     }
 
     public function syncFieldsToCampaign(Campaign $campaign, array $spec): void
@@ -156,6 +163,33 @@ class CampaignApiSpecService
             'queue_id' => 'q_example123abc',
             'lead_id' => 'e1c9b4db-e334-475e-b452-301b17b01ad2',
         ];
+    }
+
+    public function sampleStatusResponse(): array
+    {
+        return [
+            'status' => 'accepted',
+            'lead_id' => 'e1c9b4db-e334-475e-b452-301b17b01ad2',
+            'queue_id' => 'q_example123abc',
+            'test_mode' => true,
+            'reject_reason' => null,
+            'buyer_reference' => null,
+            'revenue' => null,
+            'currency' => 'GBP',
+            'redirect_url' => null,
+            'received_at' => '2026-06-26T12:00:00+00:00',
+            'distributed_at' => null,
+        ];
+    }
+
+    public function buildGetCurl(string $baseUrl, string $path, ?string $apiKeyExample = null): string
+    {
+        $url = rtrim($baseUrl, '/').$path;
+        $key = $apiKeyExample ?? 'your_prefix|your_secret';
+
+        return "curl '{$url}' \\\n"
+            ."  -H 'Authorization: Bearer {$key}' \\\n"
+            ."  -H 'Accept: application/json'";
     }
 
     public function buildCurl(string $baseUrl, ?string $apiKeyExample, array $spec, array $sample): string

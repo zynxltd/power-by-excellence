@@ -70,7 +70,7 @@ const opsStatStrip = computed(() => [
 
 const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
     label: c.name,
-    value: `${c.leads}/${c.sold}`,
+    value: `${c.leads} leads · ${c.sold} sold`,
     href: route('leads.index', { campaign_id: c.id }),
     title: `${c.name} — ${c.leads} leads, ${c.sold} sold`,
 })));
@@ -101,7 +101,7 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
         <CompactStatStrip :items="opsStatStrip" :columns="8" class="mb-6" />
 
         <Panel v-if="topCampaignStrip.length" title="Top campaigns today" class="mt-6">
-            <CompactStatStrip :items="topCampaignStrip" :columns="topCampaignStrip.length" />
+            <CompactStatStrip :items="topCampaignStrip" />
         </Panel>
 
         <div class="mt-6 grid gap-6 lg:grid-cols-3">
@@ -131,7 +131,7 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                 </div>
             </Panel>
             <Panel v-if="processingLeads.length" title="Processing now" class="lg:col-span-3">
-                <p class="mb-3 text-sm text-slate-600 dark:text-slate-400">Leads actively moving through the pipeline — updates every {{ intervalSeconds }}s.</p>
+                <p class="mb-3 text-xs text-slate-600 dark:text-slate-400">Leads actively moving through the pipeline — updates every {{ intervalSeconds }}s.</p>
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <Link
                         v-for="lead in processingLeads"
@@ -160,23 +160,23 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
             <Panel title="Recent Leads" :padding="false">
                 <DataTable :empty="!recentLeads?.data?.length" :loading="isNavigating">
                     <template #head>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">UUID</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Supplier</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Time</th>
+                        <th class="text-left">UUID</th>
+                        <th class="text-left">Status</th>
+                        <th class="text-left">Campaign</th>
+                        <th class="text-left">Supplier</th>
+                        <th class="text-left">Time</th>
                     </template>
                     <ClickableTableRow v-for="lead in recentLeads.data" :key="lead.id" :href="route('leads.show', lead.id)">
-                        <td class="px-6 py-4">
+                        <td class="">
                             <span class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 8) }}…</span>
                         </td>
-                        <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>
-                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td class=""><StatusBadge :status="lead.status" /></td>
+                        <td class="text-xs text-slate-600 dark:text-slate-400">
                             <Link v-if="lead.campaign_id" :href="route('campaigns.show', lead.campaign_id)" class="hover:text-indigo-600" @click.stop>{{ lead.campaign }}</Link>
                             <span v-else>—</span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-slate-500">{{ lead.supplier ?? '—' }}</td>
-                        <td class="px-6 py-4"><FormattedDate :value="lead.received_at" format="relative" /></td>
+                        <td class="text-xs text-slate-500">{{ lead.supplier ?? '—' }}</td>
+                        <td class=""><FormattedDate :value="lead.received_at" format="relative" /></td>
                     </ClickableTableRow>
                 </DataTable>
                 <Pagination :links="recentLeads.links" />
@@ -191,21 +191,21 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                 </template>
                 <DataTable :empty="!deliveryPreview?.data?.length" :loading="isNavigating">
                     <template #head>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Delivery</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Buyer</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tier</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Time</th>
+                        <th class="text-left">Delivery</th>
+                        <th class="text-left">Buyer</th>
+                        <th class="text-left">Tier</th>
+                        <th class="text-left">Status</th>
+                        <th class="text-left">Time</th>
                     </template>
                     <ClickableTableRow v-for="log in deliveryPreview.data" :key="log.id" :href="route('logs.delivery.show', log.id)">
-                        <td class="px-6 py-4 text-sm text-slate-900 dark:text-white">
+                        <td class="text-xs text-slate-900 dark:text-white">
                             <Link v-if="log.delivery_id" :href="route('deliveries.show', log.delivery_id)" class="hover:text-indigo-600" @click.stop>{{ log.delivery ?? '—' }}</Link>
                             <span v-else>—</span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-slate-500">{{ log.buyer ?? '—' }}</td>
-                        <td class="px-6 py-4 text-xs text-slate-500">{{ log.tier ? `T${log.tier}` : '—' }}</td>
-                        <td class="px-6 py-4"><StatusBadge :status="log.status" /></td>
-                        <td class="px-6 py-4"><FormattedDate :value="log.created_at" format="relative" /></td>
+                        <td class="text-xs text-slate-500">{{ log.buyer ?? '—' }}</td>
+                        <td class="text-xs text-slate-500">{{ log.tier ? `T${log.tier}` : '—' }}</td>
+                        <td class=""><StatusBadge :status="log.status" /></td>
+                        <td class=""><FormattedDate :value="log.created_at" format="relative" /></td>
                     </ClickableTableRow>
                 </DataTable>
                 <Pagination :links="deliveryPreview.links" />

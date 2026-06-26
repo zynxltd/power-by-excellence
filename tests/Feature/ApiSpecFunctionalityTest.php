@@ -40,6 +40,7 @@ class ApiSpecFunctionalityTest extends TestCase
                 ->has('spec')
                 ->has('sampleRequest')
                 ->has('sampleResponse')
+                ->has('sampleStatusResponse')
                 ->has('curl')
                 ->has('fieldTypes')
                 ->has('formTypes')
@@ -292,5 +293,76 @@ class ApiSpecFunctionalityTest extends TestCase
 
         $this->assertSame('25000', $sample['loan_amount']);
         $this->assertSame($campaign->reference, $sample['campaign_reference']);
+    }
+
+    public function test_lock_toggle_persists_locked_state(): void
+    {
+        $campaign = Campaign::where('reference', 'loans-uk')->first();
+
+        $this->actingAs($this->admin)
+            ->post(route('campaigns.api-spec.lock', $campaign), ['locked' => true])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $campaign->refresh();
+        $this->assertTrue($this->specService->isLocked($campaign));
+
+        $this->actingAs($this->admin)
+            ->get(route('campaigns.api-spec', $campaign))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('spec.locked', true));
+
+        $this->actingAs($this->admin)
+            ->post(route('campaigns.api-spec.lock', $campaign), ['locked' => false])
+            ->assertRedirect();
+
+        $campaign->refresh();
+        $this->assertFalse($this->specService->isLocked($campaign));
+    }
+
+    public function test_update_rejected_when_api_spec_is_locked(): void
+    {
+        $campaign = Campaign::where('reference', 'loans-uk')->first();
+        $campaign->update(['api_spec' => array_merge(
+            $this->specService->defaultSpec($campaign),
+            ['locked' => true],
+        )]);
+
+        $this->actingAs($this->admin)
+            ->put(route('campaigns.api-spec.update', $campaign), [
+                'spec' => [
+                    'description' => 'Should not save',
+                    'fields' => [
+                        [
+                            'name' => 'firstname',
+                            'label' => 'First name',
+                            'type' => 'string',
+                            'required' => true,
+                            'ping_field' => false,
+                            'form_type' => 'text',
+                        ],
+                    ],
+                ],
+                'sync_fields' => false,
+            ])
+            ->assertStatus(422);
+
+        $campaign->refresh();
+        $this->assertNotSame('Should not save', $campaign->api_spec['description'] ?? null);
+    }
+
+    public function test_load_premade_template_rejected_when_locked(): void
+    {
+        $campaign = Campaign::where('reference', 'loans-uk')->first();
+        $campaign->update(['api_spec' => array_merge(
+            $this->specService->defaultSpec($campaign),
+            ['locked' => true],
+        )]);
+
+        $this->actingAs($this->admin)
+            ->post(route('campaigns.api-spec.load-premade', $campaign), [
+                'template_key' => 'solar_full',
+            ])
+            ->assertStatus(422);
     }
 }

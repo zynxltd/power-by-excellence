@@ -19,6 +19,7 @@ import { useLiveStats } from '@/Composables/useLiveStats';
 
 const page = usePage();
 const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
+const canCreateCampaign = computed(() => Boolean(page.props.auth.account));
 
 const props = defineProps({
     stats: Object,
@@ -85,7 +86,7 @@ const switchToTenant = (accountId) => {
                 <AppButton v-if="isSuperAdmin" :href="route('accounts.index')" variant="secondary">Platforms</AppButton>
                 <AppButton v-else :href="route('settings.edit')" variant="secondary">Platform settings</AppButton>
                 <AppButton :href="route('operations.index')" variant="secondary">Live ops</AppButton>
-                <AppButton :href="route('campaigns.create')">New campaign</AppButton>
+                <AppButton v-if="canCreateCampaign" :href="route('campaigns.create')">New campaign</AppButton>
             </div>
         </div>
 

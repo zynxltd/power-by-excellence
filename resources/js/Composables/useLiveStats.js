@@ -28,7 +28,7 @@ export function provideLiveStats() {
     };
 
     const refresh = async () => {
-        if (page.props.auth?.isBuyerPortal || page.props.auth?.isSupplierPortal) {
+        if (! page.props.auth?.showLiveStats) {
             return;
         }
 
@@ -65,7 +65,7 @@ export function provideLiveStats() {
     );
 
     onMounted(() => {
-        if (page.props.auth?.isBuyerPortal || page.props.auth?.isSupplierPortal) {
+        if (! page.props.auth?.showLiveStats) {
             return;
         }
 

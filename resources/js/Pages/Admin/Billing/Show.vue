@@ -38,14 +38,37 @@ const form = useForm({
     skip_ledger: false,
 });
 
+const typeLabel = (type) => props.ledgerTypes?.find((t) => t.value === type)?.label ?? type;
+
+const confirmMessage = () => {
+    const type = typeLabel(form.type);
+    const amount = form.amount ? formatMoney(form.amount) : 'this amount';
+    const extras = [];
+
+    if (form.bypass_account_lock) extras.push('bypass billing lock');
+    if (form.allow_negative) extras.push('allow negative balance');
+    if (form.suppress_alerts) extras.push('suppress alerts');
+    if (form.skip_ledger) extras.push('skip ledger row');
+
+    const extra = extras.length ? `\n\nIncludes: ${extras.join(', ')}.` : '';
+
+    return `Post ${amount} as "${type}" to ${props.buyer.name}?${extra}\n\nThis updates the buyer credit balance immediately.`;
+};
+
 const submit = () => {
+    if (!form.amount || Number(form.amount) <= 0) {
+        return;
+    }
+
+    if (!window.confirm(confirmMessage())) {
+        return;
+    }
+
     form.post(route('billing.top-up', props.buyer.id), {
         preserveScroll: true,
         onSuccess: () => form.reset('amount', 'description'),
     });
 };
-
-const typeLabel = (type) => props.ledgerTypes?.find((t) => t.value === type)?.label ?? type;
 </script>
 
 <template>
@@ -103,30 +126,38 @@ const typeLabel = (type) => props.ledgerTypes?.find((t) => t.value === type)?.la
                         <TextInput v-model="form.description" class="mt-1 w-full" placeholder="Reason for adjustment" />
                     </div>
 
-                    <button type="button" class="text-sm font-medium text-indigo-600" @click="showAdvanced = !showAdvanced">
-                        {{ showAdvanced ? 'Hide' : 'Show' }} edge-case options
-                    </button>
+                    <div class="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                        <button
+                            type="button"
+                            class="text-left text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                            @click="showAdvanced = !showAdvanced"
+                        >
+                            {{ showAdvanced ? 'Hide' : 'Show' }} edge-case options
+                        </button>
 
-                    <div v-if="showAdvanced" class="space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/20">
-                        <label class="flex items-center gap-2">
-                            <input v-model="form.bypass_account_lock" type="checkbox" class="rounded" />
-                            Bypass account billing lock
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="form.allow_negative" type="checkbox" class="rounded" />
-                            Allow negative balance
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="form.suppress_alerts" type="checkbox" class="rounded" />
-                            Suppress low-balance alerts
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="form.skip_ledger" type="checkbox" class="rounded" />
-                            Balance-only (skip ledger row)
-                        </label>
+                        <div v-if="showAdvanced" class="space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/20">
+                            <label class="flex items-center gap-2">
+                                <input v-model="form.bypass_account_lock" type="checkbox" class="rounded" />
+                                Bypass account billing lock
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="form.allow_negative" type="checkbox" class="rounded" />
+                                Allow negative balance
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="form.suppress_alerts" type="checkbox" class="rounded" />
+                                Suppress low-balance alerts
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="form.skip_ledger" type="checkbox" class="rounded" />
+                                Balance-only (skip ledger row)
+                            </label>
+                        </div>
+
+                        <div class="pt-1">
+                            <PrimaryButton :disabled="form.processing" class="w-full sm:w-auto">Post to ledger</PrimaryButton>
+                        </div>
                     </div>
-
-                    <PrimaryButton :disabled="form.processing">Post to ledger</PrimaryButton>
                 </form>
             </Panel>
 

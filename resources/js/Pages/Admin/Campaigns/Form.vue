@@ -10,6 +10,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -76,12 +77,60 @@ const normalizeCodes = () => {
     form.reference = String(form.reference).toLowerCase().replace(/[^a-z0-9_-]/g, '');
 };
 
-const submit = () => {
+const cleanCaps = () => {
+    form.caps = Object.fromEntries(
+        Object.entries(form.caps ?? {}).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    );
+};
+
+const validateBeforeSubmit = () => {
     normalizeCodes();
-    if (props.campaign) {
-        form.put(route('campaigns.update', props.campaign.id));
+
+    if (!form.name?.trim() || !form.reference?.trim() || !form.country || !form.currency) {
+        goStep('identity');
+        return false;
+    }
+
+    if (form.payout_amount === '' || form.payout_amount === null || form.floor_price === '' || form.floor_price === null) {
+        goStep('pricing');
+        return false;
+    }
+
+    return true;
+};
+
+const jumpToErrorStep = () => {
+    const errors = form.errors ?? {};
+    const identityFields = ['name', 'reference', 'country', 'currency', 'vertical_id'];
+    const pricingFields = ['payout_amount', 'floor_price', 'bidding_mode'];
+
+    if (identityFields.some((field) => errors[field])) {
+        goStep('identity');
+    } else if (pricingFields.some((field) => errors[field])) {
+        goStep('pricing');
+    } else if (errors.use_advanced_distribution || errors.sell_mode) {
+        goStep('routing');
     } else {
-        form.post(route('campaigns.store'));
+        goStep('caps');
+    }
+};
+
+const submit = () => {
+    if (!validateBeforeSubmit()) {
+        return;
+    }
+
+    cleanCaps();
+
+    const options = {
+        preserveScroll: true,
+        onError: jumpToErrorStep,
+    };
+
+    if (props.campaign) {
+        form.put(route('campaigns.update', props.campaign.id), options);
+    } else {
+        form.post(route('campaigns.store'), options);
     }
 };
 </script>
@@ -97,6 +146,8 @@ const submit = () => {
                 <AppButton :href="route('campaigns.show', campaign.id)" variant="secondary">View campaign</AppButton>
             </template>
         </PageHeader>
+
+        <TenantContextBanner class="mb-6" />
 
         <CampaignWorkflowNav
             v-if="campaignWorkflow"
@@ -147,14 +198,14 @@ const submit = () => {
                 </Panel>
             </template>
 
-            <form class="space-y-6" @submit.prevent="submit">
+            <form class="space-y-6" novalidate @submit.prevent="submit">
                 <FormErrorSummary :errors="form.errors" />
 
                 <Panel v-show="currentStep === 'identity'" title="1. Campaign identity">
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="md:col-span-2">
                             <InputLabel value="Campaign name" />
-                            <TextInput v-model="form.name" class="mt-1 w-full" required placeholder="e.g. Auto Insurance Leads" />
+                            <TextInput v-model="form.name" class="mt-1 w-full" placeholder="e.g. Auto Insurance Leads" />
                             <InputError class="mt-1" :message="form.errors.name" />
                         </div>
                         <div class="md:col-span-2">
@@ -163,7 +214,6 @@ const submit = () => {
                                 v-model="form.reference"
                                 class="mt-1 w-full font-mono"
                                 :disabled="!!campaign?.reference_locked"
-                                required
                                 placeholder="auto-insurance-leads"
                                 maxlength="255"
                             />

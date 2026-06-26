@@ -44,6 +44,64 @@ class CampaignValidationTest extends TestCase
         $response->assertSessionHasErrors(['reference']);
     }
 
+    public function test_campaign_store_with_empty_caps_succeeds(): void
+    {
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $admin = User::where('email', 'uk@powerbyexcellence.test')->first();
+
+        $this->actingAs($admin)
+            ->post(route('campaigns.store'), [
+                'name' => 'Caps Empty Test',
+                'reference' => 'caps-empty-test',
+                'country' => 'GB',
+                'currency' => 'GBP',
+                'status' => 'active',
+                'vertical_id' => '',
+                'payout_amount' => 5,
+                'floor_price' => 10,
+                'sell_mode' => 'exclusive',
+                'bidding_mode' => 'real_time_auction',
+                'use_advanced_distribution' => false,
+                'caps' => [
+                    'daily' => '',
+                    'hourly' => '',
+                    'daily_spend_cap' => '',
+                    'monthly_spend_cap' => '',
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('campaigns', [
+            'reference' => 'caps-empty-test',
+            'account_id' => $admin->account_id,
+        ]);
+    }
+
+    public function test_super_admin_on_central_without_tenant_redirects_on_campaign_create(): void
+    {
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test'])
+            ->actingAs($super)
+            ->get(route('campaigns.create'))
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error');
+
+        $this->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test'])
+            ->actingAs($super)
+            ->post(route('campaigns.store'), [
+                'name' => 'No Tenant',
+                'reference' => 'no-tenant-campaign',
+                'country' => 'GB',
+                'currency' => 'GBP',
+                'payout_amount' => 5,
+                'floor_price' => 10,
+            ])
+            ->assertRedirect(route('accounts.index'))
+            ->assertSessionHas('error');
+    }
+
     public function test_account_settings_update_defaults(): void
     {
         $this->withoutVite();

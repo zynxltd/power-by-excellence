@@ -65,19 +65,19 @@ const securityStatStrip = computed(() => [
         <Panel title="Access Logs" class="mb-6" :padding="false">
             <DataTable :empty="!accessLogs?.data?.length" empty-message="No access logs found.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">When</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">IP</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Path</th>
+                    <th class="text-left">When</th>
+                    <th class="text-left">User</th>
+                    <th class="text-left">Action</th>
+                    <th class="text-left">IP</th>
+                    <th class="text-left">Path</th>
                 </template>
                 <tr v-for="log in accessLogs.data" :key="log.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-6 py-4"><FormattedDate :value="log.created_at" /></td>
-                    <td class="px-6 py-4">
+                    <td class=""><FormattedDate :value="log.created_at" /></td>
+                    <td class="">
                         <p class="font-medium text-slate-900 dark:text-white">{{ log.user?.name ?? 'Unknown' }}</p>
                         <p class="text-xs text-slate-500">{{ log.user?.email }}</p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="">
                         <span
                             :class="[
                                 'rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
@@ -89,11 +89,11 @@ const securityStatStrip = computed(() => [
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500">{{ log.path ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
+                    <td class="text-xs text-slate-500">{{ log.path ?? '—' }}</td>
                 </tr>
             </DataTable>
-            <div v-if="accessLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+            <div v-if="accessLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 dark:border-slate-800">
                 <Link
                     v-for="link in accessLogs.links"
                     :key="'access-' + link.label"
@@ -111,31 +111,31 @@ const securityStatStrip = computed(() => [
         <Panel title="Audit Logs" :padding="false">
             <DataTable :empty="!auditLogs?.data?.length" empty-message="No audit events found.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">When</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Entity</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">IP</th>
+                    <th class="text-left">When</th>
+                    <th class="text-left">User</th>
+                    <th class="text-left">Action</th>
+                    <th class="text-left">Entity</th>
+                    <th class="text-left">IP</th>
                 </template>
                 <tr v-for="log in auditLogs.data" :key="log.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-6 py-4"><FormattedDate :value="log.created_at" /></td>
-                    <td class="px-6 py-4">
+                    <td class=""><FormattedDate :value="log.created_at" /></td>
+                    <td class="">
                         <p class="font-medium text-slate-900 dark:text-white">{{ log.user?.name ?? 'System' }}</p>
                         <p class="text-xs text-slate-500">{{ log.user?.email }}</p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="">
                         <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                    <td class="text-xs text-slate-600 dark:text-slate-400">
                         {{ log.entity_type ?? '—' }}
                         <span v-if="log.entity_id" class="font-mono text-xs text-slate-500">#{{ log.entity_id }}</span>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
                 </tr>
             </DataTable>
-            <div v-if="auditLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+            <div v-if="auditLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 dark:border-slate-800">
                 <Link
                     v-for="link in auditLogs.links"
                     :key="'audit-' + link.label"

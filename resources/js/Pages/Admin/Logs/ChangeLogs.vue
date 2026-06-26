@@ -21,31 +21,31 @@ defineProps({ events: Object });
         <Panel :padding="false">
             <DataTable :empty="!events?.data?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">When</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Event</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Message</th>
+                    <th class="text-left">When</th>
+                    <th class="text-left">Lead</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Event</th>
+                    <th class="text-left">Message</th>
                 </template>
                 <tr v-for="event in events.data" :key="event.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td class="px-6 py-4"><FormattedDate :value="event.created_at" /></td>
-                    <td class="px-6 py-4">
+                    <td class=""><FormattedDate :value="event.created_at" /></td>
+                    <td class="">
                         <Link
                             v-if="event.lead"
                             :href="route('leads.show', event.lead.id)"
-                            class="font-mono text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                            class="font-mono text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                         >
                             {{ event.lead.uuid?.slice(0, 12) }}…
                         </Link>
                         <span v-else class="text-slate-400">—</span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ event.lead?.campaign?.name ?? '—' }}</td>
-                    <td class="px-6 py-4">
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.lead?.campaign?.name ?? '—' }}</td>
+                    <td class="">
                         <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                             {{ event.event_type }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ event.message ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.message ?? '—' }}</td>
                 </tr>
             </DataTable>
             <Pagination :links="events.links" />

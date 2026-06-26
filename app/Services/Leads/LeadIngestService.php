@@ -50,10 +50,11 @@ class LeadIngestService
 
         $reserved = [
             'campaign_reference', 'campaign_id', 'sid', 'ssid', 'source',
-            'ip_address', 'user_agent', 'sync', 'queue_id',
+            'ip_address', 'user_agent', 'sync', 'queue_id', 'test',
         ];
 
         $fieldData = collect($data)->except($reserved)->all();
+        $isTest = filter_var($data['test'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         $lead = Lead::create([
             'account_id' => $campaign->account_id,
@@ -63,6 +64,7 @@ class LeadIngestService
             'sub_supplier_id' => $subSupplierId,
             'queue_id' => $data['queue_id'] ?? ('q_'.Str::random(16)),
             'field_data' => $fieldData,
+            'metadata' => $isTest ? ['test_mode' => true] : null,
             'sid' => $data['sid'] ?? null,
             'ssid' => $data['ssid'] ?? null,
             'source' => $data['source'] ?? null,

@@ -8,6 +8,7 @@ use App\Models\DeliveryLog;
 use App\Models\Lead;
 use App\Services\Logging\PlatformLogger;
 use App\Services\Rules\RuleEngine;
+use App\Support\Delivery\EmailRecipientResolver;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -450,18 +451,29 @@ class DeliveryExecutor
 
     protected function sendEmail(array $fields, array $config, DeliveryLog $log, Delivery $delivery): DeliveryResult
     {
-        $to = $config['to'] ?? null;
-        if (! $to) {
+        $delivery->loadMissing('buyer');
+        $recipients = app(EmailRecipientResolver::class)->resolve($config, $delivery);
+
+        if (! app(EmailRecipientResolver::class)->hasRecipients($recipients)) {
             return DeliveryResult::failed('Email recipient not configured');
         }
 
         $subject = $this->interpolator->interpolate($config['subject'] ?? 'New Lead', $fields);
         $body = $this->interpolator->interpolate($config['body'] ?? json_encode($fields), $fields);
 
-        $log->update(['post_request' => ['to' => $to, 'subject' => $subject]]);
+        $log->update(['post_request' => array_merge(['subject' => $subject], $recipients)]);
 
         try {
-            \Illuminate\Support\Facades\Mail::raw($body, fn ($m) => $m->to($to)->subject($subject));
+            \Illuminate\Support\Facades\Mail::raw($body, function ($message) use ($recipients, $subject) {
+                $message->to($recipients['to']);
+                if (! empty($recipients['cc'])) {
+                    $message->cc($recipients['cc']);
+                }
+                if (! empty($recipients['bcc'])) {
+                    $message->bcc($recipients['bcc']);
+                }
+                $message->subject($subject);
+            });
 
             $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
 
@@ -473,8 +485,10 @@ class DeliveryExecutor
 
     protected function emailPingPost(array $fields, array $pingFields, array $config, DeliveryLog $log, Delivery $delivery): DeliveryResult
     {
-        $to = $config['to'] ?? null;
-        if (! $to) {
+        $delivery->loadMissing('buyer');
+        $recipients = app(EmailRecipientResolver::class)->resolve($config, $delivery);
+
+        if (! app(EmailRecipientResolver::class)->hasRecipients($recipients)) {
             return DeliveryResult::failed('Email recipient not configured');
         }
 
@@ -491,12 +505,21 @@ class DeliveryExecutor
         }
 
         $log->update([
-            'ping_request' => ['to' => $to, 'subject' => $subject, 'fields' => array_keys($pingFields)],
+            'ping_request' => array_merge(['subject' => $subject, 'fields' => array_keys($pingFields)], $recipients),
             'ping_response' => ['mode' => 'email_ping_post', 'awaiting' => true],
         ]);
 
         try {
-            \Illuminate\Support\Facades\Mail::raw($body, fn ($m) => $m->to($to)->subject($subject));
+            \Illuminate\Support\Facades\Mail::raw($body, function ($message) use ($recipients, $subject) {
+                $message->to($recipients['to']);
+                if (! empty($recipients['cc'])) {
+                    $message->cc($recipients['cc']);
+                }
+                if (! empty($recipients['bcc'])) {
+                    $message->bcc($recipients['bcc']);
+                }
+                $message->subject($subject);
+            });
 
             $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
 

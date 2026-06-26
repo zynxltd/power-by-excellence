@@ -19,6 +19,8 @@ const styles = {
     validating: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-400',
     distributing: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-400',
     success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400',
+    past_due: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',
+    locked: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-400',
     failed: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-400',
     skipped: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',
 };

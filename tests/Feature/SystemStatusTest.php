@@ -28,7 +28,26 @@ class SystemStatusTest extends TestCase
                 ->has('status')
                 ->has('status.components')
                 ->where('status.status', fn ($v) => in_array($v, ['operational', 'degraded', 'outage'], true))
+                ->where('status.components', fn ($components) => collect($components)->pluck('key')->contains('lead_api')
+                    && ! collect($components)->pluck('key')->contains('base_domain'))
             );
+    }
+
+    public function test_public_status_json_hides_internal_infrastructure_checks(): void
+    {
+        $payload = app(PlatformStatusService::class)->publicPayload();
+
+        $keys = collect($payload['components'])->pluck('key')->all();
+
+        $this->assertContains('lead_api', $keys);
+        $this->assertContains('buyer_delivery', $keys);
+        $this->assertNotContains('base_domain', $keys);
+        $this->assertNotContains('session_domain', $keys);
+        $this->assertNotContains('horizon', $keys);
+
+        foreach ($payload['components'] as $component) {
+            $this->assertStringNotContainsString('powerbyexcellence.test', strtolower($component['message']));
+        }
     }
 
     public function test_public_status_json_endpoint(): void

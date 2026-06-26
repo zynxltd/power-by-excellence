@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
 use App\Support\Campaign\CampaignFieldCatalog;
+use App\Support\Delivery\EmailRecipientResolver;
 use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Services\Delivery\DeliveryAnalyticsService;
@@ -77,7 +78,7 @@ class DeliveryController extends Controller
                     Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id'])
                 ),
                 'verticals' => VerticalCatalog::options(),
-                'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference']),
+                'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference', 'email']),
                 'methods' => collect(['direct_post', 'ping_post', 'email_ping_post', 'store_lead', 'email', 'sms']),
                 'statuses' => ['active', 'inactive', 'saved'],
             ],
@@ -111,6 +112,7 @@ class DeliveryController extends Controller
         return Inertia::render('Admin/Deliveries/Show', [
             'delivery' => $delivery,
             'recentLogs' => $recentLogs,
+            'initialTab' => request()->query('tab', 'overview'),
             'methodGuide' => $this->methodGuides()[$delivery->method->value] ?? null,
             'health' => $analytics->healthFor($delivery),
             'stats' => $analytics->statsFor($delivery),
@@ -171,12 +173,19 @@ class DeliveryController extends Controller
         $delivery = $this->resolveDelivery($delivery);
         $lead = $delivery->campaign->leads()->latest()->first();
         if (! $lead) {
-            return back()->with('error', 'No leads available to test with. Submit a test lead via the API first.');
+            return back()->with('error', 'No leads available to test with. Submit a test lead via the API first (use "test": true on the ingest API to avoid live routing).');
         }
 
         app(\App\Services\Delivery\DeliveryExecutor::class)->execute($lead, $delivery);
 
-        return back()->with('success', 'Test delivery executed. Check Live Operations or lead detail for logs.');
+        return redirect()
+            ->route('deliveries.show', [
+                'delivery' => $delivery,
+                'tab' => 'logs',
+            ])
+            ->with('success', 'Test delivery executed against the latest campaign lead. Review the ping/post log below — this fires a live request to the buyer endpoint.')
+            ->with('test_lead_uuid', $lead->uuid)
+            ->with('test_lead_id', $lead->id);
     }
 
     protected function formData(?Delivery $delivery, ?Request $request = null): array
@@ -210,7 +219,7 @@ class DeliveryController extends Controller
                 Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id', 'floor_price', 'bidding_mode'])
             ),
             'verticals' => VerticalCatalog::options(),
-            'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference']),
+            'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference', 'email']),
             'methodGuides' => $this->methodGuides(),
             'routingModes' => collect(RoutingMode::cases())->map(fn ($m) => [
                 'value' => $m->value,
@@ -340,6 +349,29 @@ class DeliveryController extends Controller
                 $validated['revenue_rules'] ?? [],
                 fn ($r) => ! empty($r['field']) && isset($r['amount'])
             ));
+        }
+
+        if (in_array($validated['method'] ?? '', ['email', 'email_ping_post'], true)) {
+            $buyer = ! empty($validated['buyer_id'])
+                ? \App\Models\Buyer::find($validated['buyer_id'])
+                : null;
+            $previewDelivery = new Delivery([
+                'buyer_id' => $validated['buyer_id'] ?? null,
+            ]);
+            if ($buyer) {
+                $previewDelivery->setRelation('buyer', $buyer);
+            }
+
+            $recipients = app(EmailRecipientResolver::class)->resolve(
+                $validated['config'] ?? [],
+                $previewDelivery,
+            );
+
+            if (! app(EmailRecipientResolver::class)->hasRecipients($recipients)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'config.to' => 'Add at least one recipient (buyer email and/or addresses in To).',
+                ]);
+            }
         }
 
         return $validated;

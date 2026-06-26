@@ -20,8 +20,22 @@ class EnsurePortalRole
             default => false,
         };
 
-        abort_unless($allowed, 403);
+        if ($allowed) {
+            return $next($request);
+        }
 
-        return $next($request);
+        if ($user?->role === UserRole::BuyerPortal) {
+            return redirect()
+                ->route('portal.buyer.dashboard')
+                ->with('error', 'Buyer portal accounts cannot access admin pages.');
+        }
+
+        if ($user?->role === UserRole::SupplierPortal) {
+            return redirect()
+                ->route('portal.supplier.dashboard')
+                ->with('error', 'Supplier portal accounts cannot access admin pages. Use the supplier dashboard instead.');
+        }
+
+        abort(403);
     }
 }

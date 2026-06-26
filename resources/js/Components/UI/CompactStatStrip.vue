@@ -15,15 +15,30 @@ const props = defineProps({
 
 const columnCount = computed(() => Number(props.columns) || props.items.length);
 
-const gridStyle = computed(() => ({
-    gridTemplateColumns: `repeat(${columnCount.value}, minmax(4.5rem, 1fr))`,
-}));
+const compactLayout = computed(() => props.items.length <= 3);
+
+const gridStyle = computed(() => {
+    const count = props.items.length;
+
+    if (compactLayout.value) {
+        return {
+            gridTemplateColumns: `repeat(${count}, minmax(9rem, 11rem))`,
+        };
+    }
+
+    return {
+        gridTemplateColumns: `repeat(${columnCount.value}, minmax(4.5rem, 1fr))`,
+    };
+});
 </script>
 
 <template>
     <div class="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div
-            class="grid w-full min-w-full divide-x divide-slate-200 dark:divide-slate-800"
+            :class="[
+                'grid divide-x divide-slate-200 dark:divide-slate-800',
+                compactLayout ? 'w-fit max-w-full' : 'w-full min-w-full',
+            ]"
             :style="gridStyle"
         >
             <component

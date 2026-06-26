@@ -9,6 +9,7 @@ import Pagination from '@/Components/UI/Pagination.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import ReportMetricSection from '@/Components/UI/ReportMetricSection.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -57,8 +58,6 @@ const netPerLead = computed(() => {
 });
 const quarantineRate = computed(() => pct(props.summary?.quarantined_period ?? 0, props.summary?.leads_period ?? 0));
 const pingFailRate = computed(() => pct(delivery.value.rejections ?? 0, delivery.value.attempts ?? 0));
-
-const kpiColumns = 4;
 
 const volumeStrip = computed(() => [
     { label: `Leads (${props.days}d)`, value: formatNumber(props.summary?.leads_period), href: route('leads.index'), accent: 'indigo' },
@@ -160,21 +159,18 @@ const revenueDataset = computed(() => ([
             title="Volume"
             :description="`Lead flow and financial totals for the last ${days} days. Click a metric to drill down.`"
             :items="volumeStrip"
-            :columns="kpiColumns"
         />
 
         <ReportMetricSection
             title="Unit economics"
             description="Revenue and payout efficiency per lead. Hover a metric for the formula — EPL is revenue per sold lead; EPC is revenue per lead received; CPL is supplier payout per lead received."
             :items="economicsStrip"
-            :columns="kpiColumns"
         />
 
         <ReportMetricSection
             title="Rates & delivery health"
             description="Conversion, rejection, and ping-post delivery quality for the selected period."
             :items="rateStrip"
-            :columns="kpiColumns"
         />
 
         <div class="grid gap-6 lg:grid-cols-2">
@@ -242,40 +238,40 @@ const revenueDataset = computed(() => ([
             <template #header>
                 <div>
                     <h3 class="font-semibold text-slate-900 dark:text-white">Campaign performance</h3>
-                    <p class="mt-1 text-sm text-slate-500">Per-campaign volume, conversion, revenue, and EPL for the selected period.</p>
+                    <p class="mt-1 text-xs text-slate-500">Per-campaign volume, conversion, revenue, and EPL for the selected period.</p>
                 </div>
             </template>
             <DataTable :empty="!byCampaign?.data?.length" empty-message="No campaign data for this period.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Campaign</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Received</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sold</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Unsold</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Rejected</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Conv.</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Payout</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Margin</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">EPL</th>
+                    <th class="text-left">Campaign</th>
+                    <th class="text-left">Received</th>
+                    <th class="text-left">Sold</th>
+                    <th class="text-left">Unsold</th>
+                    <th class="text-left">Rejected</th>
+                    <th class="text-left">Conv.</th>
+                    <th class="text-left">Revenue</th>
+                    <th class="text-left">Payout</th>
+                    <th class="text-left">Margin</th>
+                    <th class="text-left">EPL</th>
                 </template>
                 <ClickableTableRow
                     v-for="row in byCampaign.data"
                     :key="row.campaign_id"
                     :href="route('campaigns.show', row.campaign_id)"
                 >
-                    <td class="px-6 py-4">
+                    <td class="">
                         <span class="font-medium">{{ row.name }}</span>
                         <span v-if="row.reference" class="ml-1 text-xs text-slate-400">{{ row.reference }}</span>
                     </td>
-                    <td class="px-6 py-4">{{ row.received }}</td>
-                    <td class="px-6 py-4 text-emerald-600">{{ row.sold }}</td>
-                    <td class="px-6 py-4 text-amber-600">{{ row.unsold }}</td>
-                    <td class="px-6 py-4 text-rose-600">{{ row.rejected }}</td>
-                    <td class="px-6 py-4">{{ conversionRate(row) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.revenue) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.payout) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.margin) }}</td>
-                    <td class="px-6 py-4 font-medium text-cyan-600">{{ eplForRow(row) }}</td>
+                    <td class="">{{ row.received }}</td>
+                    <td class="text-emerald-600">{{ row.sold }}</td>
+                    <td class="text-amber-600">{{ row.unsold }}</td>
+                    <td class="text-rose-600">{{ row.rejected }}</td>
+                    <td class="">{{ conversionRate(row) }}</td>
+                    <td class="">{{ formatMoney(row.revenue) }}</td>
+                    <td class="">{{ formatMoney(row.payout) }}</td>
+                    <td class="">{{ formatMoney(row.margin) }}</td>
+                    <td class="font-medium text-cyan-600">{{ eplForRow(row) }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="byCampaign.links" />
@@ -285,35 +281,35 @@ const revenueDataset = computed(() => ([
             <template #header>
                 <div>
                     <h3 class="font-semibold text-slate-900 dark:text-white">Affiliate / SID performance</h3>
-                    <p class="mt-1 text-sm text-slate-500">Source ID (SID) breakdown with EPL and conversion for affiliate traffic analysis.</p>
+                    <p class="mt-1 text-xs text-slate-500">Source ID (SID) breakdown with EPL and conversion for affiliate traffic analysis.</p>
                 </div>
             </template>
             <DataTable :empty="!bySid?.data?.length" empty-message="No SID data — leads need sid on ingest.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">SID</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Supplier</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Received</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sold</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Rejected</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Conv.</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Payout</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">EPL</th>
+                    <th class="text-left">SID</th>
+                    <th class="text-left">Supplier</th>
+                    <th class="text-left">Received</th>
+                    <th class="text-left">Sold</th>
+                    <th class="text-left">Rejected</th>
+                    <th class="text-left">Conv.</th>
+                    <th class="text-left">Revenue</th>
+                    <th class="text-left">Payout</th>
+                    <th class="text-left">EPL</th>
                 </template>
                 <ClickableTableRow
                     v-for="row in bySid.data"
                     :key="`${row.sid}-${row.supplier_id}`"
                     :href="row.supplier_id ? route('suppliers.show', row.supplier_id) : route('leads.index')"
                 >
-                    <td class="px-6 py-4 font-mono text-sm font-medium">{{ row.sid }}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.supplier_name ?? '—' }}</td>
-                    <td class="px-6 py-4">{{ row.received }}</td>
-                    <td class="px-6 py-4 text-emerald-600">{{ row.sold }}</td>
-                    <td class="px-6 py-4 text-rose-600">{{ row.rejected }}</td>
-                    <td class="px-6 py-4">{{ conversionRate(row) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.revenue) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.payout) }}</td>
-                    <td class="px-6 py-4 font-medium text-cyan-600">{{ eplForRow(row) }}</td>
+                    <td class="font-mono text-xs font-medium">{{ row.sid }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.supplier_name ?? '—' }}</td>
+                    <td class="">{{ row.received }}</td>
+                    <td class="text-emerald-600">{{ row.sold }}</td>
+                    <td class="text-rose-600">{{ row.rejected }}</td>
+                    <td class="">{{ conversionRate(row) }}</td>
+                    <td class="">{{ formatMoney(row.revenue) }}</td>
+                    <td class="">{{ formatMoney(row.payout) }}</td>
+                    <td class="font-medium text-cyan-600">{{ eplForRow(row) }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="bySid.links" />
@@ -323,7 +319,7 @@ const revenueDataset = computed(() => ([
             <template #header>
                 <div>
                     <h3 class="font-semibold text-slate-900 dark:text-white">Ping tree tier summary</h3>
-                    <p class="mt-1 text-sm text-slate-500">
+                    <p class="mt-1 text-xs text-slate-500">
                         Each <strong>tier</strong> is a step in the ping tree — buyers are pinged in tier order.
                         <span v-if="pingTree?.config_name"> Demo snapshot: {{ pingTree.config_name }} on {{ pingTree.campaign_name }} ({{ pingTree.tier_count }} tiers).</span>
                     </p>
@@ -331,26 +327,26 @@ const revenueDataset = computed(() => ([
             </template>
             <DataTable :empty="!tierSummary?.data?.length" empty-message="No tier data — run php artisan db:seed to populate demo history.">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Tier</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Attempts</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Wins</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Outbid</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Rejections</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Win rate</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
+                    <th class="text-left">Tier</th>
+                    <th class="text-left">Attempts</th>
+                    <th class="text-left">Wins</th>
+                    <th class="text-left">Outbid</th>
+                    <th class="text-left">Rejections</th>
+                    <th class="text-left">Win rate</th>
+                    <th class="text-left">Revenue</th>
                 </template>
                 <ClickableTableRow
                     v-for="row in tierSummary.data"
                     :key="row.tier"
                     :href="deliveryLogFilter({ tier: row.tier })"
                 >
-                    <td class="px-6 py-4 font-medium">Tier {{ row.tier }}</td>
-                    <td class="px-6 py-4">{{ row.attempts }}</td>
-                    <td class="px-6 py-4 text-emerald-600">{{ row.wins }}</td>
-                    <td class="px-6 py-4 text-amber-600">{{ row.outbid }}</td>
-                    <td class="px-6 py-4 text-rose-600">{{ row.rejections }}</td>
-                    <td class="px-6 py-4">{{ winRate(row) }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.revenue) }}</td>
+                    <td class="font-medium">Tier {{ row.tier }}</td>
+                    <td class="">{{ row.attempts }}</td>
+                    <td class="text-emerald-600">{{ row.wins }}</td>
+                    <td class="text-amber-600">{{ row.outbid }}</td>
+                    <td class="text-rose-600">{{ row.rejections }}</td>
+                    <td class="">{{ winRate(row) }}</td>
+                    <td class="">{{ formatMoney(row.revenue) }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="tierSummary.links" />
@@ -360,39 +356,39 @@ const revenueDataset = computed(() => ([
             <template #header>
                 <div>
                     <h3 class="font-semibold text-slate-900 dark:text-white">Delivery performance by buyer route</h3>
-                    <p class="mt-1 text-sm text-slate-500">Each row is a buyer delivery endpoint. Click to view individual post/ping attempts in delivery logs.</p>
+                    <p class="mt-1 text-xs text-slate-500">Each row is a buyer delivery endpoint. Click to view individual post/ping attempts in delivery logs.</p>
                 </div>
             </template>
             <DataTable :empty="!deliveryPerformance?.data?.length">
                 <template #head>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Delivery</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Buyer</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Tier</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Method</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Attempts</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Success</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Outbid</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Rate</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Avg ms</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
+                    <th class="text-left">Delivery</th>
+                    <th class="text-left">Buyer</th>
+                    <th class="text-left">Tier</th>
+                    <th class="text-left">Method</th>
+                    <th class="text-left">Attempts</th>
+                    <th class="text-left">Success</th>
+                    <th class="text-left">Outbid</th>
+                    <th class="text-left">Rate</th>
+                    <th class="text-left">Avg ms</th>
+                    <th class="text-left">Revenue</th>
                 </template>
                 <ClickableTableRow
                     v-for="row in deliveryPerformance.data"
                     :key="row.delivery_id"
                     :href="deliveryLogFilter({ delivery_id: row.delivery_id })"
                 >
-                    <td class="px-6 py-4">
+                    <td class="">
                         <Link :href="route('deliveries.show', row.delivery_id)" class="font-medium text-indigo-600 hover:underline" @click.stop>{{ row.name }}</Link>
                     </td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.buyer_name ?? '—' }}</td>
-                    <td class="px-6 py-4">{{ row.tier ?? '—' }}</td>
-                    <td class="px-6 py-4 text-xs capitalize text-slate-500">{{ methodLabels[row.method] ?? row.method }}</td>
-                    <td class="px-6 py-4">{{ row.attempts }}</td>
-                    <td class="px-6 py-4 text-emerald-600">{{ row.successes }}</td>
-                    <td class="px-6 py-4 text-amber-600">{{ row.outbid }}</td>
-                    <td class="px-6 py-4">{{ successRate(row) }}</td>
-                    <td class="px-6 py-4 text-sm text-slate-500">{{ row.avg_duration_ms ? Math.round(row.avg_duration_ms) : '—' }}</td>
-                    <td class="px-6 py-4">{{ formatMoney(row.revenue) }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.buyer_name ?? '—' }}</td>
+                    <td class="">{{ row.tier ?? '—' }}</td>
+                    <td class="text-xs capitalize text-slate-500">{{ methodLabels[row.method] ?? row.method }}</td>
+                    <td class="">{{ row.attempts }}</td>
+                    <td class="text-emerald-600">{{ row.successes }}</td>
+                    <td class="text-amber-600">{{ row.outbid }}</td>
+                    <td class="">{{ successRate(row) }}</td>
+                    <td class="text-xs text-slate-500">{{ row.avg_duration_ms ? Math.round(row.avg_duration_ms) : '—' }}</td>
+                    <td class="">{{ formatMoney(row.revenue) }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="deliveryPerformance.links" />
@@ -402,22 +398,22 @@ const revenueDataset = computed(() => ([
             <Panel title="Top buyers (period)" :padding="false">
                 <DataTable :empty="!byBuyer?.data?.length">
                     <template #head>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Buyer</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Leads</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Margin</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">EPL</th>
+                        <th class="text-left">Buyer</th>
+                        <th class="text-left">Leads</th>
+                        <th class="text-left">Revenue</th>
+                        <th class="text-left">Margin</th>
+                        <th class="text-left">EPL</th>
                     </template>
                     <ClickableTableRow
                         v-for="row in byBuyer.data"
                         :key="row.buyer_id"
                         :href="route('billing.show', row.buyer_id)"
                     >
-                        <td class="px-6 py-4 font-medium">{{ row.name }}</td>
-                        <td class="px-6 py-4">{{ row.leads }}</td>
-                        <td class="px-6 py-4 text-emerald-600">{{ formatMoney(row.revenue) }}</td>
-                        <td class="px-6 py-4 text-violet-600">{{ formatMoney(row.margin) }}</td>
-                        <td class="px-6 py-4 font-medium text-cyan-600">{{ eplForRow({ sold: row.leads, revenue: row.revenue }) }}</td>
+                        <td class="font-medium">{{ row.name }}</td>
+                        <td class="">{{ row.leads }}</td>
+                        <td class="text-emerald-600">{{ formatMoney(row.revenue) }}</td>
+                        <td class="text-violet-600">{{ formatMoney(row.margin) }}</td>
+                        <td class="font-medium text-cyan-600">{{ eplForRow({ sold: row.leads, revenue: row.revenue }) }}</td>
                     </ClickableTableRow>
                 </DataTable>
                 <Pagination :links="byBuyer.links" />
@@ -425,22 +421,22 @@ const revenueDataset = computed(() => ([
             <Panel title="Top suppliers (period)" :padding="false">
                 <DataTable :empty="!bySupplier?.data?.length">
                     <template #head>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Supplier</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Leads</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Payout</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">Revenue</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase text-slate-500">CPA</th>
+                        <th class="text-left">Supplier</th>
+                        <th class="text-left">Leads</th>
+                        <th class="text-left">Payout</th>
+                        <th class="text-left">Revenue</th>
+                        <th class="text-left">CPA</th>
                     </template>
                     <ClickableTableRow
                         v-for="row in bySupplier.data"
                         :key="row.supplier_id"
                         :href="route('suppliers.show', row.supplier_id)"
                     >
-                        <td class="px-6 py-4 font-medium">{{ row.name }}</td>
-                        <td class="px-6 py-4">{{ row.leads }}</td>
-                        <td class="px-6 py-4 text-amber-600">{{ formatMoney(row.payout) }}</td>
-                        <td class="px-6 py-4 text-emerald-600">{{ formatMoney(row.revenue) }}</td>
-                        <td class="px-6 py-4 font-medium text-amber-600">{{ row.leads ? formatMoney(row.payout / row.leads) : '—' }}</td>
+                        <td class="font-medium">{{ row.name }}</td>
+                        <td class="">{{ row.leads }}</td>
+                        <td class="text-amber-600">{{ formatMoney(row.payout) }}</td>
+                        <td class="text-emerald-600">{{ formatMoney(row.revenue) }}</td>
+                        <td class="font-medium text-amber-600">{{ row.leads ? formatMoney(row.payout / row.leads) : '—' }}</td>
                     </ClickableTableRow>
                 </DataTable>
                 <Pagination :links="bySupplier.links" />
