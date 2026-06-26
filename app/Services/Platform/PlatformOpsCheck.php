@@ -4,10 +4,10 @@ namespace App\Services\Platform;
 
 use App\Models\Account;
 use App\Models\DeliveryLog;
+use App\Support\Platform\ResilientQueueBootstrap;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
 
 class PlatformOpsCheck
 {
@@ -248,8 +248,13 @@ class PlatformOpsCheck
         }
 
         try {
-            $connection = Redis::connection();
-            $pong = $connection->ping();
+            $manager = ResilientQueueBootstrap::redisManager();
+
+            if (! $manager) {
+                throw new \RuntimeException('Redis manager unavailable');
+            }
+
+            $pong = $manager->connection()->ping();
             $payload = is_string($pong) ? $pong : 'PONG';
 
             return $this->result(

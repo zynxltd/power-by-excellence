@@ -2,9 +2,10 @@
 
 namespace App\Support\Platform;
 
+use Illuminate\Redis\RedisManager;
+use Illuminate\Redis\RedisServiceProvider;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
 
 class ResilientQueueBootstrap
 {
@@ -52,10 +53,29 @@ class ResilientQueueBootstrap
         return in_array($connection, ['redis', 'failover'], true);
     }
 
+    public static function redisManager(): ?RedisManager
+    {
+        $app = app();
+
+        if (! $app->bound('redis')) {
+            $app->register(RedisServiceProvider::class);
+        }
+
+        $redis = $app->make('redis');
+
+        return $redis instanceof RedisManager ? $redis : null;
+    }
+
     protected static function redisReachable(): bool
     {
         try {
-            $pong = Redis::connection()->ping();
+            $manager = self::redisManager();
+
+            if (! $manager) {
+                return false;
+            }
+
+            $pong = $manager->connection()->ping();
 
             return strtoupper((string) $pong) === 'PONG' || $pong === true;
         } catch (\Throwable) {

@@ -13,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        ResilientQueueBootstrap::apply();
+        //
     }
 
     /**
@@ -21,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        ResilientQueueBootstrap::apply();
+
         Vite::prefetch(concurrency: 3);
 
         \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(function (object $user, string $token) {

@@ -19,4 +19,20 @@ class ResilientQueueBootstrapTest extends TestCase
         $this->assertSame('database', config('queue.default'));
         $this->assertFalse(config('platform.queue.fallback_active'));
     }
+
+    public function test_redis_preferred_uses_redis_when_reachable(): void
+    {
+        if (! ResilientQueueBootstrap::redisManager()?->connection()->ping()) {
+            $this->markTestSkipped('Redis is not available in this environment.');
+        }
+
+        Config::set('platform.queue.preferred_connection', 'redis');
+        Config::set('platform.queue.redis_fallback', true);
+        Config::set('platform.queue.fallback_active', false);
+
+        ResilientQueueBootstrap::apply();
+
+        $this->assertSame('redis', config('queue.default'));
+        $this->assertFalse(config('platform.queue.fallback_active'));
+    }
 }
