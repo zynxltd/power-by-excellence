@@ -41,12 +41,12 @@ const submit = () => {
         <Head title="Sign In — PowerByExcellence" />
 
         <template #header>
-            <h2 class="text-3xl font-bold tracking-tight text-slate-900">
+            <h2>
                 {{ tenant ? `Sign in — ${tenant.display_name ?? tenant.name}` : 'Welcome back' }}
             </h2>
-            <p v-if="tenant" class="mt-2 text-slate-500">Partner platform portal — admins, buyers, and suppliers.</p>
-            <p v-else-if="isCentralHost" class="mt-2 text-slate-500">Super admin sign-in for PowerByExcellence central operations.</p>
-            <p v-else class="mt-2 text-slate-500">Sign in to access your admin or portal dashboard.</p>
+            <p v-if="tenant">Partner platform portal — admins, buyers, and suppliers.</p>
+            <p v-else-if="isCentralHost">Super admin sign-in for PowerByExcellence central operations.</p>
+            <p v-else>Sign in to access your admin or portal dashboard.</p>
         </template>
 
         <div
@@ -93,7 +93,7 @@ const submit = () => {
                         autocomplete="username"
                         placeholder="you@company.com"
                         :class="[
-                            'block w-full rounded-xl border bg-slate-50 py-3 pl-11 pr-4 text-slate-900 placeholder-slate-400 transition focus:bg-white focus:outline-none focus:ring-2',
+                            'block w-full rounded-xl border bg-slate-50 py-3 pl-11 pr-4 text-base text-slate-900 placeholder-slate-400 transition focus:bg-white focus:outline-none focus:ring-2',
                             form.errors.email
                                 ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
                                 : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20',
@@ -119,7 +119,7 @@ const submit = () => {
                         autocomplete="current-password"
                         placeholder="Enter your password"
                         :class="[
-                            'block w-full rounded-xl border bg-slate-50 py-3 pl-11 pr-12 text-slate-900 placeholder-slate-400 transition focus:bg-white focus:outline-none focus:ring-2',
+                            'block w-full rounded-xl border bg-slate-50 py-3 pl-11 pr-12 text-base text-slate-900 placeholder-slate-400 transition focus:bg-white focus:outline-none focus:ring-2',
                             form.errors.password
                                 ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
                                 : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20',
@@ -142,7 +142,7 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <label class="flex cursor-pointer items-center gap-2.5">
                     <Checkbox name="remember" v-model:checked="form.remember" />
                     <span class="text-sm text-slate-600">Remember me</span>

@@ -292,6 +292,7 @@ const stageLabel = (stage) => {
         </Panel>
 
         <Panel v-if="activeTab === 'fields'" title="Field data" class="mt-6" :padding="false">
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
@@ -306,6 +307,7 @@ const stageLabel = (stage) => {
                     </tr>
                 </tbody>
             </table>
+            </div>
         </Panel>
 
         <Panel v-if="activeTab === 'events'" title="Event log" class="mt-6">

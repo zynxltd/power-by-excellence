@@ -42,6 +42,7 @@ const permissionLabel = (permission) => ({
     'leads.create': 'Create leads',
     'leads.read': 'Read leads',
     'reports.read': 'Reports',
+    'platform.read': 'Platform export',
     'quarantine.manage': 'Quarantine',
     'buyers.manage': 'Buyers',
     '*': 'Full access',

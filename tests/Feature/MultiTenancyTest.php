@@ -9,7 +9,9 @@ use App\Models\Lead;
 use App\Models\LeadFinancial;
 use App\Models\User;
 use App\Support\Tenancy\AccountContext;
+use Database\Seeders\PlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class MultiTenancyTest extends TestCase
@@ -43,7 +45,7 @@ class MultiTenancyTest extends TestCase
 
     public function test_super_admin_dashboard_paginates_partner_platforms(): void
     {
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->seed(PlatformSeeder::class);
 
         $super = User::where('email', 'admin@powerbyexcellence.test')->first();
 
@@ -62,7 +64,7 @@ class MultiTenancyTest extends TestCase
         $this->actingAs($super)
             ->get(route('dashboard', ['tenant_page' => 1]))
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('tenantOverview.data', 10)
                 ->where('tenantOverview.total', $total)
                 ->where('tenantOverview.current_page', 1)
@@ -72,7 +74,7 @@ class MultiTenancyTest extends TestCase
         $this->actingAs($super)
             ->get(route('dashboard', ['tenant_page' => 2]))
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('tenantOverview.data', $total - 10)
                 ->where('tenantOverview.current_page', 2)
             );
@@ -80,18 +82,21 @@ class MultiTenancyTest extends TestCase
 
     public function test_super_admin_without_tenant_does_not_see_tenant_scoped_dashboard_metrics(): void
     {
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->seed(PlatformSeeder::class);
 
         $super = User::where('email', 'admin@powerbyexcellence.test')->first();
 
         $this->actingAs($super)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('showTenantDashboard', false)
                 ->where('stats', null)
                 ->where('charts', null)
                 ->where('recentLeads', null)
+                ->has('platformHub.sections', 4)
+                ->where('platformHub.name', 'Central admin')
+                ->where('tenantHub', null)
             );
     }
 
@@ -159,7 +164,7 @@ class MultiTenancyTest extends TestCase
             ->withSession(['current_account_id' => $uk->id])
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('showTenantDashboard', true)
                 ->where('stats.revenue_today', fn ($value) => (float) $value === 25.0)
             );
@@ -168,7 +173,7 @@ class MultiTenancyTest extends TestCase
             ->withSession(['current_account_id' => $us->id])
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('stats.revenue_today', fn ($value) => (float) $value === 99.0)
             );
     }

@@ -37,7 +37,7 @@ const { formatMoney } = useMoneyFormat();
         </PageHeader>
 
         <Panel title="Filters" class="mb-6">
-            <div class="grid gap-3 md:grid-cols-5">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <div><InputLabel value="Search" /><input v-model="localFilters.search" class="form-input mt-1 w-full" placeholder="UUID or email" @keyup.enter="applyFilters" /></div>
                 <div>
                     <InputLabel value="Status" />

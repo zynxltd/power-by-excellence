@@ -148,7 +148,7 @@ const cellValue = (tier, row) => {
         <div :class="['marketing-content', marketingTheme === 'dark' && 'marketing-dark']">
             <section class="mx-auto max-w-7xl px-4 pt-28 pb-16 text-center sm:px-6">
                 <p class="brand-kicker mb-4">Plans & usage</p>
-                <h1 class="text-4xl font-bold text-slate-900 marketing-dark:text-white md:text-5xl">
+                <h1 class="text-3xl font-bold text-slate-900 marketing-dark:text-white sm:text-4xl md:text-5xl">
                     Pricing that <span class="brand-gradient-text">scales</span> with volume
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">

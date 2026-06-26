@@ -3,10 +3,13 @@
 namespace App\Services\Reports;
 
 use App\Services\Leads\LeadQualityService;
-use App\Support\TenantFinancialSummary;
 use App\Support\Tenancy\AccountContext;
+use App\Support\TenantFinancialSummary;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Illuminate\Support\Facades\DB;
 
 class ReportMetrics
@@ -21,7 +24,7 @@ class ReportMetrics
         private readonly ?string $currency = null,
     ) {}
 
-    public static function fromRequest(\Illuminate\Http\Request $request): self
+    public static function fromRequest(Request $request): self
     {
         $accountId = $request->attributes->get('account')?->id
             ?? AccountContext::id()
@@ -439,10 +442,10 @@ class ReportMetrics
             ->where('leads.status', 'sold')
             ->whereDate('leads.distributed_at', '>=', $this->since)
             ->whereDate('leads.distributed_at', '<=', $this->until())
-            ->selectRaw("
+            ->selectRaw('
                 sum(case when leads.redirect_offered_at is not null then 1 else 0 end) as offered,
                 sum(case when leads.redirect_followed_at is not null then 1 else 0 end) as followed
-            ")
+            ')
             ->first();
 
         $offered = (int) ($row->offered ?? 0);
@@ -460,10 +463,7 @@ class ReportMetrics
      */
     public function deliveryHealth(): array
     {
-        $row = $this->deliveryLogsQuery()
-            ->whereDate('delivery_logs.created_at', '>=', $this->since)
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
+        $row = $this->deliveryLogsInPeriod()
             ->selectRaw("
                 count(*) as attempts,
                 sum(case when delivery_logs.status = 'success' then 1 else 0 end) as successes,
@@ -483,9 +483,11 @@ class ReportMetrics
             'successes' => $successes,
             'outbid' => $outbid,
             'rejections' => (int) ($row->rejections ?? 0),
-            'success_rate' => $attempts > 0 ? round(($successes / $attempts) * 100, 1) : 0.0,
-            'outbid_rate' => $attempts > 0 ? round(($outbid / $attempts) * 100, 1) : 0.0,
-            'avg_duration_ms' => $row->avg_duration_ms ? (int) round($row->avg_duration_ms) : 0,
+            'success_rate' => $attempts > 0 ? round(($successes / $attempts) * 100, 1) : null,
+            'outbid_rate' => $attempts > 0 ? round(($outbid / $attempts) * 100, 1) : null,
+            'avg_duration_ms' => $attempts > 0 && $row->avg_duration_ms
+                ? (int) round($row->avg_duration_ms)
+                : null,
             'revenue' => (float) ($row->revenue ?? 0),
         ];
     }
@@ -495,10 +497,7 @@ class ReportMetrics
      */
     public function distributionOutcome(): array
     {
-        return $this->deliveryLogsQuery()
-            ->whereDate('delivery_logs.created_at', '>=', $this->since)
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
+        return $this->deliveryLogsInPeriod()
             ->selectRaw('delivery_logs.status, count(*) as total')
             ->groupBy('delivery_logs.status')
             ->pluck('total', 'status')
@@ -622,14 +621,16 @@ class ReportMetrics
 
     public function deliveryPerformance(int $perPage = 15): LengthAwarePaginator
     {
+        if (! $this->hasLeadVolumeInPeriod()) {
+            return $this->emptyPaginator($perPage, 'delivery_page');
+        }
+
         $redirectStats = $this->redirectStatsSubquery('deliveries.id');
 
-        return $this->deliveryLogsQuery()
+        return $this->deliveryLogsInPeriod()
             ->join('deliveries', 'deliveries.id', '=', 'delivery_logs.delivery_id')
             ->join('buyers', 'buyers.id', '=', 'deliveries.buyer_id')
             ->leftJoinSub($redirectStats, 'redirect_stats', 'redirect_stats.group_key', '=', 'deliveries.id')
-            ->whereDate('delivery_logs.created_at', '>=', $this->since)
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
             ->groupBy('deliveries.id', 'deliveries.name', 'deliveries.method', 'deliveries.tier', 'deliveries.campaign_id', 'buyers.name')
             ->selectRaw("
                 deliveries.id as delivery_id,
@@ -655,13 +656,15 @@ class ReportMetrics
 
     public function tierSummary(int $perPage = 10): LengthAwarePaginator
     {
+        if (! $this->hasLeadVolumeInPeriod()) {
+            return $this->emptyPaginator($perPage, 'tier_page');
+        }
+
         $redirectStats = $this->redirectStatsSubquery('deliveries.tier');
 
-        return $this->deliveryLogsQuery()
+        return $this->deliveryLogsInPeriod()
             ->join('deliveries', 'deliveries.id', '=', 'delivery_logs.delivery_id')
             ->leftJoinSub($redirectStats, 'redirect_stats', 'redirect_stats.group_key', '=', 'deliveries.tier')
-            ->whereDate('delivery_logs.created_at', '>=', $this->since)
-            ->whereDate('delivery_logs.created_at', '<=', $this->until())
             ->whereNotNull('deliveries.tier')
             ->groupBy('deliveries.tier')
             ->selectRaw("
@@ -679,7 +682,7 @@ class ReportMetrics
             ->withQueryString();
     }
 
-    private function redirectStatsSubquery(string $groupColumn): \Illuminate\Database\Query\Builder
+    private function redirectStatsSubquery(string $groupColumn): Builder
     {
         return DB::table('leads')
             ->join('deliveries', 'deliveries.id', '=', 'leads.winning_delivery_id')
@@ -696,14 +699,62 @@ class ReportMetrics
             ");
     }
 
-    private function leadsQuery(): \Illuminate\Database\Query\Builder
+    private function leadsQuery(): Builder
     {
         return DB::table('leads')
             ->when($this->accountId, fn ($q) => $q->where('leads.account_id', $this->accountId))
             ->when($this->campaignId, fn ($q) => $q->where('leads.campaign_id', $this->campaignId));
     }
 
-    private function deliveryLogsQuery(): \Illuminate\Database\Query\Builder
+    private function deliveryLogsInPeriod(): Builder
+    {
+        $query = $this->deliveryLogsQuery()
+            ->whereDate('leads.received_at', '>=', $this->since)
+            ->whereDate('leads.received_at', '<=', $this->until());
+
+        return $this->applyCurrencyScopeToLeads($query);
+    }
+
+    private function hasLeadVolumeInPeriod(): bool
+    {
+        return $this->applyLeadPeriodScope($this->leadsQuery())->exists();
+    }
+
+    private function applyLeadPeriodScope(Builder $query): Builder
+    {
+        $query->whereDate('leads.received_at', '>=', $this->since)
+            ->whereDate('leads.received_at', '<=', $this->until());
+
+        return $this->applyCurrencyScopeToLeads($query);
+    }
+
+    private function applyCurrencyScopeToLeads(Builder $query): Builder
+    {
+        if (! $this->currency) {
+            return $query;
+        }
+
+        return $query
+            ->join('campaigns', 'campaigns.id', '=', 'leads.campaign_id')
+            ->where('campaigns.currency', $this->currency);
+    }
+
+    private function emptyPaginator(int $perPage, string $pageName): LengthAwarePaginator
+    {
+        return new Paginator(
+            collect(),
+            0,
+            $perPage,
+            1,
+            [
+                'path' => request()->url(),
+                'pageName' => $pageName,
+                'query' => request()->query(),
+            ],
+        );
+    }
+
+    private function deliveryLogsQuery(): Builder
     {
         return DB::table('delivery_logs')
             ->join('leads', 'leads.id', '=', 'delivery_logs.lead_id')
@@ -711,7 +762,7 @@ class ReportMetrics
             ->when($this->campaignId, fn ($q) => $q->where('leads.campaign_id', $this->campaignId));
     }
 
-    private function financialsQuery(): \Illuminate\Database\Query\Builder
+    private function financialsQuery(): Builder
     {
         return DB::table('lead_financials')
             ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')

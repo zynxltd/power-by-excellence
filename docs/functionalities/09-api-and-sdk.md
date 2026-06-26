@@ -28,6 +28,7 @@ The **REST API** (`/api/v1`) is the primary machine interface for lead ingest, s
 | `leads.create` | `POST /leads`, `POST /leads/import` |
 | `leads.read` | `GET /leads/{uuid}`, `GET /leads/queue/{id}`, `POST /leads/search`, `POST /leads/{uuid}/reprocess` |
 | `reports.read` | `GET /reports/leads`, `GET /reports/revenue` |
+| `platform.read` | `GET /platform`, `GET /platform/campaigns/{reference}` |
 | `quarantine.manage` | `GET /quarantine`, `POST /quarantine/{uuid}/release\|reject` |
 | `buyers.manage` | `POST /buyers/{id}/feedback`, `POST /buyers/{id}/credit` |
 | `*` (admin key) | All of the above |
@@ -66,6 +67,16 @@ Ping simulator: `POST /api/v1/ping` with `{ "floor": 10, "bid_hint": 18 }` → `
 Post simulator: `POST /api/v1/post` → `{ "Success": true, "Approved": true }`. No auth required.
 
 Load `/sdk/pbe-leads.js` as ESM, call `createClient({ apiKey, baseUrl: '/api/v1' }).ingestLead({...})` with `sync: true`.
+
+### 9. Platform export (own portal / external stack)
+
+1. Create administrator API key (includes `platform.read` via `*` permission)
+2. `GET /api/v1/platform` with bearer token
+3. Expect JSON with `platform`, `campaigns`, `buyers`, `suppliers`, `webhooks`, `postbacks`, `forms`
+4. Optional: `GET /api/v1/platform?include=campaigns,buyers` for partial sync
+5. Optional: `GET /api/v1/platform/campaigns/loans-uk` for one campaign
+
+**Use case:** Partner runs their own white-label portal. They poll platform export to mirror campaign schemas and buyer routing locally, then POST leads via `/leads` and poll status — no admin UI login required.
 
 ### 8. Auth failure and revoke
 

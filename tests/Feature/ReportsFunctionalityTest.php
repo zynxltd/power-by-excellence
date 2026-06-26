@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Account;
+use App\Models\Buyer;
 use App\Models\Campaign;
+use App\Models\Delivery;
+use App\Models\DeliveryLog;
 use App\Models\Lead;
 use App\Models\LeadFinancial;
 use App\Models\User;
@@ -11,7 +14,9 @@ use App\Services\Api\ApiKeyService;
 use App\Services\Reports\ReportMetrics;
 use App\Support\AdminModules;
 use Carbon\Carbon;
+use Database\Seeders\PlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -26,7 +31,7 @@ class ReportsFunctionalityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->seed(PlatformSeeder::class);
         $this->withoutVite();
         $this->admin = User::where('email', 'uk@powerbyexcellence.test')->first();
         $this->account = Account::where('slug', 'excellence-uk')->first();
@@ -287,7 +292,7 @@ class ReportsFunctionalityTest extends TestCase
         $this->createLead($campaign, 'sold', Carbon::parse('2026-03-20'), 70, 40, 30);
         $this->createLead($campaign, 'sold', Carbon::parse('2026-04-01'), 999, 500, 499);
 
-        $request = \Illuminate\Http\Request::create('/reports', 'GET', [
+        $request = Request::create('/reports', 'GET', [
             'date_from' => '2026-03-10',
             'date_to' => '2026-03-20',
         ]);
@@ -375,7 +380,7 @@ class ReportsFunctionalityTest extends TestCase
         $this->createLead($campaign, 'sold', $inMonth, 80, 50, 30);
         $this->createLead($campaign, 'sold', $outOfMonth, 200, 100, 100);
 
-        $request = \Illuminate\Http\Request::create('/reports', 'GET', ['month' => '2026-03']);
+        $request = Request::create('/reports', 'GET', ['month' => '2026-03']);
         $request->attributes->set('account', $account);
         $metrics = ReportMetrics::fromRequest($request);
 
@@ -516,6 +521,131 @@ class ReportsFunctionalityTest extends TestCase
                 ->where('filters.redirect', 'followed')
                 ->where('leads.total', 1)
             );
+    }
+
+    public function test_delivery_health_is_null_when_no_leads_in_period(): void
+    {
+        $account = Account::create([
+            'name' => 'Delivery Health Empty',
+            'slug' => 'delivery-health-empty',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+            'is_active' => true,
+        ]);
+
+        $campaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'Delivery Health Campaign',
+            'reference' => 'delivery-health-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $delivery = Delivery::create([
+            'campaign_id' => $campaign->id,
+            'buyer_id' => Buyer::create([
+                'account_id' => $account->id,
+                'name' => 'Health Buyer',
+                'reference' => 'health-buyer',
+            ])->id,
+            'name' => 'Health Delivery',
+            'method' => 'ping_post',
+            'tier' => 1,
+            'is_active' => true,
+        ]);
+
+        $lead = $this->createLead($campaign, 'sold', today()->subDays(10), 25, 15, 10);
+
+        DeliveryLog::create([
+            'lead_id' => $lead->id,
+            'delivery_id' => $delivery->id,
+            'buyer_id' => $delivery->buyer_id,
+            'status' => 'success',
+            'revenue' => 25,
+            'duration_ms' => 45,
+            'created_at' => today(),
+            'updated_at' => today(),
+        ]);
+
+        $metrics = new ReportMetrics($account->id, today(), 1, null, today());
+        $summary = $metrics->summary($metrics->dailyCharts());
+
+        $this->assertSame(0, $summary['leads_period']);
+        $this->assertSame(0, $summary['delivery']['attempts']);
+        $this->assertNull($summary['delivery']['success_rate']);
+        $this->assertNull($summary['delivery']['avg_duration_ms']);
+        $this->assertEmpty($metrics->tierSummary()->items());
+        $this->assertEmpty($metrics->deliveryPerformance()->items());
+    }
+
+    public function test_delivery_health_counts_pings_for_leads_received_in_period(): void
+    {
+        $account = Account::create([
+            'name' => 'Delivery Health Sample',
+            'slug' => 'delivery-health-sample',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+            'is_active' => true,
+        ]);
+
+        $campaign = Campaign::create([
+            'account_id' => $account->id,
+            'name' => 'Delivery Sample Campaign',
+            'reference' => 'delivery-sample-campaign',
+            'country' => 'GB',
+            'currency' => 'GBP',
+            'status' => 'active',
+            'payout_amount' => 5,
+            'floor_price' => 10,
+        ]);
+
+        $delivery = Delivery::create([
+            'campaign_id' => $campaign->id,
+            'buyer_id' => Buyer::create([
+                'account_id' => $account->id,
+                'name' => 'Sample Buyer',
+                'reference' => 'sample-buyer',
+            ])->id,
+            'name' => 'Sample Delivery',
+            'method' => 'ping_post',
+            'tier' => 1,
+            'is_active' => true,
+        ]);
+
+        $lead = $this->createLead($campaign, 'sold', today(), 25, 15, 10);
+
+        DeliveryLog::create([
+            'lead_id' => $lead->id,
+            'delivery_id' => $delivery->id,
+            'buyer_id' => $delivery->buyer_id,
+            'status' => 'success',
+            'revenue' => 25,
+            'duration_ms' => 50,
+            'created_at' => today(),
+            'updated_at' => today(),
+        ]);
+
+        DeliveryLog::create([
+            'lead_id' => $lead->id,
+            'delivery_id' => $delivery->id,
+            'buyer_id' => $delivery->buyer_id,
+            'status' => 'failed',
+            'revenue' => 0,
+            'duration_ms' => 40,
+            'created_at' => today(),
+            'updated_at' => today(),
+        ]);
+
+        $metrics = new ReportMetrics($account->id, today(), 1, null, today());
+        $summary = $metrics->summary($metrics->dailyCharts());
+
+        $this->assertSame(1, $summary['leads_period']);
+        $this->assertSame(2, $summary['delivery']['attempts']);
+        $this->assertSame(50.0, $summary['delivery']['success_rate']);
+        $this->assertSame(45, $summary['delivery']['avg_duration_ms']);
     }
 
     protected function createLead(

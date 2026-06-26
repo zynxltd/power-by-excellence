@@ -21,8 +21,8 @@ const submit = () => {
         <Head title="Reset Password — PowerByExcellence" />
 
         <template #header>
-            <h2 class="text-3xl font-bold tracking-tight text-slate-900">Forgot password?</h2>
-            <p class="mt-2 text-slate-500">
+            <h2>Forgot password?</h2>
+            <p>
                 Enter your email and we'll send you a reset link.
             </p>
         </template>
@@ -54,7 +54,7 @@ const submit = () => {
                         autofocus
                         autocomplete="username"
                         placeholder="you@company.com"
-                        class="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        class="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-base text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                 </div>
                 <InputError class="mt-2" :message="form.errors.email" />

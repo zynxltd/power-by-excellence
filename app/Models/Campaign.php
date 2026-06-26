@@ -13,6 +13,7 @@ class Campaign extends Model
     protected $fillable = [
         'account_id',
         'type',
+        'pipeline_profile',
         'name',
         'logo_path',
         'reference',

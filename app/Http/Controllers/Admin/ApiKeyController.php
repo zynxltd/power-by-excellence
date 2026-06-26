@@ -7,6 +7,7 @@ use App\Models\ApiKey;
 use App\Models\Campaign;
 use App\Models\Supplier;
 use App\Services\Api\ApiKeyService;
+use App\Services\Platform\PlatformNotificationService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,7 @@ class ApiKeyController extends Controller
         'leads.create',
         'leads.read',
         'reports.read',
+        'platform.read',
         'quarantine.manage',
         'buyers.manage',
         '*',
@@ -80,7 +82,7 @@ class ApiKeyController extends Controller
             'permissions' => $permissions,
         ]);
 
-        app(\App\Services\Platform\PlatformNotificationService::class)->logTenantActivity(
+        app(PlatformNotificationService::class)->logTenantActivity(
             $account,
             $request->user(),
             'api_key.created',

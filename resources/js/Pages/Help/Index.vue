@@ -47,7 +47,7 @@ const totalArticles = computed(() =>
                     <ThemeToggle />
                     <Link
                         href="/"
-                        class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:inline"
+                        class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                     >
                         Home
                     </Link>

@@ -61,6 +61,8 @@ class ApiDocsController extends Controller
             'statusFields' => $docs->statusFields(),
             'leadStatuses' => $docs->leadStatuses(),
             'guides' => $docs->guides(),
+            'platformGuides' => $docs->platformGuides(),
+            'samplePlatformExport' => $docs->samplePlatformExport(),
         ]);
     }
 }

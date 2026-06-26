@@ -43,6 +43,7 @@ const props = defineProps({
 const { formatMoney, formatNumber, formatMoneyMulti } = useMoneyFormat(props.currency);
 const { leadsDrill, deliveryDrill, financeDrill, periodForLeads, periodForFinance } = useReportDrilldown(props);
 
+const hasLeadVolume = computed(() => (props.summary?.leads_period ?? 0) > 0);
 const revenueByCurrency = computed(() => props.summary?.revenue_by_currency ?? []);
 const financialDecimals = computed(() => (props.hasMultipleCurrencies ? 0 : 0));
 
@@ -72,7 +73,35 @@ const delivery = computed(() => props.summary?.delivery ?? {});
 const redirect = computed(() => props.summary?.redirect ?? {});
 const quality = computed(() => props.summary?.quality ?? {});
 
-const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : 0);
+const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
+
+const formatLeadRate = (value) => {
+    const leads = props.summary?.leads_period ?? 0;
+    if (!leads) {
+        return '—';
+    }
+
+    return `${value ?? 0}%`;
+};
+
+const formatDeliveryRate = (rate) => {
+    const attempts = delivery.value.attempts ?? 0;
+    if (!attempts || rate === null || rate === undefined) {
+        return '—';
+    }
+
+    return `${rate}%`;
+};
+
+const formatDeliveryDuration = () => {
+    const attempts = delivery.value.attempts ?? 0;
+    const ms = delivery.value.avg_duration_ms;
+    if (!attempts || ms === null || ms === undefined) {
+        return '—';
+    }
+
+    return `${ms}ms`;
+};
 
 const kpisByCurrency = computed(() => props.summary?.kpis_by_currency ?? []);
 
@@ -162,18 +191,18 @@ const economicsStrip = computed(() => {
 });
 
 const rateStrip = computed(() => [
-    { label: 'Conversion', title: 'Sold ÷ received — view sold leads in this period', value: `${props.summary?.conversion ?? 0}%`, href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
-    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold) — view sold leads', value: `${props.summary?.sell_through ?? 0}%`, href: leadsDrill({ status: 'sold' }), accent: 'emerald' },
-    { label: 'Reject rate', title: 'Rejected ÷ received — view rejected leads', value: `${props.summary?.reject_rate ?? 0}%`, href: leadsDrill({ status: 'rejected' }), accent: 'rose' },
-    { label: 'Quarantine', title: 'Quarantined ÷ received — view quarantined leads in period', value: `${quarantineRate.value}%`, href: leadsDrill({ status: 'quarantined' }), accent: 'orange' },
-    { label: 'Avg quality', title: 'Mean lead quality score — view all scored leads', value: quality.value.avg_score ?? '—', href: leadsDrill(), accent: 'violet' },
+    { label: 'Conversion', title: 'Sold ÷ received — view sold leads in this period', value: formatLeadRate(props.summary?.conversion), href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
+    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold) — view sold leads', value: formatLeadRate(props.summary?.sell_through), href: leadsDrill({ status: 'sold' }), accent: 'emerald' },
+    { label: 'Reject rate', title: 'Rejected ÷ received — view rejected leads', value: formatLeadRate(props.summary?.reject_rate), href: leadsDrill({ status: 'rejected' }), accent: 'rose' },
+    { label: 'Quarantine', title: 'Quarantined ÷ received — view quarantined leads in period', value: quarantineRate.value === null ? '—' : `${quarantineRate.value}%`, href: leadsDrill({ status: 'quarantined' }), accent: 'orange' },
+    { label: 'Avg quality', title: 'Mean lead quality score — view all scored leads', value: (props.summary?.leads_period ?? 0) > 0 ? (quality.value.avg_score ?? '—') : '—', href: leadsDrill(), accent: 'violet' },
     { label: 'Email pass', title: 'Email deliverability pass rate — view leads that passed email check', value: quality.value.email_checked ? `${quality.value.email_pass_rate}%` : '—', href: quality.value.email_checked ? leadsDrill({ validation: 'email_passed' }) : null, accent: 'cyan' },
     { label: 'HLR pass', title: 'Mobile HLR pass rate — view leads that passed HLR check', value: quality.value.hlr_checked ? `${quality.value.hlr_pass_rate}%` : '—', href: quality.value.hlr_checked ? leadsDrill({ validation: 'hlr_passed' }) : null, accent: 'indigo' },
-    { label: 'Ping success', title: 'Successful buyer delivery attempts — view success logs', value: `${delivery.value.success_rate ?? 0}%`, href: deliveryDrill({ status: 'success' }), accent: 'emerald' },
-    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts — view outbid logs', value: `${delivery.value.outbid_rate ?? 0}%`, href: deliveryDrill({ status: 'outbid' }), accent: 'amber' },
-    { label: 'Ping fail', title: 'Failed delivery attempts — view failed ping/post logs', value: `${pingFailRate.value}%`, href: deliveryDrill({ status: 'failed' }), accent: 'rose' },
-    { label: 'Redirect rate', title: 'Thank-you page clicks ÷ redirects offered — view sold leads that followed redirect', value: `${redirect.value.redirect_rate ?? 0}%`, href: leadsDrill({ status: 'sold', redirect: 'followed' }), accent: 'cyan' },
-    { label: 'Avg latency', title: 'Mean delivery duration — view all delivery attempts', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—', href: deliveryDrill(), accent: 'cyan' },
+    { label: 'Ping success', title: 'Successful buyer delivery attempts — view success logs', value: formatDeliveryRate(delivery.value.success_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'success' }) : null, accent: 'emerald' },
+    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts — view outbid logs', value: formatDeliveryRate(delivery.value.outbid_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'outbid' }) : null, accent: 'amber' },
+    { label: 'Ping fail', title: 'Failed delivery attempts — view failed ping/post logs', value: pingFailRate.value === null ? '—' : `${pingFailRate.value}%`, href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'failed' }) : null, accent: 'rose' },
+    { label: 'Redirect rate', title: 'Thank-you page clicks ÷ redirects offered — view sold leads that followed redirect', value: (props.summary?.sold_period ?? 0) > 0 && redirect.value.offered ? `${redirect.value.redirect_rate ?? 0}%` : '—', href: leadsDrill({ status: 'sold', redirect: 'followed' }), accent: 'cyan' },
+    { label: 'Avg latency', title: 'Mean delivery duration — view all delivery attempts', value: formatDeliveryDuration(), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill() : null, accent: 'cyan' },
 ]);
 
 const qualityStrip = computed(() => [
@@ -473,7 +502,7 @@ const revenueDataset = computed(() => ([
                     </div>
                 </div>
             </template>
-            <DataTable :empty="!tierSummary?.data?.length" empty-message="No tier data — run php artisan db:seed to populate demo history.">
+            <DataTable :empty="!hasLeadVolume || !tierSummary?.data?.length" empty-message="No tier activity for leads received in this period.">
                 <template #head>
                     <th class="text-left">Tier</th>
                     <th class="text-left">Attempts</th>
@@ -511,7 +540,7 @@ const revenueDataset = computed(() => ([
                     <p class="mt-1 text-xs text-slate-500">Each row is a buyer delivery endpoint. Click to view individual post/ping attempts in delivery logs.</p>
                 </div>
             </template>
-            <DataTable :empty="!deliveryPerformance?.data?.length">
+            <DataTable :empty="!hasLeadVolume || !deliveryPerformance?.data?.length" empty-message="No delivery activity for leads received in this period.">
                 <template #head>
                     <th class="text-left">Delivery</th>
                     <th class="text-left">Buyer</th>

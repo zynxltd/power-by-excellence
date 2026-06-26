@@ -42,7 +42,7 @@ const modeClass = (mode) => ROUTING_MODE_STYLES[mode] ?? ROUTING_MODE_STYLES.wat
             <span v-if="filteredTiers"><strong class="text-slate-700 dark:text-slate-300">{{ filteredTiers }}</strong> with entry filters</span>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
             <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
                 <thead>
                     <tr class="bg-slate-50/90 dark:bg-slate-800/60">

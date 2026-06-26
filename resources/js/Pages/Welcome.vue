@@ -307,7 +307,7 @@ const toggleFaq = (index) => {
                 <div class="absolute left-1/2 top-1/2 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] bg-gradient-to-r from-transparent via-indigo-300/30 to-transparent marketing-dark:via-indigo-500/20" />
             </div>
 
-            <div class="relative mx-auto max-w-7xl px-6 pb-20 pt-28 md:pb-28 md:pt-36">
+            <div class="relative mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 md:pb-28 md:pt-36">
                 <div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 xl:gap-16">
                     <!-- Left: content -->
                     <div class="text-center lg:text-left">
@@ -322,12 +322,12 @@ const toggleFaq = (index) => {
                             <SystemStatusBadge v-if="systemStatus" :status="systemStatus" />
                         </div>
 
-                        <h1 class="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.04] xl:text-6xl">
+                        <h1 class="text-balance text-3xl font-extrabold leading-[1.08] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.04] xl:text-6xl">
                             Turn every lead into
-                            <span class="whitespace-nowrap">
+                            <span>
                                 <span
                                     :key="currentWord"
-                                    class="brand-gradient-text inline-block w-[7.5ch] text-left animate-fade-in-up"
+                                    class="brand-gradient-text inline-block min-w-[7ch] text-left animate-fade-in-up sm:min-w-[7.5ch]"
                                 >{{ currentWord }}</span><span class="text-slate-700 marketing-dark:text-slate-200"> at scale</span>
                             </span>
                         </h1>
@@ -744,8 +744,9 @@ const toggleFaq = (index) => {
                     <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">PBE vs legacy lead routers</h2>
                     <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need in one platform — not a patchwork of scripts, spreadsheets, and third-party tools.</p>
                 </div>
-                <div class="mt-12 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/50">
-                    <div class="grid grid-cols-[1fr_auto_auto] gap-0 border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 marketing-dark:border-white/10 marketing-dark:bg-slate-800/50 marketing-dark:text-slate-400">
+                <div class="mt-12 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/50">
+                    <div class="min-w-[20rem]">
+                    <div class="grid grid-cols-[1fr_auto_auto] gap-0 border-b border-slate-200 bg-slate-50 px-4 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 sm:px-6 marketing-dark:border-white/10 marketing-dark:bg-slate-800/50 marketing-dark:text-slate-400">
                         <span>Capability</span>
                         <span class="w-24 text-center text-indigo-600 marketing-dark:text-indigo-400">PBE</span>
                         <span class="w-24 text-center">Legacy</span>
@@ -754,7 +755,7 @@ const toggleFaq = (index) => {
                         v-for="(row, i) in comparisonRows"
                         :key="row.feature"
                         :class="[
-                            'grid grid-cols-[1fr_auto_auto] items-center gap-0 px-6 py-4 text-sm',
+                            'grid grid-cols-[1fr_auto_auto] items-center gap-0 px-4 py-4 text-sm sm:px-6',
                             i % 2 === 0 ? 'bg-white marketing-dark:bg-transparent' : 'bg-slate-50/50 marketing-dark:bg-slate-800/20',
                         ]"
                     >
@@ -770,6 +771,7 @@ const toggleFaq = (index) => {
                             </svg>
                             <span v-else class="text-xs font-medium text-slate-500">{{ row.legacy }}</span>
                         </span>
+                    </div>
                     </div>
                 </div>
             </div>

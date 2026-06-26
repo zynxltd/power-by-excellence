@@ -1,15 +1,19 @@
 <?php
 
-use App\Http\Controllers\Api\MockBuyerApiController;
 use App\Http\Controllers\Api\BuyerController;
 use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\Integrations\LeadSourceWebhookController;
 use App\Http\Controllers\Api\LeadController;
+use App\Http\Controllers\Api\MockBuyerApiController;
+use App\Http\Controllers\Api\PlatformController;
 use App\Http\Controllers\Api\QuarantineController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Middleware\AuthenticateApiKey;
+use App\Http\Middleware\LogApiRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware([\App\Http\Middleware\LogApiRequest::class])->group(function () {
+Route::prefix('v1')->middleware([LogApiRequest::class])->group(function () {
     Route::get('/mock/buyers', [MockBuyerApiController::class, 'docs']);
     Route::match(['get', 'post'], '/mock/buyers/{tier}/ping', [MockBuyerApiController::class, 'ping'])->whereNumber('tier');
     Route::match(['get', 'post'], '/mock/buyers/{tier}/post', [MockBuyerApiController::class, 'post'])->whereNumber('tier');
@@ -31,6 +35,11 @@ Route::prefix('v1')->middleware([\App\Http\Middleware\LogApiRequest::class])->gr
         Route::get('/reports/revenue', [ReportController::class, 'revenue']);
     });
 
+    Route::middleware([AuthenticateApiKey::class.':platform.read'])->group(function () {
+        Route::get('/platform', [PlatformController::class, 'show']);
+        Route::get('/platform/campaigns/{reference}', [PlatformController::class, 'campaign']);
+    });
+
     Route::middleware([AuthenticateApiKey::class.':quarantine.manage'])->group(function () {
         Route::get('/quarantine', [QuarantineController::class, 'index']);
         Route::post('/quarantine/{uuid}/release', [QuarantineController::class, 'release']);
@@ -42,7 +51,7 @@ Route::prefix('v1')->middleware([\App\Http\Middleware\LogApiRequest::class])->gr
         Route::post('/buyers/{buyer}/credit', [BuyerController::class, 'addCredit']);
     });
 
-    Route::post('/ping', function (\Illuminate\Http\Request $request) {
+    Route::post('/ping', function (Request $request) {
         $floor = (float) $request->input('floor', 10);
         $hint = (float) $request->input('bid_hint', 0);
         $cost = $hint > 0 ? $hint : max($floor, 15 + random_int(0, 5));
@@ -58,8 +67,8 @@ Route::prefix('v1')->middleware([\App\Http\Middleware\LogApiRequest::class])->gr
         return response()->json(['Success' => true, 'Approved' => true]);
     });
 
-    Route::match(['get', 'post'], '/integrations/{provider}/webhook/{accountSlug}', [\App\Http\Controllers\Api\Integrations\LeadSourceWebhookController::class, 'verify'])
+    Route::match(['get', 'post'], '/integrations/{provider}/webhook/{accountSlug}', [LeadSourceWebhookController::class, 'verify'])
         ->whereIn('provider', ['facebook', 'google', 'tiktok']);
-    Route::post('/integrations/{provider}/ingest/{accountSlug}', [\App\Http\Controllers\Api\Integrations\LeadSourceWebhookController::class, 'ingest'])
+    Route::post('/integrations/{provider}/ingest/{accountSlug}', [LeadSourceWebhookController::class, 'ingest'])
         ->whereIn('provider', ['facebook', 'google', 'tiktok']);
 });

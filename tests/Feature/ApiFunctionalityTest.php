@@ -3,14 +3,16 @@
 namespace Tests\Feature;
 
 use App\Enums\LeadStatus;
+use App\Jobs\ProcessLeadJob;
 use App\Models\Account;
 use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\Lead;
-use App\Models\Supplier;
 use App\Models\Source;
+use App\Models\Supplier;
 use App\Services\Api\ApiKeyService;
 use App\Services\Billing\AccountBillingService;
+use Database\Seeders\PlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -32,7 +34,7 @@ class ApiFunctionalityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->seed(PlatformSeeder::class);
 
         $this->account = Account::where('slug', 'excellence-uk')->first();
         $this->campaign = Campaign::where('account_id', $this->account->id)->first();
@@ -78,7 +80,7 @@ class ApiFunctionalityTest extends TestCase
             ->assertStatus(202)
             ->assertJsonStructure(['status', 'queue_id', 'lead_id']);
 
-        Queue::assertPushed(\App\Jobs\ProcessLeadJob::class);
+        Queue::assertPushed(ProcessLeadJob::class);
 
         $this->postJson('/api/v1/leads', [
             'campaign_reference' => $this->campaign->reference,
@@ -148,7 +150,7 @@ class ApiFunctionalityTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['status', 'queue_id']);
 
-        Queue::assertPushed(\App\Jobs\ProcessLeadJob::class);
+        Queue::assertPushed(ProcessLeadJob::class);
     }
 
     public function test_lead_import_csv(): void
@@ -173,6 +175,58 @@ class ApiFunctionalityTest extends TestCase
         $this->getJson('/api/v1/reports/revenue', $this->auth(['reports.read']))
             ->assertOk()
             ->assertJsonStructure(['from', 'to', 'revenue', 'payout', 'margin']);
+    }
+
+    public function test_platform_export_endpoints(): void
+    {
+        $response = $this->getJson('/api/v1/platform', $this->auth(['platform.read']))
+            ->assertOk()
+            ->assertJsonStructure([
+                'exported_at',
+                'platform' => ['slug', 'name', 'api_base_url', 'portal_url'],
+                'campaigns',
+                'buyers',
+                'suppliers',
+                'webhooks',
+                'postbacks',
+                'forms',
+            ]);
+
+        $this->assertSame($this->account->slug, $response->json('platform.slug'));
+        $this->assertNotEmpty($response->json('campaigns'));
+        $this->assertTrue(
+            collect($response->json('campaigns'))->contains('reference', $this->campaign->reference)
+        );
+
+        $campaignResponse = $this->getJson(
+            '/api/v1/platform/campaigns/'.$this->campaign->reference,
+            $this->auth(['platform.read'])
+        )
+            ->assertOk()
+            ->assertJsonStructure(['exported_at', 'platform', 'campaign' => ['reference', 'fields', 'api_spec']]);
+
+        $this->assertSame($this->campaign->reference, $campaignResponse->json('campaign.reference'));
+
+        $partial = $this->getJson('/api/v1/platform?include=campaigns,buyers', $this->auth(['platform.read']))
+            ->assertOk()
+            ->assertJsonStructure(['platform', 'campaigns', 'buyers']);
+
+        $partialData = $partial->json();
+        $this->assertArrayNotHasKey('suppliers', $partialData);
+        $this->assertArrayNotHasKey('webhooks', $partialData);
+        $this->assertNotEmpty($partialData['campaigns']);
+    }
+
+    public function test_platform_export_permission_and_tenant_boundaries(): void
+    {
+        $this->getJson('/api/v1/platform', $this->auth(['leads.read']))
+            ->assertForbidden();
+
+        $other = Account::where('slug', 'insurance-ca')->first();
+        $otherCampaign = Campaign::where('account_id', $other->id)->first();
+
+        $this->getJson('/api/v1/platform/campaigns/'.$otherCampaign->reference, $this->auth(['platform.read']))
+            ->assertNotFound();
     }
 
     public function test_quarantine_api_release_and_reject(): void

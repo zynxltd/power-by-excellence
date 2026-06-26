@@ -25,7 +25,7 @@ const submit = () => {
 };
 
 const inputClass =
-    'block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20';
+    'block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-base text-slate-900 placeholder-slate-400 transition focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20';
 </script>
 
 <template>
@@ -33,8 +33,8 @@ const inputClass =
         <Head title="Reset Password — PowerByExcellence" />
 
         <template #header>
-            <h2 class="text-3xl font-bold tracking-tight text-slate-900">Set new password</h2>
-            <p class="mt-2 text-slate-500">Choose a strong password for your account.</p>
+            <h2>Set new password</h2>
+            <p>Choose a strong password for your account.</p>
         </template>
 
         <form @submit.prevent="submit" class="space-y-5">

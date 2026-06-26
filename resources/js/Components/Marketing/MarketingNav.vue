@@ -83,6 +83,13 @@ const navLinkClass = (isActive) => [
             <div class="flex items-center gap-2">
                 <SystemStatusBadge v-if="systemStatus" :status="systemStatus" compact class="hidden sm:inline-flex" />
                 <MarketingThemeToggle class="hidden lg:flex" />
+                <Link
+                    v-if="canLogin"
+                    :href="signInUrl"
+                    class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-cyan-300 lg:hidden"
+                >
+                    {{ isAuthenticated ? 'Platform' : 'Sign In' }}
+                </Link>
                 <div class="hidden items-center gap-2 lg:flex">
                     <Link
                         v-if="canLogin"

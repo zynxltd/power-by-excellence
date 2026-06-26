@@ -63,17 +63,17 @@ const accentGlow = (accent) => {
                     :href="item.href ?? undefined"
                     :title="item.title ?? undefined"
                     :class="[
-                        'relative min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br to-white p-2.5 dark:border-slate-800 dark:to-slate-900',
+                        'relative flex min-h-[4.25rem] min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br to-white p-2.5 text-center dark:border-slate-800 dark:to-slate-900',
                         accentGlow(item.accent),
                         item.href ? 'cursor-pointer transition hover:border-indigo-200 hover:shadow-md dark:hover:border-indigo-700' : '',
                     ]"
                 >
-                    <p class="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <p class="w-full truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         {{ item.label }}
                     </p>
                     <p
                         :class="[
-                            'mt-1 truncate text-lg font-bold tabular-nums leading-tight tracking-tight',
+                            'mt-1 w-full truncate text-lg font-bold tabular-nums leading-tight tracking-tight',
                             valueClass(item.accent),
                         ]"
                     >
@@ -81,7 +81,7 @@ const accentGlow = (accent) => {
                     </p>
                     <p
                         v-if="item.href"
-                        class="mt-1 truncate text-[10px] font-medium text-indigo-600 dark:text-indigo-400"
+                        class="mt-1 w-full truncate text-[10px] font-medium text-indigo-600 dark:text-indigo-400"
                     >
                         View →
                     </p>

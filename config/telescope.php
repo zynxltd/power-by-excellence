@@ -94,6 +94,7 @@ return [
 
     'middleware' => [
         'web',
+        'central.host',
         Authorize::class,
     ],
 

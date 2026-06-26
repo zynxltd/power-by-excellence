@@ -21,6 +21,8 @@ const props = defineProps({
     statusFields: { type: Array, default: () => [] },
     leadStatuses: { type: Array, default: () => [] },
     guides: { type: Array, default: () => [] },
+    platformGuides: { type: Array, default: () => [] },
+    samplePlatformExport: { type: Object, default: () => ({}) },
 });
 
 const activeTab = ref('overview');
@@ -35,6 +37,7 @@ const tabs = [
     { key: 'status', label: 'Status polling' },
     { key: 'fields', label: 'Response fields' },
     { key: 'campaigns', label: 'Campaign schemas' },
+    { key: 'platform', label: 'Platform export' },
 ];
 
 const exampleLeadId = computed(() => props.sampleResponse?.lead_id ?? 'your-lead-uuid');
@@ -82,6 +85,28 @@ const statusByLeadCurl = computed(() => {
 
 const statusByQueueCurl = computed(() => {
     const url = `${props.apiBaseUrl}/leads/queue/${exampleQueueId.value}`;
+    return `curl '${url}' \\\n`
+        + `  -H 'Authorization: Bearer your_prefix|your_secret' \\\n`
+        + `  -H 'Accept: application/json'`;
+});
+
+const platformExportCurl = computed(() => {
+    const url = `${props.apiBaseUrl}/platform`;
+    return `curl '${url}' \\\n`
+        + `  -H 'Authorization: Bearer your_prefix|your_secret' \\\n`
+        + `  -H 'Accept: application/json'`;
+});
+
+const platformCampaignCurl = computed(() => {
+    const ref = props.selectedCampaign?.reference ?? props.campaigns[0]?.reference ?? 'your-campaign-ref';
+    const url = `${props.apiBaseUrl}/platform/campaigns/${ref}`;
+    return `curl '${url}' \\\n`
+        + `  -H 'Authorization: Bearer your_prefix|your_secret' \\\n`
+        + `  -H 'Accept: application/json'`;
+});
+
+const platformPartialCurl = computed(() => {
+    const url = `${props.apiBaseUrl}/platform?include=campaigns,buyers,suppliers`;
     return `curl '${url}' \\\n`
         + `  -H 'Authorization: Bearer your_prefix|your_secret' \\\n`
         + `  -H 'Accept: application/json'`;
@@ -159,7 +184,7 @@ const methodClass = (method) => ({
         </div>
 
         <div class="grid gap-6 lg:grid-cols-12">
-            <aside class="space-y-4 lg:col-span-3 lg:sticky lg:top-6 lg:self-start">
+            <aside class="hidden space-y-4 lg:col-span-3 lg:block lg:sticky lg:top-6 lg:self-start">
                 <Panel title="Sections">
                     <nav class="space-y-1">
                         <button
@@ -202,6 +227,7 @@ const methodClass = (method) => ({
                             <li>Receive <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202 Accepted</code> with <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">lead_id</code> and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">queue_id</code>.</li>
                             <li>Poll <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /leads/{lead_id}</code> until status is terminal (<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">sold</code>, <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">unsold</code>, <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">rejected</code>, etc.).</li>
                             <li>When <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">sold</code>, use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">redirect_url</code> for consumer thank-you pages and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">revenue</code> for reconciliation.</li>
+                            <li>Running your own portal? Use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /platform</code> (<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">platform.read</code>) to sync campaigns, buyers, and routing — see the <strong>Platform export</strong> tab.</li>
                         </ol>
                     </Panel>
 
@@ -241,6 +267,7 @@ const methodClass = (method) => ({
                     </Panel>
 
                     <Panel title="Permissions & scopes" :padding="false">
+                        <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60">
@@ -255,6 +282,7 @@ const methodClass = (method) => ({
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                     </Panel>
 
                     <Panel title="HTTP response codes">
@@ -317,7 +345,7 @@ const methodClass = (method) => ({
                     </Panel>
 
                     <Panel title="Request body parameters">
-                        <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                             <table class="min-w-full text-sm">
                                 <thead>
                                     <tr class="bg-slate-50/90 dark:bg-slate-800/60">
@@ -390,6 +418,7 @@ const methodClass = (method) => ({
                     </Panel>
 
                     <Panel title="Lead status lifecycle" :padding="false">
+                        <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60">
@@ -408,12 +437,14 @@ const methodClass = (method) => ({
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                     </Panel>
                 </div>
 
                 <!-- Response fields -->
                 <div v-show="activeTab === 'fields'" class="space-y-6">
                     <Panel title="Status response field reference" :padding="false">
+                        <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60">
@@ -432,6 +463,7 @@ const methodClass = (method) => ({
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                     </Panel>
 
                     <Panel title="reject_reason vs buyer rejections">
@@ -501,6 +533,7 @@ const methodClass = (method) => ({
                         </div>
 
                         <Panel title="Field schema" :padding="false">
+                            <div class="overflow-x-auto">
                             <table class="min-w-full text-sm">
                                 <thead>
                                     <tr class="border-b border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60">
@@ -525,6 +558,7 @@ const methodClass = (method) => ({
                                     </tr>
                                 </tbody>
                             </table>
+                            </div>
                         </Panel>
 
                         <Panel title="Sample request for this campaign">
@@ -533,6 +567,79 @@ const methodClass = (method) => ({
                     </template>
 
                     <p v-else class="text-sm text-slate-500">Select a campaign above to view its field schema and sample payload.</p>
+                </div>
+
+                <!-- Platform export -->
+                <div v-show="activeTab === 'platform'" class="space-y-6">
+                    <Panel title="Pull your full platform configuration">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /platform</code> with an API key that has
+                            <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">platform.read</code> (or a full administrator key) to export campaigns, buyers, suppliers, routing, webhooks, postbacks, and hosted forms.
+                            Ideal when you run your own portal or CRM but want PowerByExcellence to handle lead distribution.
+                        </p>
+                    </Panel>
+
+                    <Panel v-for="guide in platformGuides" :key="guide.title" :title="guide.title">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">{{ guide.body }}</p>
+                    </Panel>
+
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <Panel title="Full export">
+                            <template #header>
+                                <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="copyText(platformExportCurl, 'platform-full')">
+                                    {{ copied === 'platform-full' ? 'Copied' : 'Copy' }}
+                                </button>
+                            </template>
+                            <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ platformExportCurl }}</pre>
+                        </Panel>
+                        <Panel title="Partial export (include filter)">
+                            <template #header>
+                                <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="copyText(platformPartialCurl, 'platform-partial')">
+                                    {{ copied === 'platform-partial' ? 'Copied' : 'Copy' }}
+                                </button>
+                            </template>
+                            <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ platformPartialCurl }}</pre>
+                        </Panel>
+                    </div>
+
+                    <Panel title="Single campaign">
+                        <template #header>
+                            <button type="button" class="text-xs font-medium text-indigo-600 hover:underline" @click="copyText(platformCampaignCurl, 'platform-campaign')">
+                                {{ copied === 'platform-campaign' ? 'Copied' : 'Copy' }}
+                            </button>
+                        </template>
+                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ platformCampaignCurl }}</pre>
+                    </Panel>
+
+                    <Panel title="Response shape (abbreviated)">
+                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-violet-300">{{ JSON.stringify(samplePlatformExport, null, 2) }}</pre>
+                    </Panel>
+
+                    <Panel title="include query values">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50/90 dark:bg-slate-800/60">
+                                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Value</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Section</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tr v-for="row in [
+                                        { value: 'campaigns', section: 'Campaigns, fields, API specs, deliveries, ping-tree configs' },
+                                        { value: 'buyers', section: 'Buyers with credit, caps, and delivery routes' },
+                                        { value: 'suppliers', section: 'Suppliers, SIDs, and sub-suppliers' },
+                                        { value: 'webhooks', section: 'Outbound buyer webhooks (secrets redacted)' },
+                                        { value: 'postbacks', section: 'Supplier postback URLs and events' },
+                                        { value: 'forms', section: 'Hosted form embed URLs and config' },
+                                    ]" :key="row.value">
+                                        <td class="px-3 py-2 font-mono text-xs">{{ row.value }}</td>
+                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">{{ row.section }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </Panel>
                 </div>
             </div>
         </div>

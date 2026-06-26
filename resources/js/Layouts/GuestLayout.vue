@@ -16,7 +16,7 @@ const highlights = [
 </script>
 
 <template>
-    <div class="flex min-h-screen">
+    <div class="flex min-h-dvh">
         <!-- Brand panel -->
         <div class="relative hidden w-[45%] overflow-hidden bg-slate-950 lg:flex lg:flex-col lg:justify-between">
             <div class="pointer-events-none absolute inset-0">
@@ -78,8 +78,8 @@ const highlights = [
 
         <!-- Form panel -->
         <div class="flex w-full flex-col bg-white lg:w-[55%]">
-            <div class="flex items-center justify-between p-6 lg:justify-end">
-                <Link href="/" class="lg:hidden">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 lg:border-b-0 lg:justify-end lg:py-6">
+                <Link href="/" class="min-w-0 shrink lg:hidden">
                     <BrandLogo
                         size="sm"
                         variant="dark"
@@ -89,22 +89,22 @@ const highlights = [
                 </Link>
                 <Link
                     href="/"
-                    class="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                    class="shrink-0 text-sm font-medium text-slate-500 transition hover:text-slate-900"
                 >
                     &larr; Back to homepage
                 </Link>
             </div>
 
-            <div class="flex flex-1 flex-col items-center justify-center px-6 pb-12 sm:px-12">
+            <div class="flex flex-1 flex-col items-center justify-center px-4 pb-8 pt-2 sm:px-8 sm:pb-12 lg:px-12">
                 <div class="w-full max-w-md">
-                    <div v-if="$slots.header" class="mb-8">
+                    <div v-if="$slots.header" class="mb-6 sm:mb-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-slate-900 sm:[&_h2]:text-3xl [&_p]:mt-2 [&_p]:text-slate-500">
                         <slot name="header" />
                     </div>
                     <slot />
                 </div>
             </div>
 
-            <div class="border-t border-slate-100 px-6 py-4 text-center text-xs text-slate-400">
+            <div class="border-t border-slate-100 px-4 py-4 text-center text-xs text-slate-400 sm:px-6">
                 &copy; {{ new Date().getFullYear() }} {{ tenant?.display_name ?? 'PowerByExcellence' }}. All rights reserved.
             </div>
         </div>

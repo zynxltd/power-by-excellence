@@ -117,9 +117,9 @@ const usingPresetDays = computed(() => (
 <template>
     <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/50">
         <div class="flex flex-wrap items-end gap-4">
-            <div v-if="showDays" class="shrink-0">
+            <div v-if="showDays" class="min-w-0 shrink-0">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Period</label>
-                <div class="flex h-[2.625rem] items-stretch gap-0.5 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+                <div class="flex max-w-full flex-wrap items-stretch gap-0.5 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
                     <button
                         v-for="d in [1, 7, 14, 28, 30, 60, 90]"
                         :key="d"
@@ -158,7 +158,7 @@ const usingPresetDays = computed(() => (
                 </div>
             </template>
 
-            <div v-if="showStatus" class="min-w-[8rem]">
+            <div v-if="showStatus" class="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Status</label>
                 <select v-model="local.status" class="form-select w-full">
                     <option value="">All statuses</option>
@@ -171,7 +171,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showMethod" class="min-w-[8rem]">
+            <div v-if="showMethod" class="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Method</label>
                 <select v-model="local.method" class="form-select w-full">
                     <option value="">All methods</option>
@@ -180,7 +180,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showDelivery" class="min-w-[10rem]">
+            <div v-if="showDelivery" class="w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Delivery</label>
                 <select v-model="local.delivery_id" class="form-select w-full">
                     <option value="">All deliveries</option>
@@ -188,7 +188,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showBuyer" class="min-w-[10rem]">
+            <div v-if="showBuyer" class="w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Buyer</label>
                 <select v-model="local.buyer_id" class="form-select w-full">
                     <option value="">All buyers</option>
@@ -196,7 +196,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showTier" class="min-w-[6rem]">
+            <div v-if="showTier" class="w-full min-w-0 sm:w-auto sm:min-w-[6rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Tier</label>
                 <select v-model="local.tier" class="form-select w-full">
                     <option value="">All tiers</option>
@@ -204,7 +204,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showFeedType" class="min-w-[10rem]">
+            <div v-if="showFeedType" class="w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Type</label>
                 <select v-model="local.type" class="form-select w-full">
                     <option value="">All activity</option>
@@ -212,7 +212,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showTenant" class="min-w-[10rem]">
+            <div v-if="showTenant" class="w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant</label>
                 <select v-model="local.account_id" class="form-select w-full">
                     <option value="">All platforms</option>
@@ -220,7 +220,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showLevel" class="min-w-[8rem]">
+            <div v-if="showLevel" class="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Level</label>
                 <select v-model="local.level" class="form-select w-full">
                     <option value="">All levels</option>
@@ -228,7 +228,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showCategory" class="min-w-[10rem]">
+            <div v-if="showCategory" class="w-full min-w-0 sm:w-auto sm:min-w-[10rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Category</label>
                 <select v-model="local.category" class="form-select w-full">
                     <option value="">All categories</option>
@@ -236,7 +236,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showEventType" class="min-w-[12rem]">
+            <div v-if="showEventType" class="w-full min-w-0 sm:w-auto sm:min-w-[12rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Event type</label>
                 <select v-model="local.event_type" class="form-select w-full">
                     <option value="">All event types</option>
@@ -254,7 +254,7 @@ const usingPresetDays = computed(() => (
                 <input v-model="local.path" type="search" placeholder="/api/v1/…" class="form-input w-full" />
             </div>
 
-            <div v-if="showAction" class="min-w-[8rem]">
+            <div v-if="showAction" class="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Action</label>
                 <select v-model="local.action" class="form-select w-full">
                     <option value="">All actions</option>
@@ -262,7 +262,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showCampaign" class="min-w-[12rem]">
+            <div v-if="showCampaign" class="w-full min-w-0 sm:w-auto sm:min-w-[12rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</label>
                 <select v-model="local.campaign_id" class="form-select w-full">
                     <option value="">All campaigns</option>
@@ -272,7 +272,7 @@ const usingPresetDays = computed(() => (
                 </select>
             </div>
 
-            <div v-if="showCurrency" class="min-w-[8rem]">
+            <div v-if="showCurrency" class="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">Currency</label>
                 <select v-model="local.currency" class="form-select w-full">
                     <option value="">All currencies</option>

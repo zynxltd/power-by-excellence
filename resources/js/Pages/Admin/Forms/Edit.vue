@@ -277,7 +277,7 @@ const addFieldFromSpec = (step, specName) => {
                     <button v-if="f.config.steps.length > 1" type="button" class="ml-4 text-sm text-rose-500" @click="removeStep(si)">Remove</button>
                 </div>
                 <div class="space-y-4 p-6">
-                    <div v-for="(field, fi) in step.fields" :key="fi" class="grid gap-3 rounded-xl border p-4 dark:border-slate-800 md:grid-cols-6" :class="!specFieldOptions?.some((sf) => sf.name === field.name) && field.name ? 'border-amber-300 bg-amber-50/50 dark:border-amber-800' : 'border-slate-100'">
+                    <div v-for="(field, fi) in step.fields" :key="fi" class="grid gap-3 rounded-xl border p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-6" :class="!specFieldOptions?.some((sf) => sf.name === field.name) && field.name ? 'border-amber-300 bg-amber-50/50 dark:border-amber-800' : 'border-slate-100'">
                         <input v-model="field.label" class="rounded-lg border px-3 py-2 text-sm md:col-span-2 dark:border-slate-700 dark:bg-slate-800" placeholder="Label" />
                         <input v-model="field.name" class="rounded-lg border px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800" placeholder="field_name" list="spec-field-names" />
                         <datalist id="spec-field-names">

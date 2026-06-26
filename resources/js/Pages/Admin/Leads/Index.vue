@@ -212,7 +212,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
         </Panel>
 
         <Panel title="Filters" class="mb-6">
-            <div class="grid gap-4 md:grid-cols-6">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">Search UUID</label>
                     <input v-model="localFilters.search" type="text" class="form-input" placeholder="UUID or queue ID" @keyup.enter="applyFilters" />

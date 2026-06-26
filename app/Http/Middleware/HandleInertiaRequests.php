@@ -5,14 +5,17 @@ namespace App\Http\Middleware;
 use App\Models\Account;
 use App\Models\Campaign;
 use App\Models\User;
+use App\Services\Billing\AccountBillingService;
+use App\Services\Billing\FraudProtectionService;
+use App\Services\Platform\PlatformNotificationService;
+use App\Services\Platform\PlatformStatusService;
 use App\Support\Admin\TenantHub;
 use App\Support\Money;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
-use App\Services\Platform\PlatformStatusService;
 use Illuminate\Http\Request;
-use Inertia\Middleware;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -43,10 +46,10 @@ class HandleInertiaRequests extends Middleware
                 // Resolved lazily so route middleware (SetAccountFromUser) runs first.
                 'account' => fn () => $this->formatAccount($this->resolveAccount($request)),
                 'billing' => fn () => ($account = $this->resolveAccount($request))
-                    ? app(\App\Services\Billing\AccountBillingService::class)->summary($account)
+                    ? app(AccountBillingService::class)->summary($account)
                     : null,
                 'fraudProtection' => fn () => ($account = $this->resolveAccount($request))
-                    ? app(\App\Services\Billing\FraudProtectionService::class)->summary($account)
+                    ? app(FraudProtectionService::class)->summary($account)
                     : null,
                 'isSuperAdmin' => fn () => $user?->isSuperAdmin() ?? false,
                 'isBuyerPortal' => fn () => $user?->isBuyerPortal() ?? false,
@@ -71,7 +74,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'notifications' => [
                 'unread_count' => fn () => $user
-                    ? rescue(fn () => app(\App\Services\Platform\PlatformNotificationService::class)->unreadCount($user), 0, false)
+                    ? rescue(fn () => app(PlatformNotificationService::class)->unreadCount($user), 0, false)
                     : 0,
             ],
             'urls' => [
@@ -86,6 +89,9 @@ class HandleInertiaRequests extends Middleware
                 $this->resolveAccount($request),
                 $this->resolveCampaignId($request),
             ),
+            'platformHub' => fn () => ($user?->isSuperAdmin() && TenantResolver::isCentralHost($request->getHost()))
+                ? TenantHub::forCentralAdmin()
+                : null,
             'systemStatus' => fn () => $this->systemStatus($request),
         ];
     }

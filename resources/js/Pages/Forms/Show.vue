@@ -94,10 +94,10 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
     <Head :title="submitted ? thankYou?.title ?? 'Thank you' : form.name" />
     <div
         :class="[
-            'relative min-h-screen overflow-hidden',
+            'relative min-h-dvh overflow-hidden',
             embed
-                ? 'bg-white px-3 py-4 dark:bg-slate-950'
-                : 'bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-10 dark:from-slate-950 dark:to-slate-900',
+                ? 'min-h-dvh bg-white px-3 py-3 sm:py-4 dark:bg-slate-950'
+                : 'min-h-dvh bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-6 sm:py-10 dark:from-slate-950 dark:to-slate-900',
         ]"
     >
         <div v-if="showConfetti" class="confetti pointer-events-none absolute inset-0 z-10" aria-hidden="true">
@@ -108,7 +108,7 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
             <!-- Thank you screen -->
             <div
                 v-if="submitted"
-                class="thank-you-card rounded-2xl border border-emerald-200 bg-white p-8 text-center shadow-xl dark:border-emerald-900/50 dark:bg-slate-900"
+                class="thank-you-card rounded-2xl border border-emerald-200 bg-white p-6 text-center shadow-xl sm:p-8 dark:border-emerald-900/50 dark:bg-slate-900"
             >
                 <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
                     <svg class="h-8 w-8 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,7 +141,7 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-lg sm:p-6 dark:border-slate-800 dark:bg-slate-900">
                     <h1 class="text-xl font-bold text-slate-900 dark:text-white">{{ activeSteps[currentStep]?.title ?? form.name }}</h1>
                     <p v-if="activeSteps[currentStep]?.description" class="mt-1 text-sm text-slate-500">{{ activeSteps[currentStep].description }}</p>
 
@@ -159,7 +159,7 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                                 v-model="leadForm[field.name]"
                                 :type="field.type === 'postcode' ? 'text' : field.type"
                                 :required="field.required"
-                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800"
+                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-800"
                             />
 
                             <textarea
@@ -167,14 +167,14 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                                 v-model="leadForm[field.name]"
                                 :required="field.required"
                                 rows="3"
-                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800"
+                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-800"
                             />
 
                             <select
                                 v-else-if="field.type === 'select'"
                                 v-model="leadForm[field.name]"
                                 :required="field.required"
-                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800"
+                                class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-800"
                             >
                                 <option value="">Select…</option>
                                 <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
@@ -195,9 +195,9 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
 
                         <p v-if="leadForm.hasErrors" class="text-sm text-rose-600">Please check your answers and try again.</p>
 
-                        <div class="flex gap-3 pt-2">
-                            <button v-if="currentStep > 0" type="button" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700" @click="back">Back</button>
-                            <button type="submit" class="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-500 disabled:opacity-60" :disabled="leadForm.processing">
+                        <div class="flex flex-col gap-3 pt-2 sm:flex-row">
+                            <button v-if="currentStep > 0" type="button" class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700 sm:order-none" @click="back">Back</button>
+                            <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-3.5 text-base font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 sm:flex-1" :disabled="leadForm.processing">
                                 {{ isLastStep ? (leadForm.processing ? 'Submitting…' : 'Submit') : 'Continue →' }}
                             </button>
                         </div>

@@ -54,10 +54,10 @@ const componentStatusLabel = (s) => ({
         <MarketingNav :can-login="canLogin" active="status" />
 
         <div :class="['marketing-content pt-24', marketingTheme === 'dark' && 'marketing-dark']">
-            <section class="mx-auto max-w-4xl px-6 py-12">
+            <section class="mx-auto max-w-4xl px-4 py-12 sm:px-6">
                 <div class="text-center">
                     <p class="brand-kicker">Platform health</p>
-                    <h1 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">System status</h1>
+                    <h1 class="mt-3 text-3xl font-bold tracking-tight text-slate-900 marketing-dark:text-white sm:text-4xl">System status</h1>
                     <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">
                         Live health for lead ingest, processing, and buyer delivery. Checks refresh every 15 minutes.
                     </p>

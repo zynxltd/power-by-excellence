@@ -240,9 +240,26 @@ const save = () => {
             class="mb-6"
         />
 
+        <div class="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900 lg:hidden">
+            <button
+                v-for="tab in tabs"
+                :key="tab.key"
+                type="button"
+                :class="[
+                    'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition',
+                    activeTab === tab.key
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400',
+                ]"
+                @click="activeTab = tab.key"
+            >
+                {{ tab.icon }} {{ tab.label }}
+            </button>
+        </div>
+
         <div class="grid gap-6 lg:grid-cols-12">
             <!-- Sticky sidebar -->
-            <aside class="space-y-4 lg:col-span-3 lg:sticky lg:top-6 lg:self-start">
+            <aside class="hidden space-y-4 lg:col-span-3 lg:block lg:sticky lg:top-6 lg:self-start">
                 <Panel title="Navigate">
                     <nav class="space-y-1">
                         <button

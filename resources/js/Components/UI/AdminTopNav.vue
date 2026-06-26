@@ -2,6 +2,7 @@
 import BrandLogo from '@/Components/BrandLogo.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import NotificationBell from '@/Components/UI/NotificationBell.vue';
+import AdminHubMenu from '@/Components/UI/AdminHubMenu.vue';
 import TopNavDropdown from '@/Components/UI/TopNavDropdown.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import { provideNavDropdown } from '@/Composables/useNavDropdown';
@@ -56,9 +57,34 @@ const closeMobile = () => {
 
 const clearTenantContext = () => router.post(route('accounts.clear'));
 
+const adminHub = computed(() => {
+    if (! isSuperAdmin.value || ! isCentralHost.value) {
+        return null;
+    }
+
+    return page.props.tenantHub ?? page.props.platformHub;
+});
+
+const brandTitle = computed(() => branding.value?.display_name ?? 'PowerByExcellence');
+
 const mobileSections = computed(() => {
-    if (isBuyer.value || isSupplier.value) {
-        return [];
+    if (isBuyer.value) {
+        return [
+            { id: 'buyer-dashboard', label: 'Dashboard', href: route('portal.buyer.dashboard'), links: [] },
+            { id: 'buyer-leads', label: 'My Leads', href: route('portal.buyer.leads'), links: [] },
+            { id: 'buyer-billing', label: 'Billing', href: route('portal.buyer.billing'), links: [] },
+            { id: 'buyer-profile', label: 'Profile', href: route('profile.edit'), links: [] },
+        ];
+    }
+
+    if (isSupplier.value) {
+        return [
+            { id: 'supplier-dashboard', label: 'Dashboard', href: route('portal.supplier.dashboard'), links: [] },
+            { id: 'supplier-leads', label: 'My Leads', href: route('portal.supplier.leads'), links: [] },
+            { id: 'supplier-embeds', label: 'Form embeds', href: route('portal.supplier.embeds'), links: [] },
+            { id: 'supplier-billing', label: 'Payouts', href: route('portal.supplier.billing'), links: [] },
+            { id: 'supplier-profile', label: 'Profile', href: route('profile.edit'), links: [] },
+        ];
     }
 
     const sections = [];
@@ -201,7 +227,43 @@ const mobileSections = computed(() => {
                 <button type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden" @click="mobileOpen = !mobileOpen">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
-                <Link :href="homeHref" class="min-w-0 max-w-[10rem] shrink-0 sm:max-w-[12rem] xl:max-w-[14rem]" :title="branding?.display_name">
+                <template v-if="isSuperAdmin && isCentralHost && adminHub">
+                    <Dropdown align="left" width="72" teleport content-classes="py-0 bg-slate-900 text-slate-100">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                class="rounded-lg p-0.5 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                title="Platform shortcuts"
+                                aria-label="Open platform shortcuts"
+                            >
+                                <BrandLogo
+                                    size="sm"
+                                    variant="light"
+                                    :logo-url="branding?.logo_url"
+                                    :brand-name="branding?.display_name"
+                                    :show-text="false"
+                                />
+                            </button>
+                        </template>
+                        <template #content>
+                            <AdminHubMenu :hub="adminHub" />
+                        </template>
+                    </Dropdown>
+                    <Link
+                        :href="homeHref"
+                        class="min-w-0 truncate text-lg font-bold tracking-tight text-white hover:text-indigo-200"
+                        :title="brandTitle"
+                    >
+                        <span class="hidden bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent sm:inline">Power</span><span class="hidden sm:inline">ByExcellence</span>
+                        <span class="sm:hidden">{{ brandTitle }}</span>
+                    </Link>
+                </template>
+                <Link
+                    v-else
+                    :href="homeHref"
+                    class="min-w-0 max-w-[10rem] shrink-0 sm:max-w-[12rem] xl:max-w-[14rem]"
+                    :title="brandTitle"
+                >
                     <BrandLogo
                         size="sm"
                         variant="light"
@@ -278,7 +340,7 @@ const mobileSections = computed(() => {
                     <Link :href="route('postbacks.index')" :class="dropdownLinkClass">Postbacks</Link>
                     <Link :href="route('imports.index')" :class="dropdownLinkClass">Import Data</Link>
                     <Link :href="route('features.index')" :class="dropdownLinkClass">Features</Link>
-                    <template v-if="isSuperAdmin">
+                    <template v-if="isSuperAdmin && isCentralHost">
                         <div class="my-1 border-t border-slate-700" />
                         <a href="/horizon" target="_blank" rel="noopener" :class="dropdownLinkClass">Horizon (queues)</a>
                         <a href="/telescope" target="_blank" rel="noopener" :class="dropdownLinkClass">Telescope (debug)</a>
@@ -381,7 +443,7 @@ const mobileSections = computed(() => {
         </div>
 
         <!-- Mobile navigation -->
-        <nav v-if="mobileOpen && !isBuyer && !isSupplier" class="max-h-[70vh] overflow-y-auto border-t border-slate-800 bg-slate-950 px-3 py-3 md:hidden">
+        <nav v-if="mobileOpen" class="max-h-[70vh] overflow-y-auto border-t border-slate-800 bg-slate-950 px-3 py-3 md:hidden">
             <div class="space-y-1">
                 <template v-for="section in mobileSections" :key="section.id">
                     <Link

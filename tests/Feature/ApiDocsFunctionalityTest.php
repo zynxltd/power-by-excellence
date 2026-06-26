@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Campaign;
 use App\Models\User;
+use Database\Seeders\PlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class ApiDocsFunctionalityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->seed(PlatformSeeder::class);
         $this->admin = User::where('email', 'uk@powerbyexcellence.test')->first();
     }
 
@@ -30,7 +31,7 @@ class ApiDocsFunctionalityTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/ApiDocs/Index')
                 ->has('apiBaseUrl')
-                ->has('endpoints', 13)
+                ->has('endpoints', 15)
                 ->has('statusFields', 11)
                 ->has('leadStatuses', 9)
                 ->has('guides', 6)

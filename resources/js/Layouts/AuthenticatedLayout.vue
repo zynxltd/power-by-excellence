@@ -26,7 +26,7 @@ provide('isNavigating', isNavigating);
         <NavigationLoader />
         <div
             v-if="showSessionBanner"
-            class="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+            class="flex flex-wrap items-center justify-center gap-2 border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
         >
             <template v-if="impersonator">
                 Viewing as <strong>{{ page.props.auth.user?.name }}</strong>
@@ -35,7 +35,7 @@ provide('isNavigating', isNavigating);
             <template v-else>
                 God mode — viewing <strong>{{ page.props.auth.account?.display_name ?? 'tenant platform' }}</strong> as super admin.
             </template>
-            <AppButton :href="route('impersonate.stop')" method="post" class="ml-3 inline-flex" variant="secondary">
+            <AppButton :href="route('impersonate.stop')" method="post" class="inline-flex shrink-0" variant="secondary">
                 {{ impersonator ? 'End impersonation' : 'Exit god mode' }}
             </AppButton>
         </div>

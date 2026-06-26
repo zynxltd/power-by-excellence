@@ -75,6 +75,22 @@ class PlatformApiDocsService
                 'description' => 'Revenue and margin aggregates for a date range.',
             ],
             [
+                'key' => 'platform-export',
+                'method' => 'GET',
+                'path' => '/platform',
+                'scope' => 'platform.read',
+                'summary' => 'Export platform configuration',
+                'description' => 'Full snapshot of campaigns, buyers, suppliers, routing, webhooks, postbacks, and hosted forms. Use when mirroring config into your own admin or BI stack.',
+            ],
+            [
+                'key' => 'platform-campaign',
+                'method' => 'GET',
+                'path' => '/platform/campaigns/{reference}',
+                'scope' => 'platform.read',
+                'summary' => 'Export one campaign',
+                'description' => 'Campaign schema, deliveries, ping-tree configs, and API spec for a single campaign reference.',
+            ],
+            [
                 'key' => 'quarantine-list',
                 'method' => 'GET',
                 'path' => '/quarantine',
@@ -126,6 +142,7 @@ class PlatformApiDocsService
             ['permission' => 'leads.create', 'description' => 'POST new leads and bulk import'],
             ['permission' => 'leads.read', 'description' => 'Poll status, search, and reprocess leads'],
             ['permission' => 'reports.read', 'description' => 'Read aggregated reports endpoints'],
+            ['permission' => 'platform.read', 'description' => 'Export platform configuration (campaigns, buyers, routing, integrations)'],
             ['permission' => 'quarantine.manage', 'description' => 'List, release, or reject quarantined leads'],
             ['permission' => 'buyers.manage', 'description' => 'Buyer feedback and credit top-up API'],
             ['permission' => '*', 'description' => 'Full access (administrator keys only)'],
@@ -254,6 +271,81 @@ class PlatformApiDocsService
             [
                 'title' => 'Rate limits',
                 'body' => 'Excessive requests return HTTP 429. Back off and retry with exponential delay. Contact your account manager if you need higher throughput.',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{title: string, body: string}>
+     */
+    public function platformGuides(): array
+    {
+        return [
+            [
+                'title' => 'When to use platform export',
+                'body' => 'Use GET /platform when you operate your own front-end, CRM, or reporting stack but want PowerByExcellence to run lead routing, ping trees, and buyer delivery. Pull the snapshot on a schedule (e.g. every 15 minutes) to keep your local copy of campaigns, field schemas, buyers, and delivery endpoints in sync.',
+            ],
+            [
+                'title' => 'Own platform scenario',
+                'body' => 'Example: you run a white-label partner portal on your domain. Your app stores affiliate users and shows campaign lists from GET /platform. Lead ingest still goes to POST /leads using the campaign_reference and field schema from the export. Status polling uses GET /leads/{lead_id}. Your portal never needs admin UI access — only an API key with platform.read, leads.create, and leads.read.',
+            ],
+            [
+                'title' => 'Partial exports',
+                'body' => 'Pass include as a comma-separated list to limit payload size: include=campaigns,buyers or include=suppliers,postbacks. Platform metadata is always returned. Omit include for the full snapshot.',
+            ],
+            [
+                'title' => 'Incremental sync',
+                'body' => 'Compare updated_at on campaigns, buyers, and suppliers between polls. For a single campaign refresh, call GET /platform/campaigns/{reference} instead of re-downloading the full export.',
+            ],
+            [
+                'title' => 'Secrets and credentials',
+                'body' => 'Webhook signing secrets, API key tokens, and buyer portal passwords are never returned. Webhooks include has_secret: true when a secret is configured. Delivery buyer URLs and field schemas are included so your stack can document integrations.',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function samplePlatformExport(): array
+    {
+        return [
+            'exported_at' => '2026-06-26T12:00:00+00:00',
+            'platform' => [
+                'slug' => 'your-platform',
+                'name' => 'Your Platform',
+                'api_base_url' => 'https://your-platform.powerbyexcellence.test/api/v1',
+                'portal_url' => 'https://your-platform.powerbyexcellence.test',
+                'default_currency' => 'GBP',
+                'timezone' => 'Europe/London',
+            ],
+            'campaigns' => [
+                [
+                    'reference' => 'loans-uk',
+                    'name' => 'Loans UK',
+                    'status' => 'active',
+                    'fields' => [
+                        ['name' => 'firstname', 'type' => 'string', 'required' => true],
+                        ['name' => 'email', 'type' => 'email', 'required' => true],
+                    ],
+                    'api_spec' => ['version' => '1.0', 'fields' => []],
+                    'deliveries' => [
+                        ['name' => 'Tier 1 — Acme Buyer', 'tier' => 1, 'method' => 'ping_post'],
+                    ],
+                    'distribution_configs' => [
+                        ['name' => 'Default ping tree', 'is_active' => true],
+                    ],
+                ],
+            ],
+            'buyers' => [
+                ['reference' => 'acme-buyer', 'name' => 'Acme Buyer', 'status' => 'active', 'credit_balance' => 500.0],
+            ],
+            'suppliers' => [
+                [
+                    'reference' => 'main-affiliate',
+                    'name' => 'Main Affiliate',
+                    'sources' => [['sid' => 'AFF001', 'name' => 'Default source']],
+                ],
             ],
         ];
     }

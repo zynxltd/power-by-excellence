@@ -124,7 +124,7 @@ watch(() => props.view, (v) => {
         <CompactStatStrip :items="statCards" class="mb-6" />
 
         <Panel title="Filters" class="mb-6">
-            <div class="grid gap-4 md:grid-cols-6">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">Vertical</label>
                     <select v-model="localFilters.vertical_id" class="form-select">

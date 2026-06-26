@@ -29,11 +29,13 @@ const closeOnEscape = (e) => {
 const widthClass = computed(() => ({
     48: 'w-48',
     56: 'w-56',
+    72: 'w-72',
 }[props.width.toString()] ?? 'w-48'));
 
 const widthPx = computed(() => ({
     48: 192,
     56: 224,
+    72: 288,
 }[props.width.toString()] ?? 192));
 
 const alignmentClasses = computed(() => {
