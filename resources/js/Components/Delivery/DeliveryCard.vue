@@ -10,6 +10,7 @@ const props = defineProps({
     delivery: { type: Object, required: true },
     healthStyles: { type: Object, required: true },
     methodLabels: { type: Object, default: () => ({}) },
+    showPlatformInHealth: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['test']);
@@ -60,11 +61,18 @@ const revenueLabel = computed(() => {
                             'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
                             healthStyles[delivery.health] ?? healthStyles.inactive,
                         ]"
+                        :title="delivery.health_reason ?? undefined"
                     >
                         {{ delivery.health ?? 'inactive' }}
                     </span>
                 </div>
             </div>
+            <p
+                v-if="delivery.health_reason"
+                class="mt-2 text-xs leading-snug text-amber-800 dark:text-amber-300"
+            >
+                <span v-if="delivery.platform_name && showPlatformInHealth" class="font-semibold">{{ delivery.platform_name }} · </span>{{ delivery.health_reason }}
+            </p>
         </div>
 
         <div class="flex flex-1 flex-col space-y-3 px-5 py-4">

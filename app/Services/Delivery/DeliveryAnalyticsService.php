@@ -75,33 +75,76 @@ class DeliveryAnalyticsService
 
     public function healthFor(Delivery $delivery, ?array $stats = null): string
     {
+        return $this->healthDetailFor($delivery, $stats)['health'];
+    }
+
+    /**
+     * @return array{health: string, health_reason: ?string, platform_name: ?string}
+     */
+    public function healthDetailFor(Delivery $delivery, ?array $stats = null): array
+    {
+        $platformName = $delivery->campaign?->account?->brand_name
+            ?: $delivery->campaign?->account?->name;
+
         if ($delivery->status !== 'active') {
-            return 'inactive';
+            return [
+                'health' => 'inactive',
+                'health_reason' => 'Delivery status is '.$delivery->status,
+                'platform_name' => $platformName,
+            ];
         }
 
         if ($delivery->buyer_id && $delivery->buyer) {
             if (($delivery->buyer->status ?? 'active') !== 'active') {
-                return 'critical';
+                return [
+                    'health' => 'critical',
+                    'health_reason' => 'Buyer “'.$delivery->buyer->name.'” is inactive',
+                    'platform_name' => $platformName,
+                ];
             }
             if (! app(BuyerBillingService::class)->hasCredit($delivery->buyer, (float) $delivery->revenue_amount)) {
-                return 'critical';
+                return [
+                    'health' => 'critical',
+                    'health_reason' => 'Buyer “'.$delivery->buyer->name.'” has insufficient credit',
+                    'platform_name' => $platformName,
+                ];
             }
         }
 
         if ($delivery->caps && ! app(CapService::class)->hasCapacity('delivery', $delivery->id, $delivery->caps)) {
-            return 'warning';
+            return [
+                'health' => 'warning',
+                'health_reason' => 'Delivery cap reached for current period',
+                'platform_name' => $platformName,
+            ];
         }
 
         $stats ??= $this->statsFor($delivery);
         if ($stats['last_24h_total'] > 0 && ($stats['success_rate'] ?? 100) < 50) {
-            return 'warning';
+            $rate = $stats['success_rate'];
+            $success = $stats['last_24h_success'];
+            $total = $stats['last_24h_total'];
+
+            return [
+                'health' => 'warning',
+                'health_reason' => "Low success rate {$rate}% in 24h ({$success}/{$total} posts)",
+                'platform_name' => $platformName,
+            ];
         }
 
         if ($delivery->advanced_distribution_only && ! $this->isInPingTree($delivery)) {
-            return 'warning';
+            return [
+                'health' => 'warning',
+                'health_reason' => 'Marked advanced-only but not assigned to any ping tree tier',
+                'platform_name' => $platformName,
+            ];
         }
 
-        return 'healthy';
+        return [
+            'health' => 'healthy',
+            'health_reason' => null,
+            'platform_name' => $platformName,
+        ];
     }
 
     /**
@@ -131,8 +174,11 @@ class DeliveryAnalyticsService
     {
         $array = $delivery->toArray();
         $stats ??= $this->bulkStatsFor([$delivery->id])[$delivery->id] ?? $this->statsFor($delivery);
+        $detail = $this->healthDetailFor($delivery, $stats);
         $array['stats'] = $stats;
-        $array['health'] = $this->healthFor($delivery, $stats);
+        $array['health'] = $detail['health'];
+        $array['health_reason'] = $detail['health_reason'];
+        $array['platform_name'] = $detail['platform_name'];
 
         return $array;
     }

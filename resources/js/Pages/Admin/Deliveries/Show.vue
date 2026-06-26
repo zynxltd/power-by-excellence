@@ -17,6 +17,8 @@ const props = defineProps({
     recentLogs: Object,
     methodGuide: Object,
     health: String,
+    healthReason: { type: String, default: null },
+    platformName: { type: String, default: null },
     stats: Object,
     pingTreeLinks: Array,
     performance: Object,
@@ -82,9 +84,14 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
     <AuthenticatedLayout>
         <PageHeader :title="delivery.name" description="Delivery configuration, performance, and activity.">
             <template #actions>
-                <span :class="['rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', healthStyles[health] ?? healthStyles.inactive]">
-                    {{ health }}
-                </span>
+                <div class="flex max-w-md flex-col items-end gap-1 text-right">
+                    <span :class="['rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide', healthStyles[health] ?? healthStyles.inactive]">
+                        {{ health }}
+                    </span>
+                    <p v-if="healthReason" class="text-xs leading-snug text-amber-800 dark:text-amber-300">
+                        <span v-if="platformName" class="font-semibold">{{ platformName }} · </span>{{ healthReason }}
+                    </p>
+                </div>
                 <AppButton variant="secondary" @click="testDelivery">Test delivery</AppButton>
                 <AppButton :href="route('deliveries.edit', delivery.id)">Edit</AppButton>
             </template>

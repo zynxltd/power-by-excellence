@@ -25,14 +25,14 @@ class DeliveryController extends Controller
         $query = $this->filteredDeliveriesQuery($request);
 
         $statsBase = (clone $query);
-        $healthDeliveries = (clone $query)->with('buyer')->get();
+        $healthDeliveries = (clone $query)->with(['buyer', 'campaign.account'])->get();
         $healthCounts = $analytics->healthCountsFor($healthDeliveries);
 
         $view = $request->input('view', 'cards');
         $perPage = $view === 'table' ? 25 : 24;
 
         $paginator = $query
-            ->with(['campaign', 'buyer'])
+            ->with(['campaign.account', 'buyer'])
             ->withCount('logs')
             ->orderByDesc('updated_at')
             ->paginate($perPage)
@@ -71,6 +71,7 @@ class DeliveryController extends Controller
                 'statuses' => ['active', 'inactive', 'saved'],
             ],
             'view' => $view,
+            'showPlatformColumn' => (bool) $request->user()?->isSuperAdmin(),
             'campaignWorkflow' => CampaignWorkflow::fromId($request->integer('campaign_id') ?: null),
         ]);
     }
@@ -109,7 +110,7 @@ class DeliveryController extends Controller
     public function show(Delivery $delivery, DeliveryAnalyticsService $analytics): Response
     {
         $delivery = $this->resolveDelivery($delivery);
-        $delivery->load(['campaign', 'buyer']);
+        $delivery->load(['campaign.account', 'buyer']);
         $recentLogs = $delivery->logs()
             ->with(['lead:id,uuid,status', 'buyer:id,name'])
             ->orderByDesc('created_at')
@@ -128,12 +129,16 @@ class DeliveryController extends Controller
             ],
         ];
 
+        $healthDetail = $analytics->healthDetailFor($delivery);
+
         return Inertia::render('Admin/Deliveries/Show', [
             'delivery' => $delivery,
             'recentLogs' => $recentLogs,
             'initialTab' => request()->query('tab', 'overview'),
             'methodGuide' => $this->methodGuides()[$delivery->method->value] ?? null,
-            'health' => $analytics->healthFor($delivery),
+            'health' => $healthDetail['health'],
+            'healthReason' => $healthDetail['health_reason'],
+            'platformName' => $healthDetail['platform_name'],
             'stats' => $analytics->statsFor($delivery),
             'pingTreeLinks' => $analytics->pingTreeLinks($delivery),
             'performance' => $performance,

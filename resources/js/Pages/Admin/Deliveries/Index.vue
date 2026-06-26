@@ -22,6 +22,7 @@ const props = defineProps({
     filters: Object,
     filterOptions: Object,
     view: { type: String, default: 'cards' },
+    showPlatformColumn: { type: Boolean, default: false },
     campaignWorkflow: { type: Object, default: null },
 });
 
@@ -41,6 +42,15 @@ const healthStyles = {
     warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
     critical: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
     inactive: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+};
+
+const healthLabel = (d) => {
+    if (d.health_reason) {
+        const platform = d.platform_name ? `${d.platform_name}: ` : '';
+        return `${platform}${d.health_reason}`;
+    }
+
+    return d.health ?? 'inactive';
 };
 
 const methodValue = (d) => d.method?.value ?? d.method;
@@ -216,6 +226,7 @@ watch(() => props.view, (v) => {
                         :delivery="d"
                         :health-styles="healthStyles"
                         :method-labels="methodLabels"
+                        :show-platform-in-health="showPlatformColumn"
                         @test="testDelivery"
                     />
                 </div>
@@ -239,6 +250,7 @@ watch(() => props.view, (v) => {
             <DataTable :empty="!deliveryRows.length" empty-message="No deliveries match your filters.">
                 <template #head>
                     <th class="text-left">Name</th>
+                    <th v-if="showPlatformColumn" class="text-left">Platform</th>
                     <th class="text-left">Campaign</th>
                     <th class="text-left">Buyer</th>
                     <th class="text-left">Method</th>
@@ -250,14 +262,20 @@ watch(() => props.view, (v) => {
                 </template>
                 <ClickableTableRow v-for="d in deliveryRows" :key="d.id" :href="route('deliveries.show', d.id)">
                     <td class="font-medium text-slate-900 dark:text-white">{{ d.name }}</td>
+                    <td v-if="showPlatformColumn" class="text-xs text-slate-600 dark:text-slate-400">
+                        {{ d.platform_name ?? '—' }}
+                    </td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.campaign?.name }}</td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '—' }}</td>
                     <td class=""><DeliveryMethodBadge :method="methodValue(d)" /></td>
                     <td class=""><StatusBadge :status="d.status" /></td>
-                    <td class="">
-                        <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold capitalize', healthStyles[d.health] ?? healthStyles.inactive]">
+                    <td class="max-w-xs">
+                        <span :class="['inline-block rounded-full px-2 py-0.5 text-xs font-semibold capitalize', healthStyles[d.health] ?? healthStyles.inactive]">
                             {{ d.health ?? 'inactive' }}
                         </span>
+                        <p v-if="d.health_reason" class="mt-1 text-xs leading-snug text-amber-800 dark:text-amber-300" :title="healthLabel(d)">
+                            {{ d.health_reason }}
+                        </p>
                     </td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">
                         {{ d.stats?.success_rate != null ? `${d.stats.success_rate}%` : '—' }}
