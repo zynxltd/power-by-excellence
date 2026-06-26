@@ -8,30 +8,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('platform_notifications', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('audience'); // super_admin | tenant
-            $table->string('type'); // broadcast | activity
-            $table->string('severity')->default('info');
-            $table->string('title');
-            $table->text('body')->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('platform_notifications')) {
+            Schema::create('platform_notifications', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
+                $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->string('audience'); // super_admin | tenant
+                $table->string('type'); // broadcast | activity
+                $table->string('severity')->default('info');
+                $table->string('title');
+                $table->text('body')->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamps();
 
-            $table->index(['audience', 'created_at']);
-            $table->index(['account_id', 'created_at']);
-        });
+                $table->index(['audience', 'created_at']);
+                $table->index(['account_id', 'created_at']);
+            });
+        }
 
-        Schema::create('platform_notification_reads', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('platform_notification_id')->constrained()->cascadeOnDelete();
-            $table->timestamp('read_at');
-            $table->unique(['user_id', 'platform_notification_id'], 'pn_reads_user_notification_uq');
-        });
+        if (! Schema::hasTable('platform_notification_reads')) {
+            Schema::create('platform_notification_reads', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('platform_notification_id')->constrained()->cascadeOnDelete();
+                $table->timestamp('read_at');
+                $table->unique(['user_id', 'platform_notification_id'], 'pn_reads_user_notification_uq');
+            });
+        }
     }
 
     public function down(): void
