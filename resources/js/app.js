@@ -24,8 +24,12 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        useTheme();
-        return createApp({ render: () => h(App, props) })
+        return createApp({
+            setup() {
+                useTheme();
+            },
+            render: () => h(App, props),
+        })
             .use(plugin)
             .use(ZiggyVue)
             .mount(el);

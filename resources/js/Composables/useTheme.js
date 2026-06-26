@@ -89,7 +89,7 @@ function syncFromServer(prefs) {
 
 function persistPreferencesToServer(nextTheme = theme.value) {
     const page = usePage();
-    if (!page.props.auth?.user) {
+    if (!page.props?.auth?.user) {
         return;
     }
 
@@ -110,7 +110,7 @@ export function useTheme() {
 
     const page = usePage();
     watch(
-        () => page.props.auth?.preferences,
+        () => page.props?.auth?.preferences,
         (prefs) => syncFromServer(prefs),
         { immediate: true, deep: true },
     );
