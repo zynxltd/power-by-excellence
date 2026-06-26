@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
 import { chartXTicks, xPositionPercent } from '@/utils/chartTicks';
 
 const props = defineProps({
@@ -14,8 +13,9 @@ const props = defineProps({
 
 const hover = ref(null);
 
-const padding = { top: 12, right: 8, bottom: 40, left: 36 };
+const padding = { top: 12, right: 2, bottom: 40, left: 2 };
 const labelRowHeight = 28;
+const yAxisWidth = computed(() => (props.valueFormatter ? 56 : 40));
 const innerWidth = computed(() => 100 - padding.left - padding.right);
 const innerHeight = computed(() => props.height - padding.top - padding.bottom - labelRowHeight);
 
@@ -54,6 +54,15 @@ const gridLines = computed(() => {
         value: Math.round(maxValue.value * (1 - i / lines)),
     }));
 });
+
+const yAxisLabels = computed(() => (
+    gridLines.value
+        .slice(0, -1)
+        .map((line) => ({
+            value: line.value,
+            topPercent: (line.y / props.height) * 100,
+        }))
+));
 
 const xTicks = computed(() => (
     chartXTicks(props.labels, props.maxXTicks).map((tick) => ({
@@ -146,14 +155,29 @@ const onMouseLeave = () => {
 
 <template>
     <div class="relative w-full">
-        <div class="relative w-full" :style="{ height: `${height}px` }">
-            <svg
-                :viewBox="`0 0 100 ${height}`"
-                class="h-full w-full overflow-visible"
-                preserveAspectRatio="none"
-                @mousemove="onMouseMove"
-                @mouseleave="onMouseLeave"
+        <div class="flex w-full gap-1" :style="{ height: `${height}px` }">
+            <div
+                class="pointer-events-none relative shrink-0"
+                :style="{ width: `${yAxisWidth}px` }"
             >
+                <span
+                    v-for="(label, index) in yAxisLabels"
+                    :key="`y-${index}`"
+                    class="absolute right-0 -translate-y-1/2 text-right text-[10px] font-medium leading-none text-slate-500 dark:text-slate-400"
+                    :style="{ top: `${label.topPercent}%` }"
+                >
+                    {{ formatValue(label.value) }}
+                </span>
+            </div>
+
+            <div class="relative min-w-0 flex-1">
+                <svg
+                    :viewBox="`0 0 100 ${height}`"
+                    class="h-full w-full overflow-visible"
+                    preserveAspectRatio="none"
+                    @mousemove="onMouseMove"
+                    @mouseleave="onMouseLeave"
+                >
                 <defs>
                     <linearGradient v-for="(dataset, di) in datasets" :key="`grad-${di}`" :id="`line-grad-${di}`" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" :stop-color="dataset.color" stop-opacity="0.3" />
@@ -171,15 +195,6 @@ const onMouseLeave = () => {
                         stroke-width="0.15"
                         class="dark:stroke-slate-800"
                     />
-                    <text
-                        v-if="index < gridLines.length - 1"
-                        :x="padding.left - 2"
-                        :y="line.y + 1"
-                        text-anchor="end"
-                        class="fill-slate-400 text-[2.8px] font-medium"
-                    >
-                        {{ formatValue(line.value) }}
-                    </text>
                 </g>
 
                 <template v-for="(dataset, di) in datasets" :key="di">
@@ -232,7 +247,7 @@ const onMouseLeave = () => {
 
             <div
                 class="pointer-events-none absolute inset-x-0 bottom-0"
-                :style="{ height: `${labelRowHeight}px`, paddingLeft: '2%', paddingRight: '2%' }"
+                :style="{ height: `${labelRowHeight}px` }"
             >
                 <span
                     v-for="tick in xTicks"
@@ -249,7 +264,7 @@ const onMouseLeave = () => {
                 v-if="tooltip"
                 class="pointer-events-none absolute z-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900"
                 :style="{
-                    left: `${Math.min(Math.max(tooltip.x, 10), 90)}%`,
+                    left: `${Math.min(Math.max(tooltip.x, 6), 94)}%`,
                     top: `${Math.max((tooltip.y / height) * 100 - 14, 2)}%`,
                     transform: 'translateX(-50%)',
                 }"
@@ -259,9 +274,10 @@ const onMouseLeave = () => {
                     {{ row.label }}: {{ formatValue(row.value) }}
                 </p>
             </div>
+            </div>
         </div>
 
-        <div v-if="datasets.length > 1" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <div v-if="datasets.length > 1" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 dark:border-slate-800" :style="{ marginLeft: `${yAxisWidth + 4}px` }">
             <div v-for="(dataset, i) in datasets" :key="i" class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                 <span class="h-2 w-3 rounded-full" :style="{ backgroundColor: dataset.color }" />
                 {{ dataset.label }}

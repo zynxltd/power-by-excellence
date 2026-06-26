@@ -61,9 +61,9 @@ const copyCommand = async (check) => {
                 :title="tooltip(check)"
                 :class="[
                     'flex min-w-0 flex-col items-center px-2 py-2 text-center sm:px-2.5',
-                    check.command ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60' : 'cursor-default',
+                    check.command && check.status !== 'ok' ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60' : 'cursor-default',
                 ]"
-                @click="copyCommand(check)"
+                @click="check.command && check.status !== 'ok' ? copyCommand(check) : null"
             >
                 <span class="line-clamp-2 text-[9px] font-semibold uppercase leading-tight tracking-wide text-slate-500 dark:text-slate-400 sm:text-[10px]">
                     {{ check.label }}

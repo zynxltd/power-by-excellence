@@ -76,8 +76,6 @@ class PasswordResetLinkController extends Controller
             return null;
         }
 
-        return [
-            'name' => $hostAccount->brand_name ?: $hostAccount->name,
-        ];
+        return $hostAccount->publicBranding();
     }
 }

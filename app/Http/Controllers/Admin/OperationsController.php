@@ -43,8 +43,8 @@ class OperationsController extends Controller
                 ->whereDate('created_at', today())
                 ->whereIn('status', ['failed', 'skipped'])
                 ->count(),
-            'revenue_today' => (float) \Illuminate\Support\Facades\DB::table('lead_financials')
-                ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
+            'revenue_today' => (float) Lead::query()
+                ->join('lead_financials', 'leads.id', '=', 'lead_financials.lead_id')
                 ->when($campaignId, fn ($q) => $q->where('leads.campaign_id', $campaignId))
                 ->whereDate('leads.distributed_at', today())
                 ->sum('lead_financials.revenue'),

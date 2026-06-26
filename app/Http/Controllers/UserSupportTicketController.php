@@ -12,8 +12,12 @@ use Inertia\Response;
 
 class UserSupportTicketController extends BaseController
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
+        if ($request->user()?->isSuperAdmin()) {
+            return redirect()->route('support.admin.index');
+        }
+
         $tickets = SupportTicket::where('user_id', $request->user()->id)
             ->orderByDesc('updated_at')
             ->paginate(15);
@@ -21,13 +25,16 @@ class UserSupportTicketController extends BaseController
         return Inertia::render('Support/Index', ['tickets' => $tickets]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        abort_if($request->user()?->isSuperAdmin(), 403);
+
         return Inertia::render('Support/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        abort_if($request->user()?->isSuperAdmin(), 403);
         $validated = $request->validate([
             'subject' => 'required|string|max:255',
             'body' => 'required|string|max:5000',
@@ -53,8 +60,12 @@ class UserSupportTicketController extends BaseController
         return redirect()->route('support.show', $ticket)->with('success', 'Ticket created.');
     }
 
-    public function show(Request $request, SupportTicket $ticket): Response
+    public function show(Request $request, SupportTicket $ticket): Response|RedirectResponse
     {
+        if ($request->user()?->isSuperAdmin()) {
+            return redirect()->route('support.admin.show', $ticket);
+        }
+
         abort_unless($ticket->user_id === $request->user()->id, 403);
         $ticket->load(['messages.user:id,name']);
 
@@ -63,6 +74,10 @@ class UserSupportTicketController extends BaseController
 
     public function reply(Request $request, SupportTicket $ticket): RedirectResponse
     {
+        if ($request->user()?->isSuperAdmin()) {
+            return redirect()->route('support.admin.show', $ticket);
+        }
+
         abort_unless($ticket->user_id === $request->user()->id, 403);
 
         $validated = $request->validate(['body' => 'required|string|max:5000']);

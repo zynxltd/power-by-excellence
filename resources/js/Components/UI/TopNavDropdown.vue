@@ -77,11 +77,11 @@ onUnmounted(() => {
             type="button"
             :title="title ?? label"
             :class="[
-                'flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs font-medium transition xl:px-2',
+                'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition',
                 isOpen
-                    ? 'bg-slate-800 text-white ring-1 ring-indigo-500/50'
+                    ? 'bg-indigo-600 text-white'
                     : active
-                        ? 'text-indigo-300'
+                        ? 'bg-indigo-600/20 text-indigo-200 ring-1 ring-indigo-500/40'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white',
             ]"
             :aria-expanded="isOpen"
@@ -89,7 +89,7 @@ onUnmounted(() => {
         >
             {{ label }}
             <svg
-                class="h-3 w-3 opacity-70 transition"
+                class="h-3.5 w-3.5 opacity-70 transition"
                 :class="isOpen ? 'rotate-180' : ''"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -104,7 +104,7 @@ onUnmounted(() => {
                 data-nav-dropdown-menu
                 :style="menuStyle"
                 :class="[
-                    'rounded-xl border border-slate-700 bg-slate-900 shadow-xl',
+                    'rounded-xl border border-slate-700 bg-slate-900 py-1 text-slate-100 shadow-xl',
                     wide ? 'py-0' : 'py-1',
                 ]"
                 @click="wide ? undefined : nav?.close()"

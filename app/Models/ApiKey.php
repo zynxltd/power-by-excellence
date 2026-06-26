@@ -10,6 +10,10 @@ class ApiKey extends Model
 {
     use BelongsToAccount;
 
+    protected $hidden = [
+        'key_hash',
+    ];
+
     protected $fillable = [
         'account_id',
         'supplier_id',

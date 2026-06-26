@@ -47,7 +47,7 @@ export function shortenChartLabel(label, totalDays) {
     return text;
 }
 
-export function xPositionPercent(position, paddingLeft = 36, paddingRight = 8) {
+export function xPositionPercent(position, paddingLeft = 2, paddingRight = 2) {
     const inner = 100 - paddingLeft - paddingRight;
 
     return paddingLeft + position * inner;

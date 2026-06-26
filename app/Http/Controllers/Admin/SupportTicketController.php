@@ -14,7 +14,8 @@ class SupportTicketController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = SupportTicket::with(['user:id,name,email', 'assignee:id,name'])
+        $query = SupportTicket::withoutGlobalScopes()
+            ->with(['user:id,name,email', 'account:id,name,brand_name,slug', 'assignee:id,name'])
             ->orderByDesc('updated_at');
 
         if ($request->filled('status')) {
@@ -30,7 +31,9 @@ class SupportTicketController extends Controller
 
     public function show(SupportTicket $ticket): Response
     {
-        $ticket->load(['messages.user:id,name,email', 'user:id,name,email']);
+        $ticket = SupportTicket::withoutGlobalScopes()
+            ->with(['messages.user:id,name,email', 'user:id,name,email', 'account:id,name,brand_name,slug'])
+            ->findOrFail($ticket->id);
 
         return Inertia::render('Admin/Support/Show', [
             'ticket' => $ticket,
@@ -39,6 +42,8 @@ class SupportTicketController extends Controller
 
     public function reply(Request $request, SupportTicket $ticket): RedirectResponse
     {
+        $ticket = SupportTicket::withoutGlobalScopes()->findOrFail($ticket->id);
+
         $validated = $request->validate(['body' => 'required|string|max:5000']);
 
         SupportTicketMessage::create([
@@ -55,6 +60,8 @@ class SupportTicketController extends Controller
 
     public function updateStatus(Request $request, SupportTicket $ticket): RedirectResponse
     {
+        $ticket = SupportTicket::withoutGlobalScopes()->findOrFail($ticket->id);
+
         $validated = $request->validate(['status' => 'required|in:open,pending,resolved,closed']);
 
         $ticket->update([

@@ -25,12 +25,25 @@ use Illuminate\Support\Str;
 
 class DemoHistoricalDataSeeder extends Seeder
 {
+    /** Days of backdated demo leads, logs, and activity per platform. */
+    protected int $historyDays = 90;
+
     public function run(): void
     {
+        $this->historyDays = max(1, (int) (env('DEMO_HISTORY_DAYS', $this->historyDays)));
+
+        if ($this->command) {
+            $this->command->info("Seeding {$this->historyDays} days of historical demo data for all platforms…");
+        }
+
         foreach (Account::orderBy('id')->get() as $account) {
             $primaryRef = Campaign::where('account_id', $account->id)->orderBy('id')->value('reference');
             if (! $primaryRef) {
                 continue;
+            }
+
+            if ($this->command) {
+                $this->command->line("  → {$account->name}");
             }
 
             $this->seedExtendedPartners($account);
@@ -49,6 +62,15 @@ class DemoHistoricalDataSeeder extends Seeder
         if ($uk) {
             $this->seedDemoForms($uk);
         }
+
+        if ($this->command) {
+            $this->command->info("Historical demo data complete ({$this->historyDays} days per platform).");
+        }
+    }
+
+    protected function historyDayRange(): array
+    {
+        return range($this->historyDays - 1, 0);
     }
 
     protected function seedDemoForms(Account $account): void
@@ -221,7 +243,7 @@ class DemoHistoricalDataSeeder extends Seeder
             LeadStatus::Accepted->value => 4,
         ];
 
-        for ($day = 29; $day >= 0; $day--) {
+        foreach ($this->historyDayRange() as $day) {
             $date = now()->subDays($day)->startOfDay();
             $dailyCount = random_int(18, 42);
 
@@ -312,12 +334,10 @@ class DemoHistoricalDataSeeder extends Seeder
 
             $logStatus = match (true) {
                 $isWinningTier => 'success',
-                $status === LeadStatus::Rejected->value => random_int(1, 100) <= 3
+                $status === LeadStatus::Rejected->value => random_int(1, 100) <= 1
                     ? 'failed'
                     : (random_int(0, 1) ? 'skipped' : 'outbid'),
-                $isEarlierTier => random_int(1, 100) <= 2
-                    ? 'failed'
-                    : (random_int(1, 100) <= 45 ? 'outbid' : 'skipped'),
+                $isEarlierTier => random_int(1, 100) <= 45 ? 'outbid' : 'skipped',
                 default => collect(['skipped', 'outbid', 'ping_ok'])->random(),
             };
 
@@ -358,9 +378,11 @@ class DemoHistoricalDataSeeder extends Seeder
         $buyers = Buyer::where('account_id', $account->id)->get();
         $users = User::where('account_id', $account->id)->get();
 
+        $weeks = (int) ceil($this->historyDays / 7);
+
         foreach ($buyers as $buyer) {
             $balance = (float) $buyer->credit_balance;
-            for ($week = 4; $week >= 0; $week--) {
+            for ($week = $weeks; $week >= 0; $week--) {
                 $topUp = random_int(50, 200);
                 $balance += $topUp;
                 BuyerTransaction::create([
@@ -388,7 +410,7 @@ class DemoHistoricalDataSeeder extends Seeder
         }
 
         foreach ($users as $user) {
-            for ($d = 28; $d >= 0; $d--) {
+            foreach ($this->historyDayRange() as $d) {
                 if (random_int(1, 100) > 70) {
                     continue;
                 }
@@ -467,7 +489,7 @@ class DemoHistoricalDataSeeder extends Seeder
             'Campaign cap reached',
         ];
 
-        for ($day = 29; $day >= 0; $day--) {
+        foreach ($this->historyDayRange() as $day) {
             $count = random_int(12, 35);
             for ($i = 0; $i < $count; $i++) {
                 $isError = random_int(1, 100) <= 18;

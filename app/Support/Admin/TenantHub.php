@@ -93,7 +93,7 @@ class TenantHub
                     ['label' => 'Features', 'href' => route('features.index'), 'description' => 'Feature flags'],
                     ['label' => 'Settings', 'href' => route('settings.edit'), 'description' => 'Platform settings'],
                     ['label' => 'Branding', 'href' => route('branding.edit'), 'description' => 'Logo and colours'],
-                    ['label' => 'Support', 'href' => route('support.index'), 'description' => 'Contact support'],
+                    ['label' => 'Support', 'href' => (auth()->user()?->isSuperAdmin() && \App\Support\Tenancy\TenantResolver::isCentralHost()) ? route('support.admin.index') : route('support.index'), 'description' => (auth()->user()?->isSuperAdmin() && \App\Support\Tenancy\TenantResolver::isCentralHost()) ? 'Respond to tenant tickets' : 'Contact support'],
                     ['label' => 'Help centre', 'href' => route('help.index'), 'description' => 'Documentation'],
                     ['label' => 'Profile', 'href' => route('profile.edit'), 'description' => 'Your account'],
                     auth()->user()?->isSuperAdmin()

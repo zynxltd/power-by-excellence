@@ -7,7 +7,7 @@ import LineChart from '@/Components/UI/LineChart.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
-import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
+import ReportMetricSection from '@/Components/UI/ReportMetricSection.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -57,10 +57,10 @@ const netPerLead = computed(() => {
 const quarantineRate = computed(() => pct(props.summary?.quarantined_period ?? 0, props.summary?.leads_period ?? 0));
 const pingFailRate = computed(() => pct(delivery.value.rejections ?? 0, delivery.value.attempts ?? 0));
 
-const kpiColumns = 8;
+const kpiColumns = 4;
 
 const volumeStrip = computed(() => [
-    { label: `Leads (${props.days}d)`, value: formatNumber(props.summary?.leads_period), href: route('leads.index') },
+    { label: `Leads (${props.days}d)`, value: formatNumber(props.summary?.leads_period), href: route('leads.index'), accent: 'indigo' },
     { label: 'Sold', value: formatNumber(props.summary?.sold_period), href: route('leads.index', { status: 'sold' }), accent: 'emerald' },
     { label: 'Unsold', value: formatNumber(props.summary?.unsold_period), href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
     { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: route('leads.index', { status: 'rejected' }), accent: 'rose' },
@@ -82,14 +82,14 @@ const economicsStrip = computed(() => [
 ]);
 
 const rateStrip = computed(() => [
-    { label: 'Conversion', title: 'Sold ÷ received', value: `${props.summary?.conversion ?? 0}%` },
-    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold)', value: `${props.summary?.sell_through ?? 0}%` },
+    { label: 'Conversion', title: 'Sold ÷ received', value: `${props.summary?.conversion ?? 0}%`, accent: 'indigo' },
+    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold)', value: `${props.summary?.sell_through ?? 0}%`, accent: 'emerald' },
     { label: 'Reject rate', title: 'Rejected ÷ received', value: `${props.summary?.reject_rate ?? 0}%`, accent: 'rose' },
     { label: 'Quarantine', title: 'Quarantined ÷ received', value: `${quarantineRate.value}%`, accent: 'orange' },
     { label: 'Ping success', title: 'Successful delivery attempts', value: `${delivery.value.success_rate ?? 0}%`, accent: 'emerald' },
     { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts', value: `${delivery.value.outbid_rate ?? 0}%`, accent: 'amber' },
     { label: 'Ping fail', title: 'Failed/skipped ÷ delivery attempts', value: `${pingFailRate.value}%`, accent: 'rose' },
-    { label: 'Avg latency', title: 'Mean delivery duration', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—' },
+    { label: 'Avg latency', title: 'Mean delivery duration', value: delivery.value.avg_duration_ms ? `${delivery.value.avg_duration_ms}ms` : '—', accent: 'cyan' },
 ]);
 
 const deliveryLogFilter = (params = {}) => route('logs.delivery', { days: props.days, ...params });
@@ -145,23 +145,26 @@ const eplForRow = (row) => (!row.sold ? '—' : formatMoney(row.revenue / row.so
 
         <TenantContextBanner />
 
-        <section class="mb-4">
-            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Volume</h2>
-            <CompactStatStrip :items="volumeStrip" :columns="kpiColumns" />
-        </section>
+        <ReportMetricSection
+            title="Volume"
+            :description="`Lead flow and financial totals for the last ${days} days. Click a metric to drill down.`"
+            :items="volumeStrip"
+            :columns="kpiColumns"
+        />
 
-        <section class="mb-4">
-            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Unit economics</h2>
-            <CompactStatStrip :items="economicsStrip" :columns="kpiColumns" />
-            <p class="mt-1.5 text-[10px] text-slate-500">
-                Hover for formulas. EPL is revenue per sold lead; EPC is revenue per lead received; CPL is supplier payout per lead received.
-            </p>
-        </section>
+        <ReportMetricSection
+            title="Unit economics"
+            description="Revenue and payout efficiency per lead. Hover a metric for the formula — EPL is revenue per sold lead; EPC is revenue per lead received; CPL is supplier payout per lead received."
+            :items="economicsStrip"
+            :columns="kpiColumns"
+        />
 
-        <section class="mb-6">
-            <h2 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Rates &amp; delivery health</h2>
-            <CompactStatStrip :items="rateStrip" :columns="kpiColumns" />
-        </section>
+        <ReportMetricSection
+            title="Rates & delivery health"
+            description="Conversion, rejection, and ping-post delivery quality for the selected period."
+            :items="rateStrip"
+            :columns="kpiColumns"
+        />
 
         <div class="grid gap-6 lg:grid-cols-2">
             <Panel>

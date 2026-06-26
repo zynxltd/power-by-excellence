@@ -16,6 +16,17 @@ const props = defineProps({
 });
 
 const { formatMoney } = useMoneyFormat(props.currency);
+
+const ledgerTypeLabel = (type) => ({
+    credit: 'Credit (top-up)',
+    debit: 'Lead purchase',
+    goodwill: 'Goodwill credit',
+    correction: 'Balance correction',
+    refund: 'Refund',
+    manual_debit: 'Manual debit',
+    chargeback: 'Chargeback',
+    adjustment: 'General adjustment',
+}[type] ?? type);
 </script>
 
 <template>
@@ -54,7 +65,7 @@ const { formatMoney } = useMoneyFormat(props.currency);
                 </template>
                 <tr v-for="t in transactions.data" :key="t.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td class="px-6 py-4"><FormattedDate :value="t.created_at" /></td>
-                    <td class="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{{ t.type }}</td>
+                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ ledgerTypeLabel(t.type) }}</td>
                     <td
                         class="px-6 py-4 font-medium"
                         :class="t.amount < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'"

@@ -122,10 +122,10 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('/logs/changes', [ChangeLogController::class, 'index'])->name('logs.changes');
     Route::get('/logs/security', [SecurityLogController::class, 'index'])->name('logs.security');
 
-    Route::get('support/manage', [SupportTicketController::class, 'index'])->name('support.admin.index');
-    Route::get('support/manage/{ticket}', [SupportTicketController::class, 'show'])->name('support.admin.show');
-    Route::post('support/manage/{ticket}/reply', [SupportTicketController::class, 'reply'])->name('support.admin.reply');
-    Route::patch('support/manage/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->name('support.admin.status');
+    Route::get('support/manage', [SupportTicketController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('support.admin.index');
+    Route::get('support/manage/{ticket}', [SupportTicketController::class, 'show'])->middleware(['superadmin', 'central.host'])->name('support.admin.show');
+    Route::post('support/manage/{ticket}/reply', [SupportTicketController::class, 'reply'])->middleware(['superadmin', 'central.host'])->name('support.admin.reply');
+    Route::patch('support/manage/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->middleware(['superadmin', 'central.host'])->name('support.admin.status');
 
     Route::get('automation', [AutomationController::class, 'index'])->name('automation.index');
     Route::post('automation/sequences', [AutomationController::class, 'storeSequence'])->name('automation.sequences.store');

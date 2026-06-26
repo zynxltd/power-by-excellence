@@ -25,15 +25,7 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
-            'tenant' => $hostAccount ? [
-                'name' => $hostAccount->brand_name ?: $hostAccount->name,
-                'logo_url' => $hostAccount->logo_path
-                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($hostAccount->logo_path)
-                    : null,
-                'favicon_url' => $hostAccount->favicon_path
-                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($hostAccount->favicon_path)
-                    : null,
-            ] : null,
+            'tenant' => $hostAccount?->publicBranding(),
             'isCentralHost' => \App\Support\Tenancy\TenantResolver::isCentralHost(),
             'centralLoginUrl' => 'https://'.\App\Support\Tenancy\TenantResolver::baseDomain().'/login',
         ]);

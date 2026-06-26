@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Services\Platform\PlatformOpsCheck;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class PlatformOpsCheckTest extends TestCase
@@ -53,5 +54,19 @@ class PlatformOpsCheckTest extends TestCase
 
         $this->assertArrayHasKey('needs_linking', $herd);
         $this->assertNotNull(Cache::get(PlatformOpsCheck::HERD_CACHE_KEY));
+    }
+
+    public function test_redis_queue_fallback_warns_to_start_horizon(): void
+    {
+        Config::set('platform.queue.fallback_active', true);
+
+        $checks = app(PlatformOpsCheck::class)->run(fresh: true);
+        $redis = collect($checks)->firstWhere('key', 'redis');
+        $horizon = collect($checks)->firstWhere('key', 'horizon');
+
+        $this->assertSame('warning', $redis['status']);
+        $this->assertNull($redis['command']);
+        $this->assertSame('warning', $horizon['status']);
+        $this->assertSame('php artisan horizon', $horizon['command']);
     }
 }

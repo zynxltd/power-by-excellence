@@ -42,7 +42,7 @@ const submit = () => {
 
         <template #header>
             <h2 class="text-3xl font-bold tracking-tight text-slate-900">
-                {{ tenant ? `Sign in — ${tenant.name}` : 'Welcome back' }}
+                {{ tenant ? `Sign in — ${tenant.display_name ?? tenant.name}` : 'Welcome back' }}
             </h2>
             <p v-if="tenant" class="mt-2 text-slate-500">Partner platform portal — admins, buyers, and suppliers.</p>
             <p v-else-if="isCentralHost" class="mt-2 text-slate-500">Super admin sign-in for PowerByExcellence central operations.</p>

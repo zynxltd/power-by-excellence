@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\DeliveryMethod;
 use App\Enums\LeadStatus;
 use App\Enums\UserRole;
+use App\Jobs\ProcessLeadJob;
 use App\Models\AccessLog;
 use App\Models\Account;
 use App\Models\Buyer;
@@ -424,7 +425,7 @@ class PlatformSeeder extends Seeder
             ]);
         }
 
-        Lead::create([
+        $pendingLead = Lead::create([
             'account_id' => $account->id,
             'campaign_id' => $campaign->id,
             'supplier_id' => $supplier->id,
@@ -440,5 +441,9 @@ class PlatformSeeder extends Seeder
             'sid' => $source->sid,
             'received_at' => now(),
         ]);
+
+        if (config('queue.default') !== 'sync') {
+            ProcessLeadJob::dispatch($pendingLead->id);
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
+use App\Support\CsvExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -128,7 +129,7 @@ class SupplierPortalController extends Controller
 
         $csv = "uuid,campaign,status,firstname,lastname,email,phone,payout,received_at,distributed_at\n";
         foreach ($leads as $lead) {
-            $csv .= implode(',', [
+            $csv .= CsvExport::escapeRow([
                 $lead->uuid,
                 $lead->campaign?->reference ?? '',
                 $lead->status->value,
@@ -142,10 +143,7 @@ class SupplierPortalController extends Controller
             ])."\n";
         }
 
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="supplier-leads.csv"',
-        ]);
+        return CsvExport::download($csv, 'supplier-leads.csv');
     }
 
     public function billing(Request $request): Response

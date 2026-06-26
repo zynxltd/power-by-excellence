@@ -32,9 +32,11 @@ class ProcessLeadJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(LeadPipeline $pipeline): void
     {
-        $lead = Lead::withoutGlobalScopes()->with('campaign.account')->findOrFail($this->leadId);
+        $lead = Lead::withoutGlobalScopes()
+            ->with(['campaign' => fn ($query) => $query->withoutGlobalScopes(), 'campaign.account'])
+            ->findOrFail($this->leadId);
 
-        AccountContext::set($lead->campaign->account);
+        AccountContext::set($lead->campaign?->account);
 
         $pipeline->process($lead);
     }

@@ -8,6 +8,7 @@ use App\Models\Buyer;
 use App\Models\BuyerTransaction;
 use App\Services\Billing\AccountBillingService;
 use App\Services\Billing\BuyerBillingService;
+use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +21,9 @@ class BillingController extends Controller
         $account = $this->currentAccount($request);
         $requirePrepay = $account->settings['require_buyer_prepay'] ?? false;
 
-        $buyers = Buyer::orderBy('name')
+        $buyersQuery = Buyer::where('account_id', $account->id)->orderBy('name');
+
+        $buyers = (clone $buyersQuery)
             ->paginate(25, ['*'], 'buyer_page')
             ->withQueryString()
             ->through(fn (Buyer $buyer) => [
@@ -33,14 +36,19 @@ class BillingController extends Controller
             ]);
 
         $summary = [
-            'total_credit' => (float) Buyer::sum('credit_balance'),
-            'buyer_count' => Buyer::count(),
-            'transactions_today' => BuyerTransaction::whereDate('created_at', today())->count(),
+            'total_credit' => (float) (clone $buyersQuery)->sum('credit_balance'),
+            'buyer_count' => (clone $buyersQuery)->count(),
+            'transactions_today' => BuyerTransaction::query()
+                ->whereHas('buyer', fn ($q) => $q->where('account_id', $account->id))
+                ->whereDate('created_at', today())
+                ->count(),
             'require_prepay' => $requirePrepay,
             'currency' => $account->default_currency ?? 'GBP',
         ];
 
-        $recentTransactions = BuyerTransaction::with('buyer')
+        $recentTransactions = BuyerTransaction::query()
+            ->whereHas('buyer', fn ($q) => $q->where('account_id', $account->id))
+            ->with('buyer:id,name,account_id')
             ->orderByDesc('created_at')
             ->paginate(25, ['*'], 'txn_page')
             ->withQueryString();
@@ -116,7 +124,6 @@ class BillingController extends Controller
 
     public function export(Request $request, Buyer $buyer)
     {
-        $account = $this->currentAccount($request);
         $currency = $buyer->resolvedCurrency();
 
         $transactions = $buyer->transactions()->orderByDesc('created_at')->limit(5000)->get();
@@ -124,33 +131,26 @@ class BillingController extends Controller
         $csv = "date,type,amount,balance_after,description,currency\n";
 
         foreach ($transactions as $txn) {
-            $csv .= implode(',', array_map(
-                fn ($value) => '"'.str_replace('"', '""', (string) $value).'"',
-                [
-                    $txn->created_at,
-                    $txn->type,
-                    $txn->amount,
-                    $txn->balance_after,
-                    $txn->description,
-                    $currency,
-                ]
-            ))."\n";
+            $csv .= CsvExport::escapeRow([
+                $txn->created_at,
+                $txn->type,
+                $txn->amount,
+                $txn->balance_after,
+                $txn->description,
+                $currency,
+            ])."\n";
         }
 
-        $filename = 'billing-'.$buyer->reference.'-'.now()->format('Y-m-d-His').'.csv';
-
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
+        return CsvExport::download($csv, 'billing-'.$buyer->reference.'-'.now()->format('Y-m-d-His').'.csv');
     }
 
     public function exportAll(Request $request)
     {
         $account = $this->currentAccount($request);
-        $currency = $buyer->resolvedCurrency();
 
-        $transactions = BuyerTransaction::with('buyer:id,name,reference')
+        $transactions = BuyerTransaction::query()
+            ->with('buyer:id,name,reference,currency,account_id')
+            ->whereHas('buyer', fn ($q) => $q->where('account_id', $account->id))
             ->orderByDesc('created_at')
             ->limit(5000)
             ->get();
@@ -158,27 +158,21 @@ class BillingController extends Controller
         $csv = "date,buyer,buyer_reference,type,amount,balance_after,description,currency\n";
 
         foreach ($transactions as $txn) {
-            $csv .= implode(',', array_map(
-                fn ($value) => '"'.str_replace('"', '""', (string) $value).'"',
-                [
-                    $txn->created_at,
-                    $txn->buyer?->name ?? '',
-                    $txn->buyer?->reference ?? '',
-                    $txn->type,
-                    $txn->amount,
-                    $txn->balance_after,
-                    $txn->description,
-                    $currency,
-                ]
-            ))."\n";
+            $currency = $txn->buyer?->resolvedCurrency() ?? $account->default_currency ?? 'GBP';
+
+            $csv .= CsvExport::escapeRow([
+                $txn->created_at,
+                $txn->buyer?->name ?? '',
+                $txn->buyer?->reference ?? '',
+                $txn->type,
+                $txn->amount,
+                $txn->balance_after,
+                $txn->description,
+                $currency,
+            ])."\n";
         }
 
-        $filename = 'billing-ledger-'.now()->format('Y-m-d-His').'.csv';
-
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
+        return CsvExport::download($csv, 'billing-ledger-'.now()->format('Y-m-d-His').'.csv');
     }
 
     public function unlockAccount(Request $request): RedirectResponse
@@ -204,7 +198,7 @@ class BillingController extends Controller
             return Account::findOrFail($request->session()->get('current_account_id'));
         }
 
-        $account = $user?->account;
+        $account = $user?->resolveAccount();
         abort_unless($account, 403, 'Select a partner platform to view billing.');
 
         return $account;

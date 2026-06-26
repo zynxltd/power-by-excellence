@@ -32,7 +32,7 @@ const linkClass = computed(() => {
     }
 
     if (props.theme === 'dark') {
-        base.push('text-slate-200 hover:bg-slate-800 focus:bg-slate-800');
+        base.push('text-slate-100 hover:bg-slate-800 hover:text-white focus:bg-slate-800 focus:text-white');
 
         return base.join(' ');
     }

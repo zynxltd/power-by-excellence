@@ -10,6 +10,7 @@ use App\Support\Queue\LeadJobDispatcher;
 use App\Models\Campaign;
 use App\Models\Lead;
 use App\Support\Admin\CampaignWorkflow;
+use App\Support\CsvExport;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,7 +113,11 @@ class LeadAdminController extends Controller
     {
         $this->ensureLeadAccessible($lead);
         abort_unless($lead->status === LeadStatus::Quarantined, 422);
-        $lead->update(['status' => LeadStatus::Rejected, 'reject_reason' => 'Quarantine rejected by admin']);
+        $lead->update([
+            'status' => LeadStatus::Rejected,
+            'reject_reason' => 'Quarantine rejected by admin',
+            'quarantined_until' => null,
+        ]);
 
         return back()->with('success', 'Quarantined lead rejected.');
     }
@@ -166,31 +171,23 @@ class LeadAdminController extends Controller
         $csv = "uuid,campaign,status,firstname,lastname,email,phone,zipcode,revenue,buyer,received_at,distributed_at\n";
 
         foreach ($leads as $lead) {
-            $csv .= implode(',', array_map(
-                fn ($value) => '"'.str_replace('"', '""', (string) $value).'"',
-                [
-                    $lead->uuid,
-                    $lead->campaign?->reference ?? '',
-                    $lead->status->value,
-                    $lead->getField('firstname'),
-                    $lead->getField('lastname'),
-                    $lead->getField('email'),
-                    $lead->getField('phone1'),
-                    $lead->getField('zipcode'),
-                    $lead->financials?->revenue ?? 0,
-                    $lead->soldToBuyer?->name ?? '',
-                    $lead->received_at,
-                    $lead->distributed_at,
-                ]
-            ))."\n";
+            $csv .= CsvExport::escapeRow([
+                $lead->uuid,
+                $lead->campaign?->reference ?? '',
+                $lead->status->value,
+                $lead->getField('firstname'),
+                $lead->getField('lastname'),
+                $lead->getField('email'),
+                $lead->getField('phone1'),
+                $lead->getField('zipcode'),
+                $lead->financials?->revenue ?? 0,
+                $lead->soldToBuyer?->name ?? '',
+                $lead->received_at,
+                $lead->distributed_at,
+            ])."\n";
         }
 
-        $filename = 'leads-'.now()->format('Y-m-d-His').'.csv';
-
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
+        return CsvExport::download($csv, 'leads-'.now()->format('Y-m-d-His').'.csv');
     }
 
     protected function filteredQuery(Request $request)

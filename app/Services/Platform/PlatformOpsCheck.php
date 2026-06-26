@@ -224,8 +224,10 @@ class PlatformOpsCheck
                 'redis',
                 'Redis',
                 'warning',
-                'Unavailable — database queue fallback active',
-                'Start Redis for Horizon throughput, or keep scheduler running for database queue',
+                'Unavailable — queue fell back to database',
+                app()->environment('local', 'testing')
+                    ? 'Enable Redis in Herd (or locally), then run Horizon'
+                    : 'Start Redis for Horizon throughput, or keep scheduler running for database queue',
                 null,
                 'infrastructure',
             );
@@ -356,9 +358,19 @@ class PlatformOpsCheck
         }
 
         if ($driver === 'database') {
-            $fallbackNote = config('platform.queue.fallback_active')
-                ? ' · Redis fallback (scheduler drains queue each minute)'
-                : ' · scheduler runs queue:work each minute';
+            if (config('platform.queue.fallback_active')) {
+                return $this->result(
+                    'queue',
+                    'Queue worker',
+                    'warning',
+                    'Database fallback — not using Redis queues',
+                    'Start Redis, then run Horizon',
+                    null,
+                    'infrastructure',
+                );
+            }
+
+            $fallbackNote = ' · scheduler runs queue:work each minute';
 
             return $this->result(
                 'queue',
@@ -366,7 +378,7 @@ class PlatformOpsCheck
                 $failed > 0 ? 'warning' : 'ok',
                 "Driver: {$driver}{$fallbackNote}".($failed > 0 ? " · {$failed} failed job(s)" : ''),
                 'Run schedule:work locally, or cron * * * * * php artisan schedule:run in production',
-                $failed > 0 ? 'php artisan queue:retry all' : $queueCommand,
+                $failed > 0 ? 'php artisan queue:retry all' : null,
                 'infrastructure',
             );
         }
@@ -489,13 +501,23 @@ class PlatformOpsCheck
     protected function checkHorizon(): array
     {
         if (config('queue.default') !== 'redis') {
+            if (config('platform.queue.fallback_active')) {
+                return $this->result(
+                    'horizon',
+                    'Horizon',
+                    'warning',
+                    'Inactive — waiting on Redis',
+                    'Enable Redis, then run Horizon (composer run dev starts it)',
+                    'php artisan horizon',
+                    'infrastructure',
+                );
+            }
+
             return $this->result(
                 'horizon',
                 'Horizon',
                 'ok',
-                config('platform.queue.fallback_active')
-                    ? 'Using database queue fallback — Horizon not required'
-                    : 'Not required (queue not on redis)',
+                'Not required (queue not on redis)',
                 null,
                 null,
                 'infrastructure',
@@ -521,7 +543,7 @@ class PlatformOpsCheck
                 'ok',
                 'Running — supervises redis queue workers',
                 null,
-                'php artisan horizon',
+                null,
                 'infrastructure',
             );
         }
@@ -727,7 +749,7 @@ class PlatformOpsCheck
             'status' => $status,
             'message' => $message,
             'hint' => $hint,
-            'command' => $command,
+            'command' => in_array($status, ['warning', 'critical'], true) ? $command : null,
             'category' => $category,
         ];
     }

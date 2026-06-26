@@ -183,7 +183,10 @@ class QuarantineAdminController extends Controller
                         ->whereNull('metadata->hlr_validation')
                         ->whereNull('metadata->field_validation');
                 });
-            })->where('metadata->quarantine_reason', '!=', 'out_of_hours')->count(),
+            })->where(function ($q) {
+                $q->where('metadata->quarantine_reason', '!=', 'out_of_hours')
+                    ->orWhereNull('metadata->quarantine_reason');
+            })->count(),
         ];
     }
 

@@ -62,12 +62,6 @@ const checkStatusLabel = (status) => ({
     critical: 'Critical',
 }[status] ?? status);
 
-const opsCategories = [
-    { id: 'infrastructure', title: 'Infrastructure' },
-    { id: 'speed', title: 'Speed' },
-    { id: 'quality', title: 'Quality' },
-];
-
 const checksForCategory = (categoryId) => (props.opsChecks ?? []).filter((c) => c.category === categoryId);
 
 const healthClass = (health) => ({
@@ -182,9 +176,20 @@ const platformStatItems = computed(() => {
                 </p>
             </div>
 
-            <div v-for="cat in opsCategories" :key="cat.id" class="mb-4 last:mb-0">
-                <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ cat.title }}</h3>
-                <OpsCheckStrip :checks="checksForCategory(cat.id)" />
+            <div class="mb-4">
+                <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Infrastructure</h3>
+                <OpsCheckStrip :checks="checksForCategory('infrastructure')" />
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div>
+                    <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Speed</h3>
+                    <OpsCheckStrip :checks="checksForCategory('speed')" />
+                </div>
+                <div>
+                    <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Quality</h3>
+                    <OpsCheckStrip :checks="checksForCategory('quality')" />
+                </div>
             </div>
 
             <div v-if="issueChecks.length" class="mt-4 space-y-2 rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">

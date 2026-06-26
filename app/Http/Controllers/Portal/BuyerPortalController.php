@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\BuyerFeedback;
 use App\Models\Lead;
 use App\Models\LeadReturn;
+use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Response as Download;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -114,6 +114,7 @@ class BuyerPortalController extends Controller
     public function downloadLeads(Request $request)
     {
         $buyer = $request->user()->buyer;
+        abort_unless($buyer, 403, 'Buyer account not linked to this user.');
 
         $query = Lead::where('sold_to_buyer_id', $buyer->id);
 
@@ -127,9 +128,9 @@ class BuyerPortalController extends Controller
 
         $leads = $query->orderByDesc('distributed_at')->limit(5000)->get();
 
-        $csv = "uuid,firstname,lastname,email,phone1,zipcode,status,revenue,received_at\n";
+        $csv = "uuid,firstname,lastname,email,phone1,zipcode,status,revenue,received_at,distributed_at\n";
         foreach ($leads as $lead) {
-            $csv .= implode(',', [
+            $csv .= CsvExport::escapeRow([
                 $lead->uuid,
                 $lead->getField('firstname'),
                 $lead->getField('lastname'),
@@ -139,13 +140,11 @@ class BuyerPortalController extends Controller
                 $lead->status->value,
                 $lead->financials?->revenue ?? 0,
                 $lead->received_at,
+                $lead->distributed_at,
             ])."\n";
         }
 
-        return Download::make($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="leads.csv"',
-        ]);
+        return CsvExport::download($csv, 'leads.csv');
     }
 
     public function feedback(Request $request): RedirectResponse
@@ -203,6 +202,8 @@ class BuyerPortalController extends Controller
     public function billing(Request $request): Response
     {
         $buyer = $request->user()->buyer;
+        abort_unless($buyer, 403, 'Buyer account not linked to this user.');
+
         $account = $request->user()->account ?? $buyer->account;
         $requirePrepay = $account?->settings['require_buyer_prepay'] ?? false;
 

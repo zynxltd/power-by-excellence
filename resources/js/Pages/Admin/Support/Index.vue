@@ -67,6 +67,7 @@ const statusClass = (status) => ({
             </template>
             <DataTable :empty="!tickets.data?.length" empty-message="No tickets match your filters.">
                 <template #head>
+                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Subject</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
@@ -78,6 +79,10 @@ const statusClass = (status) => ({
                     :key="ticket.id"
                     :href="route('support.admin.show', ticket.id)"
                 >
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ ticket.account?.brand_name || ticket.account?.name || '—' }}</p>
+                        <p v-if="ticket.account?.slug" class="text-xs text-slate-500">{{ ticket.account.slug }}</p>
+                    </td>
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ ticket.subject }}</td>
                     <td class="px-6 py-4">
                         <p class="text-sm text-slate-900 dark:text-white">{{ ticket.user?.name ?? '—' }}</p>

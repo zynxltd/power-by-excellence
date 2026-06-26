@@ -6,7 +6,6 @@ use App\Enums\LeadStatus;
 use App\Models\DeliveryLog;
 use App\Models\Lead;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class LiveStats
 {
@@ -67,16 +66,18 @@ class LiveStats
             'pending' => (clone $base)->whereIn('status', LeadStatus::inFlightValues())->count(),
             'processing_count' => $processingCount,
             'quarantined' => (clone $base)->where('status', 'quarantined')->count(),
-            'ping_posts_today' => DeliveryLog::whereDate('created_at', today())
-                ->when($campaignId, fn (Builder $q) => $q->whereHas('lead', fn (Builder $lq) => $lq->where('campaign_id', $campaignId)))
+            'ping_posts_today' => DeliveryLog::query()->forCurrentAccount()
+                ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
+                ->whereDate('created_at', today())
                 ->whereNotNull('ping_request')
                 ->count(),
-            'failed_today' => DeliveryLog::whereDate('created_at', today())
-                ->when($campaignId, fn (Builder $q) => $q->whereHas('lead', fn (Builder $lq) => $lq->where('campaign_id', $campaignId)))
+            'failed_today' => DeliveryLog::query()->forCurrentAccount()
+                ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
+                ->whereDate('created_at', today())
                 ->whereIn('status', ['failed', 'skipped'])
                 ->count(),
-            'revenue_today' => (float) DB::table('lead_financials')
-                ->join('leads', 'leads.id', '=', 'lead_financials.lead_id')
+            'revenue_today' => (float) Lead::query()
+                ->join('lead_financials', 'leads.id', '=', 'lead_financials.lead_id')
                 ->when($campaignId, fn ($q) => $q->where('leads.campaign_id', $campaignId))
                 ->whereDate('leads.distributed_at', today())
                 ->sum('lead_financials.revenue'),

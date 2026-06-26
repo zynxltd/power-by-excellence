@@ -105,6 +105,13 @@ const statusClass = (status) => ({
                 <Panel title="Requester">
                     <dl class="space-y-3 text-sm">
                         <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</dt>
+                            <dd class="mt-0.5 font-medium text-slate-900 dark:text-white">
+                                {{ ticket.account?.brand_name || ticket.account?.name || '—' }}
+                            </dd>
+                            <dd v-if="ticket.account?.slug" class="text-xs text-slate-500">{{ ticket.account.slug }}</dd>
+                        </div>
+                        <div>
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Name</dt>
                             <dd class="mt-0.5 font-medium text-slate-900 dark:text-white">{{ ticket.user?.name ?? '—' }}</dd>
                         </div>

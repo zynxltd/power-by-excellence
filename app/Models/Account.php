@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Account extends Model
 {
@@ -77,5 +78,26 @@ class Account extends Model
         }
 
         return $this->slug.'.'.TenantResolver::baseDomain();
+    }
+
+    /**
+     * Public-facing branding for login, guest layouts, and portals.
+     *
+     * @return array{name: string, display_name: string, logo_url: ?string, favicon_url: ?string}
+     */
+    public function publicBranding(): array
+    {
+        $displayName = $this->brand_name ?: $this->name;
+
+        return [
+            'name' => $displayName,
+            'display_name' => $displayName,
+            'logo_url' => $this->logo_path
+                ? Storage::disk('public')->url($this->logo_path)
+                : null,
+            'favicon_url' => $this->favicon_path
+                ? Storage::disk('public')->url($this->favicon_path)
+                : null,
+        ];
     }
 }

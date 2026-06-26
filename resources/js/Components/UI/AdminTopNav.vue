@@ -3,9 +3,7 @@ import BrandLogo from '@/Components/BrandLogo.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import NotificationBell from '@/Components/UI/NotificationBell.vue';
 import TopNavDropdown from '@/Components/UI/TopNavDropdown.vue';
-import NavHubMenu from '@/Components/UI/NavHubMenu.vue';
 import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
 import { provideNavDropdown } from '@/Composables/useNavDropdown';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -15,7 +13,6 @@ provideNavDropdown();
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const account = computed(() => page.props.auth.account);
-const tenantHub = computed(() => page.props.tenantHub);
 const branding = computed(() => page.props.tenant ?? page.props.auth.account);
 const isSuperAdmin = computed(() => page.props.auth.isSuperAdmin);
 const isCentralHost = computed(() => page.props.isCentralHost);
@@ -39,26 +36,160 @@ const homeHref = computed(() => {
 const isAdminRoute = (patterns) => patterns.some((p) => route().current(p));
 
 const navLinkClass = (active) => [
-    'shrink-0 rounded-md px-1.5 py-1 text-xs font-medium transition xl:px-2',
+    'shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition',
     active ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white',
 ];
 
+const dropdownLinkClass = 'block px-4 py-2 text-sm text-slate-100 hover:bg-slate-800';
+
 const mobileOpen = ref(false);
+const mobileSection = ref(null);
+
+const toggleMobileSection = (id) => {
+    mobileSection.value = mobileSection.value === id ? null : id;
+};
+
+const closeMobile = () => {
+    mobileOpen.value = false;
+    mobileSection.value = null;
+};
 
 const clearTenantContext = () => router.post(route('accounts.clear'));
+
+const mobileSections = computed(() => {
+    if (isBuyer.value || isSupplier.value) {
+        return [];
+    }
+
+    const sections = [];
+
+    if (canAccess('dashboard')) {
+        sections.push({ id: 'dashboard', label: 'Dashboard', href: route('dashboard'), links: [] });
+    }
+
+    if (isSuperAdmin.value && isCentralHost.value) {
+        sections.push({ id: 'command', label: 'Command Center', href: route('command-center.index'), links: [] });
+    }
+
+    if (canAccess('tenant')) {
+        sections.push({
+            id: 'tenant',
+            label: 'Tenant',
+            links: [
+                ...(isSuperAdmin.value && isCentralHost.value ? [{ label: 'Partner Platforms', href: route('accounts.index') }] : []),
+                { label: 'Buyers', href: route('buyers.index') },
+                { label: 'Suppliers', href: route('suppliers.index') },
+                { label: 'Users', href: route('users.index') },
+            ],
+        });
+    }
+
+    if (canAccess('campaigns')) {
+        sections.push({
+            id: 'campaigns',
+            label: 'Campaigns',
+            links: [
+                { label: 'All Campaigns', href: route('campaigns.index') },
+                { label: 'Form Builder', href: route('forms.index') },
+            ],
+        });
+    }
+
+    if (canAccess('operations')) {
+        sections.push({
+            id: 'operations',
+            label: 'Operations',
+            links: [
+                { label: 'Live Operations', href: route('operations.index') },
+                { label: 'Lead Pipeline', href: route('leads.index') },
+                { label: 'Quarantine', href: route('quarantine.index') },
+            ],
+        });
+    }
+
+    if (canAccess('reports')) {
+        sections.push({ id: 'reports', label: 'Reports', href: route('reports.index'), links: [] });
+    }
+
+    if (canAccess('routing')) {
+        sections.push({
+            id: 'routing',
+            label: 'Routing',
+            links: [
+                { label: 'Deliveries', href: route('deliveries.index') },
+                { label: 'Ping Tree', href: route('distribution.index') },
+                { label: 'Routing Simulator', href: route('routing.simulator') },
+                { label: 'Automation Hub', href: route('automation.index') },
+            ],
+        });
+    }
+
+    if (canAccess('logs')) {
+        sections.push({
+            id: 'logs',
+            label: 'Logs',
+            links: [
+                ...(isSuperAdmin.value && isCentralHost.value ? [
+                    { label: 'Live Feed', href: route('live-feed.index') },
+                    { label: 'Notifications', href: route('notifications.admin.index') },
+                ] : []),
+                { label: 'Delivery Logs', href: route('logs.delivery') },
+                { label: 'API Logs', href: route('logs.api') },
+                { label: 'Access Logs', href: route('logs.access') },
+                { label: 'Change Logs', href: route('logs.changes') },
+                { label: 'Security Logs', href: route('logs.security') },
+            ],
+        });
+    }
+
+    if (canAccess('tools')) {
+        sections.push({
+            id: 'tools',
+            label: 'Tools',
+            links: [
+                { label: 'Integrations', href: route('integrations.index') },
+                { label: 'API Keys', href: route('api-keys.index') },
+                { label: 'Webhooks', href: route('webhooks.index') },
+                { label: 'Postbacks', href: route('postbacks.index') },
+                { label: 'Import Data', href: route('imports.index') },
+                { label: 'Features', href: route('features.index') },
+            ],
+        });
+    }
+
+    if (canAccess('settings') || canAccess('billing') || canAccess('finance')) {
+        sections.push({
+            id: 'account',
+            label: 'Account',
+            links: [
+                ...(canAccess('settings') ? [
+                    { label: 'Settings', href: route('settings.edit') },
+                    { label: 'Branding', href: route('branding.edit') },
+                ] : []),
+                ...(canAccess('finance') ? [{ label: 'Finance', href: route('finance.index') }] : []),
+                ...(canAccess('billing') ? [{ label: 'Buyer Billing', href: route('billing.index') }] : []),
+                { label: 'Support', href: isSuperAdmin.value ? route('support.admin.index') : route('support.index') },
+                { label: 'Help Centre', href: route('help.index') },
+                { label: 'Profile', href: route('profile.edit') },
+            ],
+        });
+    }
+
+    return sections;
+});
 </script>
 
 <template>
     <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
-        <div class="mx-auto flex h-11 max-w-[1600px] items-center gap-1.5 px-2 sm:px-4">
-            <!-- Left: logo (fixed width — never competes with right actions) -->
-            <div class="flex shrink-0 items-center gap-1">
-                <button type="button" class="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 lg:hidden" @click="mobileOpen = !mobileOpen">
+        <!-- Row 1: brand + utilities (never competes with nav for space) -->
+        <div class="mx-auto flex h-12 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
+            <div class="flex min-w-0 shrink-0 items-center gap-2">
+                <button type="button" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden" @click="mobileOpen = !mobileOpen">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
-                <Link :href="homeHref" class="min-w-0 max-w-[7rem] shrink-0 sm:max-w-[9rem] lg:max-w-[10rem]" :title="branding?.display_name">
+                <Link :href="homeHref" class="min-w-0 max-w-[10rem] shrink-0 sm:max-w-[12rem] xl:max-w-[14rem]" :title="branding?.display_name">
                     <BrandLogo
-                        size="xs"
+                        size="sm"
                         variant="light"
                         :logo-url="branding?.logo_url"
                         :brand-name="branding?.display_name"
@@ -67,79 +198,21 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
                 </Link>
             </div>
 
-            <!-- Center: primary navigation (scrolls when crowded — does not squeeze the right cluster) -->
-            <nav
-                v-if="!isBuyer && !isSupplier"
-                class="hidden min-w-0 flex-1 items-center gap-0 overflow-x-auto overscroll-x-contain lg:flex [&::-webkit-scrollbar]:hidden"
-                style="-ms-overflow-style: none; scrollbar-width: none;"
-            >
-                <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))" title="Dashboard">Home</Link>
-
-                <TopNavDropdown v-if="canAccess('campaigns')" id="campaigns" label="Campaigns" :active="isAdminRoute(['campaigns.*', 'forms.*'])">
-                    <Link :href="route('campaigns.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">All campaigns</Link>
-                    <Link :href="route('forms.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Form builder</Link>
-                </TopNavDropdown>
-
-                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Ops" title="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*', 'deliveries.*', 'distribution.*', 'routing.simulator*', 'automation.*'])">
-                    <Link :href="route('operations.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Live operations</Link>
-                    <Link :href="route('leads.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Lead pipeline</Link>
-                    <Link :href="route('quarantine.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Quarantine</Link>
-                    <div class="my-1 border-t border-slate-700" />
-                    <Link v-if="canAccess('routing')" :href="route('deliveries.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Deliveries</Link>
-                    <Link v-if="canAccess('routing')" :href="route('distribution.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Ping tree</Link>
-                    <Link v-if="canAccess('routing')" :href="route('routing.simulator')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Routing simulator</Link>
-                    <Link v-if="canAccess('routing')" :href="route('automation.index')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Automation</Link>
-                </TopNavDropdown>
-
-                <Link v-if="canAccess('reports')" :href="route('reports.index')" :class="navLinkClass(isAdminRoute(['reports.*']))" title="Reports">Reports</Link>
-
-                <TopNavDropdown
-                    v-if="tenantHub"
-                    id="more"
-                    label="More"
-                    title="Platform shortcuts, finance, logs & settings"
-                    wide
-                    :active="isAdminRoute(['accounts.*', 'buyers.*', 'suppliers.*', 'users.*', 'billing.*', 'finance.*', 'settings.*', 'logs.*', 'integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*', 'branding.*', 'support.*', 'help.*', 'command-center.*'])"
-                >
-                    <NavHubMenu :tenant-hub="tenantHub" />
-                </TopNavDropdown>
-
-                <template v-else-if="isSuperAdmin && isCentralHost">
-                    <Link :href="route('command-center.index')" :class="navLinkClass(route().current('command-center.*'))" title="Command Center">Command</Link>
-                    <Link :href="route('accounts.index')" :class="navLinkClass(route().current('accounts.*'))" title="Partner platforms">Platforms</Link>
-                </template>
-            </nav>
-
-            <!-- Buyer portal -->
-            <nav v-else-if="isBuyer" class="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto lg:flex">
-                <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">Dashboard</Link>
-                <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">My Leads</Link>
-                <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">Billing</Link>
-            </nav>
-
-            <!-- Supplier portal -->
-            <nav v-else-if="isSupplier" class="hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto lg:flex">
-                <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>
-                <Link :href="route('portal.supplier.leads')" :class="navLinkClass(route().current('portal.supplier.leads'))">My Leads</Link>
-                <Link :href="route('portal.supplier.billing')" :class="navLinkClass(route().current('portal.supplier.billing'))">Payouts</Link>
-            </nav>
-
-            <!-- Right: tenant + utilities + user (fixed — never shrinks) -->
-            <div class="flex shrink-0 items-center gap-1">
-                <Dropdown v-if="isSuperAdmin" align="right" width="56" teleport content-classes="py-1 bg-slate-900">
+            <div class="ml-auto flex shrink-0 items-center gap-1.5">
+                <Dropdown v-if="isSuperAdmin" align="right" width="56" teleport content-classes="py-1 bg-slate-900 text-slate-100">
                     <template #trigger>
                         <button
                             type="button"
-                            class="flex h-8 max-w-[8rem] items-center gap-1 rounded-md border border-slate-700 bg-slate-900 px-1.5 text-left text-slate-200 transition hover:bg-slate-800 xl:max-w-[10rem]"
+                            class="flex h-9 max-w-[11rem] items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2 text-left text-slate-200 transition hover:bg-slate-800 sm:max-w-[13rem] xl:max-w-[15rem]"
                             :title="account?.display_name ?? 'All partner platforms'"
                         >
-                            <svg class="h-3.5 w-3.5 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <svg class="h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
-                            <span class="hidden min-w-0 truncate text-[11px] font-semibold lg:inline">
+                            <span class="hidden min-w-0 truncate text-xs font-semibold md:inline">
                                 {{ account?.display_name ?? 'All platforms' }}
                             </span>
-                            <svg class="hidden h-3 w-3 shrink-0 opacity-60 lg:block" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="hidden h-3.5 w-3.5 shrink-0 opacity-60 md:block" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
@@ -152,61 +225,179 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
                         <button
                             v-if="account"
                             type="button"
-                            class="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"
+                            class="block w-full px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
                             @click="clearTenantContext"
                         >
                             All platforms (central admin)
                         </button>
-                        <Link
-                            v-if="isCentralHost"
-                            :href="route('accounts.index')"
-                            class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
-                        >
-                            Partner platforms list
-                        </Link>
-                        <Link v-if="account" :href="route('dashboard')" class="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Tenant dashboard</Link>
+                        <Link v-if="isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner platforms list</Link>
+                        <Link v-if="account" :href="route('dashboard')" :class="dropdownLinkClass">Tenant dashboard</Link>
                     </template>
                 </Dropdown>
 
-                <div class="flex items-center gap-0.5">
-                    <NotificationBell />
-                    <ThemeToggle variant="dark" />
-                </div>
+                <NotificationBell />
+                <ThemeToggle variant="dark" />
 
-                <div class="ml-0.5 border-l border-slate-800 pl-1">
-                    <Dropdown align="right" width="48" teleport content-classes="py-1 bg-slate-900">
-                        <template #trigger>
-                            <button
-                                type="button"
-                                class="flex h-8 items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-1 transition hover:bg-slate-800 sm:px-1.5"
-                                :title="user?.name"
-                            >
-                                <div class="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
-                                    <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name" class="h-full w-full object-cover" />
-                                    <span v-else class="flex h-full w-full items-center justify-center text-[10px] font-bold text-white">{{ userInitials }}</span>
-                                </div>
-                                <span class="hidden max-w-[5rem] truncate text-xs font-medium text-slate-200 2xl:inline">{{ user?.name }}</span>
-                            </button>
-                        </template>
-                        <template #content>
-                            <DropdownLink theme="dark" :href="route('profile.edit')">Profile</DropdownLink>
-                            <DropdownLink theme="dark" :href="route('logout')" method="post" as="button">Log Out</DropdownLink>
-                        </template>
-                    </Dropdown>
-                </div>
+                <Dropdown align="right" width="48" teleport content-classes="py-1 bg-slate-900 text-slate-100">
+                    <template #trigger>
+                        <button
+                            type="button"
+                            class="flex h-9 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-1.5 transition hover:bg-slate-800 sm:px-2"
+                            :title="user?.name"
+                        >
+                            <div class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
+                                <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name" class="h-full w-full object-cover" />
+                                <span v-else class="flex h-full w-full items-center justify-center text-xs font-bold text-white">{{ userInitials }}</span>
+                            </div>
+                            <span class="hidden max-w-[7rem] truncate text-sm font-medium text-slate-200 lg:inline xl:max-w-[10rem]">{{ user?.name }}</span>
+                        </button>
+                    </template>
+                    <template #content>
+                        <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
+                        <Link :href="route('logout')" method="post" as="button" class="block w-full cursor-pointer border-0 bg-transparent px-4 py-2 text-left text-sm text-slate-100 hover:bg-slate-800">Log Out</Link>
+                    </template>
+                </Dropdown>
             </div>
         </div>
 
-        <nav v-if="mobileOpen && !isBuyer && !isSupplier" class="border-t border-slate-800 bg-slate-950 px-4 py-3 lg:hidden">
-            <div class="grid grid-cols-2 gap-1 text-sm">
-                <Link :href="route('dashboard')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Home</Link>
-                <Link :href="route('campaigns.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Campaigns</Link>
-                <Link :href="route('operations.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Live ops</Link>
-                <Link :href="route('leads.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Leads</Link>
-                <Link v-if="canAccess('reports')" :href="route('reports.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Reports</Link>
-                <Link :href="route('finance.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Finance</Link>
-                <Link :href="route('buyers.index')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Buyers</Link>
-                <Link :href="route('settings.edit')" class="rounded-lg px-3 py-2 text-slate-200 hover:bg-slate-800" @click="mobileOpen = false">Settings</Link>
+        <!-- Row 2: full primary navigation on its own line -->
+        <nav
+            v-if="!isBuyer && !isSupplier"
+            class="hidden border-t border-slate-800/80 md:block"
+        >
+            <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-center gap-0.5 px-4 py-1.5 sm:px-6">
+                <Link v-if="canAccess('dashboard')" :href="route('dashboard')" :class="navLinkClass(route().current('dashboard'))">Dashboard</Link>
+
+                <Link
+                    v-if="isSuperAdmin && isCentralHost"
+                    :href="route('command-center.index')"
+                    :class="navLinkClass(route().current('command-center.*'))"
+                >
+                    Command Center
+                </Link>
+
+                <TopNavDropdown v-if="canAccess('tenant')" id="tenant" label="Tenant" :active="isAdminRoute(['accounts.*', 'buyers.*', 'suppliers.*', 'users.*'])">
+                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('accounts.index')" :class="dropdownLinkClass">Partner Platforms</Link>
+                    <Link :href="route('buyers.index')" :class="dropdownLinkClass">Buyers</Link>
+                    <Link :href="route('suppliers.index')" :class="dropdownLinkClass">Suppliers</Link>
+                    <Link :href="route('users.index')" :class="dropdownLinkClass">Users</Link>
+                </TopNavDropdown>
+
+                <TopNavDropdown v-if="canAccess('campaigns')" id="campaigns" label="Campaigns" :active="isAdminRoute(['campaigns.*', 'forms.*'])">
+                    <Link :href="route('campaigns.index')" :class="dropdownLinkClass">All Campaigns</Link>
+                    <Link :href="route('forms.index')" :class="dropdownLinkClass">Form Builder</Link>
+                </TopNavDropdown>
+
+                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*'])">
+                    <Link :href="route('operations.index')" :class="dropdownLinkClass">Live Operations</Link>
+                    <Link :href="route('leads.index')" :class="dropdownLinkClass">Lead Pipeline</Link>
+                    <Link :href="route('quarantine.index')" :class="dropdownLinkClass">Quarantine</Link>
+                </TopNavDropdown>
+
+                <Link v-if="canAccess('reports')" :href="route('reports.index')" :class="navLinkClass(isAdminRoute(['reports.*']))">Reports</Link>
+
+                <TopNavDropdown v-if="canAccess('routing')" id="routing" label="Routing" :active="isAdminRoute(['deliveries.*', 'distribution.*', 'routing.simulator*', 'automation.*'])">
+                    <Link :href="route('deliveries.index')" :class="dropdownLinkClass">Deliveries</Link>
+                    <Link :href="route('distribution.index')" :class="dropdownLinkClass">Ping Tree</Link>
+                    <Link :href="route('routing.simulator')" :class="dropdownLinkClass">Routing Simulator</Link>
+                    <Link :href="route('automation.index')" :class="dropdownLinkClass">Automation Hub</Link>
+                </TopNavDropdown>
+
+                <TopNavDropdown v-if="canAccess('logs')" id="logs" label="Logs" :active="isAdminRoute(['logs.*', 'live-feed.*', 'notifications.admin.*'])">
+                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('live-feed.index')" :class="dropdownLinkClass">Live Feed</Link>
+                    <Link v-if="isSuperAdmin && isCentralHost" :href="route('notifications.admin.index')" :class="dropdownLinkClass">Notifications</Link>
+                    <Link :href="route('logs.delivery')" :class="dropdownLinkClass">Delivery Logs</Link>
+                    <Link :href="route('logs.api')" :class="dropdownLinkClass">API Logs</Link>
+                    <Link :href="route('logs.access')" :class="dropdownLinkClass">Access Logs</Link>
+                    <Link :href="route('logs.changes')" :class="dropdownLinkClass">Change Logs</Link>
+                    <Link :href="route('logs.security')" :class="dropdownLinkClass">Security Logs</Link>
+                </TopNavDropdown>
+
+                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*'])">
+                    <Link :href="route('integrations.index')" :class="dropdownLinkClass">Integrations</Link>
+                    <Link :href="route('api-keys.index')" :class="dropdownLinkClass">API Keys</Link>
+                    <Link :href="route('webhooks.index')" :class="dropdownLinkClass">Webhooks</Link>
+                    <Link :href="route('postbacks.index')" :class="dropdownLinkClass">Postbacks</Link>
+                    <Link :href="route('imports.index')" :class="dropdownLinkClass">Import Data</Link>
+                    <Link :href="route('features.index')" :class="dropdownLinkClass">Features</Link>
+                    <template v-if="isSuperAdmin">
+                        <div class="my-1 border-t border-slate-700" />
+                        <a href="/horizon" target="_blank" rel="noopener" :class="dropdownLinkClass">Horizon (queues)</a>
+                        <a href="/telescope" target="_blank" rel="noopener" :class="dropdownLinkClass">Telescope (debug)</a>
+                    </template>
+                </TopNavDropdown>
+
+                <TopNavDropdown
+                    v-if="canAccess('settings') || canAccess('billing') || canAccess('finance')"
+                    id="account"
+                    label="Account"
+                    :active="isAdminRoute(['settings.*', 'billing.*', 'finance.*', 'profile.*', 'support.*', 'help.*', 'branding.*'])"
+                >
+                    <Link v-if="canAccess('settings')" :href="route('settings.edit')" :class="dropdownLinkClass">Settings</Link>
+                    <Link v-if="canAccess('settings')" :href="route('branding.edit')" :class="dropdownLinkClass">Branding</Link>
+                    <Link v-if="canAccess('finance')" :href="route('finance.index')" :class="dropdownLinkClass">Finance</Link>
+                    <Link v-if="canAccess('billing')" :href="route('billing.index')" :class="dropdownLinkClass">Buyer Billing</Link>
+                    <Link :href="isSuperAdmin ? route('support.admin.index') : route('support.index')" :class="dropdownLinkClass">
+                        {{ isSuperAdmin ? 'Support Queue' : 'Support' }}
+                    </Link>
+                    <Link :href="route('help.index')" :class="dropdownLinkClass">Help Centre</Link>
+                    <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
+                </TopNavDropdown>
+            </div>
+        </nav>
+
+        <!-- Buyer / supplier: simple nav row -->
+        <nav v-else-if="isBuyer" class="hidden border-t border-slate-800/80 md:block">
+            <div class="mx-auto flex max-w-[1600px] items-center justify-center gap-1 px-4 py-1.5 sm:px-6">
+                <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">Dashboard</Link>
+                <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">My Leads</Link>
+                <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">Billing</Link>
+            </div>
+        </nav>
+        <nav v-else-if="isSupplier" class="hidden border-t border-slate-800/80 md:block">
+            <div class="mx-auto flex max-w-[1600px] items-center justify-center gap-1 px-4 py-1.5 sm:px-6">
+                <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>
+                <Link :href="route('portal.supplier.leads')" :class="navLinkClass(route().current('portal.supplier.leads'))">My Leads</Link>
+                <Link :href="route('portal.supplier.billing')" :class="navLinkClass(route().current('portal.supplier.billing'))">Payouts</Link>
+            </div>
+        </nav>
+
+        <!-- Mobile navigation -->
+        <nav v-if="mobileOpen && !isBuyer && !isSupplier" class="max-h-[70vh] overflow-y-auto border-t border-slate-800 bg-slate-950 px-3 py-3 md:hidden">
+            <div class="space-y-1">
+                <template v-for="section in mobileSections" :key="section.id">
+                    <Link
+                        v-if="section.href"
+                        :href="section.href"
+                        :class="[...navLinkClass(route().current(section.id === 'dashboard' ? 'dashboard' : `${section.id}.*`)), 'block w-full']"
+                        @click="closeMobile"
+                    >
+                        {{ section.label }}
+                    </Link>
+                    <div v-else class="rounded-lg border border-slate-800">
+                        <button
+                            type="button"
+                            class="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-slate-200"
+                            @click="toggleMobileSection(section.id)"
+                        >
+                            {{ section.label }}
+                            <svg class="h-4 w-4 transition" :class="mobileSection === section.id ? 'rotate-180' : ''" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div v-if="mobileSection === section.id" class="border-t border-slate-800 pb-1">
+                            <Link
+                                v-for="link in section.links"
+                                :key="link.href + link.label"
+                                :href="link.href"
+                                class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                                @click="closeMobile"
+                            >
+                                {{ link.label }}
+                            </Link>
+                        </div>
+                    </div>
+                </template>
             </div>
         </nav>
     </header>

@@ -145,18 +145,19 @@ const switchToTenant = (accountId) => {
 
         <CompactStatStrip :items="statLinks" :columns="7" class="mb-4" />
 
-        <div class="mb-4 grid gap-4 lg:grid-cols-2">
+        <div class="mb-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
             <Panel
                 v-for="group in quickLinkGroups"
                 :key="group.title"
                 :title="group.title"
+                class="lg:col-span-6"
             >
                 <QuickLinkChips :links="group.links" />
             </Panel>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-3">
-            <Panel class="lg:col-span-2">
+        <div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+            <Panel class="lg:col-span-8">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume — {{ chartDaysLocal }} days</h3>
@@ -181,7 +182,7 @@ const switchToTenant = (accountId) => {
                     :drilldown-route="route('leads.index')"
                 />
             </Panel>
-            <Panel>
+            <Panel class="lg:col-span-4">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h3 class="font-semibold text-slate-900 dark:text-white">Status breakdown — {{ chartDaysLocal }} days</h3>

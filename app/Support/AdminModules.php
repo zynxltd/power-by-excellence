@@ -48,6 +48,7 @@ class AdminModules
 
         $map = [
             'dashboard' => 'dashboard',
+            'live-stats' => 'operations',
             'command-center.*' => 'dashboard',
             'accounts.*' => 'tenant',
             'buyers.*' => 'tenant',
@@ -69,6 +70,7 @@ class AdminModules
             'notifications.admin.*' => 'tools',
             'billing.*' => 'billing',
             'finance.*' => 'finance',
+            'settings.*' => 'settings',
             'branding.*' => 'settings',
             'profile.*' => 'settings',
         ];

@@ -57,13 +57,12 @@ class LeadByteParityTest extends TestCase
 
     public function test_admin_support_and_automation_pages(): void
     {
-        $routes = [
-            '/support/manage',
-            '/automation',
-            '/logs/security',
-        ];
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
 
-        foreach ($routes as $url) {
+        $this->actingAs($super)->get('/support/manage')->assertOk();
+        $this->actingAs($this->admin)->get('/support/manage')->assertForbidden();
+
+        foreach (['/automation', '/logs/security'] as $url) {
             $this->actingAs($this->admin)->get($url)->assertOk();
         }
     }
