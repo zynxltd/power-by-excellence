@@ -93,6 +93,16 @@ final class IntegrationManifest
     }
 
     /**
+     * HandleInertiaRequests / Marketing pricing page — do not edit Pricing.vue directly:
+     *
+     * @return array<string, mixed>
+     */
+    public static function pricingModuleFlags(): array
+    {
+        return PricingModuleFlags::forPage();
+    }
+
+    /**
      * PostbackDispatcher / SupplierPostbackService event names added by this feature.
      *
      * @return list<string>

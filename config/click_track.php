@@ -1,6 +1,33 @@
 <?php
 
 return [
+    'pricing' => [
+        'product_key' => 'click_track',
+        'display_name' => 'Click Track',
+        'tagline' => 'Affiliate link tracking, clicks, and conversions',
+        'plans' => [
+            'starter' => [
+                'show_on_pricing' => false,
+                'marketing_label' => 'Not included',
+                'feature_bullet' => 'Upgrade to Growth for affiliate click tracking.',
+            ],
+            'growth' => [
+                'show_on_pricing' => true,
+                'marketing_label' => 'Included',
+                'clicks_display' => '100,000 / month',
+                'conversions_display' => '25,000 / month',
+                'feature_bullet' => 'Tracking links, click logs, conversion queue, and supplier stats.',
+            ],
+            'enterprise' => [
+                'show_on_pricing' => true,
+                'marketing_label' => 'Unlimited',
+                'clicks_display' => 'Unlimited',
+                'conversions_display' => 'Unlimited',
+                'feature_bullet' => 'Custom caps, priority support, and advanced reporting.',
+            ],
+        ],
+    ],
+
     'plans' => [
         'starter' => [
             'label' => 'Starter',

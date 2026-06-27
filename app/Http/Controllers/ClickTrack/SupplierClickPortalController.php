@@ -19,8 +19,7 @@ class SupplierClickPortalController extends Controller
     public function __invoke(Request $request): Response
     {
         $supplier = $request->user()->supplier;
-        abort_unless($supplier, 403, 'Supplier account not linked to this user.');
-
+        abort_unless($supplier, 403);
         $account = $request->user()->account ?? $supplier->account;
 
         return Inertia::render('Portal/Supplier/Clicks', [

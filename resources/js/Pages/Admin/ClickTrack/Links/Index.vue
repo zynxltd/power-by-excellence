@@ -13,11 +13,14 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 const props = defineProps({
     entitlement: Object,
     links: Object,
+    linkCaps: Object,
     campaigns: Array,
     suppliers: Array,
     buyers: Array,
     goalOptions: Array,
 });
+
+const capUsage = (linkId) => props.linkCaps?.[linkId];
 
 const form = useForm({
     name: '',
@@ -68,6 +71,11 @@ const copyUrl = (token) => navigator.clipboard.writeText(route('click.redirect',
                         <div><InputLabel value="Payout" /><TextInput v-model="form.payout_amount" type="number" step="0.01" class="mt-1 block w-full" /></div>
                         <div><InputLabel value="Revenue" /><TextInput v-model="form.revenue_amount" type="number" step="0.01" class="mt-1 block w-full" /></div>
                     </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><InputLabel value="Daily click cap" /><TextInput v-model="form.cap_daily" type="number" min="0" class="mt-1 block w-full" placeholder="0 = unlimited" /></div>
+                        <div><InputLabel value="Monthly click cap" /><TextInput v-model="form.cap_monthly" type="number" min="0" class="mt-1 block w-full" placeholder="0 = unlimited" /></div>
+                        <div><InputLabel value="Daily conversion cap" /><TextInput v-model="form.conversion_cap_daily" type="number" min="0" class="mt-1 block w-full" placeholder="0 = unlimited" /></div>
+                    </div>
                     <div><InputLabel value="Goal" /><select v-model="form.goal" class="form-select mt-1 w-full"><option v-for="g in goalOptions" :key="g" :value="g">{{ g }}</option></select></div>
                     <label class="flex items-center gap-2 text-sm"><input v-model="form.auto_approve_conversions" type="checkbox" /> Auto-approve conversions on lead sold</label>
                     <PrimaryButton :disabled="form.processing">Create link</PrimaryButton>
@@ -86,6 +94,19 @@ const copyUrl = (token) => navigator.clipboard.writeText(route('click.redirect',
                         </div>
                         <p class="mt-2 break-all font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ route('click.redirect', link.token) }}</p>
                         <p class="mt-1 text-xs text-slate-500">{{ link.clicks_count }} clicks · {{ link.conversions_count }} conversions · {{ link.impressions_count }} impressions</p>
+                        <div v-if="capUsage(link.id)" class="mt-2 space-y-1 text-xs text-slate-500">
+                            <div v-if="capUsage(link.id).caps.daily" class="flex items-center gap-2">
+                                <span class="w-24">Daily clicks</span>
+                                <div class="h-1.5 flex-1 overflow-hidden rounded bg-slate-200 dark:bg-slate-700"><div class="h-full bg-indigo-500" :style="{ width: `${capUsage(link.id).click_daily_pct ?? 0}%` }" /></div>
+                                <span>{{ capUsage(link.id).clicks_today }} / {{ capUsage(link.id).caps.daily }}</span>
+                            </div>
+                            <div v-if="capUsage(link.id).caps.monthly" class="flex items-center gap-2">
+                                <span class="w-24">Monthly clicks</span>
+                                <div class="h-1.5 flex-1 overflow-hidden rounded bg-slate-200 dark:bg-slate-700"><div class="h-full bg-indigo-500" :style="{ width: `${capUsage(link.id).click_monthly_pct ?? 0}%` }" /></div>
+                                <span>{{ capUsage(link.id).clicks_month }} / {{ capUsage(link.id).caps.monthly }}</span>
+                            </div>
+                            <p v-if="capUsage(link.id).click_cap_reached || capUsage(link.id).conversion_cap_reached" class="font-semibold text-amber-600">Cap reached — redirects may be blocked</p>
+                        </div>
                         <div class="mt-3 flex gap-2">
                             <AppButton variant="secondary" class="!px-3 !py-1.5" @click="copyUrl(link.token)">Copy URL</AppButton>
                             <AppButton variant="secondary" class="!px-3 !py-1.5" @click="destroy(link.id)">Delete</AppButton>

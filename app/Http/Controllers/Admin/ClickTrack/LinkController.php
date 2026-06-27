@@ -7,6 +7,7 @@ use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\Supplier;
 use App\Models\TrackingLink;
+use App\Services\ClickTrack\ClickCapService;
 use App\Services\ClickTrack\ClickTrackEntitlementService;
 use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
@@ -19,16 +20,20 @@ class LinkController extends Controller
 {
     use ResolvesAdminAccount;
 
-    public function index(Request $request, ClickTrackEntitlementService $entitlement): Response
+    public function index(Request $request, ClickTrackEntitlementService $entitlement, ClickCapService $caps): Response
     {
         $account = $this->resolveAdminAccount($request);
+        $links = TrackingLink::with(['campaign:id,name,reference', 'supplier:id,name', 'buyer:id,name'])
+            ->withCount(['clicks', 'conversions', 'impressions'])
+            ->orderByDesc('updated_at')
+            ->paginate(25);
 
         return Inertia::render('Admin/ClickTrack/Links/Index', [
             'entitlement' => $entitlement->summary($account),
-            'links' => TrackingLink::with(['campaign:id,name,reference', 'supplier:id,name', 'buyer:id,name'])
-                ->withCount(['clicks', 'conversions', 'impressions'])
-                ->orderByDesc('updated_at')
-                ->paginate(25),
+            'links' => $links,
+            'linkCaps' => collect($links->items())->mapWithKeys(fn (TrackingLink $link) => [
+                $link->id => $caps->usageForLink($link),
+            ])->all(),
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference', 'payout_amount']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
             'buyers' => Buyer::orderBy('name')->get(['id', 'name', 'reference']),

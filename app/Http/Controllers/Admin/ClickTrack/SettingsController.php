@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\ClickTrack;
 
 use App\Http\Controllers\Controller;
+use App\ClickTrack\IntegrationManifest;
 use App\Services\ClickTrack\ClickTrackEntitlementService;
 use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class SettingsController extends Controller
                 'conversions_cap' => $settings['conversions_cap'] ?? null,
             ],
             'plans' => config('click_track.plans', []),
+            'pricingModuleFlags' => IntegrationManifest::pricingModuleFlags(),
         ]);
     }
 

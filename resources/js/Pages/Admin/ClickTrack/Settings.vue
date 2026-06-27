@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
-defineProps({ entitlement: Object, settings: Object, plans: Object });
+defineProps({ entitlement: Object, settings: Object, plans: Object, pricingModuleFlags: Object });
 
 const form = useForm({
     enabled: settings?.enabled ?? false,
@@ -29,7 +29,24 @@ const submit = () => form.patch(route('click-track.settings.update'));
                     <div class="flex justify-between"><dt class="text-slate-500">Plan</dt><dd class="font-semibold">{{ entitlement?.plan_label }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">Entitled</dt><dd class="font-semibold">{{ entitlement?.entitled ? 'Yes' : 'No' }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">Clicks used</dt><dd>{{ entitlement?.clicks_used }} / {{ entitlement?.clicks_cap ?? '∞' }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-500">Conversions used</dt><dd>{{ entitlement?.conversions_used }} / {{ entitlement?.conversions_cap ?? '∞' }}</dd></div>
                 </dl>
+                <div v-if="entitlement?.clicks_cap" class="mt-4">
+                    <p class="mb-1 text-xs text-slate-500">Clicks usage</p>
+                    <div class="h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-700">
+                        <div class="h-full bg-indigo-500" :style="{ width: `${Math.min(100, Math.round((entitlement.clicks_used / entitlement.clicks_cap) * 100))}%` }" />
+                    </div>
+                </div>
+            </Panel>
+
+            <Panel v-if="pricingModuleFlags?.tiers" title="Pricing page manifest">
+                <p class="mb-2 text-xs text-slate-500">Exported for Marketing/Pricing.vue via IntegrationManifest::pricingModuleFlags()</p>
+                <ul class="space-y-1 text-sm">
+                    <li v-for="(tier, key) in pricingModuleFlags.tiers" :key="key">
+                        <span class="font-semibold">{{ tier.label }}</span>
+                        <span v-if="tier.show_on_pricing" class="text-slate-500"> — {{ tier.marketing_label }}</span>
+                    </li>
+                </ul>
             </Panel>
 
             <Panel title="Configuration">
