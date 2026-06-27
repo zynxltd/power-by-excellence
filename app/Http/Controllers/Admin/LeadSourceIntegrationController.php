@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Services\Leads\LeadIngestService;
 use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Inertia\Response;
 class LeadSourceIntegrationController extends Controller
 {
     use ResolvesAdminAccount;
+
+    public function __construct(
+        protected LeadIngestService $leadIngest,
+    ) {}
 
     public function edit(Request $request, string $provider): Response
     {
@@ -61,10 +66,32 @@ class LeadSourceIntegrationController extends Controller
                 Rule::exists('campaigns', 'id')->where('account_id', $account->id),
             ],
             'field_mapping' => 'nullable|array',
+            'field_mapping.*.source' => 'nullable|string|max:255',
+            'field_mapping.*.target' => 'nullable|string|max:255',
         ]);
 
         if (empty($validated['verify_token']) && ($this->providers()[$provider]['requires_verify_token'] ?? false)) {
             $validated['verify_token'] = Str::random(32);
+        }
+
+        $validated['field_mapping'] = $this->leadIngest->normalizeFieldMapping($validated['field_mapping'] ?? []);
+
+        $campaignId = $validated['campaign_id'] ?? null;
+        if ($campaignId && $validated['field_mapping'] !== []) {
+            $campaignFieldNames = Campaign::with('fields')
+                ->where('account_id', $account->id)
+                ->where('id', $campaignId)
+                ->first()?->fields
+                ->pluck('name')
+                ->all() ?? [];
+
+            foreach ($validated['field_mapping'] as $source => $target) {
+                if (! in_array($target, $campaignFieldNames, true)) {
+                    return back()->withErrors([
+                        'field_mapping' => "Campaign field \"{$target}\" does not exist on the selected campaign.",
+                    ]);
+                }
+            }
         }
 
         $settings = $account->settings ?? [];
@@ -104,8 +131,15 @@ class LeadSourceIntegrationController extends Controller
                 'page_access_token_label' => 'Page access token',
                 'page_access_token_help' => 'Required to fetch lead name, email, and phone from Meta when webhooks fire. Generate in Meta Business Suite or the Graph API explorer.',
                 'webhook_help' => 'Callback URL for Meta App → Webhooks → Page → leadgen.',
-                'ingest_help' => 'POST JSON with campaign field names (email, firstname, phone1, etc.) for testing, Zapier, or Make.',
+                'ingest_help' => 'POST JSON with source field names; mappings below translate them to campaign fields.',
                 'requires_verify_token' => true,
+                'suggested_field_mappings' => [
+                    'email' => 'email',
+                    'first_name' => 'firstname',
+                    'last_name' => 'lastname',
+                    'phone_number' => 'phone1',
+                    'post_code' => 'zipcode',
+                ],
             ],
             'google' => [
                 'name' => 'Google Ads Lead Forms',
@@ -126,8 +160,15 @@ class LeadSourceIntegrationController extends Controller
                 'page_access_token_label' => null,
                 'page_access_token_help' => null,
                 'webhook_help' => 'Receive POST payloads from Google Ads webhook delivery or middleware that forwards lead-form submissions.',
-                'ingest_help' => 'POST JSON with campaign field names. Easiest path for Zapier, Make, or custom scripts - no Meta-style verify handshake.',
+                'ingest_help' => 'POST JSON with source field names; mappings below translate them to campaign fields.',
                 'requires_verify_token' => false,
+                'suggested_field_mappings' => [
+                    'email' => 'email',
+                    'first_name' => 'firstname',
+                    'last_name' => 'lastname',
+                    'phone_number' => 'phone1',
+                    'postal_code' => 'zipcode',
+                ],
             ],
             'tiktok' => [
                 'name' => 'TikTok Lead Gen',
@@ -148,8 +189,14 @@ class LeadSourceIntegrationController extends Controller
                 'page_access_token_label' => null,
                 'page_access_token_help' => null,
                 'webhook_help' => 'Receive POST payloads from TikTok lead-gen webhooks or a forwarding service.',
-                'ingest_help' => 'POST JSON with campaign field names for testing, Zapier, Make, or custom integrations.',
+                'ingest_help' => 'POST JSON with source field names; mappings below translate them to campaign fields.',
                 'requires_verify_token' => false,
+                'suggested_field_mappings' => [
+                    'email' => 'email',
+                    'first_name' => 'firstname',
+                    'last_name' => 'lastname',
+                    'phone_number' => 'phone1',
+                ],
             ],
         ];
     }

@@ -7,7 +7,6 @@ use App\Models\Account;
 use App\Models\Campaign;
 use App\Services\Leads\LeadIngestService;
 use App\Support\Tenancy\AccountContext;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -32,6 +31,7 @@ class LeadSourceIngestService
         $lead = $this->ingest->ingest([
             'campaign_id' => $campaign->id,
             'source' => $provider,
+            'field_mapping' => $config['field_mapping'] ?? [],
             ...$fields,
         ]);
 
@@ -54,14 +54,11 @@ class LeadSourceIngestService
         if ($provider === 'facebook') {
             $fromGraph = $this->facebookFieldsFromGraph($config, $payload);
             if ($fromGraph !== null) {
-                return $this->applyFieldMapping($fromGraph, $config['field_mapping'] ?? []);
+                return $fromGraph;
             }
         }
 
-        $flat = $this->flattenPayload($payload);
-        $mapped = $this->applyFieldMapping($flat, $config['field_mapping'] ?? []);
-
-        return $mapped !== [] ? $mapped : $flat;
+        return $this->flattenPayload($payload);
     }
 
     /**
@@ -185,25 +182,6 @@ class LeadSourceIngestService
      * @param  array<string, mixed>  $fields
      * @param  array<string, string>  $mapping
      * @return array<string, mixed>
-     */
-    protected function applyFieldMapping(array $fields, array $mapping): array
-    {
-        if ($mapping === []) {
-            return $fields;
-        }
-
-        $mapped = [];
-        foreach ($mapping as $source => $target) {
-            if (Arr::has($fields, $source)) {
-                $mapped[$target] = Arr::get($fields, $source);
-            }
-        }
-
-        return $mapped !== [] ? $mapped : $fields;
-    }
-
-    /**
-     * @param  array<string, mixed>  $config
      */
     protected function resolveCampaign(Account $account, array $config): Campaign
     {
