@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TenantBillingController;
 use App\Http\Controllers\Admin\ApiDocsController;
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\ApiRequestLogController;
+use App\Http\Controllers\Admin\AccessLogController;
 use App\Http\Controllers\Admin\AccountSettingsController;
 use App\Http\Controllers\Admin\ChangeLogController;
 use App\Http\Controllers\Admin\BillingController;
