@@ -107,6 +107,10 @@ class EDeliveryTest extends TestCase
 
         $this->assertSame(1, $summary['total_sent']);
         $this->assertArrayHasKey('open_rate', $summary);
+        $this->assertArrayHasKey('complaint_rate', $summary);
+        $this->assertArrayHasKey('delivery_rate', $summary);
+        $this->assertArrayHasKey('click_to_open_rate', $summary);
+        $this->assertSame(30, $summary['period_days']);
     }
 
     public function test_e_delivery_hub_loads_when_routes_wired(): void
