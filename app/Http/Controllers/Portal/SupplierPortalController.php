@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\LeadImport;
 use App\Models\HostedForm;
 use App\Models\Lead;
 use App\Models\Postback;
@@ -344,6 +345,11 @@ class SupplierPortalController extends Controller
         return Inertia::render('Portal/Supplier/ImportLeads', [
             'supplier' => $supplier->only(['id', 'name', 'reference']),
             'campaigns' => $this->supplierForms->campaignsForSupplier($supplier),
+            'recentImports' => LeadImport::query()
+                ->where('user_id', $request->user()->id)
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(['id', 'filename', 'status', 'success_rows', 'failed_rows', 'created_at']),
         ]);
     }
 
@@ -366,10 +372,11 @@ class SupplierPortalController extends Controller
             $request->file('file'),
             $campaign,
             $request->user()->id,
+            $supplier->id,
         );
 
         return redirect()
-            ->route('portal.supplier.leads')
+            ->route('portal.supplier.leads.import')
             ->with('success', "Import complete: {$import->success_rows} succeeded, {$import->failed_rows} failed.");
     }
 

@@ -13,7 +13,7 @@ class CsvImportService
 {
     public function __construct(protected LeadIngestService $ingest) {}
 
-    public function import(UploadedFile $file, Campaign $campaign, ?int $userId = null): LeadImport
+    public function import(UploadedFile $file, Campaign $campaign, ?int $userId = null, ?int $supplierId = null): LeadImport
     {
         $path = $file->store('imports');
 
@@ -65,6 +65,9 @@ class CsvImportService
 
             try {
                 $payload['campaign_reference'] = $campaign->reference;
+                if ($supplierId !== null) {
+                    $payload['supplier_id'] = $supplierId;
+                }
                 $lead = $this->ingest->ingest($payload);
                 ProcessLeadJob::dispatch($lead->id);
                 $success++;

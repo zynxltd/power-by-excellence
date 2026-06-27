@@ -204,7 +204,7 @@ class UserController extends Controller
             'allowed_modules' => $validated['role'] === UserRole::Staff->value
                 ? ($validated['allowed_modules'] ?? \App\Support\AdminModules::defaultsForStaff())
                 : null,
-            ...($validated['password'] ? ['password' => $validated['password']] : []),
+            ...(($validated['password'] ?? null) ? ['password' => $validated['password']] : []),
         ]);
 
         return back()->with('success', 'User updated.');

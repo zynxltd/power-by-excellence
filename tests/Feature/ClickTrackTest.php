@@ -32,6 +32,7 @@ class ClickTrackTest extends TestCase
         parent::setUp();
 
         $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->withoutVite();
 
         $this->account = Account::where('slug', 'excellence-uk')->firstOrFail();
         $this->campaign = Campaign::where('reference', 'auto-insurance-uk')->firstOrFail();

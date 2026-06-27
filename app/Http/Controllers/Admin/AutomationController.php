@@ -11,6 +11,7 @@ use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Models\DistributionConfig;
 use App\Models\EventAlert;
+use App\Models\EventAlertFire;
 use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Models\MessageTemplate;
