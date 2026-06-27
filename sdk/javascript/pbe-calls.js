@@ -10,6 +10,7 @@
     var accountSlug = config.accountSlug || '';
     var campaignId = config.campaignId || null;
     var selector = config.selector || '[data-pbe-call-number]';
+    var fallbackNumber = config.fallbackNumber || null;
     var cache = null;
 
     function params() {
@@ -23,11 +24,30 @@
         };
     }
 
-    function fetchNumber(cb) {
+    function applyNumber(number) {
+        document.querySelectorAll(selector).forEach(function (el) {
+            if (el.tagName === 'A') {
+                el.href = 'tel:' + number.replace(/\s/g, '');
+            }
+            el.textContent = number;
+            el.setAttribute('data-pbe-number', number);
+            el.classList.remove('pbe-calls-loading');
+        });
+    }
+
+    function showLoading() {
+        document.querySelectorAll(selector).forEach(function (el) {
+            el.classList.add('pbe-calls-loading');
+        });
+    }
+
+    function fetchNumber(cb, onError) {
         if (cache) {
             cb(cache);
             return;
         }
+
+        showLoading();
 
         var qs = new URLSearchParams();
         var p = params();
@@ -36,24 +56,33 @@
         });
 
         fetch(apiBase + '/dni/resolve?' + qs.toString(), { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
+            .then(function (r) {
+                if (!r.ok) throw new Error('DNI resolve failed');
+                return r.json();
+            })
             .then(function (data) {
                 if (data.phone_number) {
                     cache = data.phone_number;
                     cb(cache);
+                } else if (fallbackNumber) {
+                    cb(fallbackNumber);
+                } else if (onError) {
+                    onError(new Error('No tracking number returned'));
                 }
             })
-            .catch(function () {});
+            .catch(function (err) {
+                if (fallbackNumber) {
+                    cb(fallbackNumber);
+                } else if (onError) {
+                    onError(err);
+                }
+            });
     }
 
     function swapNumbers() {
-        fetchNumber(function (number) {
+        fetchNumber(applyNumber, function () {
             document.querySelectorAll(selector).forEach(function (el) {
-                if (el.tagName === 'A') {
-                    el.href = 'tel:' + number.replace(/\s/g, '');
-                }
-                el.textContent = number;
-                el.setAttribute('data-pbe-number', number);
+                el.classList.remove('pbe-calls-loading');
             });
         });
     }
@@ -64,5 +93,11 @@
         swapNumbers();
     }
 
-    window.PbeCalls = { refresh: swapNumbers, resolve: fetchNumber };
+    window.PbeCalls = {
+        refresh: function () {
+            cache = null;
+            swapNumbers();
+        },
+        resolve: fetchNumber,
+    };
 })(window);

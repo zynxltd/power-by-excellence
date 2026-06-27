@@ -51,24 +51,23 @@ if (! function_exists('callLogicAdminRoutes')) {
             ->name('call-logic.settings.update');
 
         Route::prefix('call-logic')
-            ->name('call-logic.')
             ->middleware('product.enabled:call_logic')
             ->group(function () {
-                Route::get('calls', [CallSessionController::class, 'index'])->name('calls.index');
-                Route::get('calls/export', [CallSessionController::class, 'export'])->name('calls.export');
-                Route::get('calls/{call}', [CallSessionController::class, 'show'])->name('calls.show');
-                Route::get('tracking-numbers', [TrackingNumberController::class, 'index'])->name('tracking-numbers.index');
-                Route::post('tracking-numbers', [TrackingNumberController::class, 'store'])->name('tracking-numbers.store');
-                Route::delete('tracking-numbers/{trackingNumber}', [TrackingNumberController::class, 'destroy'])->name('tracking-numbers.destroy');
-                Route::get('ivr', [IvrFlowController::class, 'index'])->name('ivr.index');
-                Route::get('ivr/create', [IvrFlowController::class, 'create'])->name('ivr.create');
-                Route::post('ivr', [IvrFlowController::class, 'store'])->name('ivr.store');
-                Route::get('ivr/{ivrFlow}/edit', [IvrFlowController::class, 'edit'])->name('ivr.edit');
-                Route::put('ivr/{ivrFlow}', [IvrFlowController::class, 'update'])->name('ivr.update');
-                Route::delete('ivr/{ivrFlow}', [IvrFlowController::class, 'destroy'])->name('ivr.destroy');
-                Route::get('reports', [CallLogicReportController::class, 'index'])->name('reports.index');
+                Route::get('calls', [CallSessionController::class, 'index'])->name('call-logic.calls.index');
+                Route::get('calls/export', [CallSessionController::class, 'export'])->name('call-logic.calls.export');
+                Route::get('calls/{call}', [CallSessionController::class, 'show'])->name('call-logic.calls.show');
+                Route::get('tracking-numbers', [TrackingNumberController::class, 'index'])->name('call-logic.tracking-numbers.index');
+                Route::post('tracking-numbers', [TrackingNumberController::class, 'store'])->name('call-logic.tracking-numbers.store');
+                Route::delete('tracking-numbers/{trackingNumber}', [TrackingNumberController::class, 'destroy'])->name('call-logic.tracking-numbers.destroy');
+                Route::get('ivr', [IvrFlowController::class, 'index'])->name('call-logic.ivr.index');
+                Route::get('ivr/create', [IvrFlowController::class, 'create'])->name('call-logic.ivr.create');
+                Route::post('ivr', [IvrFlowController::class, 'store'])->name('call-logic.ivr.store');
+                Route::get('ivr/{ivrFlow}/edit', [IvrFlowController::class, 'edit'])->name('call-logic.ivr.edit');
+                Route::put('ivr/{ivrFlow}', [IvrFlowController::class, 'update'])->name('call-logic.ivr.update');
+                Route::delete('ivr/{ivrFlow}', [IvrFlowController::class, 'destroy'])->name('call-logic.ivr.destroy');
+                Route::get('reports', [CallLogicReportController::class, 'index'])->name('call-logic.reports.index');
                 Route::patch('campaigns/{campaign}/call-settings', [CallCampaignSettingsController::class, 'update'])
-                    ->name('campaigns.call-settings.update');
+                    ->name('call-logic.campaigns.call-settings.update');
             });
     }
 }

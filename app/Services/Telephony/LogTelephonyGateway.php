@@ -29,15 +29,20 @@ class LogTelephonyGateway implements TelephonyGateway
 
     public function buildInboundTwiml(CallTwimlContext $context): string
     {
-        $lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<Response>'];
+        $statusAttr = $context->actionUrl
+            ? ' statusCallback="'.htmlspecialchars($context->actionUrl).'" statusCallbackMethod="POST"'
+            : '';
 
-        if ($context->message) {
+        $lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<Response'.$statusAttr.'>'];
+
+        if ($context->message && ! $context->gatherUrl) {
             $lines[] = '<Say>'.htmlspecialchars($context->message).'</Say>';
         }
 
         if ($context->gatherUrl) {
+            $prompt = $context->message ?? 'Please enter your selection.';
             $lines[] = '<Gather action="'.htmlspecialchars($context->gatherUrl).'" numDigits="1">';
-            $lines[] = '<Say>Press 1 to continue.</Say>';
+            $lines[] = '<Say>'.htmlspecialchars($prompt).'</Say>';
             $lines[] = '</Gather>';
         }
 
@@ -47,7 +52,7 @@ class LogTelephonyGateway implements TelephonyGateway
             } else {
                 $lines[] = '<Dial>'.htmlspecialchars($context->transferNumber).'</Dial>';
             }
-        } else {
+        } elseif (! $context->gatherUrl) {
             $lines[] = '<Say>Thank you for calling. Goodbye.</Say>';
         }
 

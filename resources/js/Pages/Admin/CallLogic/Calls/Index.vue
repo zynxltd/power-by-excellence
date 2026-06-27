@@ -55,7 +55,7 @@ const applyFilters = () => {
                 <template #body>
                     <tr v-for="call in calls.data" :key="call.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td>
-                            <Link :href="route('call-logic.calls.show', call.id)" class="font-medium text-indigo-600 hover:underline">{{ call.caller_number || '—' }}</Link>
+                            <Link :href="route('call-logic.calls.show', call.uuid)" class="font-medium text-indigo-600 hover:underline">{{ call.caller_number || '—' }}</Link>
                         </td>
                         <td>{{ call.campaign?.name || '—' }}</td>
                         <td>{{ call.sold_to_buyer?.name || '—' }}</td>

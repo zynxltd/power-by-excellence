@@ -18,11 +18,18 @@ class CallLogicReportController extends Controller
     {
         $account = $this->resolveAdminAccount($request);
 
+        $from = $request->filled('from_date') ? \Illuminate\Support\Carbon::parse($request->from_date)->startOfDay() : now()->subDays(30);
+        $to = $request->filled('to_date') ? \Illuminate\Support\Carbon::parse($request->to_date)->endOfDay() : now();
+
         return Inertia::render('Admin/CallLogic/Reports/Index', [
-            'summary' => $analytics->summary($account->id),
-            'byCampaign' => $analytics->byCampaign($account->id),
-            'trafficFlow' => $analytics->trafficFlow(accountId: $account->id),
+            'summary' => $analytics->summary($account->id, $from, $to),
+            'byCampaign' => $analytics->byCampaign($account->id, $from, $to),
+            'trafficFlow' => $analytics->trafficFlow(accountId: $account->id, from: $from, to: $to),
             'waves' => $waves->suggestions($account->id),
+            'filters' => [
+                'from_date' => $from->toDateString(),
+                'to_date' => $to->toDateString(),
+            ],
         ]);
     }
 }
