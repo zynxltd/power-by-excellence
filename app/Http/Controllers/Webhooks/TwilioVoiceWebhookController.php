@@ -98,10 +98,7 @@ class TwilioVoiceWebhookController extends Controller
         $digits = $request->input('Digits');
 
         $ivrEngine->logStep($session, $session->metadata['ivr_current_node'] ?? 'start', $digits);
-
-        $session->update([
-            'ivr_data' => array_merge($session->ivr_data ?? [], ['last_digits' => $digits]),
-        ]);
+        $ivrEngine->processStep($session->fresh(), $digits);
 
         $webhookBase = url('/webhooks/twilio/voice/'.$accountSlug);
         $twiml = $router->buildTwiml($session->fresh(), $webhookBase);

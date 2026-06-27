@@ -3,30 +3,52 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
-import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     summary: Object,
     byCampaign: Array,
     trafficFlow: Array,
     waves: Array,
+    filters: Object,
 });
 
+const localFilters = ref({ ...props.filters });
+
 const stats = computed(() => [
-    { label: 'Total calls', value: props.summary.total_calls },
-    { label: 'Connect rate', value: `${props.summary.connect_rate}%` },
-    { label: 'Sold', value: props.summary.sold_calls },
-    { label: 'Revenue', value: props.summary.revenue },
-    { label: 'Avg duration', value: `${props.summary.avg_duration_seconds}s` },
+    { label: 'Total calls', value: props.summary?.total_calls ?? 0, accent: 'indigo' },
+    { label: 'Connect rate', value: `${props.summary?.connect_rate ?? 0}%`, accent: 'emerald' },
+    { label: 'Conversion rate', value: `${props.summary?.conversion_rate ?? 0}%`, accent: 'cyan' },
+    { label: 'Sold', value: props.summary?.sold_calls ?? 0, accent: 'violet' },
+    { label: 'Revenue', value: props.summary?.revenue ?? 0, accent: 'amber' },
+    { label: 'Avg duration', value: `${props.summary?.avg_duration_seconds ?? 0}s` },
 ]);
+
+const applyFilters = () => {
+    router.get(route('call-logic.reports.index'), localFilters.value, { preserveState: true, replace: true });
+};
 </script>
 
 <template>
     <Head title="Call Logic - Reports" />
     <AuthenticatedLayout>
         <PageHeader title="Call Logic analytics" description="Connect rates, Traffic Flow, and Waves suggestions." />
-        <CompactStatStrip :stats="stats" class="mb-4" />
+
+        <Panel class="mb-4">
+            <div class="flex flex-wrap items-end gap-3 text-sm">
+                <div>
+                    <label class="mb-1 block text-xs text-slate-500">From</label>
+                    <input v-model="localFilters.from_date" type="date" class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800" @change="applyFilters" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs text-slate-500">To</label>
+                    <input v-model="localFilters.to_date" type="date" class="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800" @change="applyFilters" />
+                </div>
+            </div>
+        </Panel>
+
+        <CompactStatStrip :items="stats" :columns="6" class="mb-4" />
 
         <div class="grid gap-4 lg:grid-cols-2">
             <Panel title="Traffic Flow (buyer first-look %)">

@@ -13,6 +13,8 @@ class Campaign extends Model
     protected $fillable = [
         'account_id',
         'type',
+        'channel',
+        'call_settings',
         'pipeline_profile',
         'name',
         'logo_path',
@@ -51,6 +53,7 @@ class Campaign extends Model
             'use_advanced_distribution' => 'boolean',
             'multi_geo' => 'boolean',
             'geo_countries' => 'array',
+            'call_settings' => 'array',
         ];
     }
 

@@ -169,7 +169,8 @@ class CallRouter
     {
         $session->update(['status' => CallStatus::Unsold, 'completed_at' => now()]);
 
-        if ($campaign->channel === CampaignChannel::Hybrid) {
+        if (($campaign->channel ?? null) === CampaignChannel::Hybrid->value
+            || $campaign->channel === CampaignChannel::Hybrid) {
             $lead = $this->hybridService->createLeadFromCall($session);
 
             if ($lead) {

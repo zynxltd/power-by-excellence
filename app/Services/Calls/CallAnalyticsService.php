@@ -46,8 +46,11 @@ class CallAnalyticsService
      *
      * @return list<array<string, mixed>>
      */
-    public function trafficFlow(?int $campaignId = null, ?int $accountId = null): array
+    public function trafficFlow(?int $campaignId = null, ?int $accountId = null, ?Carbon $from = null, ?Carbon $to = null): array
     {
+        $from = $from ?? now()->subDays(30);
+        $to = $to ?? now();
+
         $query = CallDeliveryLog::query()
             ->select([
                 'buyer_id',
@@ -55,7 +58,8 @@ class CallAnalyticsService
                 DB::raw('SUM(CASE WHEN status = \'accepted\' THEN 1 ELSE 0 END) as accepted_pings'),
                 DB::raw('SUM(CASE WHEN tier = 1 THEN 1 ELSE 0 END) as tier_one_pings'),
             ])
-            ->whereHas('callSession', function ($q) use ($campaignId, $accountId) {
+            ->whereHas('callSession', function ($q) use ($campaignId, $accountId, $from, $to) {
+                $q->whereBetween('created_at', [$from, $to]);
                 if ($campaignId) {
                     $q->where('campaign_id', $campaignId);
                 }
@@ -86,10 +90,14 @@ class CallAnalyticsService
     /**
      * @return list<array<string, mixed>>
      */
-    public function byCampaign(?int $accountId = null): array
+    public function byCampaign(?int $accountId = null, ?Carbon $from = null, ?Carbon $to = null): array
     {
+        $from = $from ?? now()->subDays(30);
+        $to = $to ?? now();
+
         return CallSession::withoutGlobalScopes()
             ->when($accountId, fn ($q) => $q->where('account_id', $accountId))
+            ->whereBetween('created_at', [$from, $to])
             ->select([
                 'campaign_id',
                 DB::raw('COUNT(*) as total'),
