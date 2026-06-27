@@ -3,6 +3,7 @@
 namespace App\Services\ClickTrack;
 
 use App\Models\Lead;
+use App\Models\TrackingClick;
 use App\Models\TrackingConversion;
 use App\Models\TrackingLink;
 use App\Services\Logging\PlatformLogger;
@@ -18,7 +19,7 @@ class ConversionTrackingService
 
     public function fromLeadSold(Lead $lead): ?TrackingConversion
     {
-        $lead->loadMissing(['financials', 'campaign', 'trackingClick.trackingLink', 'account']);
+        $lead->loadMissing(['financials', 'campaign', 'account']);
 
         $existing = TrackingConversion::withoutGlobalScopes()
             ->where('lead_id', $lead->id)
@@ -28,7 +29,9 @@ class ConversionTrackingService
             return $this->approveIfAuto($existing, $lead);
         }
 
-        $click = $lead->trackingClick;
+        $click = $lead->tracking_click_id
+            ? TrackingClick::withoutGlobalScopes()->with('trackingLink')->find($lead->tracking_click_id)
+            : null;
         $link = $click?->trackingLink;
 
         if (! $click && ! $lead->supplier_id) {

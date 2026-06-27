@@ -12,6 +12,8 @@ const props = defineProps({
     entitlement: Object,
     summary: Object,
     topLinks: Array,
+    pendingQueue: Object,
+    capAlerts: Array,
     filters: Object,
 });
 
@@ -44,6 +46,22 @@ const strip = computed(() => [
         </div>
 
         <CompactStatStrip :items="strip" :columns="4" class="mb-6" />
+
+        <div v-if="pendingQueue?.count" class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <span class="font-semibold">{{ pendingQueue.count }} conversion(s)</span> awaiting approval.
+            <Link :href="route('click-track.conversions.index', { status: 'pending' })" class="ml-1 font-semibold underline">Review queue</Link>
+        </div>
+
+        <Panel v-if="capAlerts?.length" title="Cap alerts" class="mb-6">
+            <div v-for="alert in capAlerts" :key="alert.link_id" class="border-b border-slate-100 py-2 text-sm last:border-0 dark:border-slate-800">
+                <p class="font-semibold text-slate-900 dark:text-white">{{ alert.link_name }}</p>
+                <p class="text-xs text-amber-700 dark:text-amber-300">
+                    <span v-if="alert.click_cap_reached">Click cap reached</span>
+                    <span v-if="alert.click_cap_reached && alert.conversion_cap_reached"> · </span>
+                    <span v-if="alert.conversion_cap_reached">Conversion cap reached</span>
+                </p>
+            </div>
+        </Panel>
 
         <div class="mb-6 grid gap-4 md:grid-cols-4">
             <Panel title="Period summary">

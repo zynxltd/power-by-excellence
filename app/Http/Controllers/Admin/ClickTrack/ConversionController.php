@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Supplier;
 use App\Models\TrackingConversion;
 use App\Services\ClickTrack\ClickTrackEntitlementService;
+use App\Services\ClickTrack\ClickTrackPendingQueueService;
 use App\Services\ClickTrack\ConversionTrackingService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\CsvExport;
@@ -20,8 +21,11 @@ class ConversionController extends Controller
 {
     use ResolvesAdminAccount;
 
-    public function index(Request $request, ClickTrackEntitlementService $entitlement): Response
-    {
+    public function index(
+        Request $request,
+        ClickTrackEntitlementService $entitlement,
+        ClickTrackPendingQueueService $pendingQueue,
+    ): Response {
         $account = $this->resolveAdminAccount($request);
 
         $query = TrackingConversion::with([
@@ -48,6 +52,7 @@ class ConversionController extends Controller
         return Inertia::render('Admin/ClickTrack/Conversions/Index', [
             'entitlement' => $entitlement->summary($account),
             'conversions' => $query->paginate(50)->withQueryString(),
+            'pendingQueue' => $pendingQueue->conversionQueue($account?->id, 5),
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name']),
             'filters' => $request->only(['status', 'campaign_id', 'supplier_id']),

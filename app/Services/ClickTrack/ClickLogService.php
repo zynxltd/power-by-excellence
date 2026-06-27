@@ -121,7 +121,7 @@ class ClickLogService
         }
 
         $click->update(['lead_id' => $lead->id]);
-        $lead->update(['tracking_click_id' => $click->id]);
+        $lead->forceFill(['tracking_click_id' => $click->id])->save();
 
         if (! $lead->supplier_id && $click->supplier_id) {
             $lead->update(['supplier_id' => $click->supplier_id]);
