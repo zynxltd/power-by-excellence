@@ -74,9 +74,29 @@ class HostedFormEmbedService
     /**
      * @return array<string, string>
      */
+    public function formTrackingParams(HostedForm $form, Supplier $supplier): array
+    {
+        $config = $form->config ?? [];
+
+        if (! empty($config['default_source_id'])) {
+            $source = $supplier->sources()->whereKey((int) $config['default_source_id'])->first();
+        } else {
+            $source = null;
+        }
+
+        if (! $source && ! empty($config['default_sid'])) {
+            $source = $supplier->sources()->where('sid', $config['default_sid'])->first();
+        }
+
+        return $this->supplierTrackingParams($supplier, $source);
+    }
+
+    /**
+     * @return array<string, string>
+     */
     public function supplierTrackingParams(Supplier $supplier, ?Source $source = null): array
     {
-        $source ??= $supplier->sources()->orderBy('id')->first();
+        $source ??= $supplier->sources()->orderBy('sid')->first();
 
         return array_filter([
             'supplier_id' => (string) $supplier->id,
@@ -91,21 +111,27 @@ class HostedFormEmbedService
     {
         $campaignIds = $supplier->campaignSuppliers()->pluck('campaign_id');
 
-        if ($campaignIds->isEmpty()) {
-            return [];
-        }
-
         return HostedForm::withoutGlobalScopes()
             ->where('account_id', $supplier->account_id)
             ->live()
             ->where(function ($q) use ($campaignIds, $supplier) {
-                $q->where(function ($inner) use ($campaignIds) {
-                    $inner->whereNull('supplier_id')
-                        ->whereIn('campaign_id', $campaignIds);
-                })->orWhere(function ($inner) use ($supplier) {
+                $q->where(function ($inner) use ($supplier) {
                     $inner->where('supplier_id', $supplier->id)
                         ->where('approval_status', SupplierHostedFormService::STATUS_APPROVED);
+                })->orWhere(function ($inner) use ($supplier) {
+                    $inner->whereNull('supplier_id')
+                        ->where(function ($config) use ($supplier) {
+                            $config->where('config->default_supplier_id', $supplier->id)
+                                ->orWhere('config->default_supplier_id', (string) $supplier->id);
+                        });
                 });
+
+                if ($campaignIds->isNotEmpty()) {
+                    $q->orWhere(function ($inner) use ($campaignIds) {
+                        $inner->whereNull('supplier_id')
+                            ->whereIn('campaign_id', $campaignIds);
+                    });
+                }
             })
             ->with('campaign:id,name,reference')
             ->orderBy('name')

@@ -65,6 +65,65 @@ class SupplierFormApprovalTest extends TestCase
         $this->assertSame($this->supplier->id, $form->config['default_supplier_id']);
     }
 
+    public function test_supplier_form_stores_selected_tracking_sid(): void
+    {
+        $secondSource = $this->supplier->sources()->create([
+            'sid' => 'facebook_ads',
+            'name' => 'Facebook Ads',
+        ]);
+
+        $this->ukHost()
+            ->actingAs($this->supplierUser)
+            ->post(route('portal.supplier.forms.store'), [
+                'campaign_id' => $this->campaign->id,
+                'source_id' => $secondSource->id,
+                'name' => 'Facebook Landing Form',
+                'redirect_url' => '',
+                'allowed_domains' => [],
+            ])
+            ->assertRedirect();
+
+        $form = HostedForm::where('name', 'Facebook Landing Form')->firstOrFail();
+        $this->assertSame('facebook_ads', $form->config['default_sid']);
+        $this->assertSame($secondSource->id, $form->config['default_source_id']);
+    }
+
+    public function test_embed_urls_use_form_specific_sid(): void
+    {
+        $facebookSource = $this->supplier->sources()->create([
+            'sid' => 'facebook_ads',
+            'name' => 'Facebook Ads',
+        ]);
+
+        HostedForm::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Facebook Embed Form',
+            'slug' => 'facebook-embed-form',
+            'is_active' => true,
+            'approval_status' => SupplierHostedFormService::STATUS_APPROVED,
+            'config' => [
+                'steps' => [],
+                'default_supplier_id' => $this->supplier->id,
+                'default_sid' => $facebookSource->sid,
+                'default_source_id' => $facebookSource->id,
+            ],
+        ]);
+
+        $this->ukHost()
+            ->actingAs($this->supplierUser)
+            ->get(route('portal.supplier.embeds'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('forms', fn ($forms) => collect($forms)->contains(
+                    fn ($form) => $form['name'] === 'Facebook Embed Form'
+                        && str_contains($form['embed']['directUrl'], 'sid=facebook_ads')
+                        && $form['default_sid'] === 'facebook_ads'
+                ))
+            );
+    }
+
     public function test_supplier_can_submit_form_for_tenant_approval(): void
     {
         $form = HostedForm::create([

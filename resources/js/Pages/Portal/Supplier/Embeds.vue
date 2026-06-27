@@ -4,6 +4,7 @@ import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FlashMessage from '@/Components/UI/FlashMessage.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -20,9 +21,11 @@ const props = defineProps({
 
 const showCreate = ref(false);
 const editingId = ref(null);
+const previewSidByForm = ref({});
 
 const createForm = useForm({
     campaign_id: props.campaigns[0]?.id ?? '',
+    source_id: props.sources[0]?.id ?? '',
     name: '',
     redirect_url: '',
     allowed_domains: [''],
@@ -30,6 +33,7 @@ const createForm = useForm({
 
 const editForm = useForm({
     campaign_id: '',
+    source_id: '',
     name: '',
     redirect_url: '',
     allowed_domains: [''],
@@ -52,11 +56,47 @@ const statusVariant = (status) => ({
 }[status] ?? 'slate');
 
 const canCreate = computed(() => (props.campaigns?.length ?? 0) > 0);
+const hasSources = computed(() => (props.sources?.length ?? 0) > 0);
+
+const embedStrip = computed(() => [
+    { label: 'Live forms', value: props.forms?.length ?? 0, accent: 'indigo' },
+    { label: 'Tracking IDs', value: props.sources?.length ?? 0, accent: 'cyan' },
+    { label: 'Pending requests', value: props.requests?.filter((r) => r.approval_status === 'pending').length ?? 0, accent: 'amber' },
+    { label: 'Iframe embed', value: props.iframeEmbedAllowed ? 'Enabled' : 'Disabled', accent: props.iframeEmbedAllowed ? 'emerald' : 'rose' },
+]);
+
+const formPreviewSid = (form) => previewSidByForm.value[form.id] ?? form.default_sid ?? props.sources[0]?.sid ?? '';
+
+const setFormPreviewSid = (formId, sid) => {
+    previewSidByForm.value = { ...previewSidByForm.value, [formId]: sid };
+};
+
+const withSid = (url, sid) => {
+    if (!url || !sid) return url;
+    try {
+        const parsed = new URL(url);
+        parsed.searchParams.set('sid', sid);
+        return parsed.toString();
+    } catch {
+        return url;
+    }
+};
+
+const previewEmbed = (form, kind) => {
+    const sid = formPreviewSid(form);
+    if (kind === 'html') {
+        const iframeUrl = withSid(form.embed.iframeUrl, sid);
+        return form.embed.iframeHtml.replace(/src="[^"]+"/, `src="${iframeUrl}"`);
+    }
+    const base = kind === 'direct' ? form.embed.directUrl : form.embed.iframeUrl;
+    return withSid(base, sid);
+};
 
 const startCreate = () => {
     editingId.value = null;
     createForm.reset();
     createForm.campaign_id = props.campaigns[0]?.id ?? '';
+    createForm.source_id = props.sources[0]?.id ?? '';
     createForm.allowed_domains = [''];
     showCreate.value = true;
 };
@@ -65,6 +105,7 @@ const startEdit = (request) => {
     editingId.value = request.id;
     showCreate.value = false;
     editForm.campaign_id = request.campaign?.id ?? '';
+    editForm.source_id = request.config?.default_source_id ?? props.sources.find((s) => s.sid === request.config?.default_sid)?.id ?? props.sources[0]?.id ?? '';
     editForm.name = request.name;
     editForm.redirect_url = request.config?.redirect_url ?? '';
     editForm.allowed_domains = request.config?.allowed_domains?.length
@@ -132,6 +173,8 @@ const copyText = async (text) => {
             </AppButton>
         </div>
 
+        <CompactStatStrip :items="embedStrip" :columns="4" class="mb-6" />
+
         <div
             v-if="!iframeEmbedAllowed"
             class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
@@ -156,6 +199,15 @@ const copyText = async (text) => {
                 <div>
                     <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Form name</label>
                     <input v-model="createForm.name" type="text" class="form-input mt-1 w-full" required placeholder="e.g. Google Search landing form" />
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Tracking ID (SID)</label>
+                    <select v-model="createForm.source_id" class="form-select mt-1 w-full md:max-w-md" :disabled="!hasSources">
+                        <option v-for="source in sources" :key="`create-source-${source.id}`" :value="source.id">
+                            {{ source.sid }}<template v-if="source.name"> — {{ source.name }}</template>
+                        </option>
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500">SID identifies traffic source for reporting. It is not auto-linked to the campaign — pick the source that matches this form's traffic.</p>
                 </div>
                 <div class="md:col-span-2">
                     <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Thank-you redirect URL (optional)</label>
@@ -241,6 +293,14 @@ const copyText = async (text) => {
                                 </select>
                             </div>
                             <div>
+                                <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Tracking ID (SID)</label>
+                                <select v-model="editForm.source_id" class="form-select mt-1 w-full" :disabled="!hasSources">
+                                    <option v-for="source in sources" :key="`edit-source-${source.id}`" :value="source.id">
+                                        {{ source.sid }}<template v-if="source.name"> — {{ source.name }}</template>
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
                                 <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Form name</label>
                                 <input v-model="editForm.name" type="text" class="form-input mt-1 w-full" required />
                             </div>
@@ -259,6 +319,9 @@ const copyText = async (text) => {
         </Panel>
 
         <Panel v-if="sources?.length" title="Your tracking IDs" class="mb-6">
+            <p class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+                SIDs are configured on your supplier account and apply across campaigns. Assign the correct SID when creating each form — embed URLs bake in your choice.
+            </p>
             <div class="flex flex-wrap gap-2">
                 <span
                     v-for="source in sources"
@@ -273,40 +336,59 @@ const copyText = async (text) => {
         </Panel>
 
         <div v-if="!forms?.length" class="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500 dark:border-slate-600">
-            No approved forms are available yet. Create a form above and submit it for tenant approval.
+            No live embed forms are available yet. Your platform administrator can assign tenant forms to you, or you can create a form above and submit it for approval.
         </div>
 
         <div v-else class="space-y-6">
             <Panel v-for="form in forms" :key="form.id" :title="form.name">
-                <p v-if="form.campaign" class="mb-4 text-sm text-slate-500">
-                    Campaign: <span class="font-medium text-slate-700 dark:text-slate-300">{{ form.campaign.name }}</span>
-                    <span class="font-mono text-xs">({{ form.campaign.reference }})</span>
-                </p>
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p v-if="form.campaign" class="text-sm text-slate-500">
+                            Campaign: <span class="font-medium text-slate-700 dark:text-slate-300">{{ form.campaign.name }}</span>
+                            <span class="font-mono text-xs">({{ form.campaign.reference }})</span>
+                        </p>
+                        <p v-if="form.default_sid" class="mt-1 text-xs text-slate-500">
+                            Default SID: <span class="font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ form.default_sid }}</span>
+                        </p>
+                    </div>
+                    <div v-if="sources?.length > 1" class="min-w-[220px]">
+                        <label class="text-xs font-semibold uppercase text-slate-500">Preview SID</label>
+                        <select
+                            :value="formPreviewSid(form)"
+                            class="form-select mt-1 w-full text-sm"
+                            @change="setFormPreviewSid(form.id, $event.target.value)"
+                        >
+                            <option v-for="source in sources" :key="`preview-${form.id}-${source.id}`" :value="source.sid">
+                                {{ source.sid }}<template v-if="source.name"> — {{ source.name }}</template>
+                            </option>
+                        </select>
+                    </div>
+                </div>
 
                 <div class="space-y-4">
                     <div>
                         <div class="mb-1 flex items-center justify-between gap-2">
                             <label class="text-xs font-semibold uppercase text-slate-500">Direct link</label>
-                            <button type="button" class="text-xs text-indigo-600" @click="copyText(form.embed.directUrl)">Copy</button>
+                            <button type="button" class="text-xs text-indigo-600" @click="copyText(previewEmbed(form, 'direct'))">Copy</button>
                         </div>
-                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ form.embed.directUrl }}</code>
+                        <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ previewEmbed(form, 'direct') }}</code>
                     </div>
 
                     <template v-if="iframeEmbedAllowed">
                         <div>
                             <div class="mb-1 flex items-center justify-between gap-2">
                                 <label class="text-xs font-semibold uppercase text-slate-500">Iframe URL</label>
-                                <button type="button" class="text-xs text-indigo-600" @click="copyText(form.embed.iframeUrl)">Copy</button>
+                                <button type="button" class="text-xs text-indigo-600" @click="copyText(previewEmbed(form, 'iframe'))">Copy</button>
                             </div>
-                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ form.embed.iframeUrl }}</code>
+                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ previewEmbed(form, 'iframe') }}</code>
                         </div>
                         <div>
                             <div class="mb-1 flex items-center justify-between gap-2">
                                 <label class="text-xs font-semibold uppercase text-slate-500">Iframe HTML</label>
-                                <button type="button" class="text-xs text-indigo-600" @click="copyText(form.embed.iframeHtml)">Copy</button>
+                                <button type="button" class="text-xs text-indigo-600" @click="copyText(previewEmbed(form, 'html'))">Copy</button>
                             </div>
-                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ form.embed.iframeHtml }}</code>
-                            <p class="mt-2 text-xs text-slate-500">Paste into any page on your site. Embeds work on any domain when your account has iframe embed enabled.</p>
+                            <code class="block overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ previewEmbed(form, 'html') }}</code>
+                            <p class="mt-2 text-xs text-slate-500">Append <code class="rounded bg-slate-100 px-1 font-mono dark:bg-slate-800">click_id</code>, UTM params, or <code class="rounded bg-slate-100 px-1 font-mono dark:bg-slate-800">ssid</code> to the URL as needed.</p>
                         </div>
                     </template>
                 </div>

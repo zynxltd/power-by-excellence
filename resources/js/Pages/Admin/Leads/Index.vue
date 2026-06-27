@@ -107,6 +107,10 @@ const drillContext = computed(() => {
         }
     }
 
+    if (f.buyer_feedback) {
+        parts.push(`buyer feedback: ${f.buyer_feedback}`);
+    }
+
     return parts;
 });
 
@@ -128,6 +132,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
     <AuthenticatedLayout>
         <PageHeader title="Lead Pipeline" description="Track leads through ingest, validation, distribution, and sale. Click a status to filter.">
             <template #actions>
+                <AppButton :href="route('buyer-feedback.index')" variant="secondary">Buyer feedback</AppButton>
                 <AppButton :href="route('operations.index')" variant="secondary">Live ops</AppButton>
                 <AppButton :href="route('quarantine.index')" variant="secondary">Quarantine</AppButton>
                 <AppButton :href="route('leads.export', localFilters)" variant="secondary" external>Export CSV</AppButton>
@@ -254,6 +259,15 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     </select>
                 </div>
                 <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-500">Buyer feedback</label>
+                    <select v-model="localFilters.buyer_feedback" class="form-select">
+                        <option value="">Any</option>
+                        <option value="invalid">Invalid / bad lead</option>
+                        <option value="converted">Converted</option>
+                        <option value="any">Any feedback recorded</option>
+                    </select>
+                </div>
+                <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-500">From</label>
                     <input v-model="localFilters.from_date" type="date" class="form-input" />
                 </div>
@@ -278,6 +292,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     <th v-if="showTenantColumn" class="text-left">Platform</th>
                     <th class="text-left">Campaign</th>
                     <th class="text-left">Status</th>
+                    <th class="text-left">Feedback</th>
                     <th class="text-left">Quality</th>
                     <th class="text-left">Revenue</th>
                     <th class="text-left">Received</th>
@@ -289,6 +304,17 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                     </td>
                     <td class="text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
                     <td class=""><StatusBadge :status="lead.status" /></td>
+                    <td class="text-xs">
+                        <span
+                            v-if="lead.buyer_feedback?.length"
+                            :class="lead.buyer_feedback.some((f) => ['invalid', 'bad_lead', 'returned'].includes(f.status))
+                                ? 'font-semibold text-rose-600'
+                                : 'text-slate-600'"
+                        >
+                            {{ lead.buyer_feedback[0]?.status }}
+                        </span>
+                        <span v-else class="text-slate-400">—</span>
+                    </td>
                     <td class=""><LeadQualityBadge :quality="lead.quality" compact /></td>
                     <td class="font-medium">{{ formatMoney(lead.financials?.revenue ?? 0) }}</td>
                     <td class=""><FormattedDate :value="lead.received_at" /></td>

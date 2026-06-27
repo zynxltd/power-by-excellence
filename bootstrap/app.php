@@ -29,6 +29,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(function (Request $request) {
             $user = $request->user();
 
+            if ($user?->isBuyerPortal()) {
+                return route('portal.buyer.dashboard', absolute: false);
+            }
+
+            if ($user?->isSupplierPortal()) {
+                return route('portal.supplier.dashboard', absolute: false);
+            }
+
             if ($user && \App\Support\Tenancy\TenantResolver::isCentralHost($request->getHost()) && ! $user->isSuperAdmin()) {
                 $account = $user->resolveAccount();
 

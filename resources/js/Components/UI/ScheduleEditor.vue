@@ -5,6 +5,18 @@ import AppButton from '@/Components/UI/AppButton.vue';
 
 const model = defineModel({ type: Object, required: true });
 
+if (!model.value) {
+    model.value = { timezone: 'Europe/London', windows: [] };
+}
+
+if (!model.value.timezone) {
+    model.value.timezone = 'Europe/London';
+}
+
+if (!Array.isArray(model.value.windows)) {
+    model.value.windows = [];
+}
+
 const days = [
     { value: 'all', label: 'Every day' },
     { value: 'monday', label: 'Monday' },
@@ -16,38 +28,37 @@ const days = [
     { value: 'sunday', label: 'Sunday' },
 ];
 
-const ensureWindows = () => {
-    if (!model.value.windows?.length) {
-        model.value.windows = [{ day: 'all', start: '09:00', end: '17:00' }];
-    }
-};
-
 const addWindow = () => {
-    ensureWindows();
-    model.value.windows.push({ day: 'monday', start: '09:00', end: '17:00' });
+    if (!model.value.timezone) {
+        model.value.timezone = 'Europe/London';
+    }
+    model.value.windows.push({ day: 'all', start: '09:00', end: '17:00' });
 };
 
 const removeWindow = (index) => {
-    if (model.value.windows.length > 1) {
-        model.value.windows.splice(index, 1);
-    }
+    model.value.windows.splice(index, 1);
 };
-
-ensureWindows();
 </script>
 
 <template>
     <div class="space-y-4">
         <p class="text-sm text-slate-600 dark:text-slate-400">
-            Restrict when this delivery can fire. Outside these windows, attempts are skipped with reason "Outside schedule".
+            Optional. With no windows, this delivery runs <strong>24/7</strong>. Add windows to restrict hours — outside them, attempts are skipped with reason "Outside schedule".
         </p>
 
-        <div>
+        <div v-if="model.windows.length">
             <InputLabel value="Timezone" />
             <TextInput v-model="model.timezone" class="mt-1 block w-full" placeholder="Europe/London" />
         </div>
 
-        <div class="space-y-3">
+        <p
+            v-if="!model.windows.length"
+            class="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+        >
+            No schedule windows — delivery is always eligible.
+        </p>
+
+        <div v-else class="space-y-3">
             <div
                 v-for="(window, index) in model.windows"
                 :key="index"

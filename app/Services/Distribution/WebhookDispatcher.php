@@ -17,7 +17,7 @@ class WebhookDispatcher
 
         $webhooks = Webhook::withoutGlobalScopes()
             ->where('account_id', $account->id)
-            ->where('is_active', true)
+            ->live()
             ->get()
             ->filter(fn (Webhook $w) => in_array($event, $w->events ?? [], true))
             ->filter(fn (Webhook $w) => $this->matchesBuyerScope($w, $lead, $event));

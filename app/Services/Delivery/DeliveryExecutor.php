@@ -18,6 +18,8 @@ class DeliveryExecutor
     public function __construct(
         protected TagInterpolator $interpolator,
         protected RuleEngine $ruleEngine,
+        protected DeliveryPayloadBuilder $payloadBuilder,
+        protected DeliveryResponseMatcher $responseMatcher,
     ) {}
 
     public function execute(Lead $lead, Delivery $delivery, array $pingFields = []): DeliveryResult
@@ -162,7 +164,7 @@ class DeliveryExecutor
         $body = $response->json() ?? ['raw' => $response->body()];
         $log->update(['post_response' => $body, 'http_status' => $response->status()]);
 
-        if ($this->matchesSuccess($config, $response->status(), $body)) {
+        if ($this->responseMatcher->matchesPostSuccess($config, $response->status(), $body)) {
             $revenue = $this->resolveRevenue($config, $body, [], $delivery, $fields);
 
             return DeliveryResult::success($revenue, $response->status());
@@ -250,15 +252,7 @@ class DeliveryExecutor
             return PingResult::failed($log);
         }
 
-        $pingPayload = $this->interpolator->buildPayload(
-            array_merge($config, ['custom_post_data' => $config['ping_payload'] ?? null]),
-            $pingFields
-        );
-
-        if (! empty($config['bid_hint'])) {
-            $pingPayload['bid_hint'] = $config['bid_hint'];
-        }
-        $pingPayload['floor'] = $floor;
+        $pingPayload = $this->payloadBuilder->buildPingPayload($config, $pingFields, $floor, $lead);
 
         $log->update(['ping_request' => ['url' => $pingUrl, 'body' => $pingPayload]]);
 
@@ -266,7 +260,7 @@ class DeliveryExecutor
         $pingBody = $pingResponse->json() ?? ['raw' => $pingResponse->body()];
         $log->update(['ping_response' => $pingBody, 'http_status' => $pingResponse->status()]);
 
-        if (! $this->matchesPingSuccess($config, $pingBody, $floor)) {
+        if (! $this->responseMatcher->matchesPingSuccess($config, $pingBody, $floor)) {
             $log->update(['status' => 'skipped', 'skipped_reason' => 'ping_rejected']);
 
             return PingResult::skipped('ping_rejected', $log);
@@ -333,15 +327,7 @@ class DeliveryExecutor
             return null;
         }
 
-        $pingPayload = $this->interpolator->buildPayload(
-            array_merge($config, ['custom_post_data' => $config['ping_payload'] ?? null]),
-            $pingFields
-        );
-
-        if (! empty($config['bid_hint'])) {
-            $pingPayload['bid_hint'] = $config['bid_hint'];
-        }
-        $pingPayload['floor'] = $floor;
+        $pingPayload = $this->payloadBuilder->buildPingPayload($config, $pingFields, $floor, $lead);
 
         $log->update(['ping_request' => ['url' => $pingUrl, 'body' => $pingPayload]]);
 
@@ -384,7 +370,7 @@ class DeliveryExecutor
             'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
         ]);
 
-        if (! $this->matchesPingSuccess($config, $pingBody, $floor)) {
+        if (! $this->responseMatcher->matchesPingSuccess($config, $pingBody, $floor)) {
             $log->update(['status' => 'skipped', 'skipped_reason' => 'ping_rejected']);
 
             return PingResult::skipped('ping_rejected', $log);
@@ -418,11 +404,7 @@ class DeliveryExecutor
             return DeliveryResult::failed('Post URL not configured');
         }
 
-        $postPayload = $this->interpolator->buildPayload(
-            array_merge($config, ['custom_post_data' => $config['post_payload'] ?? null]),
-            $fullFields,
-            $pingBody
-        );
+        $postPayload = $this->payloadBuilder->buildPostPayload($config, $fullFields, $pingBody, $lead);
 
         $log->update(['post_request' => ['url' => $postUrl, 'body' => $postPayload]]);
 
@@ -430,7 +412,7 @@ class DeliveryExecutor
         $postBody = $postResponse->json() ?? ['raw' => $postResponse->body()];
         $log->update(['post_response' => $postBody, 'http_status' => $postResponse->status()]);
 
-        if ($this->matchesSuccess($config, $postResponse->status(), $postBody)) {
+        if ($this->responseMatcher->matchesPostSuccess($config, $postResponse->status(), $postBody)) {
             $revenue = $this->resolveRevenue($config, $postBody, $pingBody, $delivery, $fullFields);
             $log->update(['status' => 'success', 'revenue' => $revenue]);
 
@@ -544,49 +526,6 @@ class DeliveryExecutor
         $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
 
         return DeliveryResult::success($revenue);
-    }
-
-    protected function matchesPingSuccess(array $config, array $body, float $floor): bool
-    {
-        $rules = $config['ping_success_rules'] ?? [
-            ['field' => 'Success', 'op' => 'eq', 'value' => true],
-        ];
-
-        foreach ($rules as $rule) {
-            $actual = data_get($body, $rule['field']);
-            $expected = $rule['value'];
-            $op = $rule['op'] ?? 'eq';
-
-            if ($op === 'gte' && ! ((float) $actual >= (float) $expected)) {
-                return false;
-            }
-            if ($op === 'eq' && $actual != $expected) {
-                return false;
-            }
-        }
-
-        $cost = (float) data_get($body, $config['price_field'] ?? 'Cost', 0);
-
-        return $cost >= $floor;
-    }
-
-    protected function matchesSuccess(array $config, int $status, array $body): bool
-    {
-        $rules = $config['response_rules'] ?? [['match_by' => 'http_status', 'value' => '200']];
-
-        foreach ($rules as $rule) {
-            if (($rule['match_by'] ?? '') === 'http_status' && (string) $status === (string) ($rule['value'] ?? '200')) {
-                return ($rule['label'] ?? 'success') === 'success';
-            }
-            if (($rule['match_by'] ?? '') === 'keyword') {
-                $raw = json_encode($body);
-                if (str_contains($raw, (string) $rule['value'])) {
-                    return ($rule['label'] ?? 'success') === 'success';
-                }
-            }
-        }
-
-        return $status >= 200 && $status < 300;
     }
 
     protected function resolveRevenue(array $config, array $postBody, array $pingBody = [], ?Delivery $delivery = null, array $leadFields = []): float

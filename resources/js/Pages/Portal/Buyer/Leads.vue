@@ -14,12 +14,14 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import BuyerAccountPanel from '@/Components/Portal/BuyerAccountPanel.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     leads: Object,
     filters: Object,
     campaigns: Array,
+    suppliers: { type: Array, default: () => [] },
+    sids: { type: Array, default: () => [] },
     statuses: Array,
     account: Object,
     recentActivity: Array,
@@ -36,10 +38,14 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
 const { formatMoney } = useMoneyFormat(props.currency);
 
 const quickActionsEl = ref(null);
+const selectAllRef = ref(null);
 const selectedLeadUuid = ref('');
+const selectedUuids = ref(new Set());
 
 const feedbackForm = useForm({ lead_uuid: '', status: 'contacted', converted: false, notes: '' });
 const returnForm = useForm({ lead_uuid: '', reason: '' });
+const bulkFeedbackForm = useForm({ lead_uuids: [], status: 'contacted', converted: false, notes: '' });
+const bulkReturnForm = useForm({ lead_uuids: [], reason: '' });
 
 const returnPresets = [
     'Wrong phone number',
@@ -54,10 +60,77 @@ const selectedLeadMeta = computed(() => (
     ?? props.leads.data?.find((lead) => lead.uuid === selectedLeadUuid.value)
 ));
 
-const canReturnSelectedLead = computed(() => (
-    selectedLeadUuid.value
-    && !selectedLeadMeta.value?.return_pending
+const canReturnSelectedLead = computed(() => {
+    if (!selectedLeadUuid.value || bulkMode.value) {
+        return false;
+    }
+
+    const meta = selectedLeadMeta.value;
+
+    return meta
+        && !meta.return_pending
+        && meta.return_request?.status !== 'pending';
+});
+
+const canBulkReturn = computed(() => selectedCount.value > 0);
+
+const pageUuids = computed(() => props.leads.data?.map((lead) => lead.uuid) ?? []);
+const selectedCount = computed(() => selectedUuids.value.size);
+const bulkMode = computed(() => selectedCount.value > 1);
+const allPageSelected = computed(() => (
+    pageUuids.value.length > 0 && pageUuids.value.every((uuid) => selectedUuids.value.has(uuid))
 ));
+const somePageSelected = computed(() => pageUuids.value.some((uuid) => selectedUuids.value.has(uuid)));
+
+const isLeadSelected = (uuid) => selectedUuids.value.has(uuid);
+
+const toggleLeadSelection = (uuid) => {
+    const next = new Set(selectedUuids.value);
+    if (next.has(uuid)) {
+        next.delete(uuid);
+    } else {
+        next.add(uuid);
+    }
+    selectedUuids.value = next;
+};
+
+const toggleSelectAllPage = () => {
+    const next = new Set(selectedUuids.value);
+    if (allPageSelected.value) {
+        pageUuids.value.forEach((uuid) => next.delete(uuid));
+    } else {
+        pageUuids.value.forEach((uuid) => next.add(uuid));
+    }
+    selectedUuids.value = next;
+};
+
+const clearSelection = () => {
+    selectedUuids.value = new Set();
+};
+
+const exportSelected = () => {
+    if (!selectedCount.value) {
+        return;
+    }
+
+    const params = new URLSearchParams();
+    selectedUuids.value.forEach((uuid) => params.append('uuids[]', uuid));
+    window.location.href = `${route('portal.buyer.leads.download')}?${params.toString()}`;
+};
+
+watch([allPageSelected, somePageSelected], () => {
+    if (selectAllRef.value) {
+        selectAllRef.value.indeterminate = somePageSelected.value && !allPageSelected.value;
+    }
+});
+
+watch(selectedUuids, (uuids) => {
+    if (uuids.size === 1) {
+        selectedLeadUuid.value = [...uuids][0];
+    } else if (uuids.size === 0) {
+        selectedLeadUuid.value = '';
+    }
+}, { deep: true });
 
 const leadOptionLabel = (lead) => {
     const parts = [lead.label];
@@ -88,11 +161,14 @@ const syncFormsToSelection = (lead) => {
 };
 
 const selectLeadForAction = (lead, scroll = true) => {
+    selectedUuids.value = new Set([lead.uuid]);
     selectedLeadUuid.value = lead.uuid;
     syncFormsToSelection(lead);
     returnForm.reason = '';
     feedbackForm.clearErrors();
     returnForm.clearErrors();
+    bulkFeedbackForm.clearErrors();
+    bulkReturnForm.clearErrors();
 
     if (scroll) {
         nextTick(() => {
@@ -105,6 +181,10 @@ watch(selectedLeadUuid, (uuid) => {
     const lead = props.leads.data?.find((row) => row.uuid === uuid)
         ?? props.actionLeads?.find((row) => row.uuid === uuid);
     syncFormsToSelection(lead ?? null);
+
+    if (uuid && (selectedUuids.value.size !== 1 || !selectedUuids.value.has(uuid))) {
+        selectedUuids.value = new Set([uuid]);
+    }
 });
 
 const submitFeedback = () => {
@@ -116,7 +196,10 @@ const submitFeedback = () => {
     feedbackForm.lead_uuid = selectedLeadUuid.value;
     feedbackForm.post(route('portal.buyer.feedback'), {
         preserveScroll: true,
-        onSuccess: () => feedbackForm.reset('notes'),
+        onSuccess: () => {
+            feedbackForm.reset('notes');
+            clearSelection();
+        },
     });
 };
 
@@ -129,7 +212,46 @@ const submitReturn = () => {
     returnForm.lead_uuid = selectedLeadUuid.value;
     returnForm.post(route('portal.buyer.returns'), {
         preserveScroll: true,
-        onSuccess: () => returnForm.reset('reason'),
+        onSuccess: () => {
+            returnForm.reset('reason');
+            clearSelection();
+        },
+    });
+};
+
+const submitBulkFeedback = () => {
+    if (!selectedCount.value) {
+        return;
+    }
+
+    bulkFeedbackForm.lead_uuids = [...selectedUuids.value];
+    bulkFeedbackForm.post(route('portal.buyer.feedback.bulk'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            bulkFeedbackForm.reset('notes');
+            clearSelection();
+        },
+    });
+};
+
+const submitBulkReturn = () => {
+    if (!selectedCount.value) {
+        return;
+    }
+
+    bulkReturnForm.lead_uuids = [...selectedUuids.value];
+    bulkReturnForm.post(route('portal.buyer.returns.bulk'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            bulkReturnForm.reset('reason');
+            clearSelection();
+        },
+    });
+};
+
+const scrollToQuickActions = () => {
+    nextTick(() => {
+        quickActionsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 };
 
@@ -154,6 +276,16 @@ const returnLabel = (lead) => {
     if (!lead.return_request) return '—';
     return lead.return_request.status;
 };
+
+const showingPendingReturns = computed(() => localFilters.value.return === 'pending');
+
+onMounted(() => {
+    if (props.filters?.return === 'pending') {
+        nextTick(() => {
+            document.getElementById('lead-inventory')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+});
 </script>
 
 <template>
@@ -172,55 +304,115 @@ const returnLabel = (lead) => {
             {{ page.props.flash.success }}
         </div>
 
+        <div
+            v-if="showingPendingReturns"
+            class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+        >
+            <span>Showing leads with return requests awaiting platform review.</span>
+            <AppButton variant="secondary" class="!px-3 !py-1.5" @click="clearFilters">Clear filter</AppButton>
+        </div>
+
         <div class="grid gap-6 lg:grid-cols-4">
             <div class="space-y-6 lg:col-span-3">
-                <Panel title="Filters">
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                        <div class="xl:col-span-2">
-                            <InputLabel value="Search" />
-                            <input v-model="localFilters.search" class="form-input mt-1 w-full" placeholder="Name, email, UUID" @keyup.enter="applyFilters" />
+                <Panel title="Filters" class="shrink-0">
+                    <div
+                        class="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+                    >
+                        <div class="col-span-2 min-w-0 sm:col-span-3 md:col-span-1">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Search</label>
+                            <input
+                                v-model="localFilters.search"
+                                class="form-input !mt-0.5 !py-1.5 !px-2.5 !text-sm w-full"
+                                placeholder="Name, email, UUID"
+                                @keyup.enter="applyFilters"
+                            />
                         </div>
-                        <div>
-                            <InputLabel value="Status" />
-                            <select v-model="localFilters.status" class="form-select mt-1 w-full">
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Status</label>
+                            <select v-model="localFilters.status" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">All</option>
                                 <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
                             </select>
                         </div>
-                        <div>
-                            <InputLabel value="Campaign" />
-                            <select v-model="localFilters.campaign_id" class="form-select mt-1 w-full">
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Campaign</label>
+                            <select v-model="localFilters.campaign_id" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">All</option>
                                 <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
                         </div>
-                        <div>
-                            <InputLabel value="Feedback" />
-                            <select v-model="localFilters.feedback" class="form-select mt-1 w-full">
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Supplier</label>
+                            <select v-model="localFilters.supplier_id" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
+                                <option value="">All</option>
+                                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+                            </select>
+                        </div>
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">SID</label>
+                            <select v-model="localFilters.sid" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
+                                <option value="">All</option>
+                                <option v-for="sid in sids" :key="sid" :value="sid">{{ sid }}</option>
+                            </select>
+                        </div>
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Feedback</label>
+                            <select v-model="localFilters.feedback" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">Any</option>
                                 <option value="none">Not reported</option>
                                 <option value="reported">Reported</option>
                                 <option value="converted">Converted</option>
                             </select>
                         </div>
-                        <div>
-                            <InputLabel value="From" />
-                            <input v-model="localFilters.from_date" type="date" class="form-input mt-1 w-full" />
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Return</label>
+                            <select v-model="localFilters.return" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
+                                <option value="">Any</option>
+                                <option value="pending">Pending review</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
                         </div>
-                        <div>
-                            <InputLabel value="To" />
-                            <input v-model="localFilters.to_date" type="date" class="form-input mt-1 w-full" />
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">From</label>
+                            <input v-model="localFilters.from_date" type="date" class="form-input !mt-0.5 !py-1.5 !px-2 !text-sm w-full" />
                         </div>
-                    </div>
-                    <div class="mt-3 flex gap-2">
-                        <AppButton @click="applyFilters">Apply</AppButton>
-                        <AppButton variant="secondary" @click="clearFilters">Clear</AppButton>
+                        <div class="min-w-0">
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">To</label>
+                            <input v-model="localFilters.to_date" type="date" class="form-input !mt-0.5 !py-1.5 !px-2 !text-sm w-full" />
+                        </div>
+                        <div class="col-span-2 flex justify-end gap-2 sm:col-span-3 md:col-span-1 md:justify-start">
+                            <AppButton class="!px-3 !py-1.5" @click="applyFilters">Apply</AppButton>
+                            <AppButton variant="secondary" class="!px-3 !py-1.5" @click="clearFilters">Clear</AppButton>
+                        </div>
                     </div>
                 </Panel>
 
-                <Panel title="Lead inventory" :padding="false">
+                <Panel id="lead-inventory" title="Lead inventory" :padding="false">
+                    <div
+                        v-if="selectedCount"
+                        class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-indigo-50/80 px-4 py-3 dark:border-slate-700 dark:bg-indigo-950/30"
+                    >
+                        <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                            {{ selectedCount }} selected
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <AppButton variant="secondary" class="!px-3 !py-1.5" @click="exportSelected">Export selected</AppButton>
+                            <AppButton class="!px-3 !py-1.5" @click="scrollToQuickActions">Feedback / return</AppButton>
+                            <AppButton variant="secondary" class="!px-3 !py-1.5" @click="clearSelection">Clear</AppButton>
+                        </div>
+                    </div>
                     <DataTable :empty="!leads.data?.length" empty-message="No leads match your filters. Clear filters or contact your account manager if you expect inventory here.">
                         <template #head>
+                            <th class="w-10 px-4 py-3">
+                                <input
+                                    ref="selectAllRef"
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-indigo-600 dark:border-slate-600"
+                                    :checked="allPageSelected"
+                                    @change="toggleSelectAllPage"
+                                />
+                            </th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Contact</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Campaign</th>
@@ -229,7 +421,20 @@ const returnLabel = (lead) => {
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Cost</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                         </template>
-                        <tr v-for="lead in leads.data" :key="lead.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <tr
+                            v-for="lead in leads.data"
+                            :key="lead.id"
+                            class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                            :class="isLeadSelected(lead.uuid) && 'bg-indigo-50/70 dark:bg-indigo-950/20'"
+                        >
+                            <td class="px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-indigo-600 dark:border-slate-600"
+                                    :checked="isLeadSelected(lead.uuid)"
+                                    @change="toggleLeadSelection(lead.uuid)"
+                                />
+                            </td>
                             <td class="px-4 py-3">
                                 <button type="button" class="font-mono text-xs text-indigo-600 hover:underline dark:text-indigo-400" :title="lead.uuid" @click="copyUuid(lead.uuid)">
                                     {{ lead.uuid?.slice(0, 10) }}…
@@ -266,9 +471,77 @@ const returnLabel = (lead) => {
                 <div ref="quickActionsEl">
                     <Panel title="Quick actions">
                         <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                            Pick a lead from your inventory — no UUID typing required. Use row actions above to pre-fill, or choose from the list.
+                            <template v-if="bulkMode">
+                                {{ selectedCount }} leads selected — apply the same feedback or return reason to all, or clear selection to work on one lead.
+                            </template>
+                            <template v-else>
+                                Pick a lead from your inventory — use row checkboxes, table actions, or the dropdown below.
+                            </template>
                         </p>
 
+                        <div v-if="bulkMode" class="grid gap-6 lg:grid-cols-2">
+                            <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Bulk feedback</h3>
+                                <p class="mt-1 text-xs text-slate-500">Apply the same status to all selected leads.</p>
+                                <form class="mt-4 space-y-4" @submit.prevent="submitBulkFeedback">
+                                    <FormErrorSummary :errors="bulkFeedbackForm.errors" />
+                                    <div>
+                                        <InputLabel value="Status" />
+                                        <select v-model="bulkFeedbackForm.status" class="form-select mt-1 w-full">
+                                            <option value="contacted">Contacted</option>
+                                            <option value="called">Called</option>
+                                            <option value="callback">Callback scheduled</option>
+                                            <option value="converted">Converted</option>
+                                            <option value="funded">Funded</option>
+                                            <option value="invalid">Invalid</option>
+                                        </select>
+                                    </div>
+                                    <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                        <input v-model="bulkFeedbackForm.converted" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                                        Mark as converted
+                                    </label>
+                                    <div>
+                                        <InputLabel value="Notes" />
+                                        <textarea v-model="bulkFeedbackForm.notes" class="form-input mt-1 w-full" rows="3" placeholder="Optional notes" />
+                                    </div>
+                                    <PrimaryButton :disabled="bulkFeedbackForm.processing">
+                                        Submit feedback for {{ selectedCount }} leads
+                                    </PrimaryButton>
+                                </form>
+                            </div>
+
+                            <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Bulk return</h3>
+                                <p class="mt-1 text-xs text-slate-500">Leads with a pending return are skipped automatically.</p>
+                                <form v-if="canBulkReturn" class="mt-4 space-y-4" @submit.prevent="submitBulkReturn">
+                                    <FormErrorSummary :errors="bulkReturnForm.errors" />
+                                    <div>
+                                        <InputLabel value="Quick reasons" />
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <button
+                                                v-for="preset in returnPresets"
+                                                :key="`bulk-${preset}`"
+                                                type="button"
+                                                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-amber-300 hover:bg-amber-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-amber-950/30"
+                                                @click="bulkReturnForm.reason = preset"
+                                            >
+                                                {{ preset }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Return reason" />
+                                        <textarea v-model="bulkReturnForm.reason" class="form-input mt-1 w-full" rows="4" placeholder="Explain why these leads should be returned" required />
+                                        <InputError class="mt-1" :message="bulkReturnForm.errors.reason" />
+                                    </div>
+                                    <PrimaryButton :disabled="bulkReturnForm.processing">
+                                        Submit return for {{ selectedCount }} leads
+                                    </PrimaryButton>
+                                </form>
+                            </div>
+                        </div>
+
+                        <template v-else>
                         <div class="mb-6">
                             <InputLabel value="Lead" />
                             <select v-model="selectedLeadUuid" class="form-select mt-1 w-full">
@@ -348,6 +621,7 @@ const returnLabel = (lead) => {
                                 <p v-else class="mt-4 text-sm text-slate-500">Select a lead to request a return.</p>
                             </div>
                         </div>
+                        </template>
                     </Panel>
                 </div>
             </div>

@@ -233,8 +233,8 @@ const comparisonRows = [
 
 const securityFeatures = [
     {
-        title: 'Tenant isolation',
-        desc: 'Your platform runs on its own subdomain with scoped data, API keys, and financials.',
+        title: 'Dedicated subdomain',
+        desc: 'Your partner platform runs on its own branded subdomain with scoped data, API keys, and financials.',
         icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
     },
     {
@@ -299,20 +299,21 @@ const toggleFaq = (index) => {
         <MarketingNav :can-login="canLogin" />
 
         <div :class="['marketing-content', marketingTheme === 'dark' && 'marketing-dark']">
-        <!-- Hero -->
-        <section class="hero-section relative overflow-hidden">
+        <!-- Hero + verticals (first viewport) -->
+        <div class="flex min-h-[calc(100svh-4rem)] flex-col">
+        <section class="hero-section relative flex flex-1 flex-col overflow-hidden">
             <div class="pointer-events-none absolute inset-0">
                 <div class="hero-grid absolute inset-0" />
-                <div class="absolute -right-32 top-0 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-indigo-400/20 via-violet-400/10 to-transparent blur-3xl marketing-dark:from-indigo-600/20" />
-                <div class="absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-gradient-to-tr from-cyan-400/15 to-transparent blur-3xl marketing-dark:from-cyan-500/10" />
+                <div class="absolute -right-32 top-0 h-64 w-64 rounded-full bg-gradient-to-br from-indigo-400/20 via-violet-400/10 to-transparent blur-3xl marketing-dark:from-indigo-600/20" />
+                <div class="absolute -left-24 bottom-0 h-56 w-56 rounded-full bg-gradient-to-tr from-cyan-400/15 to-transparent blur-3xl marketing-dark:from-cyan-500/10" />
                 <div class="absolute left-1/2 top-1/2 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] bg-gradient-to-r from-transparent via-indigo-300/30 to-transparent marketing-dark:via-indigo-500/20" />
             </div>
 
-            <div class="relative mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 md:pb-28 md:pt-36">
-                <div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 xl:gap-16">
+            <div class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-10 sm:px-6 md:py-12 lg:py-14">
+                <div class="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 xl:gap-14">
                     <!-- Left: content -->
                     <div class="text-center lg:text-left">
-                        <div class="mb-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+                        <div class="mb-3 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
                             <div class="brand-badge inline-flex shadow-sm shadow-indigo-500/10">
                                 <span class="relative flex h-2 w-2">
                                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
@@ -323,7 +324,7 @@ const toggleFaq = (index) => {
                             <SystemStatusBadge v-if="systemStatus" :status="systemStatus" />
                         </div>
 
-                        <h1 class="text-balance text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.1] xl:text-6xl">
+                        <h1 class="text-balance text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 marketing-dark:text-white sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1] xl:text-5xl">
                             Turn every lead into
                             <span
                                 :key="currentWord"
@@ -332,12 +333,12 @@ const toggleFaq = (index) => {
                             at scale
                         </h1>
 
-                        <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600 marketing-dark:text-slate-400 lg:mx-0 lg:text-[1.125rem]">
+                        <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-600 marketing-dark:text-slate-400 lg:mx-0 lg:text-lg">
                             Capture, validate, and distribute leads in milliseconds with ping-tree routing, isolated partner platforms, and full delivery audit.
                         </p>
 
-                        <div class="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:justify-start">
-                            <a href="#demo" class="brand-btn-primary group inline-flex items-center justify-center gap-2 px-8 py-4 text-base shadow-indigo-500/25">
+                        <div class="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:justify-start">
+                            <a href="#demo" class="brand-btn-primary group inline-flex items-center justify-center gap-2 px-7 py-3.5 text-base shadow-indigo-500/25">
                                 Book a Demo
                                 <svg class="h-5 w-5 transition group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -345,17 +346,17 @@ const toggleFaq = (index) => {
                             </a>
                             <Link
                                 :href="route('pricing')"
-                                class="brand-btn-secondary inline-flex items-center justify-center px-8 py-4 text-base"
+                                class="brand-btn-secondary inline-flex items-center justify-center px-7 py-3.5 text-base"
                             >
                                 View Pricing
                             </Link>
                             <MarketingSignInLink
                                 v-if="canLogin"
-                                class="brand-btn-secondary inline-flex items-center justify-center px-8 py-4 text-base"
+                                class="brand-btn-secondary inline-flex items-center justify-center px-7 py-3.5 text-base"
                             />
                         </div>
 
-                        <a href="#features" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 marketing-dark:text-indigo-400 marketing-dark:hover:text-cyan-300">
+                        <a href="#features" class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 marketing-dark:text-indigo-400 marketing-dark:hover:text-cyan-300">
                             Explore features
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -366,22 +367,22 @@ const toggleFaq = (index) => {
                             <div
                                 v-for="item in heroStats"
                                 :key="item.label"
-                                class="hero-stat-chip rounded-2xl border border-slate-200/80 bg-white/70 p-3 text-left backdrop-blur-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/40"
+                                class="hero-stat-chip rounded-xl border border-slate-200/80 bg-white/70 p-2.5 text-left backdrop-blur-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/40"
                             >
                                 <div class="mb-2 inline-flex rounded-lg bg-indigo-500/10 p-1.5 text-indigo-600 marketing-dark:text-indigo-400">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
                                     </svg>
                                 </div>
-                                <p class="text-lg font-bold leading-none text-slate-900 marketing-dark:text-white">{{ item.value }}</p>
+                                <p class="text-base font-bold leading-none text-slate-900 marketing-dark:text-white">{{ item.value }}</p>
                                 <p class="mt-1 text-xs text-slate-500 marketing-dark:text-slate-400">{{ item.label }}</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Right: dashboard preview -->
-                    <div class="relative mx-auto w-full max-w-xl lg:mx-0 lg:max-w-none">
-                        <div class="hero-panel-glow absolute -inset-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-cyan-400/20 blur-3xl" />
+                    <div class="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-lg xl:max-w-xl">
+                        <div class="hero-panel-glow absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-cyan-400/20 blur-3xl" />
 
                         <!-- Floating notification -->
                         <div class="absolute -right-2 top-8 z-20 hidden animate-float rounded-xl border border-emerald-500/30 bg-slate-900/95 px-4 py-3 shadow-xl shadow-emerald-500/10 backdrop-blur-md sm:block lg:-right-6">
@@ -401,20 +402,20 @@ const toggleFaq = (index) => {
                                 <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">Live</span>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3 p-4 sm:p-5">
+                            <div class="grid grid-cols-2 gap-2 p-3 sm:p-4">
                                 <div
                                     v-for="(stat, i) in stats"
                                     :key="stat.label"
-                                    class="rounded-xl border border-white/10 bg-gradient-to-br from-slate-800/80 to-slate-900/60 p-4"
+                                    class="rounded-lg border border-white/10 bg-gradient-to-br from-slate-800/80 to-slate-900/60 p-3"
                                     :class="i === 0 && 'ring-1 ring-indigo-500/30'"
                                 >
-                                    <p class="text-xl font-bold text-white sm:text-2xl">{{ stat.value }}</p>
+                                    <p class="text-lg font-bold text-white sm:text-xl">{{ stat.value }}</p>
                                     <p class="mt-1 text-[11px] uppercase tracking-wide text-slate-500">{{ stat.label }}</p>
                                 </div>
                             </div>
 
-                            <div class="border-t border-white/10 bg-slate-900/50 p-4 sm:p-5">
-                                <div class="mb-4 flex items-center justify-between">
+                            <div class="border-t border-white/10 bg-slate-900/50 p-3 sm:p-4">
+                                <div class="mb-3 flex items-center justify-between">
                                     <div>
                                         <p class="text-sm font-semibold text-white">Ping-tree auction</p>
                                         <p class="text-xs text-slate-500">Auto Insurance UK · Tier 1</p>
@@ -424,11 +425,11 @@ const toggleFaq = (index) => {
                                         Processing
                                     </span>
                                 </div>
-                                <div class="space-y-2.5">
+                                <div class="space-y-2">
                                     <div
                                         v-for="bid in liveBids"
                                         :key="bid.buyer"
-                                        class="rounded-lg bg-slate-800/60 px-3 py-2.5"
+                                        class="rounded-lg bg-slate-800/60 px-3 py-2"
                                     >
                                         <div class="mb-1.5 flex items-center justify-between text-xs">
                                             <span class="font-medium text-slate-300">{{ bid.buyer }}</span>
@@ -446,9 +447,9 @@ const toggleFaq = (index) => {
                         </div>
 
                         <!-- Floating metric chip -->
-                        <div class="absolute -bottom-4 -left-2 z-20 hidden animate-float-delayed rounded-xl border border-emerald-500/25 bg-white/95 px-4 py-3 shadow-lg shadow-emerald-500/10 backdrop-blur-md marketing-dark:border-emerald-500/30 marketing-dark:bg-slate-900/95 sm:block lg:-left-6">
+                        <div class="absolute -bottom-2 -left-2 z-20 hidden animate-float-delayed rounded-xl border border-emerald-500/25 bg-white/95 px-3 py-2 shadow-lg shadow-emerald-500/10 backdrop-blur-md marketing-dark:border-emerald-500/30 marketing-dark:bg-slate-900/95 sm:block lg:-left-4">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 marketing-dark:text-emerald-400">Route time</p>
-                            <p class="text-lg font-bold text-slate-900 marketing-dark:text-white">38<span class="text-sm font-semibold text-slate-500">ms</span></p>
+                            <p class="text-base font-bold text-slate-900 marketing-dark:text-white">38<span class="text-sm font-semibold text-slate-500">ms</span></p>
                         </div>
                     </div>
                 </div>
@@ -456,7 +457,7 @@ const toggleFaq = (index) => {
         </section>
 
         <!-- Verticals marquee -->
-        <section class="overflow-hidden border-y border-slate-200/80 bg-slate-50/80 py-6 marketing-dark:border-white/10 marketing-dark:bg-slate-900/40">
+        <section class="shrink-0 overflow-hidden border-y border-slate-200/80 bg-slate-50/80 py-5 marketing-dark:border-white/10 marketing-dark:bg-slate-900/40">
             <div class="mb-3 text-center">
                 <span class="text-xs font-semibold uppercase tracking-widest text-slate-400 marketing-dark:text-slate-500">Trusted across verticals</span>
             </div>
@@ -474,6 +475,7 @@ const toggleFaq = (index) => {
                 </div>
             </div>
         </section>
+        </div>
 
         <!-- Features -->
         <section id="features" class="py-24 md:py-32">
@@ -723,7 +725,7 @@ const toggleFaq = (index) => {
                                 </template>
 
                                 <div class="mt-4 flex items-center justify-between rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-3 py-2.5">
-                                    <p class="text-[11px] text-slate-500">Configurable per campaign · up to 10 tiers</p>
+                                    <p class="text-[11px] text-slate-500">Configurable per campaign · unlimited tiers</p>
                                     <span class="text-[11px] font-semibold text-cyan-400">42ms total</span>
                                 </div>
                             </div>
@@ -838,7 +840,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-violet-600 marketing-dark:text-violet-400">Enterprise-ready</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Security &amp; compliance built in</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Tenant isolation, scoped API keys, comprehensive audit logs, and billing enforcement - designed for agencies managing multiple partner networks.
+                            Scoped API keys, comprehensive audit logs, two-factor auth, and billing enforcement - designed for agencies managing high-volume lead networks.
                         </p>
                         <Link
                             :href="route('status.index')"

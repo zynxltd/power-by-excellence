@@ -134,11 +134,13 @@ class BuyerPortalService
             ->where('buyer_id', $buyer->id)
             ->first();
 
-        $returns = LeadReturn::query()
+        $returnRecords = LeadReturn::query()
             ->where('lead_id', $lead->id)
             ->where('buyer_id', $buyer->id)
             ->orderByDesc('created_at')
-            ->get()
+            ->get();
+
+        $returns = $returnRecords
             ->map(fn (LeadReturn $return) => [
                 'status' => $return->status,
                 'reason' => $return->reason,
@@ -150,7 +152,7 @@ class BuyerPortalService
         $metadata = $lead->metadata ?? [];
 
         return [
-            ...$this->formatLeadRow($lead, $feedback, $returns[0] ?? null),
+            ...$this->formatLeadRow($lead, $feedback, $returnRecords->first()),
             'received_at' => $lead->received_at,
             'fields' => collect($lead->field_data ?? [])->map(fn ($value, $key) => [
                 'key' => $key,

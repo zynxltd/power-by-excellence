@@ -31,7 +31,7 @@ class PostbackDispatcher
                 }
             });
 
-        $postbacks = $query->get()->filter(fn (Postback $p) => in_array($event, $p->events ?? [], true));
+        $postbacks = $query->get()->filter(fn (Postback $p) => $p->isLive() && in_array($event, $p->events ?? [], true));
 
         foreach ($postbacks as $postback) {
             $this->fire($postback, $lead, $event);

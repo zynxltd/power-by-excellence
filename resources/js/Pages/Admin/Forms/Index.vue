@@ -9,6 +9,7 @@ import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { useApprovalHighlight } from '@/Composables/useApprovalHighlight';
 
 const props = defineProps({
     forms: Object,
@@ -61,6 +62,8 @@ const approvalLabel = (status) => ({
     approved: 'Approved',
     rejected: 'Rejected',
 }[status] ?? status);
+
+useApprovalHighlight();
 </script>
 
 <template>
@@ -82,6 +85,7 @@ const approvalLabel = (status) => ({
             <div class="space-y-4">
                 <div
                     v-for="item in pendingApprovals"
+                    :id="`approval-${item.id}`"
                     :key="item.id"
                     class="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-500/30 dark:bg-amber-500/5"
                 >

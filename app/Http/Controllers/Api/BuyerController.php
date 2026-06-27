@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Buyer;
+use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,18 @@ class BuyerController extends Controller
             $validated['status'],
             $validated['converted'] ?? false,
             $validated['notes'] ?? null,
+        );
+
+        app(PlatformNotificationService::class)->notifyTenantBuyerFeedback(
+            $buyer->account,
+            null,
+            $buyer,
+            1,
+            $validated['status'],
+            $validated['converted'] ?? false,
+            $validated['notes'] ?? null,
+            $result['feedback_id'] ?? null,
+            $result['lead_id'] ?? null,
         );
 
         return response()->json(['status' => 'ok', 'event' => $result['event']]);

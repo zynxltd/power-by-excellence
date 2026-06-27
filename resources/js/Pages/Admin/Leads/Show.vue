@@ -78,14 +78,32 @@ const jumpToTab = (tab) => {
     });
 };
 
-const leadStatStrip = computed(() => [
-    { label: 'Status', value: props.lead?.status ?? '-', accent: 'indigo' },
-    { label: 'Quality', value: props.leadQuality ? `${props.leadQuality.score} (${props.leadQuality.grade_label})` : '-', accent: 'violet' },
-    { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '-', accent: 'cyan' },
-    { label: 'Revenue', value: formatMoney(props.lead?.financials?.revenue ?? 0), accent: 'emerald' },
-    { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '-', accent: 'amber' },
-    { label: 'Queue ID', value: props.lead?.queue_id ?? '-' },
-]);
+const leadStatStrip = computed(() => {
+    const items = [
+        { label: 'Status', value: props.lead?.status ?? '-', accent: 'indigo' },
+        { label: 'Quality', value: props.leadQuality ? `${props.leadQuality.score} (${props.leadQuality.grade_label})` : '-', accent: 'violet' },
+        { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '-', accent: 'cyan' },
+        { label: 'Revenue', value: formatMoney(props.lead?.financials?.revenue ?? 0), accent: 'emerald' },
+        { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '-', accent: 'amber' },
+        { label: 'Queue ID', value: props.lead?.queue_id ?? '-' },
+    ];
+
+    const feedback = props.lead?.buyer_feedback?.[0];
+    if (feedback) {
+        const invalid = ['invalid', 'bad_lead', 'returned'].includes(feedback.status);
+        items.splice(1, 0, {
+            label: 'Buyer feedback',
+            value: feedback.status,
+            accent: invalid ? 'rose' : 'emerald',
+        });
+    }
+
+    return items;
+});
+
+const invalidFeedback = computed(() =>
+    (props.lead?.buyer_feedback ?? []).filter((f) => ['invalid', 'bad_lead', 'returned'].includes(f.status)),
+);
 
 const sortedDeliveryLogs = computed(() => {
     const logs = [...(props.lead?.delivery_logs ?? [])];
@@ -217,6 +235,53 @@ const stageLabel = (stage) => {
         </Panel>
 
         <CompactStatStrip :items="leadStatStrip" class="mt-6" />
+
+        <div
+            v-if="lead.buyer_feedback?.length"
+            class="mt-4 rounded-xl border p-4"
+            :class="invalidFeedback.length
+                ? 'border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/30'
+                : 'border-indigo-200 bg-indigo-50/60 dark:border-indigo-800 dark:bg-indigo-950/20'"
+        >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="font-semibold" :class="invalidFeedback.length ? 'text-rose-900 dark:text-rose-100' : 'text-indigo-900 dark:text-indigo-100'">
+                        Buyer feedback recorded
+                    </p>
+                    <p class="mt-1 text-sm" :class="invalidFeedback.length ? 'text-rose-800 dark:text-rose-200' : 'text-indigo-800 dark:text-indigo-200'">
+                        {{ invalidFeedback.length ? 'This lead was flagged as invalid by the buyer.' : 'The buyer reported an outcome on this lead.' }}
+                    </p>
+                </div>
+                <AppButton :href="route('buyer-feedback.index', { search: lead.uuid })" variant="secondary">All feedback</AppButton>
+            </div>
+            <div class="mt-4 space-y-3">
+                <div
+                    v-for="fb in lead.buyer_feedback"
+                    :key="fb.id"
+                    class="rounded-lg border border-white/60 bg-white/80 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/60"
+                >
+                    <div class="flex flex-wrap items-center gap-2">
+                        <StatusBadge :status="fb.status" />
+                        <span v-if="fb.buyer" class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ fb.buyer.name }}</span>
+                        <FormattedDate :value="fb.created_at" class="text-xs text-slate-500" />
+                    </div>
+                    <p v-if="fb.notes" class="mt-2 text-sm text-slate-700 dark:text-slate-300">{{ fb.notes }}</p>
+                    <div class="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+                        <Link v-if="lead.supplier" :href="route('suppliers.show', lead.supplier.id)" class="text-indigo-600 hover:underline">
+                            Supplier: {{ lead.supplier.name }}
+                        </Link>
+                        <span v-if="lead.sid">SID: {{ lead.sid }}</span>
+                        <Link
+                            v-if="fb.buyer"
+                            :href="route('buyers.show', { buyer: fb.buyer.id, feedback: fb.id })"
+                            class="text-indigo-600 hover:underline"
+                        >
+                            View on buyer
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <p v-if="processingStatus" class="mt-2 text-sm" :class="processingStatus.class">
             Pipeline target &lt;200ms - {{ processingStatus.label }}

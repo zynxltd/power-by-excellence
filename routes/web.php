@@ -64,9 +64,21 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     if (! \App\Support\Tenancy\TenantResolver::isCentralHost()) {
-        return auth()->check()
-            ? redirect()->route('dashboard')
-            : redirect()->route('login');
+        if (! auth()->check()) {
+            return redirect()->route('login');
+        }
+
+        $user = auth()->user();
+
+        if ($user->isBuyerPortal()) {
+            return redirect()->route('portal.buyer.dashboard');
+        }
+
+        if ($user->isSupplierPortal()) {
+            return redirect()->route('portal.supplier.dashboard');
+        }
+
+        return redirect()->route('dashboard');
     }
 
     return Inertia::render('Welcome', [
@@ -204,6 +216,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
     Route::put('integrations/lead-sources/{provider}', [LeadSourceIntegrationController::class, 'update'])->name('integrations.lead-source.update');
 
     Route::get('quarantine', [QuarantineAdminController::class, 'index'])->name('quarantine.index');
+    Route::get('buyer-feedback', [\App\Http\Controllers\Admin\BuyerFeedbackController::class, 'index'])->name('buyer-feedback.index');
     Route::post('quarantine/{lead}/release', [QuarantineAdminController::class, 'release'])->name('quarantine.release');
     Route::post('quarantine/{lead}/reject', [QuarantineAdminController::class, 'reject'])->name('quarantine.reject');
     Route::post('quarantine/bulk-release', [QuarantineAdminController::class, 'bulkRelease'])->name('quarantine.bulk-release');
@@ -222,11 +235,19 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
 
     Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
     Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+    Route::post('webhooks/{webhook}/approve', [WebhookController::class, 'approve'])->name('webhooks.approve');
+    Route::post('webhooks/{webhook}/reject', [WebhookController::class, 'reject'])->name('webhooks.reject');
+    Route::post('webhooks/{webhook}/approve-deletion', [WebhookController::class, 'approveDeletion'])->name('webhooks.approve-deletion');
+    Route::post('webhooks/{webhook}/reject-deletion', [WebhookController::class, 'rejectDeletion'])->name('webhooks.reject-deletion');
     Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
 
     Route::get('postbacks', [PostbackController::class, 'index'])->name('postbacks.index');
     Route::post('postbacks', [PostbackController::class, 'store'])->name('postbacks.store');
     Route::put('postbacks/{postback}', [PostbackController::class, 'update'])->name('postbacks.update');
+    Route::post('postbacks/{postback}/approve', [PostbackController::class, 'approve'])->name('postbacks.approve');
+    Route::post('postbacks/{postback}/reject', [PostbackController::class, 'reject'])->name('postbacks.reject');
+    Route::post('postbacks/{postback}/approve-deletion', [PostbackController::class, 'approveDeletion'])->name('postbacks.approve-deletion');
+    Route::post('postbacks/{postback}/reject-deletion', [PostbackController::class, 'rejectDeletion'])->name('postbacks.reject-deletion');
     Route::delete('postbacks/{postback}', [PostbackController::class, 'destroy'])->name('postbacks.destroy');
 
     Route::get('api-docs', [ApiDocsController::class, 'index'])->name('api-docs.index');
@@ -300,10 +321,17 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
         Route::get('/leads/download', [BuyerPortalController::class, 'downloadLeads'])->name('leads.download');
         Route::get('/leads/{uuid}', [BuyerPortalController::class, 'showLead'])->name('leads.show');
         Route::post('/feedback', [BuyerPortalController::class, 'feedback'])->name('feedback');
+        Route::post('/feedback/bulk', [BuyerPortalController::class, 'bulkFeedback'])->name('feedback.bulk');
         Route::post('/returns', [BuyerPortalController::class, 'returnLead'])->name('returns');
+        Route::post('/returns/bulk', [BuyerPortalController::class, 'bulkReturn'])->name('returns.bulk');
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
         Route::get('/integrations', [BuyerPortalController::class, 'integrations'])->name('integrations');
+        Route::post('/webhooks', [BuyerPortalController::class, 'storeWebhook'])->name('webhooks.store');
+        Route::put('/webhooks/{webhook}', [BuyerPortalController::class, 'updateWebhook'])->name('webhooks.update');
+        Route::post('/webhooks/{webhook}/submit', [BuyerPortalController::class, 'submitWebhook'])->name('webhooks.submit');
+        Route::delete('/webhooks/{webhook}', [BuyerPortalController::class, 'destroyWebhook'])->name('webhooks.destroy');
+        Route::post('/webhooks/{webhook}/request-deletion', [BuyerPortalController::class, 'requestWebhookDeletion'])->name('webhooks.request-deletion');
     });
 
 Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':supplier'])
@@ -319,6 +347,11 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
         Route::put('/forms/{hostedForm}', [SupplierPortalController::class, 'updateForm'])->name('forms.update');
         Route::post('/forms/{hostedForm}/submit', [SupplierPortalController::class, 'submitForm'])->name('forms.submit');
         Route::get('/integrations', [SupplierPortalController::class, 'integrations'])->name('integrations');
+        Route::post('/postbacks', [SupplierPortalController::class, 'storePostback'])->name('postbacks.store');
+        Route::put('/postbacks/{postback}', [SupplierPortalController::class, 'updatePostback'])->name('postbacks.update');
+        Route::post('/postbacks/{postback}/submit', [SupplierPortalController::class, 'submitPostback'])->name('postbacks.submit');
+        Route::delete('/postbacks/{postback}', [SupplierPortalController::class, 'destroyPostback'])->name('postbacks.destroy');
+        Route::post('/postbacks/{postback}/request-deletion', [SupplierPortalController::class, 'requestPostbackDeletion'])->name('postbacks.request-deletion');
         Route::get('/billing', [SupplierPortalController::class, 'billing'])->name('billing');
     });
 

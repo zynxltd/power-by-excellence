@@ -30,7 +30,9 @@ class PortalIntegrationsTest extends TestCase
                 ->component('Portal/Buyer/Integrations')
                 ->has('apiBaseUrl')
                 ->has('partner.reference')
-                ->has('endpoints')
+                ->has('helpUrls')
+                ->has('webhookEventOptions')
+                ->has('webhookStats')
                 ->has('guides')
             );
     }
@@ -47,8 +49,9 @@ class PortalIntegrationsTest extends TestCase
                 ->component('Portal/Supplier/Integrations')
                 ->has('apiBaseUrl')
                 ->has('campaigns')
-                ->has('sampleIngest')
-                ->has('endpoints')
+                ->has('helpUrls')
+                ->has('postbackStats')
+                ->has('postbackRequests')
             );
     }
 

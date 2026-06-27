@@ -54,6 +54,16 @@ const defaultConfig = () => ({
     ping_timeout: 5,
     revenue_field: 'Cost',
     bid_hint: '',
+    ping_payload: '',
+    post_payload: '',
+    ping_include_floor: true,
+    ping_floor_field: 'floor',
+    ping_include_bid_hint: true,
+    ping_bid_hint_field: 'bid_hint',
+    ping_price_field: 'Cost',
+    ping_enforce_floor: true,
+    ping_success_rules: [{ field: 'Success', op: 'eq', value: true }],
+    response_rules: [{ match_by: 'http_status', value: '200', label: 'success' }],
     redirect_url: '',
     accept_url: '',
     to: '',
@@ -108,7 +118,7 @@ const form = useForm({
     },
     schedule: props.delivery?.schedule?.windows?.length
         ? props.delivery.schedule
-        : { timezone: 'Europe/London', windows: [{ day: 'all', start: '00:00', end: '23:59' }] },
+        : null,
 });
 
 const selectedGuide = computed(() => props.methodGuides?.[form.method]);
@@ -173,9 +183,37 @@ const configPreview = computed(() => {
 const addRule = () => form.revenue_rules.push({ field: '', value: '', amount: 15 });
 const removeRule = (i) => form.revenue_rules.splice(i, 1);
 
+const addPingSuccessRule = () => form.config.ping_success_rules.push({ field: '', op: 'eq', value: '' });
+const removePingSuccessRule = (i) => form.config.ping_success_rules.splice(i, 1);
+const addResponseRule = () => form.config.response_rules.push({ match_by: 'json_path', field: '', value: '', label: 'success' });
+const removeResponseRule = (i) => form.config.response_rules.splice(i, 1);
+
+const pingSchemaExample = `{
+  "lead": {
+    "zipcode": "[zipcode]",
+    "state": "[state]"
+  },
+  "auction": {
+    "min_price": [floor],
+    "hint": [bid_hint]
+  }
+}`;
+
+const postSchemaExample = `{
+  "lead_uuid": "[lead_uuid]",
+  "ping_id": "{$ping.PingID}",
+  "firstname": "[firstname]",
+  "email": "[email]"
+}`;
+
 const submit = () => {
+    const schedule = form.schedule?.windows?.length
+        ? form.schedule
+        : null;
+
     const payload = {
         ...form.data(),
+        schedule,
         location_filter: {
             states: form.location_filter.states.split(',').map((s) => s.trim()).filter(Boolean),
             zip_prefixes: form.location_filter.zip_prefixes.split(',').map((s) => s.trim()).filter(Boolean),
@@ -355,6 +393,45 @@ const submit = () => {
                                     <div><InputLabel value="Post timeout" /><TextInput v-model="form.config.timeout" type="number" class="mt-1 w-full" /></div>
                                     <div><InputLabel value="Revenue field" /><TextInput v-model="form.config.revenue_field" class="mt-1 w-full" placeholder="Cost" /></div>
                                     <div><InputLabel value="Bid hint (demo)" /><TextInput v-model="form.config.bid_hint" type="number" step="0.01" class="mt-1 w-full" /></div>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                                    <p class="text-sm font-semibold text-slate-900 dark:text-white">Ping payload schema</p>
+                                    <p class="mt-1 text-xs text-slate-500">Each buyer/tier can use a different JSON shape. Tags: lead fields <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[zipcode]</code>, system <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[floor]</code> <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[bid_hint]</code> <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[lead_uuid]</code>. Leave empty for legacy top-level floor/bid fields.</p>
+                                    <textarea v-model="form.config.ping_payload" rows="8" class="form-input mt-3 w-full font-mono text-xs" :placeholder="pingSchemaExample" />
+                                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <label class="flex items-center gap-2 text-sm"><input v-model="form.config.ping_include_floor" type="checkbox" class="rounded" /> Auto-inject floor</label>
+                                        <div><InputLabel value="Floor field path" /><TextInput v-model="form.config.ping_floor_field" class="mt-1 w-full font-mono text-sm" placeholder="floor or auction.min_price" /></div>
+                                        <label class="flex items-center gap-2 text-sm"><input v-model="form.config.ping_include_bid_hint" type="checkbox" class="rounded" /> Auto-inject bid hint</label>
+                                        <div><InputLabel value="Bid hint field path" /><TextInput v-model="form.config.ping_bid_hint_field" class="mt-1 w-full font-mono text-sm" placeholder="bid_hint" /></div>
+                                        <div><InputLabel value="Bid price field (response)" /><TextInput v-model="form.config.ping_price_field" class="mt-1 w-full font-mono text-sm" placeholder="Cost or bid.amount" /></div>
+                                        <label class="flex items-center gap-2 text-sm"><input v-model="form.config.ping_enforce_floor" type="checkbox" class="rounded" /> Require bid ≥ campaign floor</label>
+                                    </div>
+                                    <div class="mt-4 space-y-2">
+                                        <InputLabel value="Ping success rules" />
+                                        <div v-for="(rule, i) in form.config.ping_success_rules" :key="`ping-rule-${i}`" class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                                            <TextInput v-model="rule.field" placeholder="field path e.g. Success" class="min-w-[8rem] flex-1 font-mono text-sm" />
+                                            <select v-model="rule.op" class="form-select text-sm"><option value="eq">equals</option><option value="neq">not equals</option><option value="gte">≥</option><option value="gt">&gt;</option><option value="exists">exists</option><option value="contains">contains</option></select>
+                                            <TextInput v-model="rule.value" placeholder="expected" class="min-w-[6rem] flex-1 font-mono text-sm" />
+                                            <button type="button" class="text-sm text-rose-500" @click="removePingSuccessRule(i)">Remove</button>
+                                        </div>
+                                        <button type="button" class="text-sm text-indigo-600" @click="addPingSuccessRule">+ Add ping rule</button>
+                                    </div>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                                    <p class="text-sm font-semibold text-slate-900 dark:text-white">Post payload schema</p>
+                                    <p class="mt-1 text-xs text-slate-500">Full lead POST after a winning ping. Use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">{$ping.field}</code> to pass values from the ping response (e.g. token, PingID).</p>
+                                    <textarea v-model="form.config.post_payload" rows="8" class="form-input mt-3 w-full font-mono text-xs" :placeholder="postSchemaExample" />
+                                    <div class="mt-4 space-y-2">
+                                        <InputLabel value="Post success rules" />
+                                        <div v-for="(rule, i) in form.config.response_rules" :key="`post-rule-${i}`" class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                                            <select v-model="rule.match_by" class="form-select text-sm"><option value="http_status">HTTP status</option><option value="json_path">JSON field</option><option value="keyword">Body contains</option></select>
+                                            <TextInput v-if="rule.match_by === 'json_path'" v-model="rule.field" placeholder="Approved or status.code" class="min-w-[8rem] flex-1 font-mono text-sm" />
+                                            <TextInput v-model="rule.value" placeholder="expected" class="min-w-[6rem] flex-1 font-mono text-sm" />
+                                            <select v-model="rule.label" class="form-select text-sm"><option value="success">success</option><option value="reject">reject</option></select>
+                                            <button type="button" class="text-sm text-rose-500" @click="removeResponseRule(i)">Remove</button>
+                                        </div>
+                                        <button type="button" class="text-sm text-indigo-600" @click="addResponseRule">+ Add post rule</button>
+                                    </div>
                                 </div>
                                 <div class="grid gap-3 md:grid-cols-2">
                                     <div>

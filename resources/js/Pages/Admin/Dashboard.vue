@@ -79,7 +79,7 @@ const statLinks = computed(() => {
         value: showMultiCurrencyRevenue.value
             ? formatMoneyMulti(revenueByCurrency.value, { decimals: 2 })
             : formatMoney(stats.value.revenue_today ?? 0),
-        href: route('billing.index'),
+        href: route('reports.index', { days: 1 }),
         accent: 'cyan',
     },
     { label: 'Reject Rate', value: `${stats.value.reject_rate ?? 0}%`, href: route('leads.index', { status: 'rejected' }), accent: 'rose' },

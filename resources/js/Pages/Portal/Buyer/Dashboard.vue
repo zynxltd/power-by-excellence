@@ -8,9 +8,9 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import BuyerAccountPanel from '@/Components/Portal/BuyerAccountPanel.vue';
+import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
 const props = defineProps({
     buyer: Object,
@@ -38,6 +38,8 @@ const activityLabel = (item) => {
 
     return `Feedback · ${item.status}${item.converted ? ' · converted' : ''}`;
 };
+
+const pendingReturnsUrl = computed(() => route('portal.buyer.leads', { return: 'pending' }));
 </script>
 
 <template>
@@ -49,17 +51,24 @@ const activityLabel = (item) => {
                 <p class="text-xs text-slate-500">Performance & inventory for {{ buyer.name }}</p>
             </div>
             <div class="flex gap-2">
-                <AppButton :href="route('portal.buyer.leads.download')" variant="secondary">Download CSV</AppButton>
+                <AppButton :href="route('portal.buyer.leads.download')" variant="secondary" external>Download CSV</AppButton>
                 <AppButton :href="route('portal.buyer.leads')">View all leads</AppButton>
             </div>
         </div>
 
         <div
             v-if="stats.pending_returns > 0"
-            class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+            class="mb-6 flex flex-wrap items-center gap-x-1 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
         >
-            {{ stats.pending_returns }} return{{ stats.pending_returns === 1 ? '' : 's' }} awaiting platform review.
-            <Link :href="route('portal.buyer.leads')" class="ml-1 font-semibold underline">View leads</Link>
+            <span>
+                {{ stats.pending_returns }} return{{ stats.pending_returns === 1 ? '' : 's' }} awaiting platform review.
+            </span>
+            <Link
+                :href="pendingReturnsUrl"
+                class="font-semibold underline underline-offset-2 hover:text-amber-950 dark:hover:text-amber-100"
+            >
+                View leads
+            </Link>
         </div>
 
         <CompactStatStrip :items="buyerPortalStrip" :columns="4" class="mb-6" />

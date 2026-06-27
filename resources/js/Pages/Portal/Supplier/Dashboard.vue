@@ -55,7 +55,7 @@ const activityLabel = (item) => {
                 <p class="text-xs text-slate-500">Lead submissions & payouts for {{ supplier.name }}</p>
             </div>
             <div class="flex gap-2">
-                <AppButton :href="route('portal.supplier.leads.download')" variant="secondary">Download CSV</AppButton>
+                <AppButton :href="route('portal.supplier.leads.download')" variant="secondary" external>Download CSV</AppButton>
                 <AppButton :href="route('portal.supplier.leads')">View all leads</AppButton>
             </div>
         </div>

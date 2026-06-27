@@ -31,7 +31,7 @@ const items = computed(() => {
         { label: 'Sold', value: stats.value.sold_today, href: route('leads.index', { status: 'sold' }), color: 'text-emerald-600 dark:text-emerald-400' },
         { label: 'Queue', value: stats.value.pending, href: route('operations.index'), color: 'text-amber-600 dark:text-amber-400' },
         { label: 'Quarantine', value: stats.value.quarantined, href: route('quarantine.index'), color: 'text-rose-600 dark:text-rose-400' },
-        { label: 'Revenue', value: revenueLabel.value, href: route('finance.index'), color: 'text-cyan-600 dark:text-cyan-400' },
+        { label: 'Revenue', value: revenueLabel.value, href: route('reports.index', { days: 1 }), color: 'text-cyan-600 dark:text-cyan-400' },
     ];
 });
 

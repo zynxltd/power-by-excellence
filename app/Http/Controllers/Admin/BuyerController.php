@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer;
+use App\Models\BuyerFeedback;
+use App\Models\LeadReturn;
 use App\Models\User;
 use App\Mail\PortalCredentialsMail;
 use App\Services\Integrations\BuyerWebhookSync;
@@ -76,6 +78,44 @@ class BuyerController extends Controller
             ->limit(10)
             ->get();
 
+        $recentFeedback = BuyerFeedback::query()
+            ->where('buyer_id', $buyer->id)
+            ->with(['lead:id,uuid,campaign_id', 'lead.campaign:id,name'])
+            ->orderByDesc('updated_at')
+            ->limit(15)
+            ->get()
+            ->map(fn (BuyerFeedback $feedback) => [
+                'id' => $feedback->id,
+                'status' => $feedback->status,
+                'converted' => $feedback->converted,
+                'notes' => $feedback->notes,
+                'recorded_at' => $feedback->updated_at?->toDateTimeString(),
+                'lead' => $feedback->lead ? [
+                    'id' => $feedback->lead->id,
+                    'uuid' => $feedback->lead->uuid,
+                    'campaign' => $feedback->lead->campaign?->only(['id', 'name']),
+                ] : null,
+            ]);
+
+        $pendingReturns = LeadReturn::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('status', 'pending')
+            ->with(['lead:id,uuid,campaign_id', 'lead.campaign:id,name'])
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get()
+            ->map(fn (LeadReturn $return) => [
+                'id' => $return->id,
+                'reason' => $return->reason,
+                'status' => $return->status,
+                'submitted_at' => $return->created_at?->toDateTimeString(),
+                'lead' => $return->lead ? [
+                    'id' => $return->lead->id,
+                    'uuid' => $return->lead->uuid,
+                    'campaign' => $return->lead->campaign?->only(['id', 'name']),
+                ] : null,
+            ]);
+
         $billing = app(\App\Services\Billing\AccountBillingService::class);
         $portalUser = User::query()
             ->where('buyer_id', $buyer->id)
@@ -86,9 +126,19 @@ class BuyerController extends Controller
             'buyer' => $buyer->load(['deliveries.campaign']),
             'recentLeads' => $recentLeads,
             'recentTransactions' => $recentTransactions,
+            'recentFeedback' => $recentFeedback,
+            'pendingReturns' => $pendingReturns,
+            'activityStats' => [
+                'pending_returns' => LeadReturn::where('buyer_id', $buyer->id)->where('status', 'pending')->count(),
+                'feedback_total' => BuyerFeedback::where('buyer_id', $buyer->id)->count(),
+            ],
             'isOperational' => $billing->isBuyerOperational($buyer),
             'currency' => $buyer->resolvedCurrency(),
             'portalUser' => $portalUser,
+            'highlight' => [
+                'feedback' => $request->integer('feedback') ?: null,
+                'return' => $request->integer('return') ?: null,
+            ],
         ]);
     }
 

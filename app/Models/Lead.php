@@ -106,6 +106,11 @@ class Lead extends Model
         return $this->hasMany(DeliveryLog::class);
     }
 
+    public function buyerFeedback(): HasMany
+    {
+        return $this->hasMany(BuyerFeedback::class);
+    }
+
     public function getField(string $key, mixed $default = null): mixed
     {
         return data_get($this->field_data, $key, $default);

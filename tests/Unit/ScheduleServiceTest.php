@@ -45,4 +45,31 @@ class ScheduleServiceTest extends TestCase
             ],
         ]));
     }
+
+    #[Test]
+    public function empty_schedule_means_always_available(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24 23:59:00', 'Europe/London'));
+
+        $service = new ScheduleService;
+
+        $this->assertTrue($service->isWithinSchedule(null));
+        $this->assertTrue($service->isWithinSchedule([]));
+        $this->assertTrue($service->isWithinSchedule(['timezone' => 'Europe/London', 'windows' => []]));
+    }
+
+    #[Test]
+    public function full_day_window_includes_last_minute_of_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24 23:59:00', 'Europe/London'));
+
+        $service = new ScheduleService;
+
+        $this->assertTrue($service->isWithinSchedule([
+            'timezone' => 'Europe/London',
+            'windows' => [
+                ['day' => 'all', 'start' => '00:00', 'end' => '23:59'],
+            ],
+        ]));
+    }
 }

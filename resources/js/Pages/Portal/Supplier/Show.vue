@@ -80,9 +80,13 @@ const leadName = computed(() => {
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Sub-affiliate (SSID)</dt>
                             <dd class="mt-1 font-mono text-sm text-slate-900 dark:text-white">{{ lead.ssid }}</dd>
                         </div>
-                        <div v-if="lead.source?.name">
+                        <div v-if="lead.source_record?.name">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Source name</dt>
-                            <dd class="mt-1 text-sm text-slate-900 dark:text-white">{{ lead.source.name }}</dd>
+                            <dd class="mt-1 text-sm text-slate-900 dark:text-white">{{ lead.source_record.name }}</dd>
+                        </div>
+                        <div v-if="lead.ingest_source">
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Ingest source</dt>
+                            <dd class="mt-1 font-mono text-xs text-slate-600 dark:text-slate-400">{{ lead.ingest_source }}</dd>
                         </div>
                     </dl>
                 </Panel>

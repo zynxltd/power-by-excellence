@@ -21,6 +21,11 @@ class PlatformNotificationTest extends TestCase
         $this->seed(\Database\Seeders\PlatformSeeder::class);
     }
 
+    protected function ukHost()
+    {
+        return $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test']);
+    }
+
     public function test_tenant_activity_logged_for_super_admin(): void
     {
         $account = Account::where('slug', 'excellence-uk')->first();
@@ -170,5 +175,80 @@ class PlatformNotificationTest extends TestCase
             'type' => 'system',
             'metadata->alert_key' => PlatformNotificationService::ALERT_HERD_TENANT_LINKING,
         ]);
+    }
+
+    public function test_approval_notifications_link_to_admin_review_pages(): void
+    {
+        $tenantAdmin = User::where('email', 'uk@powerbyexcellence.test')->first();
+        $service = app(PlatformNotificationService::class);
+
+        $webhookNotification = PlatformNotification::create([
+            'account_id' => Account::where('slug', 'excellence-uk')->value('id'),
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'info',
+            'title' => 'Webhook approval requested',
+            'metadata' => [
+                'action' => 'webhook.approval_requested',
+                'webhook_id' => 42,
+            ],
+        ]);
+
+        $postbackNotification = PlatformNotification::create([
+            'account_id' => Account::where('slug', 'excellence-uk')->value('id'),
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Postback approval requested',
+            'metadata' => [
+                'action' => 'postback.approval_requested',
+                'postback_id' => 7,
+            ],
+        ]);
+
+        $formNotification = PlatformNotification::create([
+            'account_id' => Account::where('slug', 'excellence-uk')->value('id'),
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Form approval requested',
+            'metadata' => [
+                'action' => 'form.approval_requested',
+                'hosted_form_id' => 15,
+            ],
+        ]);
+
+        $this->assertSame(
+            route('webhooks.index', ['approval' => 42]),
+            $service->hrefFor($tenantAdmin, $webhookNotification),
+        );
+        $this->assertSame(
+            route('postbacks.index', ['approval' => 7]),
+            $service->hrefFor($tenantAdmin, $postbackNotification),
+        );
+        $this->assertSame(
+            route('forms.index', ['approval' => 15]),
+            $service->hrefFor($tenantAdmin, $formNotification),
+        );
+
+        $this->ukHost()
+            ->actingAs($tenantAdmin)
+            ->get(route('notifications.inbox'))
+            ->assertOk()
+            ->assertJson(fn ($json) => $json
+                ->has('notifications', 3)
+                ->etc()
+            );
+
+        $inbox = $this->ukHost()
+            ->actingAs($tenantAdmin)
+            ->get(route('notifications.inbox'))
+            ->json('notifications');
+
+        $hrefs = collect($inbox)->pluck('href')->all();
+
+        $this->assertContains(route('webhooks.index', ['approval' => 42]), $hrefs);
+        $this->assertContains(route('postbacks.index', ['approval' => 7]), $hrefs);
+        $this->assertContains(route('forms.index', ['approval' => 15]), $hrefs);
     }
 }

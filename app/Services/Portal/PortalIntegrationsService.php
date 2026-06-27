@@ -2,19 +2,21 @@
 
 namespace App\Services\Portal;
 
-use App\Models\ApiKey;
 use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\Postback;
 use App\Models\Supplier;
-use App\Models\Webhook;
 use App\Services\Api\CampaignApiSpecService;
+use App\Services\Postbacks\SupplierPostbackService;
+use App\Services\Webhooks\BuyerWebhookService;
 use App\Support\Tenancy\TenantResolver;
 
 class PortalIntegrationsService
 {
     public function __construct(
         protected CampaignApiSpecService $specService,
+        protected BuyerWebhookService $buyerWebhooks,
+        protected SupplierPostbackService $supplierPostbacks,
     ) {}
 
     /**
@@ -24,37 +26,24 @@ class PortalIntegrationsService
     {
         $account = $buyer->account;
         $apiBase = TenantResolver::apiBaseUrl($account);
-
-        $webhooks = Webhook::query()
-            ->where('account_id', $account->id)
-            ->where(function ($query) use ($buyer) {
-                $query->where('buyer_id', $buyer->id)->orWhereNull('buyer_id');
-            })
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'url', 'events', 'buyer_id']);
+        $webhookRequests = $this->buyerWebhooks->requestsForBuyer($buyer);
+        $liveWebhooks = $this->buyerWebhooks->liveForBuyer($buyer);
 
         return [
             'apiBaseUrl' => $apiBase,
             'tenantHost' => TenantResolver::portalHost($account),
             'currency' => $buyer->resolvedCurrency(),
-            'partner' => $buyer->only(['reference', 'name']),
-            'webhooks' => $webhooks->map(fn (Webhook $webhook) => [
-                'name' => $webhook->name,
-                'events' => $webhook->events ?? [],
-                'scoped_to_you' => $webhook->buyer_id === $buyer->id,
-                'url_host' => parse_url($webhook->url, PHP_URL_HOST) ?: $webhook->url,
-            ])->values()->all(),
-            'endpoints' => $this->buyerEndpoints($buyer, $apiBase),
-            'guides' => $this->buyerGuides(),
-            'samples' => [
-                'feedback' => [
-                    'lead_uuid' => 'your-lead-uuid',
-                    'status' => 'converted',
-                    'converted' => true,
-                    'notes' => 'Funded on 2026-06-24',
-                ],
+            'partner' => $buyer->only(['reference', 'name', 'id']),
+            'webhooks' => $liveWebhooks,
+            'webhookRequests' => $webhookRequests,
+            'webhookEventOptions' => BuyerWebhookService::eventOptions(),
+            'webhookStats' => [
+                'live' => count($liveWebhooks),
+                'pending' => collect($webhookRequests)->where('approval_status', BuyerWebhookService::STATUS_PENDING)->count(),
+                'draft' => collect($webhookRequests)->where('approval_status', BuyerWebhookService::STATUS_DRAFT)->count(),
             ],
+            'helpUrls' => $this->buyerHelpUrls(),
+            'guides' => $this->buyerGuides(),
         ];
     }
 
@@ -76,14 +65,8 @@ class PortalIntegrationsService
             ? $campaigns->firstWhere('id', $campaignId)
             : $campaigns->first();
         $selectedSpec = $selectedCampaign ? $this->specService->defaultSpec($selectedCampaign) : null;
-        $sampleIngest = $selectedCampaign && $selectedSpec
-            ? array_merge(
-                $this->specService->sampleRequest($selectedCampaign, $selectedSpec),
-                ['sid' => $supplier->sources()->orderBy('sid')->value('sid') ?? 'your_sid'],
-            )
-            : null;
 
-        $apiKeys = ApiKey::query()
+        $apiKeys = \App\Models\ApiKey::query()
             ->where('supplier_id', $supplier->id)
             ->where('is_active', true)
             ->orderByDesc('created_at')
@@ -98,14 +81,22 @@ class PortalIntegrationsService
             ->orderBy('name')
             ->get(['name', 'method', 'events', 'supplier_id']);
 
+        $postbackRequests = $this->supplierPostbacks->requestsForSupplier($supplier);
+        $livePostbacks = $postbacks->map(fn (Postback $postback) => [
+            'name' => $postback->name,
+            'method' => strtoupper($postback->method),
+            'events' => $postback->events ?? [],
+            'scoped_to_you' => $postback->supplier_id === $supplier->id,
+        ])->values()->all();
+
         $settings = $supplier->affiliate_settings ?? [];
 
         return [
             'apiBaseUrl' => $apiBase,
             'tenantHost' => TenantResolver::portalHost($account),
             'currency' => $account->default_currency ?? 'GBP',
-            'partner' => $supplier->only(['reference', 'name']),
-            'sources' => $supplier->sources()->orderBy('sid')->get(['sid', 'name']),
+            'partner' => $supplier->only(['reference', 'name', 'id']),
+            'sources' => $supplier->sources()->orderBy('sid')->get(['id', 'sid', 'name']),
             'campaigns' => $campaigns->map(fn (Campaign $c) => [
                 'id' => $c->id,
                 'name' => $c->name,
@@ -113,119 +104,78 @@ class PortalIntegrationsService
             ])->values()->all(),
             'selectedCampaign' => $selectedCampaign?->only(['id', 'name', 'reference']),
             'selectedSpec' => $selectedSpec,
-            'sampleIngest' => $sampleIngest,
-            'sampleStatus' => $this->specService->sampleStatusResponse(),
-            'apiKeys' => $apiKeys->map(fn (ApiKey $key) => [
+            'apiKeys' => $apiKeys->map(fn (\App\Models\ApiKey $key) => [
                 'name' => $key->name,
                 'prefix' => $key->key_prefix,
                 'permissions' => $key->permissions ?? [],
                 'last_used_at' => $key->last_used_at?->toDateTimeString(),
             ])->values()->all(),
-            'postbacks' => $postbacks->map(fn (Postback $postback) => [
-                'name' => $postback->name,
-                'method' => strtoupper($postback->method),
-                'events' => $postback->events ?? [],
-                'scoped_to_you' => $postback->supplier_id === $supplier->id,
-            ])->values()->all(),
+            'postbacks' => $livePostbacks,
+            'postbackRequests' => $postbackRequests,
+            'postbackEventOptions' => SupplierPostbackService::eventOptions(),
+            'postbackStats' => [
+                'live' => count($livePostbacks),
+                'pending' => collect($postbackRequests)->where('approval_status', SupplierPostbackService::STATUS_PENDING)->count(),
+                'draft' => collect($postbackRequests)->where('approval_status', SupplierPostbackService::STATUS_DRAFT)->count(),
+            ],
+            'defaultPostbackUrlExample' => url('/api/mock/postback?lead_uuid=[lead_uuid]&payout=[payout]&sid=[sid]'),
             'defaultPostbackUrl' => $settings['default_postback_url'] ?? null,
-            'endpoints' => $this->supplierEndpoints($apiBase),
+            'helpUrls' => $this->supplierHelpUrls(),
             'guides' => $this->supplierGuides(),
         ];
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{label: string, description: string, href: string}>
      */
-    protected function buyerEndpoints(Buyer $buyer, string $apiBase): array
+    protected function supplierHelpUrls(): array
     {
-        $ref = $buyer->reference;
-
         return [
             [
-                'key' => 'csv-export',
-                'method' => 'GET',
-                'path' => '/portal/buyer/leads/download',
-                'type' => 'portal',
-                'summary' => 'Export purchased leads (CSV)',
-                'description' => 'Download up to 5,000 leads sold to your buyer account. Filter with from_date and to_date query params. Requires portal login session.',
+                'label' => 'Lead ingest API',
+                'description' => 'REST endpoints, authentication, field schemas, and polling examples.',
+                'href' => route('help.show', 'supplier-portal-leads'),
             ],
             [
-                'key' => 'feedback',
-                'method' => 'POST',
-                'path' => "/buyers/{$ref}/feedback",
-                'type' => 'api',
-                'scope' => 'buyers.manage',
-                'summary' => 'Report conversion feedback',
-                'description' => 'Push funded, contacted, or invalid outcomes for a lead UUID. Mirrors the buyer portal feedback form.',
+                'label' => 'SID & postback tracking',
+                'description' => 'How SIDs flow from ingest to reporting and conversion postbacks.',
+                'href' => route('help.show', 'supplier-tracking-sids'),
             ],
             [
-                'key' => 'webhooks',
-                'method' => 'POST',
-                'path' => '(your webhook URL)',
-                'type' => 'webhook',
-                'summary' => 'Receive lead events (outbound)',
-                'description' => 'When configured by your platform administrator, the platform POSTs JSON to your URL on events such as lead.sold. This is push delivery — not a pull API.',
+                'label' => 'CSV export guide',
+                'description' => 'Download submitted leads, date filters, and reconciliation tips.',
+                'href' => route('help.show', 'supplier-portal-csv-export'),
+            ],
+            [
+                'label' => 'Supplier portal overview',
+                'description' => 'Dashboard, leads, form embeds, and day-to-day portal workflows.',
+                'href' => route('help.show', 'supplier-portal-overview'),
             ],
         ];
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    protected function supplierEndpoints(string $apiBase): array
+    protected function buyerHelpUrls(): array
     {
         return [
             [
-                'key' => 'ingest',
-                'method' => 'POST',
-                'path' => '/leads',
-                'type' => 'api',
-                'scope' => 'leads.create',
-                'summary' => 'Submit a lead',
-                'description' => 'Real-time lead ingest. Include campaign_reference, sid, and campaign field data. Returns 202 with lead_id and queue_id unless sync=true.',
+                'label' => 'Feedback & returns API',
+                'description' => 'REST endpoints, authentication, and payload examples for conversion reporting.',
+                'href' => route('help.show', 'buyer-portal-feedback-returns'),
             ],
             [
-                'key' => 'status',
-                'method' => 'GET',
-                'path' => '/leads/{lead_id}',
-                'type' => 'api',
-                'scope' => 'leads.read',
-                'summary' => 'Poll lead status',
-                'description' => 'Check sold, rejected, or unsold outcome and payout after submission. Poll every 1–2 seconds until terminal status.',
+                'label' => 'Webhooks & outbound events',
+                'description' => 'Sample payloads, event types, and approval workflow for lead.sold notifications.',
+                'href' => route('help.show', 'buyer-portal-webhooks'),
             ],
             [
-                'key' => 'queue',
-                'method' => 'GET',
-                'path' => '/leads/queue/{queue_id}',
-                'type' => 'api',
-                'scope' => 'leads.read',
-                'summary' => 'Poll by queue ID',
-                'description' => 'Same response as GET /leads/{lead_id}. Use the queue_id from the 202 ingest response.',
+                'label' => 'CSV export guide',
+                'description' => 'Download purchased leads, date filters, and CRM import tips.',
+                'href' => route('help.show', 'buyer-portal-csv-export'),
             ],
             [
-                'key' => 'search',
-                'method' => 'POST',
-                'path' => '/leads/search',
-                'type' => 'api',
-                'scope' => 'leads.read',
-                'summary' => 'Search leads (reconciliation)',
-                'description' => 'Paginated lead search by campaign_id and status. Filter results to your supplier_id in your integration layer or match UUIDs from postbacks.',
-            ],
-            [
-                'key' => 'csv-export',
-                'method' => 'GET',
-                'path' => '/portal/supplier/leads/download',
-                'type' => 'portal',
-                'summary' => 'Export submitted leads (CSV)',
-                'description' => 'Download up to 5,000 leads attributed to your supplier. Optional from_date, to_date, and sid filters. Requires portal login.',
-            ],
-            [
-                'key' => 'postbacks',
-                'method' => 'GET/POST',
-                'path' => '(your postback URL)',
-                'type' => 'webhook',
-                'summary' => 'Conversion postbacks (outbound)',
-                'description' => 'When a lead sells, the platform fires your postback URL with payout and tracking macros. Configured by your administrator.',
+                'label' => 'Buyer portal overview',
+                'description' => 'How leads arrive, billing, and day-to-day portal workflows.',
+                'href' => route('help.show', 'buyer-portal-overview'),
             ],
         ];
     }
@@ -238,7 +188,7 @@ class PortalIntegrationsService
         return [
             [
                 'title' => 'Pull vs push data',
-                'body' => 'Use the portal CSV export or scheduled exports to pull historical inventory. For real-time updates when leads are sold to you, ask your administrator to configure webhooks pointing at your CRM endpoint.',
+                'body' => 'Use the portal CSV export or scheduled exports to pull historical inventory. For real-time updates when leads are sold to you, configure webhooks below or ask your administrator to set up delivery endpoints.',
             ],
             [
                 'title' => 'API keys',

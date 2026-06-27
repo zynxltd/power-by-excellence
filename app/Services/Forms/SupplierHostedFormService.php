@@ -75,6 +75,8 @@ class SupplierHostedFormService
             'config' => [
                 'redirect_url' => $form->config['redirect_url'] ?? '',
                 'allowed_domains' => $form->config['allowed_domains'] ?? [],
+                'default_sid' => $form->config['default_sid'] ?? null,
+                'default_source_id' => $form->config['default_source_id'] ?? null,
             ],
         ];
     }
@@ -85,7 +87,7 @@ class SupplierHostedFormService
     public function create(Supplier $supplier, array $data): HostedForm
     {
         $campaign = $this->resolveCampaignForSupplier($supplier, (int) $data['campaign_id']);
-        $source = $supplier->sources()->orderBy('id')->first();
+        $source = $this->resolveSourceForSupplier($supplier, $data);
 
         $form = HostedForm::create([
             'account_id' => $supplier->account_id,
@@ -94,7 +96,7 @@ class SupplierHostedFormService
             'name' => $data['name'],
             'is_active' => false,
             'approval_status' => self::STATUS_DRAFT,
-            'config' => $this->buildConfig($supplier, $campaign, $source?->sid, $data),
+            'config' => $this->buildConfig($supplier, $campaign, $source, $data),
         ]);
 
         return $form;
@@ -109,7 +111,7 @@ class SupplierHostedFormService
         $this->assertEditableBySupplier($form);
 
         $campaign = $this->resolveCampaignForSupplier($supplier, (int) $data['campaign_id']);
-        $source = $supplier->sources()->orderBy('id')->first();
+        $source = $this->resolveSourceForSupplier($supplier, $data);
 
         $form->update([
             'campaign_id' => $campaign->id,
@@ -119,7 +121,7 @@ class SupplierHostedFormService
             'reviewed_at' => null,
             'reviewed_by_user_id' => null,
             'rejection_reason' => null,
-            'config' => $this->buildConfig($supplier, $campaign, $source?->sid, $data),
+            'config' => $this->buildConfig($supplier, $campaign, $source, $data),
         ]);
 
         return $form->fresh();
@@ -243,7 +245,7 @@ class SupplierHostedFormService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    protected function buildConfig(Supplier $supplier, Campaign $campaign, ?string $defaultSid, array $data): array
+    protected function buildConfig(Supplier $supplier, Campaign $campaign, ?\App\Models\Source $source, array $data): array
     {
         $allowedDomains = collect($data['allowed_domains'] ?? [])
             ->map(fn ($domain) => trim((string) $domain))
@@ -256,10 +258,41 @@ class SupplierHostedFormService
             'redirect_url' => $data['redirect_url'] ?? '',
             'allowed_domains' => $allowedDomains,
             'default_supplier_id' => $supplier->id,
-            'default_sid' => $defaultSid,
+            'default_sid' => $source?->sid,
+            'default_source_id' => $source?->id,
             'embed_height' => 720,
             'steps' => $this->defaultStepsFromCampaign($campaign),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function resolveSourceForSupplier(Supplier $supplier, array $data): ?\App\Models\Source
+    {
+        if (! empty($data['source_id'])) {
+            $source = $supplier->sources()->whereKey((int) $data['source_id'])->first();
+            if (! $source) {
+                throw ValidationException::withMessages([
+                    'source_id' => 'That tracking ID does not belong to your supplier account.',
+                ]);
+            }
+
+            return $source;
+        }
+
+        if (! empty($data['sid'])) {
+            $source = $supplier->sources()->where('sid', $data['sid'])->first();
+            if (! $source) {
+                throw ValidationException::withMessages([
+                    'sid' => 'That SID is not configured on your supplier account.',
+                ]);
+            }
+
+            return $source;
+        }
+
+        return $supplier->sources()->orderBy('sid')->first();
     }
 
     /**

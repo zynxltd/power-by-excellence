@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware([LogApiRequest::class])->group(function () {
+    Route::match(['get', 'post'], '/mock/postback', \App\Http\Controllers\Api\MockPostbackController::class);
+
     Route::get('/mock/buyers', [MockBuyerApiController::class, 'docs']);
     Route::match(['get', 'post'], '/mock/buyers/{tier}/ping', [MockBuyerApiController::class, 'ping'])->whereNumber('tier');
     Route::match(['get', 'post'], '/mock/buyers/{tier}/post', [MockBuyerApiController::class, 'post'])->whereNumber('tier');

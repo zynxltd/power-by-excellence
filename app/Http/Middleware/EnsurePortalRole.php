@@ -13,6 +13,10 @@ class EnsurePortalRole
     {
         $user = $request->user();
 
+        if ($request->routeIs('impersonate.stop') && ($request->session()->get('impersonator_id') || $request->session()->get('god_mode'))) {
+            return $next($request);
+        }
+
         $allowed = match ($role) {
             'buyer' => $user?->role === UserRole::BuyerPortal,
             'supplier' => $user?->role === UserRole::SupplierPortal,
@@ -35,7 +39,6 @@ class EnsurePortalRole
                 ->route('portal.supplier.dashboard')
                 ->with('error', 'Supplier portal accounts cannot access admin pages. Use the supplier dashboard instead.');
         }
-
         abort(403);
     }
 }

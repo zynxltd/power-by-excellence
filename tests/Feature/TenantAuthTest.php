@@ -101,6 +101,17 @@ class TenantAuthTest extends TestCase
             ->assertRedirect('/login');
     }
 
+    public function test_tenant_home_redirects_buyer_to_portal_without_admin_error(): void
+    {
+        $buyer = User::where('email', 'buyer-portal@excellence-uk.test')->firstOrFail();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($buyer)
+            ->get('http://excellence-uk.powerbyexcellence.test/')
+            ->assertRedirect(route('portal.buyer.dashboard'))
+            ->assertSessionMissing('error');
+    }
+
     public function test_tenant_host_redirects_pricing_to_login(): void
     {
         $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
@@ -218,5 +229,42 @@ class TenantAuthTest extends TestCase
             ->assertSessionMissing('impersonator_id');
 
         $this->assertAuthenticatedAs($super);
+    }
+
+    public function test_impersonated_supplier_can_end_impersonation_without_admin_error(): void
+    {
+        $this->withoutVite();
+
+        $super = User::where('email', 'admin@powerbyexcellence.test')->first();
+        $supplier = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        $response = $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($supplier)
+            ->withSession(['impersonator_id' => $super->id])
+            ->post('http://excellence-uk.powerbyexcellence.test/impersonate/stop');
+
+        $response->assertRedirect();
+        $response->assertSessionMissing('error');
+        $this->assertStringContainsString(
+            'powerbyexcellence.test/impersonate/stop-handoff/',
+            $response->headers->get('Location')
+        );
+    }
+
+    public function test_supplier_logout_on_tenant_host_redirects_to_login_without_admin_error(): void
+    {
+        $supplier = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        $response = $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($supplier)
+            ->post(route('logout'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionMissing('error');
+        $this->assertGuest();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->get(route('login'))
+            ->assertOk();
     }
 }

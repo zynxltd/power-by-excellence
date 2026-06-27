@@ -11,12 +11,16 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import ManagementHubNav from '@/Components/UI/ManagementHubNav.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const props = defineProps({
     buyer: Object,
     recentLeads: Array,
     recentTransactions: Array,
+    recentFeedback: { type: Array, default: () => [] },
+    pendingReturns: { type: Array, default: () => [] },
+    activityStats: { type: Object, default: () => ({ pending_returns: 0, feedback_total: 0 }) },
+    highlight: { type: Object, default: () => ({ feedback: null, return: null }) },
     isOperational: Boolean,
     portalUser: Object,
     currency: String,
@@ -27,9 +31,38 @@ const { formatMoney } = useMoneyFormat(props.currency);
 const buyerStatStrip = computed(() => [
     { label: 'Credit', value: formatMoney(props.buyer.credit_balance), accent: 'emerald' },
     { label: 'Leads', value: props.buyer.leads_count, accent: 'indigo' },
-    { label: 'Deliveries', value: props.buyer.deliveries_count, accent: 'cyan' },
-    { label: 'Status', value: props.buyer.status, accent: 'amber' },
+    { label: 'Feedback', value: props.activityStats?.feedback_total ?? 0, accent: 'violet' },
+    { label: 'Pending returns', value: props.activityStats?.pending_returns ?? 0, accent: (props.activityStats?.pending_returns ?? 0) > 0 ? 'amber' : 'slate' },
 ]);
+
+const feedbackStatusLabel = (row) => {
+    if (row.converted) {
+        return `${row.status} · converted`;
+    }
+
+    return row.status;
+};
+
+onMounted(() => {
+    const targetId = props.highlight?.feedback
+        ? `feedback-${props.highlight.feedback}`
+        : props.highlight?.return
+            ? `return-${props.highlight.return}`
+            : null;
+
+    if (!targetId) {
+        return;
+    }
+
+    const el = document.getElementById(targetId);
+
+    if (!el) {
+        return;
+    }
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2', 'dark:ring-offset-slate-900');
+});
 </script>
 
 <template>
@@ -62,6 +95,62 @@ const buyerStatStrip = computed(() => [
         </Panel>
 
         <CompactStatStrip :items="buyerStatStrip" :columns="4" class="mb-6" />
+
+        <div class="mb-6 grid gap-6 lg:grid-cols-2">
+            <Panel id="buyer-feedback" title="Recent feedback" :padding="false">
+                <p class="border-b border-slate-100 px-6 py-3 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                    Conversion outcomes reported by this buyer from the portal or API.
+                </p>
+                <DataTable :empty="!recentFeedback?.length" empty-message="No feedback recorded yet.">
+                    <template #head>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Notes</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Recorded</th>
+                    </template>
+                    <ClickableTableRow
+                        v-for="row in recentFeedback"
+                        :key="row.id"
+                        :id="`feedback-${row.id}`"
+                        :href="row.lead ? route('leads.show', row.lead.id) : undefined"
+                    >
+                        <td class="px-6 py-4">
+                            <p class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ row.lead?.uuid?.slice(0, 10) ?? '—' }}…</p>
+                            <p class="text-xs text-slate-500">{{ row.lead?.campaign?.name ?? '—' }}</p>
+                        </td>
+                        <td class="px-6 py-4 capitalize text-slate-700 dark:text-slate-300">{{ feedbackStatusLabel(row) }}</td>
+                        <td class="max-w-xs px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.notes || '—' }}</td>
+                        <td class="px-6 py-4"><FormattedDate :value="row.recorded_at" format="relative" /></td>
+                    </ClickableTableRow>
+                </DataTable>
+            </Panel>
+
+            <Panel id="buyer-returns" title="Pending returns" :padding="false">
+                <p class="border-b border-slate-100 px-6 py-3 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                    Quality disputes awaiting administrator review. Approving a return may credit the buyer ledger manually.
+                </p>
+                <DataTable :empty="!pendingReturns?.length" empty-message="No pending return requests.">
+                    <template #head>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reason</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Submitted</th>
+                    </template>
+                    <ClickableTableRow
+                        v-for="row in pendingReturns"
+                        :key="row.id"
+                        :id="`return-${row.id}`"
+                        :href="row.lead ? route('leads.show', row.lead.id) : undefined"
+                    >
+                        <td class="px-6 py-4">
+                            <p class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ row.lead?.uuid?.slice(0, 10) ?? '—' }}…</p>
+                            <p class="text-xs text-slate-500">{{ row.lead?.campaign?.name ?? '—' }}</p>
+                        </td>
+                        <td class="max-w-md px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{{ row.reason }}</td>
+                        <td class="px-6 py-4"><FormattedDate :value="row.submitted_at" format="relative" /></td>
+                    </ClickableTableRow>
+                </DataTable>
+            </Panel>
+        </div>
 
         <Panel title="Linked deliveries" class="mt-6" :padding="false">
             <DataTable :empty="!buyer.deliveries?.length">

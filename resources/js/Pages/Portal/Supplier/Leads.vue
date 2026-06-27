@@ -53,11 +53,13 @@ const activityLabel = (item) => {
             </template>
         </PageHeader>
 
-        <div class="grid gap-6 lg:grid-cols-4">
-            <div class="space-y-6 lg:col-span-3">
-                <Panel title="Filters">
-                    <div class="flex flex-wrap items-end gap-x-2 gap-y-3 xl:flex-nowrap">
-                        <div class="min-w-[7rem] flex-1 xl:max-w-[10rem]">
+        <div class="grid gap-6 lg:grid-cols-4 lg:items-stretch">
+            <div class="flex flex-col gap-6 lg:col-span-3">
+                <Panel title="Filters" class="shrink-0">
+                    <div
+                        class="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+                    >
+                        <div class="col-span-2 min-w-0 sm:col-span-3 md:col-span-1">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Search</label>
                             <input
                                 v-model="localFilters.search"
@@ -66,44 +68,45 @@ const activityLabel = (item) => {
                                 @keyup.enter="applyFilters"
                             />
                         </div>
-                        <div class="w-[5.5rem] shrink-0">
+                        <div class="min-w-0">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Status</label>
                             <select v-model="localFilters.status" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">All</option>
                                 <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
                             </select>
                         </div>
-                        <div class="min-w-[6rem] w-28 shrink-0 xl:w-32">
+                        <div class="min-w-0">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Campaign</label>
                             <select v-model="localFilters.campaign_id" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">All</option>
                                 <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
                         </div>
-                        <div class="w-[5.5rem] shrink-0">
+                        <div class="min-w-0">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">SID</label>
                             <select v-model="localFilters.sid" class="form-select !mt-0.5 !py-1.5 !px-2 !text-sm w-full">
                                 <option value="">All</option>
                                 <option v-for="sid in sids" :key="sid" :value="sid">{{ sid }}</option>
                             </select>
                         </div>
-                        <div class="w-[8.25rem] shrink-0">
+                        <div class="min-w-0">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">From</label>
                             <input v-model="localFilters.from_date" type="date" class="form-input !mt-0.5 !py-1.5 !px-2 !text-sm w-full" />
                         </div>
-                        <div class="w-[8.25rem] shrink-0">
+                        <div class="min-w-0">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">To</label>
                             <input v-model="localFilters.to_date" type="date" class="form-input !mt-0.5 !py-1.5 !px-2 !text-sm w-full" />
                         </div>
-                        <div class="flex shrink-0 gap-2">
+                        <div class="col-span-2 flex justify-end gap-2 sm:col-span-3 md:col-span-1 md:justify-start">
                             <AppButton class="!px-3 !py-1.5" @click="applyFilters">Apply</AppButton>
                             <AppButton variant="secondary" class="!px-3 !py-1.5" @click="clearFilters">Clear</AppButton>
                         </div>
                     </div>
                 </Panel>
 
-                <Panel :padding="false">
-                    <DataTable :empty="!leads.data?.length">
+                <Panel :padding="false" class="flex min-h-0 flex-1 flex-col">
+                    <div class="min-h-0 flex-1 overflow-x-auto">
+                        <DataTable :empty="!leads.data?.length">
                         <template #head>
                             <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
@@ -133,11 +136,12 @@ const activityLabel = (item) => {
                             </td>
                         </tr>
                     </DataTable>
-                    <Pagination :links="leads.links" />
+                    </div>
+                    <Pagination :links="leads.links" class="mt-auto shrink-0" />
                 </Panel>
             </div>
 
-            <div class="space-y-6">
+            <div class="flex flex-col gap-6">
                 <SupplierAccountPanel :account="account" :currency="currency" />
 
                 <Panel title="Recent activity">

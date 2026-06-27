@@ -43,6 +43,7 @@ class EnsureAccountBillingActive
             'profile.update',
             'profile.preferences',
             'logout',
+            'impersonate.stop',
             'portal.buyer.billing',
             'portal.supplier.billing',
         ];

@@ -12,8 +12,9 @@ import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
+import { useViewPreference } from '@/Composables/useViewPreference';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     deliveries: Object,
@@ -27,6 +28,7 @@ const props = defineProps({
 });
 
 const localFilters = ref({ ...props.filters, view: props.view });
+const { preference, savePreference, isAllowed } = useViewPreference('deliveries', 'cards');
 
 const methodLabels = {
     direct_post: 'Direct API',
@@ -62,6 +64,7 @@ const applyFilters = () => {
 };
 
 const setView = (view) => {
+    savePreference(view);
     localFilters.value.view = view;
     applyFilters();
 };
@@ -70,6 +73,25 @@ const clearFilters = () => {
     localFilters.value = { view: props.view };
     applyFilters();
 };
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlView = params.get('view');
+
+    if (urlView && isAllowed(urlView)) {
+        savePreference(urlView);
+
+        return;
+    }
+
+    if (preference.value !== props.view) {
+        router.get(
+            route('deliveries.index'),
+            { ...localFilters.value, view: preference.value },
+            { preserveState: true, replace: true },
+        );
+    }
+});
 
 const testDelivery = (id) => {
     if (confirm('Run a live test against this buyer endpoint using the latest lead for this campaign?\n\nResults appear on the delivery Logs tab (not the Leads list).')) {
@@ -111,6 +133,7 @@ watch(() => props.filters, (f) => {
 });
 watch(() => props.view, (v) => {
     localFilters.value.view = v;
+    savePreference(v);
 });
 </script>
 

@@ -8,6 +8,7 @@ use App\Models\Buyer;
 use App\Models\Lead;
 use App\Models\LeadReturn;
 use App\Models\User;
+use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -121,7 +122,179 @@ class BuyerPortalEnhancementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('actionLeads')
+                ->has('suppliers')
+                ->has('sids')
             );
+    }
+
+    public function test_buyer_can_filter_leads_by_supplier_and_sid(): void
+    {
+        $lead = Lead::where('sold_to_buyer_id', $this->buyer->id)
+            ->whereNotNull('supplier_id')
+            ->whereNotNull('sid')
+            ->firstOrFail();
+
+        $totalForSid = Lead::where('sold_to_buyer_id', $this->buyer->id)
+            ->where('sid', $lead->sid)
+            ->count();
+
+        $this->host()
+            ->actingAs($this->portalUser)
+            ->get(route('portal.buyer.leads', [
+                'supplier_id' => $lead->supplier_id,
+                'sid' => $lead->sid,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('filters.supplier_id', (string) $lead->supplier_id)
+                ->where('filters.sid', $lead->sid)
+                ->where('leads.total', $totalForSid)
+            );
+    }
+
+    public function test_single_feedback_notification_links_to_highlighted_row(): void
+    {
+        $lead = Lead::where('sold_to_buyer_id', $this->buyer->id)->firstOrFail();
+
+        $this->host()
+            ->actingAs($this->portalUser)
+            ->post(route('portal.buyer.feedback'), [
+                'lead_uuid' => $lead->uuid,
+                'status' => 'invalid',
+                'converted' => false,
+                'notes' => 'Fraudulent lead',
+            ])
+            ->assertRedirect();
+
+        $feedback = \App\Models\BuyerFeedback::where('lead_id', $lead->id)->where('buyer_id', $this->buyer->id)->firstOrFail();
+        $notification = \App\Models\PlatformNotification::query()
+            ->where('title', 'Buyer feedback recorded')
+            ->where('account_id', $this->account->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $tenantAdmin = User::where('email', 'uk@powerbyexcellence.test')->firstOrFail();
+
+        $this->assertSame(
+            route('buyers.show', ['buyer' => $this->buyer->id, 'feedback' => $feedback->id]),
+            app(PlatformNotificationService::class)->hrefFor($tenantAdmin, $notification),
+        );
+    }
+
+    public function test_buyer_can_submit_bulk_feedback(): void
+    {
+        $leads = Lead::where('sold_to_buyer_id', $this->buyer->id)->limit(2)->get();
+        $this->assertGreaterThanOrEqual(2, $leads->count());
+
+        $this->host()
+            ->actingAs($this->portalUser)
+            ->post(route('portal.buyer.feedback.bulk'), [
+                'lead_uuids' => $leads->pluck('uuid')->all(),
+                'status' => 'contacted',
+                'converted' => false,
+                'notes' => 'Bulk update',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        foreach ($leads as $lead) {
+            $this->assertDatabaseHas('buyer_feedback', [
+                'lead_id' => $lead->id,
+                'buyer_id' => $this->buyer->id,
+                'status' => 'contacted',
+            ]);
+        }
+
+        $this->assertDatabaseHas('platform_notifications', [
+            'account_id' => $this->account->id,
+            'audience' => 'tenant',
+            'title' => 'Buyer feedback on 2 leads',
+        ]);
+
+        $tenantAdmin = User::where('email', 'uk@powerbyexcellence.test')->firstOrFail();
+        $notification = \App\Models\PlatformNotification::query()
+            ->where('title', 'Buyer feedback on 2 leads')
+            ->where('account_id', $this->account->id)
+            ->firstOrFail();
+
+        $this->assertSame(
+            route('buyers.show', $this->buyer->id),
+            app(PlatformNotificationService::class)->hrefFor($tenantAdmin, $notification),
+        );
+    }
+
+    public function test_buyer_show_includes_feedback_and_returns(): void
+    {
+        $lead = Lead::where('sold_to_buyer_id', $this->buyer->id)->firstOrFail();
+
+        \App\Models\BuyerFeedback::create([
+            'lead_id' => $lead->id,
+            'buyer_id' => $this->buyer->id,
+            'status' => 'invalid',
+            'converted' => false,
+            'notes' => 'Wrong number',
+        ]);
+
+        \App\Models\LeadReturn::create([
+            'lead_id' => $lead->id,
+            'buyer_id' => $this->buyer->id,
+            'reason' => 'Duplicate in CRM',
+            'status' => 'pending',
+        ]);
+
+        $admin = User::where('email', 'uk@powerbyexcellence.test')->firstOrFail();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($admin)
+            ->get(route('buyers.show', $this->buyer->id))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Buyers/Show')
+                ->has('recentFeedback', 1)
+                ->has('pendingReturns', 1)
+                ->where('activityStats.pending_returns', 1)
+            );
+    }
+
+    public function test_buyer_can_filter_leads_by_pending_return(): void
+    {
+        $lead = Lead::where('sold_to_buyer_id', $this->buyer->id)->firstOrFail();
+
+        LeadReturn::create([
+            'lead_id' => $lead->id,
+            'buyer_id' => $this->buyer->id,
+            'reason' => 'Wrong number',
+            'status' => 'pending',
+        ]);
+
+        $this->host()
+            ->actingAs($this->portalUser)
+            ->get(route('portal.buyer.leads', ['return' => 'pending']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('filters.return', 'pending')
+                ->where('leads.total', 1)
+                ->where('leads.data.0.uuid', $lead->uuid)
+            );
+    }
+
+    public function test_buyer_can_export_selected_leads(): void
+    {
+        $leads = Lead::where('sold_to_buyer_id', $this->buyer->id)->limit(2)->get();
+        $this->assertGreaterThanOrEqual(1, $leads->count());
+
+        $response = $this->host()
+            ->actingAs($this->portalUser)
+            ->get(route('portal.buyer.leads.download', [
+                'uuids' => $leads->pluck('uuid')->all(),
+            ]))
+            ->assertOk();
+
+        $body = $response->getContent();
+        $this->assertStringContainsString($leads->first()->uuid, $body);
+        if ($leads->count() > 1) {
+            $this->assertStringContainsString($leads->last()->uuid, $body);
+        }
     }
 
     public function test_dashboard_includes_account_summary(): void

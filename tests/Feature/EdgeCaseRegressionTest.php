@@ -200,6 +200,38 @@ class EdgeCaseRegressionTest extends TestCase
         $this->assertSame(0, User::whereNotNull('buyer_id')->whereDoesntHave('buyer')->count());
     }
 
+    public function test_supplier_embeds_show_tenant_forms_assigned_via_default_supplier(): void
+    {
+        $host = ['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'];
+        $account = Account::where('slug', 'excellence-uk')->first();
+        $supplier = Supplier::where('account_id', $account->id)->where('reference', 'supplier-main')->first();
+        $campaign = Campaign::where('account_id', $account->id)->where('reference', 'solar-uk')->first();
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->first();
+
+        \App\Models\CampaignSupplier::where('supplier_id', $supplier->id)->delete();
+
+        \App\Models\HostedForm::create([
+            'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'name' => 'Tenant assigned form',
+            'slug' => 'tenant-assigned-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'default_supplier_id' => $supplier->id,
+                'steps' => [],
+            ],
+        ]);
+
+        $this->withServerVariables($host)
+            ->actingAs($supplierUser)
+            ->get(route('portal.supplier.embeds'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('forms', fn ($forms) => collect($forms)->pluck('slug')->contains('tenant-assigned-form'))
+            );
+    }
+
     public function test_supplier_embeds_only_show_forms_for_assigned_campaigns(): void
     {
         $host = ['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'];

@@ -62,6 +62,145 @@ class PlatformNotificationService
         ]);
     }
 
+    public function notifyTenantPostbackApprovalRequest(
+        Account $account,
+        ?User $actor,
+        \App\Models\Postback $postback,
+    ): PlatformNotification {
+        $supplierName = $postback->supplier?->name ?? 'Supplier';
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Postback approval requested',
+            'body' => "{$supplierName} submitted \"{$postback->name}\" for review.",
+            'metadata' => [
+                'action' => 'postback.approval_requested',
+                'postback_id' => $postback->id,
+                'supplier_id' => $postback->supplier_id,
+            ],
+        ]);
+    }
+
+    public function notifyTenantPostbackDeletionRequest(
+        Account $account,
+        ?User $actor,
+        \App\Models\Postback $postback,
+    ): PlatformNotification {
+        $supplierName = $postback->supplier?->name ?? 'Supplier';
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Postback deletion requested',
+            'body' => "{$supplierName} asked to remove \"{$postback->name}\".",
+            'metadata' => [
+                'action' => 'postback.deletion_requested',
+                'postback_id' => $postback->id,
+                'supplier_id' => $postback->supplier_id,
+            ],
+        ]);
+    }
+
+    public function notifyTenantWebhookApprovalRequest(
+        Account $account,
+        ?User $actor,
+        \App\Models\Webhook $webhook,
+    ): PlatformNotification {
+        $buyerName = $webhook->buyer?->name ?? 'Buyer';
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'info',
+            'title' => 'Webhook approval requested',
+            'body' => "{$buyerName} submitted \"{$webhook->name}\" for review.",
+            'metadata' => [
+                'action' => 'webhook.approval_requested',
+                'webhook_id' => $webhook->id,
+                'buyer_id' => $webhook->buyer_id,
+            ],
+        ]);
+    }
+
+    public function notifyTenantWebhookDeletionRequest(
+        Account $account,
+        ?User $actor,
+        \App\Models\Webhook $webhook,
+    ): PlatformNotification {
+        $buyerName = $webhook->buyer?->name ?? 'Buyer';
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Webhook deletion requested',
+            'body' => "{$buyerName} asked to remove \"{$webhook->name}\".",
+            'metadata' => [
+                'action' => 'webhook.deletion_requested',
+                'webhook_id' => $webhook->id,
+                'buyer_id' => $webhook->buyer_id,
+            ],
+        ]);
+    }
+
+    public function notifyTenantBuyerFeedback(
+        Account $account,
+        ?User $actor,
+        \App\Models\Buyer $buyer,
+        int $leadCount,
+        string $status,
+        bool $converted = false,
+        ?string $notes = null,
+        ?int $feedbackId = null,
+        ?int $leadId = null,
+    ): PlatformNotification {
+        $statusLabel = $converted ? 'converted' : str_replace('_', ' ', strtolower(trim($status)));
+
+        $title = $leadCount === 1
+            ? 'Buyer feedback recorded'
+            : "Buyer feedback on {$leadCount} leads";
+
+        $body = "{$buyer->name} reported \"{$statusLabel}\"";
+        if ($leadCount > 1) {
+            $body .= " for {$leadCount} leads";
+        }
+        $body .= '.';
+
+        if ($notes !== null && trim($notes) !== '') {
+            $body .= ' '.Str::limit(trim($notes), 120);
+        }
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'info',
+            'title' => $title,
+            'body' => $body,
+            'metadata' => [
+                'action' => 'buyer.feedback_recorded',
+                'buyer_id' => $buyer->id,
+                'lead_count' => $leadCount,
+                'status' => $status,
+                'converted' => $converted,
+                'feedback_id' => $feedbackId,
+                'lead_id' => $leadId,
+            ],
+        ]);
+    }
+
     public function broadcast(
         User $createdBy,
         string $title,
@@ -162,14 +301,16 @@ class PlatformNotificationService
             return route('command-center.index');
         }
 
-        $ticketId = $notification->metadata['support_ticket_id'] ?? null;
+        $metadata = $notification->metadata ?? [];
+        $approvalHref = $this->approvalHrefFor($metadata['action'] ?? null, $metadata);
+
+        if ($approvalHref !== null) {
+            return $approvalHref;
+        }
+
+        $ticketId = $metadata['support_ticket_id'] ?? null;
 
         if (! $ticketId) {
-            $formId = $notification->metadata['hosted_form_id'] ?? null;
-            if ($formId && ($notification->metadata['action'] ?? null) === 'form.approval_requested') {
-                return route('forms.edit', $formId);
-            }
-
             return null;
         }
 
@@ -178,6 +319,37 @@ class PlatformNotificationService
         }
 
         return route('support.show', $ticketId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    protected function approvalHrefFor(?string $action, array $metadata): ?string
+    {
+        return match ($action) {
+            'form.approval_requested' => route('forms.index', array_filter([
+                'approval' => $metadata['hosted_form_id'] ?? null,
+            ])),
+            'postback.approval_requested', 'postback.deletion_requested' => route('postbacks.index', array_filter([
+                'approval' => $metadata['postback_id'] ?? null,
+            ])),
+            'webhook.approval_requested', 'webhook.deletion_requested' => route('webhooks.index', array_filter([
+                'approval' => $metadata['webhook_id'] ?? null,
+            ])),
+            'buyer.feedback_recorded' => isset($metadata['buyer_id'])
+                ? route('buyers.show', array_filter([
+                    'buyer' => $metadata['buyer_id'],
+                    'feedback' => $metadata['feedback_id'] ?? null,
+                ]))
+                : null,
+            'buyer.return_submitted' => isset($metadata['buyer_id'])
+                ? route('buyers.show', array_filter([
+                    'buyer' => $metadata['buyer_id'],
+                    'return' => $metadata['return_id'] ?? null,
+                ]))
+                : null,
+            default => null,
+        };
     }
 
     /**

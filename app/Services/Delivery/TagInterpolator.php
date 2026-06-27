@@ -6,9 +6,9 @@ class TagInterpolator
 {
     public function interpolate(string $template, array $fields, array $pingResponse = []): string
     {
-        $result = preg_replace_callback('/\[([a-zA-Z0-9_]+)\]/', function ($matches) use ($fields) {
+        $result = preg_replace_callback('/\[([a-zA-Z0-9_.]+)\]/', function ($matches) use ($fields) {
             $key = $matches[1];
-            $value = $fields[$key] ?? '';
+            $value = data_get($fields, $key, '');
 
             return is_scalar($value) ? (string) $value : json_encode($value);
         }, $template);

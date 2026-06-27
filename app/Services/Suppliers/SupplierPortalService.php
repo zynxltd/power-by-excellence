@@ -3,6 +3,7 @@
 namespace App\Services\Suppliers;
 
 use App\Models\Lead;
+use App\Models\Source;
 use App\Models\Supplier;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -147,6 +148,8 @@ class SupplierPortalService
     {
         $metadata = $lead->metadata ?? [];
 
+        $sourceRecord = $this->resolvedSourceRecord($lead);
+
         return [
             ...$this->formatLeadRow($lead),
             'fields' => collect($lead->field_data ?? [])->map(fn ($value, $key) => [
@@ -154,11 +157,29 @@ class SupplierPortalService
                 'value' => is_scalar($value) ? (string) $value : json_encode($value),
             ])->values()->all(),
             'conversion_event' => $metadata['conversion_status'] ?? null,
-            'source' => $lead->source ? [
-                'sid' => $lead->source->sid,
-                'name' => $lead->source->name,
+            'ingest_source' => $lead->getAttributes()['source'] ?? null,
+            'source_record' => $sourceRecord ? [
+                'sid' => $sourceRecord->sid,
+                'name' => $sourceRecord->name,
             ] : null,
         ];
+    }
+
+    protected function resolvedSourceRecord(Lead $lead): ?Source
+    {
+        if ($lead->relationLoaded('source')) {
+            $relation = $lead->getRelation('source');
+
+            if ($relation instanceof Source) {
+                return $relation;
+            }
+        }
+
+        if ($lead->source_id) {
+            return Source::query()->find($lead->source_id);
+        }
+
+        return null;
     }
 
     /**

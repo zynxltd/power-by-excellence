@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\HostedForm;
 use App\Models\Lead;
+use App\Models\Postback;
 use App\Services\Forms\HostedFormEmbedService;
 use App\Services\Forms\SupplierHostedFormService;
 use App\Services\Portal\PortalIntegrationsService;
+use App\Services\Postbacks\SupplierPostbackService;
 use App\Services\Suppliers\SupplierPortalService;
 use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +24,7 @@ class SupplierPortalController extends Controller
         protected SupplierPortalService $portal,
         protected PortalIntegrationsService $integrations,
         protected SupplierHostedFormService $supplierForms,
+        protected SupplierPostbackService $supplierPostbacks,
     ) {}
 
     public function dashboard(Request $request): Response
@@ -172,14 +175,16 @@ class SupplierPortalController extends Controller
         $account = $request->user()->account ?? $supplier->account;
         $embedService = app(HostedFormEmbedService::class);
         $iframeEmbedAllowed = $embedService->accountAllowsSupplierIframeEmbed($account);
-        $tracking = $embedService->supplierTrackingParams($supplier);
 
-        $forms = collect($embedService->formsForSupplier($supplier))->map(function ($form) use ($embedService, $tracking) {
+        $forms = collect($embedService->formsForSupplier($supplier))->map(function ($form) use ($embedService, $supplier) {
+            $tracking = $embedService->formTrackingParams($form, $supplier);
+
             return [
                 'id' => $form->id,
                 'name' => $form->name,
                 'slug' => $form->slug,
                 'campaign' => $form->campaign?->only(['id', 'name', 'reference']),
+                'default_sid' => $form->config['default_sid'] ?? $tracking['sid'] ?? null,
                 'embed' => $embedService->embedPayload($form, $tracking),
             ];
         })->values();
@@ -239,6 +244,7 @@ class SupplierPortalController extends Controller
     {
         return $request->validate([
             'campaign_id' => 'required|integer|exists:campaigns,id',
+            'source_id' => 'nullable|integer|exists:sources,id',
             'name' => 'required|string|max:255',
             'redirect_url' => 'nullable|url|max:500',
             'allowed_domains' => 'nullable|array',
@@ -255,6 +261,83 @@ class SupplierPortalController extends Controller
                 $supplier,
                 $request->integer('campaign_id') ?: null,
             ),
+        ]);
+    }
+
+    public function storePostback(Request $request): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+        $validated = $this->validateSupplierPostback($request);
+
+        $this->supplierPostbacks->create($supplier, $validated);
+
+        return back()->with('success', 'Postback draft saved. Submit it for tenant approval when ready.');
+    }
+
+    public function updatePostback(Request $request, Postback $postback): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+        $validated = $this->validateSupplierPostback($request);
+
+        $this->supplierPostbacks->update($supplier, $postback, $validated);
+
+        return back()->with('success', 'Postback draft updated.');
+    }
+
+    public function submitPostback(Request $request, Postback $postback): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+        $validated = $request->validate([
+            'submission_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $this->supplierPostbacks->submitForApproval(
+            $supplier,
+            $postback,
+            $request->user(),
+            $validated['submission_notes'] ?? null,
+        );
+
+        return back()->with('success', 'Postback submitted for tenant approval.');
+    }
+
+    public function destroyPostback(Request $request, Postback $postback): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+        $this->supplierPostbacks->deleteDraft($supplier, $postback);
+
+        return back()->with('success', 'Postback draft deleted.');
+    }
+
+    public function requestPostbackDeletion(Request $request, Postback $postback): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+        $validated = $request->validate([
+            'submission_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $this->supplierPostbacks->requestDeletion(
+            $supplier,
+            $postback,
+            $request->user(),
+            $validated['submission_notes'] ?? null,
+        );
+
+        return back()->with('success', 'Deletion request sent to your platform administrator.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validateSupplierPostback(Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'url' => 'required|url|max:2000',
+            'method' => 'required|in:get,post',
+            'events' => 'required|array|min:1',
+            'events.*' => 'string|in:'.implode(',', SupplierPostbackService::eventOptions()),
+            'campaign_id' => 'nullable|integer|exists:campaigns,id',
         ]);
     }
 
@@ -275,9 +358,27 @@ class SupplierPortalController extends Controller
             ->whereYear('leads.distributed_at', now()->year)
             ->sum('lead_financials.payout');
 
-        $payouts = Lead::where('supplier_id', $supplier->id)
+        $payoutsQuery = Lead::where('supplier_id', $supplier->id)
             ->where('status', 'sold')
-            ->with(['financials', 'campaign'])
+            ->with(['financials', 'campaign']);
+
+        if ($request->filled('from_date')) {
+            $payoutsQuery->whereDate('distributed_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $payoutsQuery->whereDate('distributed_at', '<=', $request->to_date);
+        }
+
+        if ($request->filled('campaign_id')) {
+            $payoutsQuery->where('campaign_id', $request->integer('campaign_id'));
+        }
+
+        if ($request->filled('sid')) {
+            $payoutsQuery->where('sid', $request->sid);
+        }
+
+        $payouts = $payoutsQuery
             ->orderByDesc('distributed_at')
             ->paginate(25)
             ->withQueryString()
@@ -288,6 +389,21 @@ class SupplierPortalController extends Controller
                 'payout' => $lead->financials?->payout ?? 0,
                 'distributed_at' => $lead->distributed_at?->toDateTimeString(),
             ]);
+
+        $campaigns = Lead::where('supplier_id', $supplier->id)
+            ->where('leads.status', 'sold')
+            ->join('campaigns', 'campaigns.id', '=', 'leads.campaign_id')
+            ->distinct()
+            ->orderBy('campaigns.name')
+            ->get(['campaigns.id', 'campaigns.name', 'campaigns.reference']);
+
+        $sids = Lead::where('supplier_id', $supplier->id)
+            ->where('status', 'sold')
+            ->whereNotNull('sid')
+            ->where('sid', '!=', '')
+            ->distinct()
+            ->orderBy('sid')
+            ->pluck('sid');
 
         return Inertia::render('Portal/Supplier/Billing', [
             'supplier' => $supplier->only(['id', 'name', 'reference']),
@@ -300,6 +416,9 @@ class SupplierPortalController extends Controller
                 'sold_count' => Lead::where('supplier_id', $supplier->id)->where('status', 'sold')->count(),
             ],
             'payouts' => $payouts,
+            'filters' => $request->only(['from_date', 'to_date', 'campaign_id', 'sid']),
+            'campaigns' => $campaigns,
+            'sids' => $sids,
         ]);
     }
 

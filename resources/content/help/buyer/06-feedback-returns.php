@@ -85,10 +85,26 @@ Good reasons are specific: *"Phone number disconnected - auto message on dial"* 
 
 ## API vs portal
 
-Administrators can also record feedback via the REST API (`POST /api/v1/buyers/{id}/feedback`) for automated CRM webhooks. Portal forms POST to:
+Administrators can also record feedback via the REST API for automated CRM integrations. Portal forms POST to:
 
 - `POST /portal/buyer/feedback`
 - `POST /portal/buyer/returns`
+
+### REST feedback example
+
+Requires a tenant API key with `buyers.manage`. Replace the host, buyer reference, and UUID with your values:
+
+```bash
+curl -X POST 'https://your-tenant.test/api/v1/buyers/buyer-042/feedback' \
+  -H 'Authorization: Bearer your_prefix|your_secret' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "lead_uuid": "00000000-0000-0000-0000-000000000000",
+    "status": "contacted",
+    "converted": false,
+    "notes": "Reached consumer — follow-up scheduled"
+  }'
+```
 
 Use whichever channel your integration supports; duplicate feedback on the same lead may depend on platform dedupe rules - ask your account manager if you run both.
 

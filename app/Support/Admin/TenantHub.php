@@ -109,6 +109,7 @@ class TenantHub
                     $campaignId ? ['label' => 'Ping tree', 'href' => route('distribution.create').$campaignQuery, 'description' => 'Distribution routing'] : null,
                     $campaignId ? ['label' => 'Add delivery', 'href' => route('deliveries.create').'?campaign_id='.$campaignId, 'description' => 'New buyer delivery'] : null,
                     ['label' => 'Lead pipeline', 'href' => route('leads.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Search and inspect leads'],
+                    ['label' => 'Buyer feedback', 'href' => route('buyer-feedback.index', $campaignId ? ['campaign_id' => $campaignId] : []), 'description' => 'Invalid flags and conversion reports by supplier'],
                     ['label' => 'Hosted forms', 'href' => route('forms.index'), 'description' => 'Form builder'],
                 ])),
             ],

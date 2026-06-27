@@ -7,7 +7,11 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import StatusBadge from '@/Components/UI/StatusBadge.vue';
+import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { useApprovalHighlight } from '@/Composables/useApprovalHighlight';
 
 const props = defineProps({
     postbacks: Object,
@@ -15,7 +19,34 @@ const props = defineProps({
     suppliers: Array,
     campaigns: Array,
     eventOptions: Array,
+    pendingApprovals: { type: Array, default: () => [] },
+    approvalStats: { type: Object, default: () => ({}) },
 });
+
+const rejectingId = ref(null);
+const rejectionReason = ref('');
+
+const approve = (id) => router.post(route('postbacks.approve', id));
+const approveDeletion = (id) => {
+    if (!confirm('Permanently remove this postback?')) return;
+    router.post(route('postbacks.approve-deletion', id));
+};
+const reject = (id) => {
+    if (!rejectionReason.value.trim()) return;
+    router.post(route('postbacks.reject', id), { rejection_reason: rejectionReason.value }, {
+        onSuccess: () => { rejectingId.value = null; rejectionReason.value = ''; },
+    });
+};
+const rejectDeletion = (id) => {
+    router.post(route('postbacks.reject-deletion', id), {
+        rejection_reason: rejectionReason.value || null,
+    }, { onSuccess: () => { rejectingId.value = null; rejectionReason.value = ''; } });
+};
+
+const approvalLabel = (status) => ({
+    pending: 'New postback',
+    pending_deletion: 'Deletion request',
+}[status] ?? status);
 
 const form = useForm({
     name: '',
@@ -41,6 +72,8 @@ const statusClass = (status) => ({
     failed: 'text-red-600 dark:text-red-400',
     pending: 'text-amber-600 dark:text-amber-400',
 }[status] ?? 'text-slate-500');
+
+useApprovalHighlight();
 </script>
 
 <template>
@@ -52,6 +85,55 @@ const statusClass = (status) => ({
         />
 
         <div class="space-y-6">
+            <Panel v-if="pendingApprovals?.length" title="Supplier approval queue" class="border-amber-200 bg-amber-50/50 dark:border-amber-500/30 dark:bg-amber-500/5">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Suppliers submit postbacks for review before they fire on live traffic.
+                    <span v-if="approvalStats?.pending"> {{ approvalStats.pending }} new</span>
+                    <span v-if="approvalStats?.pending_deletion"> · {{ approvalStats.pending_deletion }} deletion</span>
+                </p>
+                <div class="space-y-4">
+                    <div
+                        v-for="item in pendingApprovals"
+                        :id="`approval-${item.id}`"
+                        :key="item.id"
+                        class="rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-500/30 dark:bg-slate-900"
+                    >
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="font-semibold text-slate-900 dark:text-white">{{ item.name }}</p>
+                                    <StatusBadge :label="approvalLabel(item.approval_status)" variant="amber" />
+                                </div>
+                                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    {{ item.supplier?.name }} · {{ item.method?.toUpperCase() }} · {{ item.events?.join(', ') }}
+                                </p>
+                                <code class="mt-2 block overflow-x-auto text-xs text-slate-600 dark:text-slate-400">{{ item.url }}</code>
+                                <p v-if="item.submission_notes" class="mt-2 text-sm text-slate-600 dark:text-slate-300">{{ item.submission_notes }}</p>
+                                <p v-if="item.submitted_at" class="mt-1 text-xs text-slate-500">Submitted <FormattedDate :value="item.submitted_at" /></p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <template v-if="item.approval_status === 'pending'">
+                                    <AppButton @click="approve(item.id)">Approve</AppButton>
+                                    <AppButton variant="danger" @click="rejectingId = rejectingId === item.id ? null : item.id">Reject</AppButton>
+                                </template>
+                                <template v-else-if="item.approval_status === 'pending_deletion'">
+                                    <AppButton variant="danger" @click="approveDeletion(item.id)">Confirm delete</AppButton>
+                                    <AppButton variant="secondary" @click="rejectDeletion(item.id)">Keep active</AppButton>
+                                </template>
+                            </div>
+                        </div>
+                        <div v-if="rejectingId === item.id" class="mt-4 border-t border-amber-200 pt-4 dark:border-amber-500/30">
+                            <label class="text-sm font-medium">Rejection reason</label>
+                            <textarea v-model="rejectionReason" rows="2" class="form-input mt-1 w-full" />
+                            <div class="mt-2 flex gap-2">
+                                <AppButton variant="danger" :disabled="!rejectionReason.trim()" @click="reject(item.id)">Confirm reject</AppButton>
+                                <AppButton variant="secondary" @click="rejectingId = null">Cancel</AppButton>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Panel>
+
             <Panel title="Add Postback">
                 <form @submit.prevent="submit" class="grid gap-4 md:grid-cols-2">
                     <div class="md:col-span-2">
@@ -117,6 +199,12 @@ const statusClass = (status) => ({
                             <span :class="p.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800'" class="rounded-full px-2 py-0.5 text-xs font-medium">
                                 {{ p.is_active ? 'Active' : 'Paused' }}
                             </span>
+                            <StatusBadge
+                                v-if="p.approval_status"
+                                :label="p.approval_status"
+                                :variant="p.approval_status === 'approved' ? 'emerald' : p.approval_status === 'pending' ? 'amber' : 'slate'"
+                                class="ml-1"
+                            />
                             <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ p.method?.toUpperCase() }}</span>
                             <span
                                 v-if="p.config?.synced_from === 'supplier_default_postback'"

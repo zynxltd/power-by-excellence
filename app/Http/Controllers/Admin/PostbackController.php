@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Postback;
 use App\Models\PostbackLog;
 use App\Models\Supplier;
+use App\Services\Postbacks\SupplierPostbackService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +17,8 @@ class PostbackController extends Controller
 {
     public function index(): Response
     {
+        $supplierPostbacks = app(SupplierPostbackService::class);
+
         return Inertia::render('Admin/Postbacks/Index', [
             'postbacks' => Postback::with(['supplier:id,name', 'campaign:id,name'])
                 ->withCount('logs')
@@ -27,17 +30,21 @@ class PostbackController extends Controller
                 ->get(),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference']),
-            'eventOptions' => [
-                'lead.accepted',
-                'lead.sold',
-                'lead.rejected',
-                'lead.unsold',
-                'lead.contacted',
-                'lead.converted',
-                'lead.funded',
-                'lead.returned',
-                'delivery.success',
-            ],
+            'eventOptions' => SupplierPostbackService::eventOptions(),
+            'pendingApprovals' => $supplierPostbacks->pendingForAdmin()
+                ->map(fn (Postback $postback) => [
+                    'id' => $postback->id,
+                    'name' => $postback->name,
+                    'url' => $postback->url,
+                    'method' => $postback->method,
+                    'events' => $postback->events ?? [],
+                    'approval_status' => $postback->approval_status,
+                    'submitted_at' => $postback->submitted_at?->toDateTimeString(),
+                    'submission_notes' => $postback->submission_notes,
+                    'supplier' => $postback->supplier?->only(['id', 'name', 'reference']),
+                    'campaign' => $postback->campaign?->only(['id', 'name', 'reference']),
+                ]),
+            'approvalStats' => $supplierPostbacks->adminStats(),
         ]);
     }
 
@@ -82,5 +89,45 @@ class PostbackController extends Controller
         $postback->delete();
 
         return back()->with('success', 'Postback removed.');
+    }
+
+    public function approve(Request $request, Postback $postback): RedirectResponse
+    {
+        app(SupplierPostbackService::class)->approve($postback, $request->user());
+
+        return back()->with('success', 'Postback approved and activated.');
+    }
+
+    public function reject(Request $request, Postback $postback): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:1000',
+        ]);
+
+        app(SupplierPostbackService::class)->reject(
+            $postback,
+            $request->user(),
+            $validated['rejection_reason'],
+        );
+
+        return back()->with('success', 'Postback rejected. The supplier can revise and resubmit.');
+    }
+
+    public function approveDeletion(Request $request, Postback $postback): RedirectResponse
+    {
+        app(SupplierPostbackService::class)->approveDeletion($postback, $request->user());
+
+        return back()->with('success', 'Postback removed.');
+    }
+
+    public function rejectDeletion(Request $request, Postback $postback): RedirectResponse
+    {
+        app(SupplierPostbackService::class)->rejectDeletion(
+            $postback,
+            $request->user(),
+            $request->input('rejection_reason'),
+        );
+
+        return back()->with('success', 'Deletion request rejected. Postback remains active.');
     }
 }

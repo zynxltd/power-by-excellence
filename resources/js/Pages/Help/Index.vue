@@ -17,6 +17,20 @@ const page = usePage();
 const query = ref(props.search ?? '');
 const activeAudience = ref(props.defaultAudience);
 
+const dashboardHref = computed(() => {
+    if (page.props.auth?.isBuyerPortal) {
+        return route('portal.buyer.dashboard');
+    }
+
+    if (page.props.auth?.isSupplierPortal) {
+        return route('portal.supplier.dashboard');
+    }
+
+    return route('dashboard');
+});
+
+const homeHref = computed(() => (page.props.auth?.user ? dashboardHref.value : '/'));
+
 const audienceLabel = {
     tenant: 'Platform',
     buyer: 'Buyer',
@@ -87,21 +101,21 @@ const pathArticleTitle = (slug) => articleTitleBySlug.value[slug] ?? slug.replac
     <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
         <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-                <Link href="/">
+                <Link :href="homeHref">
                     <BrandLogo size="sm" variant="dark" class="dark:hidden" />
                     <BrandLogo size="sm" variant="light" class="hidden dark:block" />
                 </Link>
                 <div class="flex items-center gap-3">
                     <ThemeToggle />
                     <Link
-                        href="/"
+                        :href="homeHref"
                         class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:inline"
                     >
                         Home
                     </Link>
                     <Link
                         v-if="page.props.auth?.user"
-                        :href="route('dashboard')"
+                        :href="dashboardHref"
                         class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
                         Dashboard

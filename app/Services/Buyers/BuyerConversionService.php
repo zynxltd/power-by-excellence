@@ -36,7 +36,7 @@ class BuyerConversionService
 
         $lead->update(['metadata' => $metadata]);
 
-        BuyerFeedback::updateOrCreate(
+        $feedback = BuyerFeedback::updateOrCreate(
             ['lead_id' => $lead->id, 'buyer_id' => $buyer->id],
             [
                 'status' => $normalized,
@@ -53,7 +53,12 @@ class BuyerConversionService
         $this->postbackDispatcher->dispatch($lead->fresh(), $event);
         $this->fireBuyerWebhook($buyer, $lead->fresh(), $event, $normalized, $converted, $notes);
 
-        return ['event' => $event, 'status' => $normalized];
+        return [
+            'event' => $event,
+            'status' => $normalized,
+            'feedback_id' => $feedback->id,
+            'lead_id' => $lead->id,
+        ];
     }
 
     protected function mapStatusToEvent(string $status, bool $converted): string

@@ -26,7 +26,7 @@ class LeadAdminController extends Controller
         $baseQuery = $this->filteredQuery($request);
 
         $query = (clone $baseQuery)
-            ->with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account'])
+            ->with(['campaign', 'campaign.account', 'soldToBuyer', 'financials', 'account', 'supplier', 'buyerFeedback.buyer'])
             ->orderByDesc('received_at');
 
         $leads = $query->paginate(25)->withQueryString();
@@ -50,6 +50,7 @@ class LeadAdminController extends Controller
                 'quality_max',
                 'validation',
                 'redirect',
+                'buyer_feedback',
             ]),
             'statuses' => ['pending', 'processing', 'sold', 'unsold', 'rejected', 'quarantined', 'duplicate'],
             'pipelineSummary' => $this->pipelineSummary($baseQuery),
@@ -66,6 +67,9 @@ class LeadAdminController extends Controller
             'campaign',
             'campaign.account',
             'events',
+            'buyerFeedback.buyer',
+            'supplier',
+            'source',
             'deliveryLogs' => fn ($q) => $q
                 ->with(['delivery:id,name,method,tier,campaign_id', 'buyer:id,name'])
                 ->orderBy('created_at'),
@@ -283,6 +287,20 @@ class LeadAdminController extends Controller
                 'followed' => $query->whereNotNull('redirect_followed_at'),
                 default => null,
             };
+        }
+
+        if ($request->filled('buyer_feedback')) {
+            $mode = $request->string('buyer_feedback')->toString();
+            $invalidStatuses = \App\Services\Reports\BuyerFeedbackReportService::INVALID_STATUSES;
+
+            if ($mode === 'any') {
+                $query->whereHas('buyerFeedback');
+            } elseif ($mode === 'invalid') {
+                $query->whereHas('buyerFeedback', fn ($q) => $q->whereIn('status', $invalidStatuses));
+            } elseif ($mode === 'converted') {
+                $query->whereHas('buyerFeedback', fn ($q) => $q->where('converted', true)
+                    ->orWhereIn('status', \App\Services\Reports\BuyerFeedbackReportService::POSITIVE_STATUSES));
+            }
         }
 
         return $query;

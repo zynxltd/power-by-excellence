@@ -100,6 +100,9 @@ class BuyersFunctionalityTest extends TestCase
                 ->has('isOperational')
                 ->has('recentLeads')
                 ->has('recentTransactions')
+                ->has('recentFeedback')
+                ->has('pendingReturns')
+                ->has('activityStats')
             );
     }
 

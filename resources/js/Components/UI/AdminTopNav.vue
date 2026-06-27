@@ -171,6 +171,7 @@ const mobileSections = computed(() => {
             links: [
                 { label: 'Live Operations', href: route('operations.index') },
                 { label: 'Lead Pipeline', href: route('leads.index') },
+                { label: 'Buyer feedback', href: route('buyer-feedback.index') },
                 { label: 'Quarantine', href: route('quarantine.index') },
             ],
         });
@@ -352,9 +353,10 @@ const mobileSections = computed(() => {
                     <Link :href="route('forms.index')" :class="dropdownLinkClass">Form Builder</Link>
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*'])">
+                <TopNavDropdown v-if="canAccess('operations')" id="operations" label="Operations" :active="isAdminRoute(['operations.*', 'leads.*', 'quarantine.*', 'buyer-feedback.*'])">
                     <Link :href="route('operations.index')" :class="dropdownLinkClass">Live Operations</Link>
                     <Link :href="route('leads.index')" :class="dropdownLinkClass">Lead Pipeline</Link>
+                    <Link :href="route('buyer-feedback.index')" :class="dropdownLinkClass">Buyer feedback</Link>
                     <Link :href="route('quarantine.index')" :class="dropdownLinkClass">Quarantine</Link>
                 </TopNavDropdown>
 

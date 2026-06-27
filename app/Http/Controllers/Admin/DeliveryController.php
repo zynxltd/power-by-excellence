@@ -375,6 +375,10 @@ class DeliveryController extends Controller
             ));
         }
 
+        if (empty($validated['schedule']['windows'] ?? [])) {
+            $validated['schedule'] = null;
+        }
+
         if (in_array($validated['method'] ?? '', ['email', 'email_ping_post'], true)) {
             $buyer = ! empty($validated['buyer_id'])
                 ? \App\Models\Buyer::find($validated['buyer_id'])

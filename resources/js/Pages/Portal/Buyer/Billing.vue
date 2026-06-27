@@ -5,6 +5,7 @@ import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
+import Pagination from '@/Components/UI/Pagination.vue';
 import BuyerAccountPanel from '@/Components/Portal/BuyerAccountPanel.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head } from '@inertiajs/vue3';
@@ -80,6 +81,7 @@ const billingStrip = computed(() => [
                             <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ t.description }}</td>
                         </tr>
                     </DataTable>
+                    <Pagination :links="transactions.links" />
                 </Panel>
             </div>
 
