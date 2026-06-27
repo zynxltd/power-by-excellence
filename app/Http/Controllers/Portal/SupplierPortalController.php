@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Lead;
 use App\Models\Postback;
@@ -132,18 +133,13 @@ class SupplierPortalController extends Controller
     {
         $supplier = $this->resolveSupplier($request);
 
-        $query = Lead::where('supplier_id', $supplier->id);
+        $query = Lead::where('supplier_id', $supplier->id)
+            ->with(['campaign', 'financials']);
 
-        if ($request->filled('from_date')) {
-            $query->whereDate('received_at', '>=', $request->from_date);
-        }
-
-        if ($request->filled('to_date')) {
-            $query->whereDate('received_at', '<=', $request->to_date);
-        }
-
-        if ($request->filled('sid')) {
-            $query->where('sid', $request->sid);
+        if ($request->filled('uuids')) {
+            $query->whereIn('uuid', (array) $request->input('uuids'));
+        } else {
+            $this->applyLeadFilters($query, $request);
         }
 
         $leads = $query->orderByDesc('received_at')->limit(5000)->get();
@@ -341,6 +337,50 @@ class SupplierPortalController extends Controller
         ]);
     }
 
+    public function importLeads(Request $request): Response
+    {
+        $supplier = $this->resolveSupplier($request);
+
+        return Inertia::render('Portal/Supplier/ImportLeads', [
+            'supplier' => $supplier->only(['id', 'name', 'reference']),
+            'campaigns' => $this->supplierForms->campaignsForSupplier($supplier),
+        ]);
+    }
+
+    public function storeImport(Request $request): RedirectResponse
+    {
+        $supplier = $this->resolveSupplier($request);
+
+        $validated = $request->validate([
+            'campaign_id' => 'required|integer|exists:campaigns,id',
+            'file' => 'required|file|mimes:csv,txt|max:10240',
+        ]);
+
+        $campaign = Campaign::findOrFail($validated['campaign_id']);
+        abort_unless(
+            $campaign->campaignSuppliers()->where('supplier_id', $supplier->id)->exists(),
+            403,
+        );
+
+        $import = app(\App\Services\Leads\CsvImportService::class)->import(
+            $request->file('file'),
+            $campaign,
+            $request->user()->id,
+        );
+
+        return redirect()
+            ->route('portal.supplier.leads')
+            ->with('success', "Import complete: {$import->success_rows} succeeded, {$import->failed_rows} failed.");
+    }
+
+    public function downloadPayouts(Request $request, \App\Services\Exports\SupplierPayoutExportService $export)
+    {
+        $supplier = $this->resolveSupplier($request);
+        $csv = $export->buildCsv($supplier, $request);
+
+        return CsvExport::download($csv, 'payouts.csv');
+    }
+
     public function billing(Request $request): Response
     {
         $supplier = $this->resolveSupplier($request);
@@ -422,11 +462,58 @@ class SupplierPortalController extends Controller
         ]);
     }
 
+    public function clicks(Request $request): Response
+    {
+        $supplier = $this->resolveSupplier($request);
+        $account = $request->user()->account ?? $supplier->account;
+        $clickStats = $this->portal->clickStats($supplier);
+
+        return Inertia::render('Portal/Supplier/Clicks', [
+            'supplier' => $supplier->only(['id', 'name', 'reference']),
+            'account' => $this->portal->accountSummary($supplier),
+            'stats' => $clickStats,
+            'currency' => $account?->default_currency ?? 'GBP',
+        ]);
+    }
+
     protected function resolveSupplier(Request $request): \App\Models\Supplier
     {
         $supplier = $request->user()->supplier;
         abort_unless($supplier, 403, 'Supplier account not linked to this user.');
 
         return $supplier;
+    }
+
+    protected function applyLeadFilters($query, Request $request): void
+    {
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('campaign_id')) {
+            $query->where('campaign_id', $request->integer('campaign_id'));
+        }
+
+        if ($request->filled('sid')) {
+            $query->where('sid', $request->sid);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('uuid', 'like', "%{$search}%")
+                    ->orWhere('field_data->email', 'like', "%{$search}%")
+                    ->orWhere('field_data->firstname', 'like', "%{$search}%")
+                    ->orWhere('field_data->lastname', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('received_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('received_at', '<=', $request->to_date);
+        }
     }
 }
