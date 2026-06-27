@@ -18,6 +18,9 @@ import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 const props = defineProps({
     sequences: Array,
     bulkCampaigns: Array,
+    segments: Array,
+    sendingProfiles: Array,
+    templates: Array,
     eventAlerts: Array,
     campaigns: Array,
     metrics: Array,
@@ -59,6 +62,10 @@ const bulkForm = useForm({
     message: '',
     filter: { has_phone: true, has_email: false },
     scheduled_at: '',
+    html_body: '',
+    segment_id: '',
+    sending_profile_id: '',
+    throttle_per_minute: '',
 });
 
 const alertForm = useForm({
@@ -201,6 +208,10 @@ const sendBulk = (id) => {
 
         <!-- Bulk messaging -->
         <div v-show="activeTab === 'bulk-sms'" class="space-y-6">
+            <p class="text-sm text-slate-500">
+                <Link :href="route('e-delivery.index')" class="font-medium text-indigo-600 hover:underline">E-Delivery hub</Link>
+                — deliverability reports, segments, templates, and sending profiles.
+            </p>
             <div class="grid gap-6 lg:grid-cols-2">
                 <Panel title="Create bulk campaign">
                     <form class="space-y-4" @submit.prevent="submitBulk">
@@ -238,8 +249,32 @@ const sendBulk = (id) => {
                         </div>
                         <div>
                             <InputLabel value="Message" />
-                            <textarea v-model="bulkForm.message" rows="4" class="form-input mt-1 w-full" required maxlength="1600" />
+                            <textarea v-model="bulkForm.message" rows="4" class="form-input mt-1 w-full" required maxlength="16000" />
                             <InputError class="mt-1" :message="bulkForm.errors.message" />
+                        </div>
+                        <div v-if="bulkForm.channel === 'email'">
+                            <InputLabel value="HTML body (optional)" />
+                            <textarea v-model="bulkForm.html_body" rows="3" class="form-input mt-1 w-full font-mono text-xs" placeholder="<p>Hello [firstname]</p>" />
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel value="Segment" />
+                                <select v-model="bulkForm.segment_id" class="form-select mt-1 w-full">
+                                    <option value="">Filter only</option>
+                                    <option v-for="s in segments" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <InputLabel value="Sending profile" />
+                                <select v-model="bulkForm.sending_profile_id" class="form-select mt-1 w-full">
+                                    <option value="">Default</option>
+                                    <option v-for="p in sendingProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <InputLabel value="Throttle (per minute)" />
+                            <TextInput v-model="bulkForm.throttle_per_minute" type="number" min="1" class="mt-1 block w-full" placeholder="100" />
                         </div>
                         <div>
                             <InputLabel value="Schedule (optional)" />

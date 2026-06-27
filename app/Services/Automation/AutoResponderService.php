@@ -7,13 +7,15 @@ use App\Models\AutoResponder;
 use App\Models\Lead;
 use App\Services\Delivery\TagInterpolator;
 use App\Services\Logging\PlatformLogger;
-use App\Services\Messaging\MessagingGateway;
+use App\Services\Messaging\MessageSendService;
+use App\Services\Messaging\MessagingCredentialsResolver;
 
 class AutoResponderService
 {
     public function __construct(
         protected TagInterpolator $interpolator,
-        protected MessagingGateway $messaging,
+        protected MessageSendService $sender,
+        protected MessagingCredentialsResolver $credentials,
     ) {}
 
     public function dispatchForLead(Lead $lead, string $triggerEvent): void
@@ -49,6 +51,7 @@ class AutoResponderService
         $config = $payload['config'] ?? [];
         $recipient = $payload['recipient'];
         $provider = filled($config['provider'] ?? null) ? $config['provider'] : null;
+        $accountId = (int) ($payload['account_id'] ?? 0);
 
         $fields = [
             'firstname' => 'Alex',
@@ -61,12 +64,20 @@ class AutoResponderService
         if ($channel === 'email') {
             $subject = $this->interpolator->interpolate($config['subject'] ?? 'Test message', $fields);
             $body = $this->interpolator->interpolate($config['body'] ?? '', $fields);
+            $account = $accountId ? \App\Models\Account::find($accountId) : null;
             $effectiveProvider = $provider ?? config('messaging.email_provider', 'smtp');
-            $live = $this->isEmailProviderLive($effectiveProvider);
+            $live = $this->credentials->isProviderLive($account, $effectiveProvider, 'email');
 
-            $sent = $this->messaging->sendEmail($recipient, $subject, $body, [
+            $sent = $accountId ? $this->sender->send([
+                'account_id' => $accountId,
+                'channel' => 'email',
+                'recipient' => $recipient,
+                'subject' => $subject,
+                'body' => $body,
                 'provider' => $provider,
-            ]);
+                'source_type' => 'auto_responder_test',
+                'track' => false,
+            ]) : false;
 
             return [
                 'success' => $sent,
@@ -82,12 +93,19 @@ class AutoResponderService
         }
 
         $message = $this->interpolator->interpolate($config['body'] ?? $config['message'] ?? '', $fields);
+        $account = $accountId ? \App\Models\Account::find($accountId) : null;
         $effectiveProvider = $provider ?? config('messaging.sms_provider', 'log');
-        $live = $this->isSmsProviderLive($effectiveProvider);
+        $live = $this->credentials->isProviderLive($account, $effectiveProvider, 'sms');
 
-        $sent = $this->messaging->sendSms($recipient, $message, [
+        $sent = $accountId ? $this->sender->send([
+            'account_id' => $accountId,
+            'channel' => 'sms',
+            'recipient' => $recipient,
+            'body' => $message,
             'provider' => $live ? $provider : 'log',
-        ]);
+            'source_type' => 'auto_responder_test',
+            'track' => false,
+        ]) : false;
 
         return [
             'success' => $sent,
@@ -117,9 +135,21 @@ class AutoResponderService
 
                 $subject = $this->interpolator->interpolate($config['subject'] ?? 'Thank you', $fields);
                 $body = $this->interpolator->interpolate($config['body'] ?? '', $fields);
+                $htmlBody = filled($config['html_body'] ?? null)
+                    ? $this->interpolator->interpolate($config['html_body'], $fields)
+                    : null;
 
-                $this->messaging->sendEmail($to, $subject, $body, [
+                $this->sender->send([
+                    'account_id' => $lead->account_id,
+                    'lead_id' => $lead->id,
+                    'channel' => 'email',
+                    'recipient' => $to,
+                    'subject' => $subject,
+                    'body' => $body,
+                    'html_body' => $htmlBody,
                     'provider' => $provider,
+                    'source_type' => AutoResponder::class,
+                    'source_id' => $responder->id,
                 ]);
             } elseif ($responder->channel === 'sms') {
                 $toField = $config['to_field'] ?? 'phone1';
@@ -129,8 +159,16 @@ class AutoResponderService
                 }
 
                 $message = $this->interpolator->interpolate($config['body'] ?? $config['message'] ?? '', $fields);
-                $this->messaging->sendSms($to, $message, [
+                $this->sender->send([
+                    'account_id' => $lead->account_id,
+                    'lead_id' => $lead->id,
+                    'channel' => 'sms',
+                    'recipient' => $to,
+                    'body' => $message,
                     'provider' => $provider,
+                    'source_type' => AutoResponder::class,
+                    'source_id' => $responder->id,
+                    'track' => false,
                 ]);
             }
 
@@ -147,28 +185,5 @@ class AutoResponderService
             ], $lead, $e);
         }
     }
-
-    protected function isEmailProviderLive(string $provider): bool
-    {
-        return match ($provider) {
-            'sendgrid' => filled(config('services.sendgrid.key')),
-            'mailgun' => filled(config('services.mailgun.domain')) && filled(config('services.mailgun.secret')),
-            'postmark' => filled(config('services.postmark.key')),
-            'resend' => filled(config('services.resend.key')),
-            default => filled(config('mail.mailers.smtp.host')) || config('mail.default') === 'log',
-        };
-    }
-
-    protected function isSmsProviderLive(string $provider): bool
-    {
-        return match ($provider) {
-            'twilio' => filled(config('messaging.twilio.sid'))
-                && filled(config('messaging.twilio.token'))
-                && filled(config('messaging.twilio.from')),
-            'vonage' => filled(config('messaging.vonage.key'))
-                && filled(config('messaging.vonage.secret'))
-                && filled(config('messaging.vonage.from')),
-            default => false,
-        };
-    }
 }
+

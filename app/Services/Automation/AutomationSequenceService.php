@@ -7,13 +7,13 @@ use App\Models\AutomationSequence;
 use App\Models\Lead;
 use App\Services\Delivery\TagInterpolator;
 use App\Services\Logging\PlatformLogger;
-use App\Services\Messaging\MessagingGateway;
+use App\Services\Messaging\MessageSendService;
 
 class AutomationSequenceService
 {
     public function __construct(
         protected TagInterpolator $interpolator,
-        protected MessagingGateway $messaging,
+        protected MessageSendService $sender,
     ) {}
 
     public function dispatchForLead(Lead $lead, string $triggerEvent): void
@@ -59,9 +59,21 @@ class AutomationSequenceService
 
                 $subject = $this->interpolator->interpolate($config['subject'] ?? 'Follow up', $fields);
                 $body = $this->interpolator->interpolate($config['body'] ?? '', $fields);
+                $htmlBody = filled($config['html_body'] ?? null)
+                    ? $this->interpolator->interpolate($config['html_body'], $fields)
+                    : null;
 
-                $this->messaging->sendEmail($to, $subject, $body, [
+                $this->sender->send([
+                    'account_id' => $lead->account_id,
+                    'lead_id' => $lead->id,
+                    'channel' => 'email',
+                    'recipient' => $to,
+                    'subject' => $subject,
+                    'body' => $body,
+                    'html_body' => $htmlBody,
                     'provider' => $provider,
+                    'source_type' => 'automation_sequence_step',
+                    'source_id' => $step->id,
                 ]);
             } elseif ($step->channel === 'sms') {
                 $to = $fields[$config['to_field'] ?? 'phone1'] ?? null;
@@ -71,8 +83,16 @@ class AutomationSequenceService
 
                 $message = $this->interpolator->interpolate($config['body'] ?? $config['message'] ?? '', $fields);
 
-                $this->messaging->sendSms($to, $message, [
+                $this->sender->send([
+                    'account_id' => $lead->account_id,
+                    'lead_id' => $lead->id,
+                    'channel' => 'sms',
+                    'recipient' => $to,
+                    'body' => $message,
                     'provider' => $provider,
+                    'source_type' => 'automation_sequence_step',
+                    'source_id' => $step->id,
+                    'track' => false,
                 ]);
             }
 
