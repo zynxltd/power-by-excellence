@@ -31,11 +31,17 @@ class LeadSourceIntegrationController extends Controller
             'field_mapping' => [],
         ];
 
+        $selectedCampaignId = $request->integer('campaign_id') ?: ($config['campaign_id'] ?? null);
+        $campaignFields = $selectedCampaignId
+            ? Campaign::with('fields')->find($selectedCampaignId)?->fields ?? collect()
+            : collect();
+
         return Inertia::render('Admin/Integrations/LeadSource', [
             'provider' => $provider,
             'meta' => $meta,
             'config' => $config,
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference']),
+            'campaignFields' => $campaignFields,
             'webhookUrl' => url("/api/v1/integrations/{$provider}/webhook/{$account->slug}"),
             'ingestUrl' => url("/api/v1/integrations/{$provider}/ingest/{$account->slug}"),
         ]);

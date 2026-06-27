@@ -22,6 +22,7 @@ class Buyer extends Model
         'caps',
         'schedule',
         'settings',
+        'stripe_customer_id',
         'portal_password',
     ];
 

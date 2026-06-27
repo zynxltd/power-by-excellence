@@ -27,6 +27,7 @@ class AccountSettingsController extends Controller
                     'billing_alert_emails' => $account->settings['billing_alert_emails'] ?? '',
                     'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
                     'buyer_portal_locale' => $account->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
+                    'custom_portal_domain' => $account->settings['custom_portal_domain'] ?? '',
                 ]
             ),
             'timezones' => timezone_identifiers_list(),
@@ -50,6 +51,7 @@ class AccountSettingsController extends Controller
             'billing_alert_emails' => 'nullable|string|max:500',
             'default_low_credit_alert' => 'nullable|numeric|min:0',
             'buyer_portal_locale' => 'nullable|string|max:5',
+            'custom_portal_domain' => 'nullable|string|max:255',
         ], $this->messages());
 
         $settings = $account->settings ?? [];
@@ -60,6 +62,9 @@ class AccountSettingsController extends Controller
         $settings['buyer_portal_locale'] = BuyerPortalLocale::isValid($validated['buyer_portal_locale'] ?? null)
             ? $validated['buyer_portal_locale']
             : BuyerPortalLocale::default();
+        $settings['custom_portal_domain'] = filled($validated['custom_portal_domain'] ?? null)
+            ? strtolower(trim((string) $validated['custom_portal_domain']))
+            : null;
 
         $account->update([
             'name' => $validated['name'],

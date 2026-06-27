@@ -130,13 +130,13 @@ class BuyerBillingService
             'amount' => $signedAmount,
             'balance_after' => $newBalance,
             'description' => $description,
-            'meta' => array_filter([
+            'meta' => array_filter(array_merge([
                 'bypass_prepay' => $options['bypass_prepay'] ?? false,
                 'bypass_account_lock' => $options['bypass_account_lock'] ?? false,
                 'allow_negative' => $options['allow_negative'] ?? false,
                 'suppress_alerts' => $options['suppress_alerts'] ?? false,
                 'performed_by' => $options['performed_by'] ?? null,
-            ]),
+            ], $options['meta'] ?? [])),
         ]);
 
         if ($signedAmount < 0) {

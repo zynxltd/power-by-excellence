@@ -45,7 +45,10 @@ class EnsureAccountBillingActive
             'logout',
             'impersonate.stop',
             'portal.buyer.billing',
+            'portal.buyer.stripe.checkout',
+            'portal.buyer.stripe.success',
             'portal.supplier.billing',
+            'portal.billing.lock',
         ];
 
         if ($request->route() && in_array($request->route()->getName(), $allowed, true)) {
@@ -57,6 +60,10 @@ class EnsureAccountBillingActive
                 'error' => 'Account billing is locked. Please contact your platform administrator.',
                 'billing_status' => $status,
             ], 402);
+        }
+
+        if (in_array($user->role, [UserRole::BuyerPortal, UserRole::SupplierPortal], true)) {
+            return redirect()->route('portal.billing.lock');
         }
 
         return redirect()->route('billing.lock');

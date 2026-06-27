@@ -98,6 +98,7 @@ class CampaignController extends Controller
             'tenantHub' => TenantHub::forAccount($campaign->account, $campaign->id),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign),
             'leadsToday' => $campaign->leads()->whereDate('received_at', today())->count(),
+            'goLiveChecklist' => app(\App\Services\Campaigns\CampaignSetupStatusService::class)->checklist($campaign),
         ]);
     }
 

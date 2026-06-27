@@ -8,7 +8,9 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import SupplierAccountPanel from '@/Components/Portal/SupplierAccountPanel.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
@@ -30,6 +32,11 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
 
 const { formatMoney } = useMoneyFormat(props.currency);
 
+const showImport = ref(false);
+const importForm = useForm({ campaign_id: '', file: null });
+const onImportFile = (e) => { importForm.file = e.target.files[0]; };
+const submitImport = () => importForm.post(route('portal.supplier.leads.import.store'), { forceFormData: true });
+
 const copyUuid = async (uuid) => {
     try {
         await navigator.clipboard.writeText(uuid);
@@ -49,9 +56,32 @@ const activityLabel = (item) => {
     <AuthenticatedLayout>
         <PageHeader title="Supplier Leads" description="All leads submitted through your sources — filter by campaign, SID, status, and date.">
             <template #actions>
+                <AppButton variant="secondary" @click="showImport = !showImport">{{ showImport ? 'Hide import' : 'Import CSV' }}</AppButton>
                 <AppButton :href="route('portal.supplier.leads.download', localFilters)" variant="secondary" external>Export CSV</AppButton>
             </template>
         </PageHeader>
+
+        <Panel v-if="showImport" title="Import leads from CSV" class="mb-6">
+            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                Upload a CSV with headers matching the campaign field names. Rows are validated and queued like API ingest.
+            </p>
+            <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submitImport">
+                <div>
+                    <InputLabel value="Campaign" />
+                    <select v-model="importForm.campaign_id" class="form-select mt-1 w-full" required>
+                        <option value="">Select campaign</option>
+                        <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }} ({{ c.reference }})</option>
+                    </select>
+                </div>
+                <div>
+                    <InputLabel value="CSV file" />
+                    <input type="file" accept=".csv,.txt" class="mt-1 block w-full text-sm" required @change="onImportFile" />
+                </div>
+                <div class="md:col-span-2">
+                    <PrimaryButton :disabled="importForm.processing">Upload and import</PrimaryButton>
+                </div>
+            </form>
+        </Panel>
 
         <div class="grid gap-6 lg:grid-cols-4 lg:items-stretch">
             <div class="flex flex-col gap-6 lg:col-span-3">
@@ -105,7 +135,7 @@ const activityLabel = (item) => {
                 </Panel>
 
                 <Panel :padding="false" class="flex min-h-0 flex-1 flex-col">
-                    <div class="min-h-0 flex-1 overflow-x-auto">
+                    <div class="min-h-0 flex-1 overflow-x-auto hidden md:block">
                         <DataTable :empty="!leads.data?.length">
                         <template #head>
                             <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Lead</th>
@@ -137,6 +167,24 @@ const activityLabel = (item) => {
                         </tr>
                     </DataTable>
                     </div>
+
+                    <div class="md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+                        <div v-if="!leads.data?.length" class="px-4 py-8 text-center text-sm text-slate-500">No leads match your filters.</div>
+                        <article v-for="lead in leads.data" :key="lead.id" class="space-y-2 px-4 py-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <button type="button" class="font-mono text-xs text-slate-500" @click="copyUuid(lead.uuid)">{{ lead.uuid?.slice(0, 12) }}…</button>
+                                <StatusBadge :status="lead.status" />
+                            </div>
+                            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ lead.field_data?.firstname }} {{ lead.field_data?.lastname }}</p>
+                            <p class="text-xs text-slate-500">{{ lead.campaign?.name }} · SID {{ lead.sid || '—' }}</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.payout ?? 0) }}</span>
+                                <FormattedDate :value="lead.received_at" />
+                            </div>
+                            <Link :href="route('portal.supplier.leads.show', lead.uuid)" class="inline-block text-sm font-semibold text-indigo-600">View lead</Link>
+                        </article>
+                    </div>
+
                     <Pagination :links="leads.links" class="mt-auto shrink-0" />
                 </Panel>
             </div>

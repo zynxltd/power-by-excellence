@@ -4,6 +4,8 @@ import { usePage, Link } from '@inertiajs/vue3';
 
 const page = usePage();
 const billing = computed(() => page.props.auth?.billing);
+const isBuyerPortal = computed(() => page.props.auth?.isBuyerPortal);
+const isSupplierPortal = computed(() => page.props.auth?.isSupplierPortal);
 
 const messages = {
     past_due: 'Your platform billing is past due. Lead processing continues - please arrange payment to avoid a platform lock.',
@@ -12,6 +14,25 @@ const messages = {
 
 const show = computed(() => billing.value && billing.value.status !== 'active');
 const isLocked = computed(() => billing.value?.status === 'locked');
+
+const billingHref = computed(() => {
+    if (isLocked.value && (isBuyerPortal.value || isSupplierPortal.value)) {
+        return route('portal.billing.lock');
+    }
+    if (isBuyerPortal.value) {
+        return route('portal.buyer.billing');
+    }
+    if (isSupplierPortal.value) {
+        return route('portal.supplier.billing');
+    }
+    return route('billing.index');
+});
+
+const linkLabel = computed(() => (
+    isLocked.value && (isBuyerPortal.value || isSupplierPortal.value)
+        ? 'View account status →'
+        : 'View billing →'
+));
 </script>
 
 <template>
@@ -27,10 +48,10 @@ const isLocked = computed(() => billing.value?.status === 'locked');
         <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
             <p>{{ messages[billing.status] ?? 'Billing attention required.' }}</p>
             <Link
-                :href="route('billing.index')"
+                :href="billingHref"
                 class="shrink-0 font-semibold underline underline-offset-2 hover:no-underline"
             >
-                View billing →
+                {{ linkLabel }}
             </Link>
         </div>
     </div>

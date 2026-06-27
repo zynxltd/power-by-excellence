@@ -2,24 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Security\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class TwoFactorController extends Controller
 {
-    public function enable(Request $request): RedirectResponse
+    public function enable(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
         $request->validate(['password' => ['required', 'current_password']]);
 
-        $user = $request->user();
-        $recoveryCodes = collect(range(1, 8))->map(fn () => Str::upper(Str::random(10)))->all();
+        $secret = $twoFactor->generateSecret();
+        $request->session()->put('two_factor.pending_secret', $secret);
 
-        $user->forceFill([
+        return back()->with([
+            'success' => 'Scan the QR code and enter a code to confirm.',
+            'two_factor_qr' => $twoFactor->getQrCodeUrl($request->user(), $secret),
+            'two_factor_secret' => $secret,
+        ]);
+    }
+
+    public function confirm(Request $request, TwoFactorService $twoFactor): RedirectResponse
+    {
+        $request->validate([
+            'password' => ['required', 'current_password'],
+            'code' => ['required', 'string', 'size:6'],
+        ]);
+
+        $secret = $request->session()->get('two_factor.pending_secret');
+
+        if (! $secret || ! $twoFactor->verifyCode($secret, $request->string('code')->toString())) {
+            return back()->withErrors(['code' => 'Invalid authentication code.']);
+        }
+
+        $recoveryCodes = $twoFactor->generateRecoveryCodes();
+
+        $request->user()->forceFill([
             'two_factor_enabled' => true,
-            'two_factor_secret' => Str::random(32),
+            'two_factor_secret' => $secret,
             'two_factor_recovery_codes' => $recoveryCodes,
         ])->save();
+
+        $request->session()->forget('two_factor.pending_secret');
 
         return back()->with([
             'success' => 'Two-factor authentication enabled.',
@@ -37,6 +61,8 @@ class TwoFactorController extends Controller
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
         ])->save();
+
+        $request->session()->forget(['two_factor.pending_secret', 'two_factor_verified']);
 
         return back()->with('success', 'Two-factor authentication disabled.');
     }

@@ -52,6 +52,24 @@ class WebhookController extends Controller
         return back()->with('success', 'Webhook created.');
     }
 
+    public function update(Request $request, Webhook $webhook): RedirectResponse
+    {
+        if (($webhook->config['synced_from'] ?? null) === 'buyer_sold_webhook') {
+            return back()->with('error', 'This webhook is managed from the buyer form.');
+        }
+
+        $webhook->update($request->validate([
+            'name' => 'required|string|max:255',
+            'url' => 'required|url|max:2000',
+            'events' => 'required|array|min:1',
+            'events.*' => 'string',
+            'buyer_id' => 'nullable|exists:buyers,id',
+            'is_active' => 'boolean',
+        ]));
+
+        return back()->with('success', 'Webhook updated.');
+    }
+
     public function destroy(Webhook $webhook): RedirectResponse
     {
         if (($webhook->config['synced_from'] ?? null) === 'buyer_sold_webhook') {

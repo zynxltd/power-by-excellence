@@ -77,6 +77,11 @@ class LeadIngestService
 
         PlatformLogger::leadEvent($lead, 'lead.ingested', 'Lead ingested via API');
 
+        $clickUuid = $data['click_id'] ?? data_get($metadata, 'click_id');
+        if ($clickUuid) {
+            app(\App\Services\ClickTrack\ClickLogService::class)->attachLeadByClickUuid($lead, $clickUuid);
+        }
+
         return $lead;
     }
 }

@@ -404,6 +404,7 @@ onMounted(() => {
                             <AppButton variant="secondary" class="!px-3 !py-1.5" @click="clearSelection">Clear</AppButton>
                         </div>
                     </div>
+                    <div class="hidden md:block">
                     <DataTable :empty="!leads.data?.length" empty-message="No leads match your filters. Clear filters or contact your account manager if you expect inventory here.">
                         <template #head>
                             <th class="w-10 px-4 py-3">
@@ -467,6 +468,36 @@ onMounted(() => {
                             </td>
                         </tr>
                     </DataTable>
+                    </div>
+
+                    <div class="md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+                        <div v-if="!leads.data?.length" class="px-4 py-8 text-center text-sm text-slate-500">No leads match your filters.</div>
+                        <article
+                            v-for="lead in leads.data"
+                            :key="lead.id"
+                            class="space-y-2 px-4 py-4"
+                            :class="isLeadSelected(lead.uuid) && 'bg-indigo-50/70 dark:bg-indigo-950/20'"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" class="rounded border-slate-300" :checked="isLeadSelected(lead.uuid)" @change="toggleLeadSelection(lead.uuid)" />
+                                    <button type="button" class="font-mono text-xs text-indigo-600 dark:text-indigo-400" @click="copyUuid(lead.uuid)">{{ lead.uuid?.slice(0, 10) }}…</button>
+                                </label>
+                                <StatusBadge :status="lead.status" />
+                            </div>
+                            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ lead.field_data?.firstname }} {{ lead.field_data?.lastname }}</p>
+                            <p class="text-xs text-slate-500">{{ lead.field_data?.email }}</p>
+                            <p class="text-xs text-slate-500">{{ lead.campaign?.reference }} · {{ feedbackLabel(lead) }} · {{ returnLabel(lead) }}</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(lead.financials?.revenue ?? 0) }}</span>
+                                <div class="flex gap-2">
+                                    <Link :href="route('portal.buyer.leads.show', lead.uuid)" class="text-xs font-semibold text-slate-600">View</Link>
+                                    <button type="button" class="text-xs font-semibold text-indigo-600" @click="selectLeadForAction(lead)">Actions</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
                     <Pagination :links="leads.links" />
                 </Panel>
 

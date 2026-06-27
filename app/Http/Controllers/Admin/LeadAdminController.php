@@ -186,36 +186,9 @@ class LeadAdminController extends Controller
         return back()->with('success', 'Lead queued for repost through the ping tree.');
     }
 
-    public function export(Request $request)
+    public function export(Request $request, \App\Services\Exports\LeadExportService $exportService)
     {
-        $leads = (clone $this->filteredQuery($request))
-            ->with(['campaign:id,name,reference', 'financials', 'soldToBuyer:id,name'])
-            ->orderByDesc('received_at')
-            ->limit(5000)
-            ->get();
-
-        $csv = "uuid,campaign,status,quality_score,email_status,hlr_status,firstname,lastname,email,phone,zipcode,revenue,buyer,received_at,distributed_at\n";
-
-        foreach ($leads as $lead) {
-            $quality = LeadQualityService::analyzeLead($lead);
-            $csv .= CsvExport::escapeRow([
-                $lead->uuid,
-                $lead->campaign?->reference ?? '',
-                $lead->status->value,
-                $quality['score'],
-                $quality['email']['label'],
-                $quality['hlr']['label'],
-                $lead->getField('firstname'),
-                $lead->getField('lastname'),
-                $lead->getField('email'),
-                $lead->getField('phone1'),
-                $lead->getField('zipcode'),
-                $lead->financials?->revenue ?? 0,
-                $lead->soldToBuyer?->name ?? '',
-                $lead->received_at,
-                $lead->distributed_at,
-            ])."\n";
-        }
+        $csv = $exportService->buildCsvFromQuery($this->filteredQuery($request));
 
         return CsvExport::download($csv, 'leads-'.now()->format('Y-m-d-His').'.csv');
     }

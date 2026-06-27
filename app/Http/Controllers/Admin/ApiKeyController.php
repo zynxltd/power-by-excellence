@@ -24,6 +24,8 @@ class ApiKeyController extends Controller
         'leads.create',
         'leads.read',
         'reports.read',
+        'clicks.read',
+        'conversions.manage',
         'platform.read',
         'quarantine.manage',
         'buyers.manage',

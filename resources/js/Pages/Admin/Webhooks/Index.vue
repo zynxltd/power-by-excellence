@@ -22,6 +22,37 @@ const props = defineProps({
 
 const rejectingId = ref(null);
 const rejectionReason = ref('');
+const editingWebhook = ref(null);
+
+const editForm = useForm({
+    name: '',
+    url: '',
+    events: [],
+    buyer_id: '',
+    is_active: true,
+});
+
+const openEdit = (webhook) => {
+    if (isManaged(webhook) || approvalBadge(webhook)) return;
+    editingWebhook.value = webhook.id;
+    editForm.name = webhook.name;
+    editForm.url = webhook.url;
+    editForm.events = [...(webhook.events ?? [])];
+    editForm.buyer_id = webhook.buyer_id ?? '';
+    editForm.is_active = webhook.is_active ?? true;
+};
+
+const submitEdit = () => {
+    editForm.put(route('webhooks.update', editingWebhook.value), {
+        onSuccess: () => { editingWebhook.value = null; },
+    });
+};
+
+const toggleEditEvent = (event) => {
+    const idx = editForm.events.indexOf(event);
+    if (idx >= 0) editForm.events.splice(idx, 1);
+    else editForm.events.push(event);
+};
 
 const approve = (id) => router.post(route('webhooks.approve', id));
 const approveDeletion = (id) => {
@@ -192,6 +223,43 @@ useApprovalHighlight();
                 </form>
             </Panel>
 
+            <Panel v-if="editingWebhook" title="Edit webhook" class="border-indigo-200 dark:border-indigo-500/30">
+                <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submitEdit">
+                    <div class="md:col-span-2">
+                        <InputLabel value="Name" />
+                        <TextInput v-model="editForm.name" class="mt-1 block w-full" required />
+                    </div>
+                    <div class="md:col-span-2">
+                        <InputLabel value="Endpoint URL" />
+                        <TextInput v-model="editForm.url" type="url" class="mt-1 block w-full font-mono text-sm" required />
+                    </div>
+                    <div>
+                        <InputLabel value="Scope - buyer (optional)" />
+                        <select v-model="editForm.buyer_id" class="form-select mt-1 w-full">
+                            <option value="">All buyers (account-wide)</option>
+                            <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <InputLabel value="Events" />
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <label
+                                v-for="ev in eventOptions"
+                                :key="`edit-${ev}`"
+                                class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-700"
+                            >
+                                <input type="checkbox" :checked="editForm.events.includes(ev)" @change="toggleEditEvent(ev)" />
+                                {{ ev }}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-2 md:col-span-2">
+                        <PrimaryButton :disabled="editForm.processing || !editForm.events.length">Save changes</PrimaryButton>
+                        <AppButton type="button" variant="secondary" @click="editingWebhook = null">Cancel</AppButton>
+                    </div>
+                </form>
+            </Panel>
+
             <Panel title="Configured Webhooks">
                 <div v-if="!webhooks?.length" class="py-8 text-center text-sm text-slate-500">No webhooks configured yet.</div>
                 <div v-for="w in webhooks" :key="w.id" class="flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
@@ -209,6 +277,14 @@ useApprovalHighlight();
                         <p class="mt-1 truncate font-mono text-xs text-slate-500">{{ w.url }}</p>
                         <p class="mt-1 text-xs text-slate-400">{{ (w.events || []).join(', ') }}</p>
                     </div>
+                    <AppButton
+                        v-if="!isManaged(w) && !approvalBadge(w)"
+                        variant="ghost"
+                        class="shrink-0"
+                        @click="openEdit(w)"
+                    >
+                        Edit
+                    </AppButton>
                     <AppButton
                         v-if="!isManaged(w) && !approvalBadge(w)"
                         variant="danger"

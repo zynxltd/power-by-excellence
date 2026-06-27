@@ -66,7 +66,10 @@ class AutoResponderController extends Controller
             ]);
         }
 
-        $result = $service->sendTest($validated);
+        $result = $service->sendTest([
+            ...$validated,
+            'account_id' => AccountContext::id() ?? session('current_account_id'),
+        ]);
 
         $flash = $result['mode'] === 'live'
             ? 'Test message sent.'

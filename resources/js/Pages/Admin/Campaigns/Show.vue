@@ -12,6 +12,7 @@ import Pagination from '@/Components/UI/Pagination.vue';
 import PingTreeConfigCard from '@/Components/UI/PingTreeConfigCard.vue';
 import CampaignFieldsPreview from '@/Components/Campaign/CampaignFieldsPreview.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import GoLiveChecklist from '@/Components/Campaign/GoLiveChecklist.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head } from '@inertiajs/vue3';
@@ -23,6 +24,7 @@ const props = defineProps({
     tenantHub: Object,
     campaignWorkflow: Object,
     leadsToday: Number,
+    goLiveChecklist: { type: Array, default: null },
 });
 
 const { formatMoney } = useMoneyFormat(props.campaign?.currency);
@@ -52,6 +54,8 @@ const campaignStatStrip = computed(() => [
         </PageHeader>
 
         <TenantContextBanner />
+
+        <GoLiveChecklist v-if="goLiveChecklist" :checklist="goLiveChecklist" />
 
         <CampaignWorkflowNav
             v-if="campaignWorkflow"

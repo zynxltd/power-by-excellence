@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\User;
 use App\Services\Billing\AccountBillingService;
 use App\Services\Billing\FraudProtectionService;
+use App\Services\ClickTrack\ClickTrackEntitlementService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Platform\PlatformStatusService;
 use App\Support\Admin\TenantHub;
@@ -51,6 +52,9 @@ class HandleInertiaRequests extends Middleware
                     : null,
                 'fraudProtection' => fn () => ($account = $this->resolveAccount($request))
                     ? app(FraudProtectionService::class)->summary($account)
+                    : null,
+                'clickTrack' => fn () => ($account = $this->resolveAccount($request))
+                    ? app(ClickTrackEntitlementService::class)->summary($account)
                     : null,
                 'isSuperAdmin' => fn () => $user?->isSuperAdmin() ?? false,
                 'isBuyerPortal' => fn () => $user?->isBuyerPortal() ?? false,

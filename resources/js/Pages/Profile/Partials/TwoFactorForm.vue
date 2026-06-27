@@ -3,14 +3,24 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     twoFactorEnabled: Boolean,
     recoveryCodes: Array,
+    twoFactorQr: { type: String, default: null },
+    twoFactorSecret: { type: String, default: null },
 });
 
+const page = usePage();
+
+const qrUrl = computed(() => props.twoFactorQr ?? page.props.flash?.two_factor_qr ?? null);
+const pendingSecret = computed(() => props.twoFactorSecret ?? page.props.flash?.two_factor_secret ?? null);
+const awaitingConfirm = computed(() => Boolean(qrUrl.value || pendingSecret.value) && !props.twoFactorEnabled);
+
 const enableForm = useForm({ password: '' });
+const confirmForm = useForm({ password: '', code: '' });
 const disableForm = useForm({ password: '' });
 </script>
 
@@ -39,6 +49,28 @@ const disableForm = useForm({ password: '' });
                     <InputError :message="disableForm.errors.password" class="mt-1" />
                 </div>
                 <AppButton type="submit" variant="danger" :disabled="disableForm.processing">Disable 2FA</AppButton>
+            </form>
+        </div>
+
+        <div v-else-if="awaitingConfirm" class="mt-6 max-w-sm space-y-4">
+            <p class="text-sm text-slate-600 dark:text-slate-400">Scan this QR code with your authenticator app, then enter a code to confirm.</p>
+            <div v-if="qrUrl" class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <img :src="qrUrl" alt="Two-factor QR code" class="mx-auto h-48 w-48" />
+            </div>
+            <p v-if="pendingSecret" class="break-all font-mono text-xs text-slate-500">Manual key: {{ pendingSecret }}</p>
+
+            <form class="space-y-4" @submit.prevent="confirmForm.post(route('profile.two-factor.confirm'))">
+                <div>
+                    <InputLabel for="confirm_password" value="Password" />
+                    <TextInput id="confirm_password" v-model="confirmForm.password" type="password" class="mt-1 block w-full" required />
+                    <InputError :message="confirmForm.errors.password" class="mt-1" />
+                </div>
+                <div>
+                    <InputLabel for="confirm_code" value="Authentication code" />
+                    <TextInput id="confirm_code" v-model="confirmForm.code" type="text" inputmode="numeric" maxlength="6" class="mt-1 block w-full font-mono tracking-widest" required />
+                    <InputError :message="confirmForm.errors.code" class="mt-1" />
+                </div>
+                <AppButton type="submit" :disabled="confirmForm.processing">Confirm and enable</AppButton>
             </form>
         </div>
 

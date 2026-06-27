@@ -24,6 +24,8 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
             'recoveryCodes' => session('recovery_codes'),
+            'twoFactorQr' => session('two_factor_qr'),
+            'twoFactorSecret' => session('two_factor_secret'),
             'twoFactorEnabled' => (bool) $user->two_factor_enabled,
             'preferences' => [
                 'theme' => $user->theme ?? 'light',

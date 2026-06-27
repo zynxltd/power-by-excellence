@@ -236,4 +236,39 @@ class SupplierPortalService
             ->whereDate('leads.distributed_at', '<=', $to)
             ->sum('lead_financials.payout');
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function clickStats(Supplier $supplier): array
+    {
+        $links = \App\Models\TrackingLink::query()
+            ->where('supplier_id', $supplier->id)
+            ->withCount(['clicks', 'conversions'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $clicksToday = \App\Models\TrackingClick::query()
+            ->where('supplier_id', $supplier->id)
+            ->where('clicked_at', '>=', today())
+            ->count();
+
+        $conversionsApproved = \App\Models\TrackingConversion::query()
+            ->where('supplier_id', $supplier->id)
+            ->where('status', \App\Models\TrackingConversion::STATUS_APPROVED)
+            ->where('created_at', '>=', today()->subDays(6))
+            ->count();
+
+        return [
+            'links' => $links,
+            'clicks_today' => $clicksToday,
+            'conversions_7d' => $conversionsApproved,
+            'recent_clicks' => \App\Models\TrackingClick::query()
+                ->where('supplier_id', $supplier->id)
+                ->with('trackingLink:id,name')
+                ->orderByDesc('clicked_at')
+                ->limit(20)
+                ->get(),
+        ];
+    }
 }

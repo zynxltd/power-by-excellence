@@ -6,7 +6,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -14,6 +14,7 @@ const props = defineProps({
     meta: Object,
     config: Object,
     campaigns: Array,
+    campaignFields: Array,
     webhookUrl: String,
     ingestUrl: String,
 });
@@ -25,6 +26,9 @@ const form = useForm({
     verify_token: props.config?.verify_token ?? '',
     page_access_token: props.config?.page_access_token ?? '',
     campaign_id: props.config?.campaign_id ?? '',
+    field_mapping: props.config?.field_mapping?.length
+        ? [...props.config.field_mapping]
+        : [{ source: '', target: '' }],
 });
 
 watch(
@@ -35,11 +39,36 @@ watch(
             verify_token: config?.verify_token ?? '',
             page_access_token: config?.page_access_token ?? '',
             campaign_id: config?.campaign_id ?? '',
+            field_mapping: config?.field_mapping?.length
+                ? [...config.field_mapping]
+                : [{ source: '', target: '' }],
         });
         form.reset();
     },
     { deep: true },
 );
+
+watch(
+    () => form.campaign_id,
+    (campaignId) => {
+        if (campaignId) {
+            router.get(route('integrations.lead-source', props.provider), { campaign_id: campaignId }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        }
+    },
+);
+
+const campaignFieldOptions = computed(() => props.campaignFields ?? []);
+
+const addMappingRow = () => form.field_mapping.push({ source: '', target: '' });
+const removeMappingRow = (index) => {
+    if (form.field_mapping.length > 1) {
+        form.field_mapping.splice(index, 1);
+    }
+};
 
 const isConfigured = computed(() => {
     if (!form.enabled || !form.campaign_id) {
@@ -145,6 +174,40 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                         <p class="mt-1 text-xs text-slate-500">{{ meta.page_access_token_help }}</p>
                         <InputError class="mt-1" :message="form.errors.page_access_token" />
                     </div>
+
+                    <div v-if="form.campaign_id">
+                        <div class="mb-2 flex items-center justify-between">
+                            <InputLabel value="Field mapping" />
+                            <button type="button" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400" @click="addMappingRow">
+                                + Add row
+                            </button>
+                        </div>
+                        <p class="mb-3 text-xs text-slate-500">Map source platform field names to your campaign field names.</p>
+                        <div class="space-y-2">
+                            <div
+                                v-for="(row, index) in form.field_mapping"
+                                :key="index"
+                                class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                            >
+                                <input v-model="row.source" type="text" class="form-input font-mono text-sm" placeholder="Source field (e.g. email)" />
+                                <select v-model="row.target" class="form-select">
+                                    <option value="">Campaign field</option>
+                                    <option v-for="field in campaignFieldOptions" :key="field.id ?? field.name" :value="field.name">
+                                        {{ field.label ?? field.name }}
+                                    </option>
+                                </select>
+                                <button
+                                    v-if="form.field_mapping.length > 1"
+                                    type="button"
+                                    class="text-xs text-rose-600 hover:underline"
+                                    @click="removeMappingRow(index)"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <AppButton type="submit" :disabled="form.processing">Save settings</AppButton>
                 </form>
             </Panel>
