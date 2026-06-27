@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-Buyer portal accounts are created by your platform administrator — there is no self-registration. When your buyer profile is set up, an administrator links a **Buyer Portal** user to your buyer record and provides credentials by email or a secure handoff.
+Buyer portal accounts are created by your platform administrator - there is no self-registration. When your buyer profile is set up, an administrator links a **Buyer Portal** user to your buyer record and provides credentials by email or a secure handoff.
 
 Your login is scoped to a single **tenant subdomain** (partner platform). The same email/password will not work on the central marketing site, super-admin console, or another partner's domain. This isolation protects lead data and billing across brands.
 
@@ -19,13 +19,13 @@ Your login is scoped to a single **tenant subdomain** (partner platform). The sa
 Confirm you have:
 
 1. The correct **partner URL** (e.g. `https://excellence-uk.powerbyexcellence.test/login`)
-2. A **Buyer Portal** role user — not staff admin or supplier credentials
+2. A **Buyer Portal** role user - not staff admin or supplier credentials
 3. An **active** account (not suspended by your administrator)
 
 ## Signing in step by step
 
 1. Open your partner platform URL in a modern browser (Chrome, Firefox, Safari, or Edge)
-2. Navigate to `/login` on that subdomain — e.g. `https://insurance-ca.powerbyexcellence.test/login`
+2. Navigate to `/login` on that subdomain - e.g. `https://insurance-ca.powerbyexcellence.test/login`
 3. Enter the **email** address on your user record
 4. Enter your **password** (case-sensitive)
 5. Optionally tick **Remember me** on a trusted personal device only
@@ -43,7 +43,7 @@ The login page shows your partner branding (logo, colours) when configured by th
 | Credit Balance stat | Dashboard | Current prepay credits |
 | Account menu | Top right | Profile, sign out |
 
-Super-admin and tenant **staff** accounts use different login flows and land on `/admin` — they cannot use buyer credentials to access `/portal/buyer` unless impersonation is used by support staff.
+Super-admin and tenant **staff** accounts use different login flows and land on `/admin` - they cannot use buyer credentials to access `/portal/buyer` unless impersonation is used by support staff.
 
 ## Password reset
 
@@ -51,7 +51,7 @@ If you forget your password:
 
 1. On `/login`, click **Forgot password?**
 2. Enter your registered email address
-3. Submit the form — a reset link is sent to that inbox
+3. Submit the form - a reset link is sent to that inbox
 4. Open the email and follow the link (links expire after a set period)
 5. Enter a new password twice and save
 6. Return to `/login` on the **same subdomain** and sign in
@@ -60,18 +60,18 @@ If you do not receive the email within a few minutes, check spam/junk folders. S
 
 ## Session & subdomain rules
 
-- **Sessions are domain-scoped** — cookies set on `excellence-uk.powerbyexcellence.test` do not apply to `solar-us.powerbyexcellence.test`
-- **One tenant per login** — if you purchase leads on multiple brands, each requires a separate user and login on that brand's subdomain
-- **Sign out on shared PCs** — use the account menu **Log out** when finished
-- **Verified email** may be required — if prompted to verify email after first login, complete verification before accessing portal routes
+- **Sessions are domain-scoped** - cookies set on `excellence-uk.powerbyexcellence.test` do not apply to `solar-us.powerbyexcellence.test`
+- **One tenant per login** - if you purchase leads on multiple brands, each requires a separate user and login on that brand's subdomain
+- **Sign out on shared PCs** - use the account menu **Log out** when finished
+- **Verified email** may be required - if prompted to verify email after first login, complete verification before accessing portal routes
 
 ## Account security best practices
 
-1. **Do not share credentials** — request separate portal users for each team member so audit trails stay accurate
-2. **Use strong passwords** — mix length with numbers and symbols; avoid reusing passwords from other systems
-3. **Report suspicious access** — if you see leads you did not purchase or unknown sessions, contact your administrator immediately
+1. **Do not share credentials** - request separate portal users for each team member so audit trails stay accurate
+2. **Use strong passwords** - mix length with numbers and symbols; avoid reusing passwords from other systems
+3. **Report suspicious access** - if you see leads you did not purchase or unknown sessions, contact your administrator immediately
 4. **Avoid public Wi‑Fi** for portal access when handling PII; use VPN if your policy requires it
-5. **Two-factor authentication** — if your platform enables 2FA for portal users in future policy, enable it when offered
+5. **Two-factor authentication** - if your platform enables 2FA for portal users in future policy, enable it when offered
 
 ## Example scenarios
 
@@ -89,7 +89,7 @@ During a billing dispute, an administrator suspends the portal user. On login, t
 
 ## Tips
 
-- Save the exact login URL from your welcome email — do not guess the subdomain
+- Save the exact login URL from your welcome email - do not guess the subdomain
 - After password reset, always return to your partner `/login`, not the central site
 - If your organisation uses IP allowlists (configured by admin), connect from an approved network or VPN
 - Clear browser cookies for the subdomain only if you get stuck in a redirect loop after a domain change
@@ -106,7 +106,7 @@ During a billing dispute, an administrator suspends the portal user. On login, t
 | **Partner platforms sign in at …** | Buyer tried central host login | Use the partner URL shown in the message |
 | **Too many login attempts.** | Rate limit (5 attempts) | Wait the stated minutes, then retry |
 | Redirect to `/admin` instead of portal | User has staff role, not Buyer Portal | Ask admin to create or fix your portal user role |
-| **403 — Buyer account not linked to this user.** | User missing buyer link | Admin must attach `buyer_id` to your user |
+| **403 - Buyer account not linked to this user.** | User missing buyer link | Admin must attach `buyer_id` to your user |
 | Password reset link invalid | Expired or already used | Request a fresh reset from `/login` |
 MD,
 ];

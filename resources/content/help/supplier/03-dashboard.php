@@ -34,9 +34,9 @@ Three cards appear at the top of the dashboard:
 
 ### How to interpret today's numbers
 
-- **High submissions, low sold** — Traffic is arriving but not monetising; check lead quality, campaign fit, or filter match rates on `/portal/supplier/leads`
-- **Sold without matching submissions** — Rare; usually reflects leads received on a prior day that sold today (distribution delay)
-- **Payout lower than expected** — Payout is your rev-share, not buyer revenue; rates are set by the platform administrator
+- **High submissions, low sold** - Traffic is arriving but not monetising; check lead quality, campaign fit, or filter match rates on `/portal/supplier/leads`
+- **Sold without matching submissions** - Rare; usually reflects leads received on a prior day that sold today (distribution delay)
+- **Payout lower than expected** - Payout is your rev-share, not buyer revenue; rates are set by the platform administrator
 
 ### Example
 
@@ -50,24 +50,24 @@ Three cards appear at the top of the dashboard:
 
 Two bar charts sit below the stats cards:
 
-### Leads Submitted — Last 7 Days
+### Leads Submitted - Last 7 Days
 
-- **Blue bars** — leads received per day (`received_at`)
-- **Green bars** — leads sold per day (`distributed_at`, status = sold)
+- **Blue bars** - leads received per day (`received_at`)
+- **Green bars** - leads sold per day (`distributed_at`, status = sold)
 - X-axis labels show weekday abbreviations (Mon, Tue, Wed…)
 
 Compare blue vs green height to spot days with strong or weak conversion. A widening gap (many blue, few green) signals quality or routing issues.
 
-### Payout — Last 7 Days
+### Payout - Last 7 Days
 
-- **Cyan bars** — total payout per day from sold leads
+- **Cyan bars** - total payout per day from sold leads
 - Useful for correlating earnings with traffic volume and sold rate
 
 ### Reading chart trends
 
-1. **Steady parallel bars** — Consistent sold rate; healthy traffic
-2. **Submission spike, flat sold** — Possible bad traffic source or campaign mismatch
-3. **Payout dip despite high sold** — Lower-value leads or campaign payout rule change; check with account manager
+1. **Steady parallel bars** - Consistent sold rate; healthy traffic
+2. **Submission spike, flat sold** - Possible bad traffic source or campaign mismatch
+3. **Payout dip despite high sold** - Lower-value leads or campaign payout rule change; check with account manager
 
 ## Your Sources (SID) panel
 
@@ -75,14 +75,14 @@ The bottom panel lists every **Source** configured under your supplier account.
 
 Each row shows:
 
-- **SID** — the source identifier you pass in API ingest (e.g. `google_ppc`, `email_blast`)
-- **Name** — human-readable label set by the administrator
+- **SID** - the source identifier you pass in API ingest (e.g. `google_ppc`, `email_blast`)
+- **Name** - human-readable label set by the administrator
 
 ### Why Sources matter
 
 - Every API post should include a valid `sid` matching one of these Sources
 - Sources let you segment PPC, email, display, and sub-affiliate traffic in reporting
-- An empty panel means no Sources are configured — contact your account manager before scaling spend
+- An empty panel means no Sources are configured - contact your account manager before scaling spend
 
 ### Example SID setup
 
@@ -107,11 +107,11 @@ Each row shows:
 
 ## Tips
 
-- Sold rate = sold ÷ received — benchmark within the same campaign vertical, not across unrelated offers
+- Sold rate = sold ÷ received - benchmark within the same campaign vertical, not across unrelated offers
 - Payout is your **rev-share**, not buyer revenue or platform margin
-- Charts use the platform's timezone for "today" boundaries — ask your account manager if unsure
+- Charts use the platform's timezone for "today" boundaries - ask your account manager if unsure
 - Dashboard data updates on each page load; refresh to see the latest counts after a traffic burst
-- Sub-affiliate performance is tracked via **SSID** at ingest time — the Sources panel shows SIDs, not individual SSIDs (use CSV export for SSID-level reconciliation if your setup supports it)
+- Sub-affiliate performance is tracked via **SSID** at ingest time - the Sources panel shows SIDs, not individual SSIDs (use CSV export for SSID-level reconciliation if your setup supports it)
 
 ## Troubleshooting
 

@@ -1,10 +1,12 @@
 <script setup>
 import MarketingNav from '@/Components/Marketing/MarketingNav.vue';
 import MarketingFooter from '@/Components/Marketing/MarketingFooter.vue';
+import MarketingSignInLink from '@/Components/Marketing/MarketingSignInLink.vue';
 import SeoHead from '@/Components/SeoHead.vue';
 import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
 import ToastHost from '@/Components/UI/ToastHost.vue';
 import { useMarketingTheme } from '@/Composables/useMarketingTheme';
+import { useMarketingSignIn } from '@/Composables/useMarketingSignIn';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
@@ -16,8 +18,7 @@ defineProps({
 const page = usePage();
 const { marketingTheme } = useMarketingTheme();
 const systemStatus = computed(() => page.props.systemStatus);
-const signInUrl = computed(() => page.props.urls?.marketingSignIn ?? route('login'));
-const isAuthenticated = computed(() => !!page.props.auth?.user);
+const { isAuthenticated } = useMarketingSignIn();
 
 const demoForm = useForm({
     name: '',
@@ -105,7 +106,7 @@ const features = [
     {
         icon: 'tree',
         title: 'Ping Tree Routing',
-        desc: 'Waterfall, ping-post auction, weighted distribution, round-robin, and hybrid tiered groups — all configurable per campaign.',
+        desc: 'Waterfall, ping-post auction, weighted distribution, round-robin, and hybrid tiered groups - all configurable per campaign.',
         color: 'from-indigo-500/25 via-cyan-500/15 to-indigo-500/20 text-indigo-600 marketing-dark:text-indigo-400',
     },
     {
@@ -117,7 +118,7 @@ const features = [
     {
         icon: 'building',
         title: 'Multi-Tenancy',
-        desc: 'Super-admins host isolated partner platforms — each with its own subdomain, buyers, suppliers, and financials. UK, US, and other markets run as campaigns within a platform.',
+        desc: 'Super-admins host isolated partner platforms - each with its own subdomain, buyers, suppliers, and financials. UK, US, and other markets run as campaigns within a platform.',
         color: 'from-violet-500/20 via-indigo-500/25 to-cyan-500/15 text-violet-600 marketing-dark:text-violet-400',
     },
     {
@@ -135,13 +136,13 @@ const features = [
     {
         icon: 'pixel',
         title: 'Postback Manager',
-        desc: 'Fire affiliate pixels and conversion tracking URLs on lead accepted, sold, rejected, and delivery success — scoped per supplier or campaign.',
+        desc: 'Fire affiliate pixels and conversion tracking URLs on lead accepted, sold, rejected, and delivery success - scoped per supplier or campaign.',
         color: 'from-violet-500/15 via-cyan-500/20 to-indigo-500/20 text-violet-600 marketing-dark:text-violet-400',
     },
     {
         icon: 'automation',
         title: 'Automation & Forms',
-        desc: 'Auto-responders, remarketing sequences, bulk SMS, hosted form builder, and event alerts — all wired into the lead pipeline.',
+        desc: 'Auto-responders, remarketing sequences, bulk SMS, hosted form builder, and event alerts - all wired into the lead pipeline.',
         color: 'from-indigo-500/25 via-violet-500/15 to-cyan-500/15 text-indigo-600 marketing-dark:text-indigo-400',
     },
     {
@@ -154,7 +155,7 @@ const features = [
 
 const customSolution = {
     title: 'Need a custom solution?',
-    desc: 'When off-the-shelf routing, integrations, or workflows are not enough, we design and deliver bespoke setups — custom ping trees, buyer adapters, data pipelines, white-label portals, and enterprise SLAs.',
+    desc: 'When off-the-shelf routing, integrations, or workflows are not enough, we design and deliver bespoke setups - custom ping trees, buyer adapters, data pipelines, white-label portals, and enterprise SLAs.',
     points: [
         'Custom delivery methods & buyer integrations',
         'Migration from legacy routers and spreadsheets',
@@ -171,7 +172,7 @@ const steps = [
 
 const verticals = ['Auto Insurance', 'Solar', 'Home Services', 'Mortgage', 'Legal', 'Education', 'Healthcare', 'Finance', 'Loans', 'Payday', 'Life Insurance', 'Debt Relief'];
 
-const rotatingWords = ['revenue', 'margin', 'buyers', 'profit'];
+const rotatingWords = ['revenue', 'profit', 'margin'];
 const currentWordIndex = ref(0);
 const currentWord = computed(() => rotatingWords[currentWordIndex.value]);
 let wordInterval;
@@ -202,7 +203,7 @@ const testimonials = [
         metric: '3 tools replaced',
     },
     {
-        quote: 'Super-admin tenancy keeps partner platforms isolated — no data bleed between brands. We run UK and US on the same platform as separate campaigns, each with its own buyers and currency. Audit logs are a lifesaver.',
+        quote: 'Super-admin tenancy keeps partner platforms isolated - no data bleed between brands. We run UK and US on the same platform as separate campaigns, each with its own buyers and currency. Audit logs are a lifesaver.',
         name: 'Priya Nair',
         role: 'Platform Operations',
         company: 'Northstar Leads',
@@ -233,12 +234,12 @@ const comparisonRows = [
 const securityFeatures = [
     {
         title: 'Tenant isolation',
-        desc: 'Super-admin only: each partner platform runs on its own subdomain with scoped data, API keys, and financials — separate from other tenants.',
+        desc: 'Your platform runs on its own subdomain with scoped data, API keys, and financials.',
         icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
     },
     {
         title: 'Scoped API keys',
-        desc: 'Granular permissions per key — leads.create, leads.read, reports, quarantine — with prefix|secret auth.',
+        desc: 'Granular permissions per key - leads.create, leads.read, reports, quarantine - with prefix|secret auth.',
         icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
     },
     {
@@ -254,7 +255,7 @@ const securityFeatures = [
 ];
 
 const pricingPreview = [
-    { name: 'Starter', price: '£299', highlight: '5k leads/mo · fraud +£29', href: 'pricing' },
+    { name: 'Starter', price: '£299', highlight: '5k leads/mo', href: 'pricing' },
     { name: 'Growth', price: '£799', highlight: '25k leads · fraud included', popular: true, href: 'pricing' },
     { name: 'Enterprise', price: 'Custom', highlight: 'Unlimited scale', href: 'pricing' },
 ];
@@ -262,7 +263,7 @@ const pricingPreview = [
 const faqs = [
     {
         q: 'How fast is lead processing?',
-        a: 'Async ingest returns in under 50ms with a queue ID. Sync mode runs the full pipeline inline and returns the final status in one request — ideal for live buyer redirects.',
+        a: 'Async ingest returns in under 50ms with a queue ID. Sync mode runs the full pipeline inline and returns the final status in one request - ideal for live buyer redirects.',
     },
     {
         q: 'How are partner platforms and markets organised?',
@@ -270,7 +271,7 @@ const faqs = [
     },
     {
         q: 'What delivery methods are supported?',
-        a: 'Ping-post auctions, waterfall routing, direct API post, email alerts, and store-lead fallback — all configurable in the visual ping-tree builder with per-tier filters.',
+        a: 'Ping-post auctions, waterfall routing, direct API post, email alerts, and store-lead fallback - all configurable in the visual ping-tree builder with per-tier filters.',
     },
     {
         q: 'Do you support affiliate tracking?',
@@ -290,7 +291,7 @@ const toggleFaq = (index) => {
 
 <template>
     <SeoHead
-        :title="seo?.title || 'PowerByExcellence — Real-Time Lead Distribution Platform'"
+        :title="seo?.title || 'PowerByExcellence - Real-Time Lead Distribution Platform'"
         :description="seo?.description || 'Ping-tree routing, real-time buyer auctions, multi-vertical capture, and enterprise reporting for agencies and lead sellers.'"
     />
 
@@ -322,14 +323,13 @@ const toggleFaq = (index) => {
                             <SystemStatusBadge v-if="systemStatus" :status="systemStatus" />
                         </div>
 
-                        <h1 class="text-balance text-3xl font-extrabold leading-[1.08] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.04] xl:text-6xl">
+                        <h1 class="text-balance text-3xl font-extrabold leading-[1.15] tracking-tight text-slate-900 marketing-dark:text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.1] xl:text-6xl">
                             Turn every lead into
-                            <span>
-                                <span
-                                    :key="currentWord"
-                                    class="brand-gradient-text inline-block min-w-[7ch] text-left animate-fade-in-up sm:min-w-[7.5ch]"
-                                >{{ currentWord }}</span><span class="text-slate-700 marketing-dark:text-slate-200"> at scale</span>
-                            </span>
+                            <span
+                                :key="currentWord"
+                                class="brand-gradient-text inline-block overflow-visible pb-0.5 animate-fade-in-up"
+                            >{{ currentWord }}</span>
+                            at scale
                         </h1>
 
                         <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600 marketing-dark:text-slate-400 lg:mx-0 lg:text-[1.125rem]">
@@ -349,13 +349,10 @@ const toggleFaq = (index) => {
                             >
                                 View Pricing
                             </Link>
-                            <Link
+                            <MarketingSignInLink
                                 v-if="canLogin"
-                                :href="signInUrl"
                                 class="brand-btn-secondary inline-flex items-center justify-center px-8 py-4 text-base"
-                            >
-                                {{ isAuthenticated ? 'Go to Platform' : 'Sign In' }}
-                            </Link>
+                            />
                         </div>
 
                         <a href="#features" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 marketing-dark:text-indigo-400 marketing-dark:hover:text-cyan-300">
@@ -484,7 +481,7 @@ const toggleFaq = (index) => {
                 <div class="mx-auto max-w-2xl text-center">
                     <p class="brand-kicker">Platform capabilities</p>
                     <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Built for lead sellers, buyers &amp; brokers</h2>
-                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need to run a high-performance lead distribution network — from ingest to payout.</p>
+                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need to run a high-performance lead distribution network - from ingest to payout.</p>
                 </div>
 
                 <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -605,7 +602,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-cyan-600 marketing-dark:text-cyan-400">Real-time distribution</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Ping-tree &amp; ping-post routing</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Route leads through tiered buyer groups in milliseconds. Waterfall priority, parallel auctions, sequential ping-post, weighted splits, round-robin, and hybrid tiered groups — all configurable per campaign.
+                            Route leads through tiered buyer groups in milliseconds. Waterfall priority, parallel auctions, sequential ping-post, weighted splits, round-robin, and hybrid tiered groups - all configurable per campaign.
                         </p>
                         <ul class="mt-6 space-y-3 text-sm text-slate-700 marketing-dark:text-slate-300">
                             <li class="flex items-center gap-2">
@@ -742,7 +739,7 @@ const toggleFaq = (index) => {
                 <div class="mx-auto max-w-2xl text-center">
                     <p class="brand-kicker">Why switch</p>
                     <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">PBE vs legacy lead routers</h2>
-                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need in one platform — not a patchwork of scripts, spreadsheets, and third-party tools.</p>
+                    <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">Everything you need in one platform - not a patchwork of scripts, spreadsheets, and third-party tools.</p>
                 </div>
                 <div class="mt-12 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm marketing-dark:border-white/10 marketing-dark:bg-slate-900/50">
                     <div class="min-w-[20rem]">
@@ -784,7 +781,7 @@ const toggleFaq = (index) => {
                     <p class="brand-kicker text-emerald-600 marketing-dark:text-emerald-400">Financial controls</p>
                     <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Billing for every role</h2>
                     <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                        Buyer credit ledgers, prepay enforcement, supplier payout tracking, and admin top-ups — all visible in dedicated billing sections for admins, buyers, and suppliers.
+                        Buyer credit ledgers, prepay enforcement, supplier payout tracking, and admin top-ups - all visible in dedicated billing sections for admins, buyers, and suppliers.
                     </p>
                 </div>
                 <div class="mt-12 grid gap-6 md:grid-cols-3">
@@ -812,7 +809,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-cyan-600 marketing-dark:text-teal-400">Affiliate tracking</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Postback Manager</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Fire conversion pixels and affiliate postbacks when leads are accepted, sold, rejected, or delivered. Scope rules per supplier or campaign — just like enterprise lead platforms.
+                            Fire conversion pixels and affiliate postbacks when leads are accepted, sold, rejected, or delivered. Scope rules per supplier or campaign - just like enterprise lead platforms.
                         </p>
                         <ul class="mt-8 space-y-3">
                             <li v-for="item in ['GET pixel URLs with [field] tag interpolation', 'Per-supplier and per-campaign scoping', 'Events: accepted, sold, rejected, unsold, delivery success', 'Full postback audit log with HTTP status']" :key="item" class="flex items-center gap-3 text-slate-700 marketing-dark:text-slate-300">
@@ -841,7 +838,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-violet-600 marketing-dark:text-violet-400">Enterprise-ready</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Security &amp; compliance built in</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Tenant isolation, scoped API keys, comprehensive audit logs, and billing enforcement — designed for agencies managing multiple partner networks.
+                            Tenant isolation, scoped API keys, comprehensive audit logs, and billing enforcement - designed for agencies managing multiple partner networks.
                         </p>
                         <Link
                             :href="route('status.index')"
@@ -958,7 +955,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-indigo-600 marketing-dark:text-sky-400">Developer-first</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">REST API &amp; client SDK</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Ship integrations fast with scoped API keys, sync/async ingest, and lightweight JavaScript and PHP client libraries — no heavy SDK install required.
+                            Ship integrations fast with scoped API keys, sync/async ingest, and lightweight JavaScript and PHP client libraries - no heavy SDK install required.
                         </p>
                         <ul class="mt-8 space-y-3">
                             <li v-for="item in ['JavaScript SDK at /sdk/pbe-leads.js', 'PHP client in sdk/php/PbeClient.php', 'Sync & async lead ingest', 'Ping/post auction simulators built in']" :key="item" class="flex items-center gap-3 text-slate-700 marketing-dark:text-slate-300">
@@ -1107,13 +1104,13 @@ const toggleFaq = (index) => {
             <div class="relative mx-auto max-w-4xl px-6 text-center">
                 <h2 class="text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Multi-tenant partner platforms</h2>
                 <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">
-                    Super-admins host multiple isolated partner businesses from one account — each on its own subdomain with separate buyers, suppliers, and financials. UK, US, and other geographies are handled with campaigns inside a platform, not as separate tenants.
+                    Super-admins host multiple isolated partner businesses from one account - each on its own subdomain with separate buyers, suppliers, and financials. UK, US, and other geographies are handled with campaigns inside a platform, not as separate tenants.
                 </p>
                 <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <a href="#demo" class="brand-btn-primary px-8 py-4 text-base">Book a Demo</a>
-                    <Link v-if="canLogin" :href="signInUrl" class="brand-btn-secondary px-8 py-4 text-base">
+                    <MarketingSignInLink v-if="canLogin" class="brand-btn-secondary px-8 py-4 text-base">
                         {{ isAuthenticated ? 'Go to Platform' : 'Sign In to Platform' }}
-                    </Link>
+                    </MarketingSignInLink>
                 </div>
             </div>
         </section>

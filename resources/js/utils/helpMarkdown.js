@@ -111,3 +111,12 @@ export function parseInline(text = '') {
 
     return parts.length ? parts : [{ type: 'text', value: text }];
 }
+
+/** @returns {string} */
+export function headingToId(text = '') {
+    return String(text)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+}

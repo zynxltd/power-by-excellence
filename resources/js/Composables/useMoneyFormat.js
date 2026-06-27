@@ -13,7 +13,7 @@ const LOCALE_BY_CURRENCY = {
     AED: 'ar-AE',
 };
 
-/** Currency layout locale — symbol always before the amount (e.g. €25.03 not 25,03 €). */
+/** Currency layout locale - symbol always before the amount (e.g. €25.03 not 25,03 €). */
 const MONEY_FORMAT_LOCALE = 'en-GB';
 
 export function useMoneyFormat(overrideCurrency = null) {
@@ -61,7 +61,7 @@ export function useMoneyFormat(overrideCurrency = null) {
 
 export function formatMoneyMultiRows(rows, formatMoney, options = {}) {
     if (!rows?.length) {
-        return '—';
+        return '-';
     }
 
     const { decimals = 0, field = 'revenue' } = options;
@@ -73,5 +73,5 @@ export function formatMoneyMultiRows(rows, formatMoney, options = {}) {
     return rows
         .filter((row) => Number(row[field] ?? 0) !== 0)
         .map((row) => formatMoney(row[field], { decimals, currency: row.currency }))
-        .join(' · ') || '—';
+        .join(' · ') || '-';
 }

@@ -81,7 +81,7 @@ const modeClass = (mode) => ROUTING_MODE_STYLES[mode] ?? ROUTING_MODE_STYLES.wat
                         </td>
                         <td class="hidden px-3 py-2.5 text-slate-600 dark:text-slate-400 md:table-cell">
                             <span v-if="group.floor_price != null && group.floor_price !== ''">{{ group.floor_price }}</span>
-                            <span v-else class="text-slate-400">—</span>
+                            <span v-else class="text-slate-400">-</span>
                         </td>
                         <td class="px-3 py-2.5 text-right">
                             <div v-if="hasEntryFilters(group.rules)" class="text-right">

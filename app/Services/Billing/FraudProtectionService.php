@@ -37,6 +37,10 @@ class FraudProtectionService
             return true;
         }
 
+        if (! ($plan['addon_available'] ?? false)) {
+            return false;
+        }
+
         return (bool) ($fraud['enabled'] ?? false);
     }
 
@@ -138,7 +142,7 @@ class FraudProtectionService
             'plan_entitled' => $planEntitled,
             'admin_override' => $adminOverride,
             'included' => (bool) ($planConfig['fraud_included'] ?? false),
-            'addon_available' => ! ($planConfig['fraud_included'] ?? false),
+            'addon_available' => (bool) ($planConfig['addon_available'] ?? false),
             'addon_price' => $planConfig['addon_price'] ?? null,
             'can_validate' => $this->canValidateLead($account),
             'usage_count' => $usage,
@@ -159,7 +163,8 @@ class FraudProtectionService
     {
         $planConfig = config('fraud_protection.plans.'.$plan, config('fraud_protection.plans.starter'));
         $included = (bool) ($planConfig['fraud_included'] ?? false);
-        $entitled = $included || $fraudAddonEnabled;
+        $addonAvailable = (bool) ($planConfig['addon_available'] ?? false);
+        $entitled = $included || ($addonAvailable && $fraudAddonEnabled);
 
         $settings['subscription_plan'] = $plan;
         $settings['fraud_protection'] = array_merge($settings['fraud_protection'] ?? [], [
@@ -178,6 +183,13 @@ class FraudProtectionService
                 'url_validation' => false,
                 'quarantine_on_fail' => $integration['quarantine_on_fail'] ?? true,
             ]);
+        } else {
+            $integration = $settings['validation_integration'] ?? [];
+            if (($integration['provider'] ?? null) === 'ipqs') {
+                $settings['validation_integration'] = array_merge($integration, [
+                    'provider' => 'demo',
+                ]);
+            }
         }
 
         return $settings;

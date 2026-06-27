@@ -1,6 +1,6 @@
-# LeadByte Replica — Developer Documentation
+# LeadByte Replica - Developer Documentation
 
-> **Purpose:** Build a production-grade lead generation and distribution platform that mirrors [LeadByte](https://www.leadbyte.co.uk/) structure, terminology, and capabilities — including ping-tree routing, real-time API distribution, multi-vertical support, buyer/supplier portals, validation, caps, and financial tracking.
+> **Purpose:** Build a production-grade lead generation and distribution platform that mirrors [LeadByte](https://www.leadbyte.co.uk/) structure, terminology, and capabilities - including ping-tree routing, real-time API distribution, multi-vertical support, buyer/supplier portals, validation, caps, and financial tracking.
 
 ---
 
@@ -101,11 +101,11 @@ Top-level tenant. Holds default currency, timezone, country, default campaign se
 
 #### Campaign
 **Central processing hub.** Two types:
-- **Standard** — ingest, validate, dedupe, distribute, pay suppliers
-- **Suppression** — DNC / do-not-market lists; blocks matching leads elsewhere
+- **Standard** - ingest, validate, dedupe, distribute, pay suppliers
+- **Suppression** - DNC / do-not-market lists; blocks matching leads elsewhere
 
 Key campaign settings (mirror LeadByte):
-- `name`, `reference` (locked after first lead — used in API guides, supplier portal)
+- `name`, `reference` (locked after first lead - used in API guides, supplier portal)
 - `type`: `standard` | `suppression`
 - `country`, `currency` (locked after first lead)
 - `payout_supplier_on`: `system_accept` | `buyer_delivery_accept`
@@ -118,7 +118,7 @@ Key campaign settings (mirror LeadByte):
 #### Supplier
 Entity that sends leads (affiliate, publisher, call centre, ad network).
 
-#### Source (SID — Supplier ID)
+#### Source (SID - Supplier ID)
 Granular tracking ID per supplier traffic source. Passed on ingest.
 
 #### Sub-Supplier (SSID)
@@ -310,7 +310,7 @@ Implement as: `buyer_contracts.vertical_id` + campaign-level `vertical_routing_r
 
 ## 5. Lead Ingestion
 
-### 5.1 REST API (Primary — Mirror LeadByte)
+### 5.1 REST API (Primary - Mirror LeadByte)
 
 Two key types (exact LeadByte model):
 
@@ -346,7 +346,7 @@ Authorization: Bearer {api_key}
 
 **Response modes:**
 
-1. **Async (queued)** — default for high volume
+1. **Async (queued)** - default for high volume
 ```json
 {
   "status": "queued",
@@ -355,7 +355,7 @@ Authorization: Bearer {api_key}
 }
 ```
 
-2. **Live Buyer Response** (synchronous — LeadByte feature)
+2. **Live Buyer Response** (synchronous - LeadByte feature)
 ```json
 {
   "status": "sold",
@@ -538,7 +538,7 @@ This is the core differentiator. LeadByte combines **ping-post mechanism** with 
 
 Mirror LeadByte PingPost delivery:
 
-**Step 1 — Ping** (partial data):
+**Step 1 - Ping** (partial data):
 ```json
 POST {buyer_ping_url}
 {
@@ -549,7 +549,7 @@ POST {buyer_ping_url}
 }
 ```
 
-**Step 2 — Evaluate response:**
+**Step 2 - Evaluate response:**
 ```json
 {
   "Success": true,
@@ -559,7 +559,7 @@ POST {buyer_ping_url}
 ```
 Rules: `Success == true AND Cost >= floor_price` → proceed to post.
 
-**Step 3 — Post** (full data, interpolate ping response):
+**Step 3 - Post** (full data, interpolate ping response):
 ```json
 POST {buyer_post_url}
 {
@@ -613,7 +613,7 @@ Leads skip groups whose hybrid rules don't match (logged as `skipped_reason`).
 1. Quarantine for manual review or scheduled release
 2. Retry queue (re-run distribution after N minutes)
 3. Fallback waterfall (lower-priority fixed-price buyers)
-4. Email ping-post (partial data via email — LeadByte feature)
+4. Email ping-post (partial data via email - LeadByte feature)
 5. Remarketing (SMS/email nurture)
 
 ---
@@ -763,7 +763,7 @@ Advanced supplier payout: conditional rules for when NOT to pay.
 - Buyer portal card on file
 - Auto top-up when balance low
 - Deduct per sold lead
-- Credit via API (`Add Buyer credit via REST API` — LeadByte feature)
+- Credit via API (`Add Buyer credit via REST API` - LeadByte feature)
 - Block delivery when insufficient balance (configurable)
 
 ### 10.5 Returns
@@ -951,7 +951,7 @@ With standard response contract:
 
 ### 14.7 Consent API
 
-`Handling 1:1 Consent` — LeadByte feature for TCPA/GDPR:
+`Handling 1:1 Consent` - LeadByte feature for TCPA/GDPR:
 - Store consent artifact per lead
 - Expose consent proof in portal and API
 
@@ -1008,7 +1008,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 
 - `leads(campaign_id, received_at DESC)`
 - `leads(account_id, status, received_at)`
-- `dedupe_index(account_id, field_key, field_value_hash)` — critical for speed
+- `dedupe_index(account_id, field_key, field_value_hash)` - critical for speed
 - `delivery_logs(lead_id)`, `delivery_logs(delivery_id, created_at)`
 
 ---
@@ -1056,7 +1056,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 
 ## 18. Implementation Phases
 
-### Phase 1 — Foundation (Weeks 1–4)
+### Phase 1 - Foundation (Weeks 1–4)
 - [ ] Account, users, RBAC
 - [ ] Campaign CRUD + field schema
 - [ ] REST API ingest (admin + supplier keys)
@@ -1065,7 +1065,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 - [ ] Delivery logs
 - [ ] Lead search + status
 
-### Phase 2 — Distribution Core (Weeks 5–8)
+### Phase 2 - Distribution Core (Weeks 5–8)
 - [ ] Distribution engine interface
 - [ ] Waterfall / priority routing
 - [ ] PingPost delivery (ping → evaluate → post)
@@ -1074,7 +1074,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 - [ ] Caps (campaign, buyer, delivery)
 - [ ] Live buyer response (sync mode)
 
-### Phase 3 — Advanced Routing (Weeks 9–12)
+### Phase 3 - Advanced Routing (Weeks 9–12)
 - [ ] Advanced distribution UI + config
 - [ ] Hybrid groups + hybrid rule groups
 - [ ] Weighted + round-robin
@@ -1083,7 +1083,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 - [ ] On success/failure delivery chains
 - [ ] Quarantine + reprocess API
 
-### Phase 4 — Network & Money (Weeks 13–16)
+### Phase 4 - Network & Money (Weeks 13–16)
 - [ ] Buyer + supplier entities, SID/SSID
 - [ ] Supplier payout rules
 - [ ] Revenue types (fixed, dynamic, rule-based)
@@ -1092,7 +1092,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 - [ ] Stripe billing + credit
 - [ ] Returns + feedback API
 
-### Phase 5 — Scale & Verticals (Weeks 17–20)
+### Phase 5 - Scale & Verticals (Weeks 17–20)
 - [ ] Vertical registry + field templates
 - [ ] Validation service plugins (HLR, email, IP)
 - [ ] Suppression campaigns + hashed lists
@@ -1101,7 +1101,7 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 - [ ] Reporting API + dashboards
 - [ ] Email/SMS responders + bulk SMS
 
-### Phase 6 — Integrations (Weeks 21–24)
+### Phase 6 - Integrations (Weeks 21–24)
 - [ ] Facebook/Google/TikTok lead sync
 - [ ] Form builder + domain lock
 - [ ] Email ping-post
@@ -1129,10 +1129,10 @@ lead_returns (id, lead_id, buyer_id, reason, status)
 
 ### Key Libraries
 
-- `libphonenumber` — phone validation
-- `guzzle` / `axios` — HTTP delivery
-- `jsonpath` — dynamic response parsing
-- `bull` / Laravel queues — job processing
+- `libphonenumber` - phone validation
+- `guzzle` / `axios` - HTTP delivery
+- `jsonpath` - dynamic response parsing
+- `bull` / Laravel queues - job processing
 
 ---
 
@@ -1225,7 +1225,7 @@ utm_source, utm_medium, utm_campaign, utm_content, utm_term
 
 ### Multi-Tenancy (Partner Platforms)
 
-- `accounts` table — each row is an isolated partner platform
+- `accounts` table - each row is an isolated partner platform
 - `BelongsToAccount` global scope + `AccountContext` for request/job scoping
 - Super admin can switch platforms via `/accounts` UI
 - API keys scoped to `account_id`; supplier keys locked to `supplier_id`
@@ -1259,4 +1259,4 @@ utm_source, utm_medium, utm_campaign, utm_content, utm_term
 
 ---
 
-*Document version: 1.1 — mirrors LeadByte platform structure as of 2026. Use as the single source of truth for engineering, product, and integration work.*
+*Document version: 1.1 - mirrors LeadByte platform structure as of 2026. Use as the single source of truth for engineering, product, and integration work.*

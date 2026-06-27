@@ -7,6 +7,7 @@ const props = defineProps({
     steps: Array,
     multiStep: Boolean,
     submitUrl: String,
+    statusUrl: String,
     thankYou: Object,
     submitted: Boolean,
     submission: Object,
@@ -84,14 +85,95 @@ const notifyParent = () => {
 };
 
 watch(() => props.submitted, (value) => {
-    if (value) notifyParent();
+    if (value) {
+        notifyParent();
+        if (isPollRedirectMode.value && props.submission?.uuid) {
+            startPolling();
+        }
+    }
 }, { immediate: true });
 
-const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti ?? true) && !props.embed);
+const isPollRedirectMode = computed(() => props.thankYou?.mode === 'poll_redirect');
+const isProcessing = ref(false);
+const pollComplete = ref(false);
+const pollError = ref(null);
+
+const showThankYou = computed(() => props.submitted && (!isPollRedirectMode.value || pollComplete.value));
+const showProcessing = computed(() => props.submitted && isPollRedirectMode.value && isProcessing.value && !pollComplete.value);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const resolveStatusUrl = (uuid) => (props.statusUrl ?? '').replace('__UUID__', uuid);
+
+const redirectTo = (url) => {
+    if (!url) return;
+    window.location.assign(url);
+};
+
+const startPolling = async () => {
+    const uuid = props.submission?.uuid;
+    if (!uuid || !props.statusUrl) return;
+
+    isProcessing.value = true;
+    pollComplete.value = false;
+    pollError.value = null;
+
+    const interval = props.thankYou?.poll_interval_ms ?? 1500;
+    const maxAttempts = props.thankYou?.poll_max_attempts ?? 40;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+            const response = await fetch(resolveStatusUrl(uuid), {
+                headers: { Accept: 'application/json' },
+            });
+
+            if (!response.ok) {
+                throw new Error('Status check failed');
+            }
+
+            const data = await response.json();
+
+            if (data.redirect_url) {
+                redirectTo(data.redirect_url);
+                return;
+            }
+
+            if (data.terminal) {
+                if (data.decline_url) {
+                    redirectTo(data.decline_url);
+                    return;
+                }
+
+                if (props.thankYou?.fallback_redirect_url) {
+                    redirectTo(props.thankYou.fallback_redirect_url);
+                    return;
+                }
+
+                isProcessing.value = false;
+                pollComplete.value = true;
+                return;
+            }
+        } catch {
+            pollError.value = 'We could not confirm your application status. Please try again in a moment.';
+            break;
+        }
+
+        await sleep(interval);
+    }
+
+    isProcessing.value = false;
+    if (!pollComplete.value && !pollError.value) {
+        pollError.value = 'This is taking longer than expected. You can close this page — we will email you if we need anything else.';
+        pollComplete.value = true;
+    }
+};
+
+const showConfetti = computed(() => showThankYou.value && (props.thankYou?.confetti ?? true) && !props.embed);
+const showSubmitAnother = computed(() => props.thankYou?.show_submit_another ?? true);
 </script>
 
 <template>
-    <Head :title="submitted ? thankYou?.title ?? 'Thank you' : form.name" />
+    <Head :title="showThankYou ? thankYou?.title ?? 'Thank you' : form.name" />
     <div
         :class="[
             'relative min-h-dvh overflow-hidden',
@@ -105,9 +187,27 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
         </div>
 
         <div :class="['relative z-20 mx-auto', embed ? 'max-w-full' : 'max-w-lg']">
+            <!-- Processing (poll & redirect) -->
+            <div
+                v-if="showProcessing"
+                class="thank-you-card rounded-2xl border border-indigo-200 bg-white p-6 text-center shadow-xl sm:p-8 dark:border-indigo-900/50 dark:bg-slate-900"
+            >
+                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40">
+                    <svg class="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ thankYou?.processing_title ?? 'Processing your application…' }}</h1>
+                <p class="mt-3 text-slate-600 dark:text-slate-400">{{ thankYou?.processing_message ?? 'Please wait while we match you with a provider.' }}</p>
+                <p v-if="thankYou?.show_reference && submission?.queue_id" class="mt-4 rounded-lg bg-slate-50 px-4 py-3 font-mono text-xs text-slate-500 dark:bg-slate-800">
+                    Reference: {{ submission.queue_id }}
+                </p>
+            </div>
+
             <!-- Thank you screen -->
             <div
-                v-if="submitted"
+                v-else-if="showThankYou"
                 class="thank-you-card rounded-2xl border border-emerald-200 bg-white p-6 text-center shadow-xl sm:p-8 dark:border-emerald-900/50 dark:bg-slate-900"
             >
                 <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
@@ -117,10 +217,12 @@ const showConfetti = computed(() => props.submitted && (props.thankYou?.confetti
                 </div>
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ thankYou?.title ?? 'Thank you!' }}</h1>
                 <p class="mt-3 text-slate-600 dark:text-slate-400">{{ thankYou?.message }}</p>
+                <p v-if="pollError" class="mt-3 text-sm text-amber-700 dark:text-amber-300">{{ pollError }}</p>
                 <p v-if="thankYou?.show_reference && submission?.queue_id" class="mt-4 rounded-lg bg-slate-50 px-4 py-3 font-mono text-xs text-slate-500 dark:bg-slate-800">
                     Reference: {{ submission.queue_id }}
                 </p>
                 <button
+                    v-if="showSubmitAnother"
                     type="button"
                     class="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500"
                     @click="resetForm"

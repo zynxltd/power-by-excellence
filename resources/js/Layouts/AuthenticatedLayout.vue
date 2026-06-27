@@ -33,14 +33,14 @@ provide('isNavigating', isNavigating);
                 (impersonated by {{ impersonator.name }}).
             </template>
             <template v-else>
-                God mode — viewing <strong>{{ page.props.auth.account?.display_name ?? 'tenant platform' }}</strong> as super admin.
+                God mode - viewing <strong>{{ page.props.auth.account?.display_name ?? 'tenant platform' }}</strong> as super admin.
             </template>
             <AppButton :href="route('impersonate.stop')" method="post" class="inline-flex shrink-0" variant="secondary">
                 {{ impersonator ? 'End impersonation' : 'Exit god mode' }}
             </AppButton>
         </div>
         <AdminTopNav />
-        <main class="mx-auto max-w-[1600px] p-3 sm:p-4 lg:p-5">
+        <main class="mx-auto max-w-[1600px] overflow-x-clip p-3 sm:p-4 lg:p-5">
             <LiveStatsBar v-if="showLiveStats" />
             <BillingAlert />
             <slot />

@@ -148,10 +148,10 @@ class AccountController extends Controller
 
         if (! TenantResolver::isCentralHost($request->getHost())) {
             return redirect()->away(TenantResolver::centralUrl('/dashboard'))
-                ->with('success', 'Returned to central admin — all platforms visible.');
+                ->with('success', 'Returned to central admin - all platforms visible.');
         }
 
-        return back()->with('success', 'Returned to central admin — all platforms visible.');
+        return back()->with('success', 'Returned to central admin - all platforms visible.');
     }
 
     public function visit(Request $request, int $accountId): RedirectResponse|HttpResponse

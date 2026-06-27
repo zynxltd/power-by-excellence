@@ -63,39 +63,34 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_profile_account_deletion_is_disabled_for_all_users(): void
     {
-        $user = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $account = \App\Models\Account::create([
+            'name' => 'Test Platform',
+            'slug' => 'test-platform',
+            'default_currency' => 'GBP',
+            'default_country' => 'GB',
+        ]);
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
+        $roles = [
+            UserRole::SuperAdmin,
+            UserRole::AccountAdmin,
+            UserRole::BuyerPortal,
+            UserRole::SupplierPortal,
+        ];
+
+        foreach ($roles as $role) {
+            $user = User::factory()->create([
+                'role' => $role,
+                'account_id' => $role === UserRole::SuperAdmin ? null : $account->id,
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
+            $this->actingAs($user)
+                ->from('/profile')
+                ->delete('/profile', ['password' => 'password'])
+                ->assertForbidden();
 
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
-
-    public function test_correct_password_must_be_provided_to_delete_account(): void
-    {
-        $user = User::factory()->create(['role' => UserRole::SuperAdmin]);
-
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->fresh());
+            $this->assertNotNull($user->fresh());
+        }
     }
 }

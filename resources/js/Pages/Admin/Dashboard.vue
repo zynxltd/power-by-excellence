@@ -75,7 +75,7 @@ const statLinks = computed(() => {
     { label: 'Unsold Today', value: stats.value.unsold_today, href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
     {
         label: showMultiCurrencyRevenue.value ? 'Revenue today' : 'Revenue Today',
-        title: showMultiCurrencyRevenue.value ? 'Shown per currency — campaigns may use different markets' : undefined,
+        title: showMultiCurrencyRevenue.value ? 'Shown per currency - campaigns may use different markets' : undefined,
         value: showMultiCurrencyRevenue.value
             ? formatMoneyMulti(revenueByCurrency.value, { decimals: 2 })
             : formatMoney(stats.value.revenue_today ?? 0),
@@ -96,18 +96,18 @@ const switchToTenant = (accountId) => {
 <template>
     <Head title="Dashboard" />
     <AuthenticatedLayout>
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Platform Overview</h1>
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <h1 class="text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-white">Platform Overview</h1>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin — all partner platforms' }}
+                    {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin - all partner platforms' }}
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <AppButton v-if="isSuperAdmin" :href="route('accounts.index')" variant="secondary">Platforms</AppButton>
-                <AppButton v-else :href="route('settings.edit')" variant="secondary">Platform settings</AppButton>
-                <AppButton :href="route('operations.index')" variant="secondary">Live ops</AppButton>
-                <AppButton v-if="canCreateCampaign" :href="route('campaigns.create')">New campaign</AppButton>
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                <AppButton v-if="isSuperAdmin" :href="route('accounts.index')" variant="secondary" class="flex-1 sm:flex-none">Platforms</AppButton>
+                <AppButton v-else :href="route('settings.edit')" variant="secondary" class="flex-1 sm:flex-none">Platform settings</AppButton>
+                <AppButton :href="route('operations.index')" variant="secondary" class="flex-1 sm:flex-none">Live ops</AppButton>
+                <AppButton v-if="canCreateCampaign" :href="route('campaigns.create')" class="flex-1 sm:flex-none">New campaign</AppButton>
             </div>
         </div>
 
@@ -123,6 +123,64 @@ const switchToTenant = (accountId) => {
                     </p>
                 </div>
             </template>
+            <div class="divide-y divide-slate-100 md:hidden dark:divide-slate-800">
+                <div
+                    v-for="tenant in tenantOverview.data"
+                    :key="`mobile-${tenant.id}`"
+                    :class="[
+                        'px-3 py-3',
+                        tenant.is_active ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : '',
+                    ]"
+                >
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ tenant.name }}</p>
+                            <p class="truncate text-[10px] text-slate-500">{{ tenant.slug }}</p>
+                        </div>
+                        <span
+                            v-if="tenant.is_active"
+                            class="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                        >
+                            Active
+                        </span>
+                    </div>
+                    <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                        <div class="rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Campaigns</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-900 dark:text-white">{{ tenant.campaigns_count }}</dd>
+                        </div>
+                        <div class="rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Leads today</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-900 dark:text-white">{{ tenant.leads_today }}</dd>
+                        </div>
+                        <div class="rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Buyers</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-900 dark:text-white">{{ tenant.buyers_count }}</dd>
+                        </div>
+                        <div class="rounded-lg bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Suppliers</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-900 dark:text-white">{{ tenant.suppliers_count }}</dd>
+                        </div>
+                    </dl>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button
+                            v-if="!tenant.is_active"
+                            type="button"
+                            class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                            @click="switchToTenant(tenant.id)"
+                        >
+                            Switch to platform
+                        </button>
+                        <Link
+                            :href="route('campaigns.index')"
+                            class="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400"
+                        >
+                            Campaigns
+                        </Link>
+                    </div>
+                </div>
+            </div>
+            <div class="hidden md:block">
             <DataTable :empty="!tenantOverview?.data?.length" :loading="isNavigating">
                 <template #head>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">Platform</th>
@@ -161,6 +219,7 @@ const switchToTenant = (accountId) => {
                     </td>
                 </tr>
             </DataTable>
+            </div>
             <Pagination :links="tenantOverview.links" />
         </Panel>
 
@@ -191,7 +250,7 @@ const switchToTenant = (accountId) => {
             <Panel class="lg:col-span-8">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume — {{ chartDaysLocal }} days</h3>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume - {{ chartDaysLocal }} days</h3>
                         <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
                             <button
                                 v-for="d in [7, 14, 30]"
@@ -217,7 +276,7 @@ const switchToTenant = (accountId) => {
             <Panel class="lg:col-span-4">
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <h3 class="font-semibold text-slate-900 dark:text-white">Status breakdown — {{ chartDaysLocal }} days</h3>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Status breakdown - {{ chartDaysLocal }} days</h3>
                     </div>
                 </template>
                 <DonutChart :items="charts.status_breakdown" :drilldown-route="route('leads.index')" :period-days="chartDaysLocal" />
@@ -237,7 +296,7 @@ const switchToTenant = (accountId) => {
                 <ClickableTableRow v-for="lead in recentLeads.data" :key="lead.id" :href="route('leads.show', lead.id)">
                     <td class="whitespace-nowrap px-6 py-4 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 8) }}…</td>
                     <td v-if="showTenantColumn" class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {{ lead.account?.brand_name || lead.account?.name || '—' }}
+                        {{ lead.account?.brand_name || lead.account?.name || '-' }}
                     </td>
                     <td class="px-6 py-4 text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="lead.status" /></td>

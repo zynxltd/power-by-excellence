@@ -6,6 +6,12 @@ import { computed } from 'vue';
 
 const page = usePage();
 const tenant = computed(() => page.props.tenant);
+const isCentralHost = computed(() => page.props.isCentralHost ?? true);
+
+/** Central super-admin login keeps the marketing split; tenant portals get a focused sign-in card. */
+const showMarketingPanel = computed(() => isCentralHost.value && !tenant.value);
+
+const brandName = computed(() => tenant.value?.display_name ?? tenant.value?.name ?? 'PowerByExcellence');
 
 const highlights = [
     'Real-time ping-tree distribution',
@@ -16,7 +22,49 @@ const highlights = [
 </script>
 
 <template>
-    <div class="flex min-h-dvh">
+    <!-- Tenant portal: centered card -->
+    <div
+        v-if="!showMarketingPanel"
+        class="relative flex min-h-dvh flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100"
+    >
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="absolute -left-24 top-0 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
+            <div class="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-violet-100/50 blur-3xl" />
+        </div>
+
+        <div class="relative flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6">
+            <div class="w-full max-w-[26rem]">
+                <div class="mb-8 flex justify-center">
+                    <Link href="/" class="inline-flex">
+                        <BrandLogo
+                            size="lg"
+                            variant="dark"
+                            :logo-url="tenant?.logo_url"
+                            :brand-name="brandName"
+                        />
+                    </Link>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-xl shadow-slate-200/60 backdrop-blur-sm sm:p-8">
+                    <div
+                        v-if="$slots.header"
+                        class="mb-6 text-center sm:mb-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-slate-900 [&_p]:mt-2 [&_p]:text-sm [&_p]:text-slate-500"
+                    >
+                        <slot name="header" />
+                    </div>
+                    <slot />
+                </div>
+
+                <p class="mt-6 text-center text-xs text-slate-400">
+                    &copy; {{ new Date().getFullYear() }} {{ brandName }}. All rights reserved.
+                </p>
+            </div>
+        </div>
+        <ToastHost />
+    </div>
+
+    <!-- Central host: split marketing + form -->
+    <div v-else class="flex min-h-dvh">
         <!-- Brand panel -->
         <div class="relative hidden w-[45%] overflow-hidden bg-slate-950 lg:flex lg:flex-col lg:justify-between">
             <div class="pointer-events-none absolute inset-0">

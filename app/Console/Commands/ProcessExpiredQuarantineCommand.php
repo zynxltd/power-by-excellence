@@ -29,7 +29,7 @@ class ProcessExpiredQuarantineCommand extends Command
             if ($this->shouldRejectOnExpiry($lead)) {
                 $lead->update([
                     'status' => LeadStatus::Rejected,
-                    'reject_reason' => 'Quarantine hold expired — validation not resolved',
+                    'reject_reason' => 'Quarantine hold expired - validation not resolved',
                     'quarantined_until' => null,
                 ]);
                 PlatformLogger::leadEvent($lead, 'lead.quarantine_expired', 'Rejected after hold expired', [

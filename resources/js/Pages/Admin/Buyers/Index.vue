@@ -45,7 +45,7 @@ const buyersStrip = computed(() => [
 <template>
     <Head title="Buyers" />
     <AuthenticatedLayout>
-        <PageHeader title="Buyers" description="Lead buyers — credit, deliveries, caps, and buyer portal access.">
+        <PageHeader title="Buyers" description="Lead buyers - credit, deliveries, caps, and buyer portal access.">
             <template #actions>
                 <AppButton :href="route('deliveries.index')" variant="secondary">Deliveries</AppButton>
                 <AppButton :href="route('buyers.create')">New Buyer</AppButton>
@@ -81,7 +81,7 @@ const buyersStrip = computed(() => [
                 <ClickableTableRow v-for="b in buyers.data" :key="b.id" :href="route('buyers.show', b.id)">
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ b.name }}</td>
                     <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ b.reference }}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ b.email || '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ b.email || '-' }}</td>
                     <td class="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">{{ formatBuyerCredit(b) }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ b.deliveries_count ?? 0 }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ b.leads_count ?? 0 }}</td>

@@ -40,7 +40,7 @@ const logStatStrip = computed(() => [
     <AuthenticatedLayout>
         <PageHeader
             title="Delivery Logs"
-            description="Ping-post and direct delivery audit trail — filter, drill down, and inspect request/response payloads."
+            description="Ping-post and direct delivery audit trail - filter, drill down, and inspect request/response payloads."
         >
             <template #actions>
                 <AppButton :href="route('operations.index')" variant="secondary">Live Operations</AppButton>
@@ -79,7 +79,7 @@ const logStatStrip = computed(() => [
                 </template>
                 <ClickableTableRow v-for="log in logs.data" :key="log.id" :href="route('logs.delivery.show', log.id)">
                     <td class=""><FormattedDate :value="log.created_at" /></td>
-                    <td class="text-xs text-slate-900 dark:text-white">{{ log.delivery ?? '—' }}</td>
+                    <td class="text-xs text-slate-900 dark:text-white">{{ log.delivery ?? '-' }}</td>
                     <td class="">
                         <span class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ log.lead_uuid?.slice(0, 10) }}…</span>
                         <p class="text-xs text-slate-500">{{ log.campaign }}</p>
@@ -88,8 +88,8 @@ const logStatStrip = computed(() => [
                         <span :class="['rounded-full px-2 py-0.5 text-xs font-medium', log.method === 'ping-post' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800']">{{ log.method }}</span>
                     </td>
                     <td class=""><StatusBadge :status="log.status" /></td>
-                    <td class="font-mono text-xs" :class="log.duration_ms > 1500 ? 'text-rose-600' : 'text-slate-600'">{{ log.duration_ms ?? '—' }}</td>
-                    <td class="text-sm font-medium">{{ log.revenue ? formatMoney(log.revenue) : '—' }}</td>
+                    <td class="font-mono text-xs" :class="log.duration_ms > 1500 ? 'text-rose-600' : 'text-slate-600'">{{ log.duration_ms ?? '-' }}</td>
+                    <td class="text-sm font-medium">{{ log.revenue ? formatMoney(log.revenue) : '-' }}</td>
                 </ClickableTableRow>
             </DataTable>
             <Pagination :links="logs.links" />

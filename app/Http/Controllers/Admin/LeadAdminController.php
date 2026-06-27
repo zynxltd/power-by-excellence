@@ -120,7 +120,7 @@ class LeadAdminController extends Controller
             || ! empty($lead->metadata['email_validation'])
             || ! empty($lead->metadata['hlr_validation'])
             || ! empty($lead->metadata['field_validation'])) {
-            abort(422, 'Validation holds must be rejected — they cannot be released back into distribution.');
+            abort(422, 'Validation holds must be rejected - they cannot be released back into distribution.');
         }
 
         $lead->update(['status' => LeadStatus::Accepted, 'quarantined_until' => null]);
@@ -153,7 +153,7 @@ class LeadAdminController extends Controller
         if ($lead->status === LeadStatus::Quarantined) {
             $reason = $lead->metadata['quarantine_reason'] ?? null;
             if ($reason === 'validation') {
-                return back()->with('error', 'Validation holds must be released or rejected — not reposted.');
+                return back()->with('error', 'Validation holds must be released or rejected - not reposted.');
             }
         }
 
@@ -402,16 +402,16 @@ class LeadAdminController extends Controller
 
         $hints = [];
         if (($deliveryStats['outbid'] ?? 0) > 0) {
-            $hints[] = $deliveryStats['outbid'].' buyer(s) outbid — bid below winning price or floor.';
+            $hints[] = $deliveryStats['outbid'].' buyer(s) outbid - bid below winning price or floor.';
         }
         if (($deliveryStats['failed'] ?? 0) > 0) {
-            $hints[] = $deliveryStats['failed'].' delivery attempt(s) failed — check buyer API logs.';
+            $hints[] = $deliveryStats['failed'].' delivery attempt(s) failed - check buyer API logs.';
         }
         if (($deliveryStats['skipped'] ?? 0) > 0) {
-            $hints[] = $deliveryStats['skipped'].' delivery attempt(s) skipped — caps, filters, or schedule.';
+            $hints[] = $deliveryStats['skipped'].' delivery attempt(s) skipped - caps, filters, or schedule.';
         }
         if ($lead->deliveryLogs->isEmpty() && $status === 'unsold') {
-            $hints[] = 'No buyers were pinged — check ping tree tiers and delivery eligibility.';
+            $hints[] = 'No buyers were pinged - check ping tree tiers and delivery eligibility.';
         }
 
         return match ($status) {

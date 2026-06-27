@@ -79,7 +79,7 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
 
         <Panel class="mb-6" title="How this connects">
             <p class="text-sm text-slate-600 dark:text-slate-400">
-                This integration uses <strong>webhook push</strong> — {{ meta.name }} (or a tool like Zapier/Make) POSTs lead data to your platform.
+                This integration uses <strong>webhook push</strong> - {{ meta.name }} (or a tool like Zapier/Make) POSTs lead data to your platform.
                 There is no in-app OAuth “Connect with Google” button; you configure the webhook or ingest URL in the ad platform or automation tool.
             </p>
             <p v-if="meta.oauth === false && provider === 'facebook'" class="mt-2 text-sm text-slate-600 dark:text-slate-400">
@@ -108,7 +108,7 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                     <div>
                         <InputLabel value="Target campaign" />
                         <select v-model="form.campaign_id" class="form-select mt-1 w-full">
-                            <option value="">— Select campaign —</option>
+                            <option value="">- Select campaign -</option>
                             <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }} ({{ c.reference }})</option>
                         </select>
                         <InputError class="mt-1" :message="form.errors.campaign_id" />

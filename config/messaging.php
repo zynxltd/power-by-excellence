@@ -14,6 +14,23 @@ return [
 
     'sms_provider' => env('MESSAGING_SMS_PROVIDER', 'log'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Signup phone verification
+    |--------------------------------------------------------------------------
+    |
+    | When null, phone verification is required only when a live SMS provider
+    | (Twilio/Vonage) is configured. The "log" driver does not send real texts.
+    | Set SIGNUP_PHONE_VERIFICATION=true|false to override auto-detection.
+    |
+    */
+
+    'phone_verification_enabled' => env('SIGNUP_PHONE_VERIFICATION'),
+
+    'email_verification_enabled' => env('SIGNUP_EMAIL_VERIFICATION', false),
+
+    'address_verification_enabled' => env('SIGNUP_ADDRESS_VERIFICATION', false),
+
     'email_provider' => env('MESSAGING_EMAIL_PROVIDER', 'smtp'),
 
     'twilio' => [

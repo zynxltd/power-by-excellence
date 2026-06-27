@@ -227,7 +227,7 @@ const methodClass = (method) => ({
                             <li>Receive <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202 Accepted</code> with <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">lead_id</code> and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">queue_id</code>.</li>
                             <li>Poll <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /leads/{lead_id}</code> until status is terminal (<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">sold</code>, <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">unsold</code>, <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">rejected</code>, etc.).</li>
                             <li>When <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">sold</code>, use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">redirect_url</code> for consumer thank-you pages and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">revenue</code> for reconciliation.</li>
-                            <li>Running your own portal? Use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /platform</code> (<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">platform.read</code>) to sync campaigns, buyers, and routing — see the <strong>Platform export</strong> tab.</li>
+                            <li>Running your own portal? Use <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">GET /platform</code> (<code class="rounded bg-slate-100 px-1 dark:bg-slate-800">platform.read</code>) to sync campaigns, buyers, and routing - see the <strong>Platform export</strong> tab.</li>
                         </ol>
                     </Panel>
 
@@ -287,12 +287,12 @@ const methodClass = (method) => ({
 
                     <Panel title="HTTP response codes">
                         <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202</code> — Lead accepted and queued (async ingest)</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">200</code> — Sync ingest finished, or status poll succeeded</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">401</code> — Missing, invalid, or expired API key</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">403</code> — Key lacks required permission scope</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">422</code> — Validation failed — field errors in JSON body</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">429</code> — Rate limit exceeded — back off and retry</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202</code> - Lead accepted and queued (async ingest)</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">200</code> - Sync ingest finished, or status poll succeeded</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">401</code> - Missing, invalid, or expired API key</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">403</code> - Key lacks required permission scope</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">422</code> - Validation failed - field errors in JSON body</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">429</code> - Rate limit exceeded - back off and retry</li>
                         </ul>
                     </Panel>
                 </div>
@@ -302,7 +302,7 @@ const methodClass = (method) => ({
                     <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                         <div>
                             <p class="text-sm font-semibold text-slate-900 dark:text-white">Test mode in examples</p>
-                            <p class="mt-0.5 text-sm text-slate-500">Includes <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">"test": true</code> — validates without live buyer delivery.</p>
+                            <p class="mt-0.5 text-sm text-slate-500">Includes <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">"test": true</code> - validates without live buyer delivery.</p>
                         </div>
                         <label class="flex cursor-pointer items-center gap-3">
                             <span class="text-sm font-medium" :class="testMode ? 'text-emerald-600' : 'text-rose-500'">
@@ -368,7 +368,7 @@ const methodClass = (method) => ({
                                     <tr>
                                         <td class="px-3 py-2 font-mono text-xs">test</td>
                                         <td class="px-3 py-2">No</td>
-                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">When true, validates only — no buyer pings, postbacks, or billing.</td>
+                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">When true, validates only - no buyer pings, postbacks, or billing.</td>
                                     </tr>
                                     <tr>
                                         <td class="px-3 py-2 font-mono text-xs">sync</td>
@@ -378,12 +378,12 @@ const methodClass = (method) => ({
                                     <tr>
                                         <td class="px-3 py-2 font-mono text-xs">source</td>
                                         <td class="px-3 py-2">No</td>
-                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">Supplier tracking label — appears in reports and lead metadata.</td>
+                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">Supplier tracking label - appears in reports and lead metadata.</td>
                                     </tr>
                                     <tr>
                                         <td class="px-3 py-2 font-mono text-xs">+ campaign fields</td>
                                         <td class="px-3 py-2">Per spec</td>
-                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">See Campaign schemas tab — each campaign defines required lead fields.</td>
+                                        <td class="px-3 py-2 text-slate-600 dark:text-slate-400">See Campaign schemas tab - each campaign defines required lead fields.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -470,14 +470,14 @@ const methodClass = (method) => ({
                         <div class="space-y-3 text-sm text-slate-600 dark:text-slate-400">
                             <p>
                                 <strong class="text-slate-900 dark:text-white">reject_reason</strong> on the status API is only populated when the lead fails
-                                <em>before</em> or <em>during</em> platform validation — duplicate email, campaign cap, suppression list, invalid phone, inactive campaign, etc.
+                                <em>before</em> or <em>during</em> platform validation - duplicate email, campaign cap, suppression list, invalid phone, inactive campaign, etc.
                             </p>
                             <p>
                                 When a <strong>buyer</strong> rejects a ping or post during routing, the lead may still finish as
                                 <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">unsold</code>. The buyer's message is stored in
                                 <Link :href="route('logs.delivery')" class="text-indigo-600 hover:underline">Delivery Logs</Link>
                                 under <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">ping_response</code> or
-                                <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">post_response</code> — not in reject_reason.
+                                <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">post_response</code> - not in reject_reason.
                             </p>
                         </div>
                     </Panel>
@@ -492,6 +492,15 @@ const methodClass = (method) => ({
                             <li>Delivery config <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">accept_url</code> (fallback)</li>
                         </ol>
                     </Panel>
+
+                    <Panel title="decline_url resolution">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            When <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">status</code> is <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">unsold</code> or <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">quarantined</code> after all ping-tree tiers pass, <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">decline_url</code> is returned when configured on the ping tree (final “No tier accepts” step).
+                        </p>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                            Use it to send consumers to a fallback or “sorry, no match” page. Tracked via the same <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">/r/{lead_id}</code> redirect endpoint as sold thank-you URLs.
+                        </p>
+                    </Panel>
                 </div>
 
                 <!-- Campaign schemas -->
@@ -504,7 +513,7 @@ const methodClass = (method) => ({
                             <div class="min-w-[14rem] flex-1">
                                 <label class="text-xs font-semibold uppercase text-slate-500">Campaign</label>
                                 <select v-model="campaignId" class="form-select mt-1 w-full">
-                                    <option value="">— Select campaign —</option>
+                                    <option value="">- Select campaign -</option>
                                     <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }} ({{ c.reference }})</option>
                                 </select>
                             </div>
@@ -554,7 +563,7 @@ const methodClass = (method) => ({
                                             <span v-if="field.required" class="mr-1 text-rose-500">required</span>
                                             <span v-if="field.ping_field" class="text-indigo-500">ping</span>
                                         </td>
-                                        <td class="px-4 py-2 font-mono text-xs text-slate-500">{{ field.example ?? '—' }}</td>
+                                        <td class="px-4 py-2 font-mono text-xs text-slate-500">{{ field.example ?? '-' }}</td>
                                     </tr>
                                 </tbody>
                             </table>

@@ -118,7 +118,7 @@ const submit = () => {
                         <div>
                             <InputLabel value="Default country" />
                             <select v-model="form.default_country" class="form-select">
-                                <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} — {{ label }}</option>
+                                <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} - {{ label }}</option>
                             </select>
                             <InputError class="mt-1" :message="form.errors.default_country" />
                         </div>

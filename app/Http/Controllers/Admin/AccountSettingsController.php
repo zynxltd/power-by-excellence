@@ -23,8 +23,6 @@ class AccountSettingsController extends Controller
                 [
                     'require_buyer_prepay' => $account->settings['require_buyer_prepay'] ?? false,
                     'supplier_iframe_embed' => $account->settings['supplier_iframe_embed'] ?? false,
-                    'billing_status' => $account->settings['billing_status'] ?? 'active',
-                    'billing_due_at' => $account->settings['billing_due_at'] ?? null,
                     'billing_alert_emails' => $account->settings['billing_alert_emails'] ?? '',
                     'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
                 ]
@@ -46,8 +44,6 @@ class AccountSettingsController extends Controller
             'default_currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'require_buyer_prepay' => 'boolean',
             'supplier_iframe_embed' => 'boolean',
-            'billing_due_at' => 'nullable|date',
-            'billing_status' => 'nullable|in:active,locked',
             'billing_alert_emails' => 'nullable|string|max:500',
             'default_low_credit_alert' => 'nullable|numeric|min:0',
         ], $this->messages());
@@ -55,18 +51,8 @@ class AccountSettingsController extends Controller
         $settings = $account->settings ?? [];
         $settings['require_buyer_prepay'] = $validated['require_buyer_prepay'] ?? false;
         $settings['supplier_iframe_embed'] = $validated['supplier_iframe_embed'] ?? false;
-        $settings['billing_due_at'] = $validated['billing_due_at'] ?? null;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
         $settings['default_low_credit_alert'] = $validated['default_low_credit_alert'] ?? null;
-
-        if (isset($validated['billing_status'])) {
-            $settings['billing_status'] = $validated['billing_status'];
-            if ($validated['billing_status'] === 'locked') {
-                $settings['billing_locked_at'] = now()->toIso8601String();
-            } else {
-                unset($settings['billing_locked_at'], $settings['billing_lock_reason']);
-            }
-        }
 
         $account->update([
             'name' => $validated['name'],
@@ -74,7 +60,6 @@ class AccountSettingsController extends Controller
             'default_country' => $validated['default_country'],
             'default_currency' => $validated['default_currency'],
             'settings' => $settings,
-            'is_active' => ($settings['billing_status'] ?? 'active') !== 'locked',
         ]);
 
         return back()->with('success', 'Platform settings updated.');

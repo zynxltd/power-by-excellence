@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Services\Billing\AccountBillingService;
+use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,9 +21,19 @@ class TenantBillingController extends Controller
             ->get()
             ->map(fn (Account $account) => $this->billingRow($account, $billing));
 
+        $collection = collect($accounts);
+
         return Inertia::render('Admin/Accounts/Billing/Index', [
             'accounts' => $accounts,
             'currentAccountId' => session('current_account_id'),
+            'summary' => [
+                'total' => $collection->count(),
+                'active' => $collection->where('status', AccountBillingService::STATUS_ACTIVE)->count(),
+                'past_due' => $collection->where('status', AccountBillingService::STATUS_PAST_DUE)->count(),
+                'locked' => $collection->where('status', AccountBillingService::STATUS_LOCKED)->count(),
+                'total_mrr' => round($collection->sum(fn ($row) => (float) ($row['effective_monthly'] ?? 0)), 2),
+                'currency' => $collection->first()['currency'] ?? 'GBP',
+            ],
         ]);
     }
 
@@ -42,24 +53,20 @@ class TenantBillingController extends Controller
         $validated = $request->validate([
             'monthly_rent' => 'nullable|numeric|min:0',
             'contract_reference' => 'nullable|string|max:120',
-            'billing_due_at' => 'nullable|date',
             'billing_status' => 'required|in:active,past_due,locked',
             'billing_lock_reason' => 'nullable|string|max:500',
             'billing_notes' => 'nullable|string|max:2000',
             'billing_alert_emails' => 'nullable|string|max:500',
             'subscription_plan' => 'required|in:starter,growth,enterprise',
-            'fraud_protection_enabled' => 'boolean',
         ]);
 
         $settings = $account->settings ?? [];
         $settings = app(\App\Services\Billing\FraudProtectionService::class)->provisionSettingsForPlan(
             $settings,
             $validated['subscription_plan'],
-            $request->boolean('fraud_protection_enabled'),
         );
         $settings['monthly_rent'] = $validated['monthly_rent'] ?? null;
         $settings['contract_reference'] = $validated['contract_reference'] ?? null;
-        $settings['billing_due_at'] = $validated['billing_due_at'] ?? null;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
         $settings['billing_notes'] = $validated['billing_notes'] ?? null;
 
@@ -117,19 +124,23 @@ class TenantBillingController extends Controller
     {
         $settings = $account->settings ?? [];
         $summary = $billing->summary($account);
+        $branding = $account->publicBranding();
 
         return [
             'id' => $account->id,
-            'name' => $account->brand_name ?: $account->name,
+            'name' => $branding['display_name'] ?: $account->name,
             'slug' => $account->slug,
             'domain' => $account->resolvedDomain(),
+            'logo_url' => $branding['logo_url'],
+            'portal_url' => TenantResolver::portalUrl($account, '/dashboard'),
             'status' => $summary['status'],
-            'due_at' => $summary['due_at'],
             'monthly_rent' => $settings['monthly_rent'] ?? null,
+            'effective_monthly' => $this->effectiveMonthly($settings),
             'contract_reference' => $settings['contract_reference'] ?? null,
             'currency' => $account->default_currency,
             'is_active' => $account->is_active,
             'can_accept_leads' => $summary['can_accept_leads'],
+            'can_process_leads' => $summary['can_process_leads'],
             'subscription_plan' => $settings['subscription_plan'] ?? 'starter',
             'fraud_protection' => app(\App\Services\Billing\FraudProtectionService::class)->summary($account),
         ];
@@ -142,20 +153,22 @@ class TenantBillingController extends Controller
     {
         $settings = $account->settings ?? [];
         $summary = $billing->summary($account);
+        $branding = $account->publicBranding();
 
         return [
             'id' => $account->id,
-            'name' => $account->brand_name ?: $account->name,
+            'name' => $branding['display_name'] ?: $account->name,
             'slug' => $account->slug,
             'domain' => $account->resolvedDomain(),
+            'logo_url' => $branding['logo_url'],
+            'portal_url' => TenantResolver::portalUrl($account, '/dashboard'),
             'currency' => $account->default_currency,
             'status' => $summary['status'],
-            'due_at' => $summary['due_at'],
             'locked_at' => $summary['locked_at'],
             'lock_reason' => $summary['lock_reason'],
             'monthly_rent' => $settings['monthly_rent'] ?? '',
+            'effective_monthly' => $this->effectiveMonthly($settings),
             'contract_reference' => $settings['contract_reference'] ?? '',
-            'billing_due_at' => $settings['billing_due_at'] ?? '',
             'billing_status' => $summary['status'],
             'billing_lock_reason' => $settings['billing_lock_reason'] ?? '',
             'billing_notes' => $settings['billing_notes'] ?? '',
@@ -163,8 +176,16 @@ class TenantBillingController extends Controller
             'can_accept_leads' => $summary['can_accept_leads'],
             'can_process_leads' => $summary['can_process_leads'],
             'subscription_plan' => $settings['subscription_plan'] ?? 'starter',
-            'fraud_protection_enabled' => (bool) (($settings['fraud_protection'] ?? [])['enabled'] ?? false),
             'fraud_protection' => app(\App\Services\Billing\FraudProtectionService::class)->summary($account),
         ];
+    }
+
+    protected function effectiveMonthly(array $settings): ?float
+    {
+        if (! isset($settings['monthly_rent']) || $settings['monthly_rent'] === '') {
+            return null;
+        }
+
+        return round((float) $settings['monthly_rent'], 2);
     }
 }

@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-**Buyer schedules** restrict delivery to configured hours — essential when buyers operate call centres with fixed opening times or serve specific timezones. Outside scheduled windows, deliveries to that buyer are skipped with reason `outside_schedule`, and the lead may waterfall to the next eligible buyer in the tier.
+**Buyer schedules** restrict delivery to configured hours - essential when buyers operate call centres with fixed opening times or serve specific timezones. Outside scheduled windows, deliveries to that buyer are skipped with reason `outside_schedule`, and the lead may waterfall to the next eligible buyer in the tier.
 
 Schedules are evaluated at **ping time** by `ScheduleService`. An empty or disabled schedule means 24/7 availability.
 
@@ -25,7 +25,7 @@ Schedules are evaluated at **ping time** by `ScheduleService`. An empty or disab
 | Lunch break exclusion | Two windows per day (morning + afternoon) |
 | 24/7 buyer | Leave schedule empty or set `"day": "all"` |
 
-Schedules apply at the **buyer** level and can also be set per **delivery** — buyer schedule is the most common configuration.
+Schedules apply at the **buyer** level and can also be set per **delivery** - buyer schedule is the most common configuration.
 
 ---
 
@@ -90,7 +90,7 @@ Matching is case-insensitive.
 
 1. Navigate to **Buyers → Edit** the target buyer.
 2. Find the **Schedule** section (JSON editor or visual form depending on your UI).
-3. Set `timezone` to the buyer's operating timezone — **do not assume server timezone**.
+3. Set `timezone` to the buyer's operating timezone - **do not assume server timezone**.
 4. Add windows for each operating day with `start` and `end` in `HH:MM` 24-hour format.
 5. Save the buyer record.
 6. Open **Routing Simulator** and test with a lead at a time inside and outside the window.
@@ -114,7 +114,7 @@ Buyer operates 8 AM – 6 PM Eastern, Monday through Saturday:
 }
 ```
 
-Sunday is omitted — leads arriving Sunday skip this buyer entirely.
+Sunday is omitted - leads arriving Sunday skip this buyer entirely.
 
 ### Example: split shift (lunch break)
 
@@ -143,15 +143,15 @@ Repeat windows for each day as needed.
 
 - Delivery skipped with `skipped_reason: outside_schedule`.
 - Lead continues to next delivery in waterfall tier, or next tier if no eligible buyers remain.
-- Lead may sell to a different buyer — not lost unless entire tree is unavailable.
+- Lead may sell to a different buyer - not lost unless entire tree is unavailable.
 
 ### Disabled schedule
 
-Set `"enabled": false` or leave schedule empty/null — buyer accepts leads 24/7.
+Set `"enabled": false` or leave schedule empty/null - buyer accepts leads 24/7.
 
 ### Evaluation timing
 
-Schedule is checked at **ping time**, not at lead ingest time. A lead ingested at 11 PM may queue and ping at 9 AM when the buyer opens — if workers process immediately, it may still hit an closed buyer. Consider ingest timing for time-sensitive verticals.
+Schedule is checked at **ping time**, not at lead ingest time. A lead ingested at 11 PM may queue and ping at 9 AM when the buyer opens - if workers process immediately, it may still hit an closed buyer. Consider ingest timing for time-sensitive verticals.
 
 ---
 
@@ -163,7 +163,7 @@ Schedule is checked at **ping time**, not at lead ingest time. A lead ingested a
 |---------|-------------|
 | Omit timezone | Falls back to `app.timezone` (server default) |
 | Wrong timezone | Buyer pinged at 3 AM local or skipped during business hours |
-| DST not considered | Carbon handles DST in named timezones — use IANA names like `America/New_York`, not fixed offsets |
+| DST not considered | Carbon handles DST in named timezones - use IANA names like `America/New_York`, not fixed offsets |
 
 ### Step-by-step: verify timezone
 
@@ -181,13 +181,13 @@ Schedule is checked at **ping time**, not at lead ingest time. A lead ingested a
 1. Open **Routing Simulator** for the campaign using this buyer.
 2. Enter valid lead field values.
 3. Note current time in buyer's timezone.
-4. If inside window — delivery should show eligible.
-5. Temporarily adjust a window end to one minute ago, re-save buyer, re-simulate — should show `outside_schedule`.
+4. If inside window - delivery should show eligible.
+5. Temporarily adjust a window end to one minute ago, re-save buyer, re-simulate - should show `outside_schedule`.
 6. Restore correct schedule after test.
 
 ### Cross-midnight windows
 
-For overnight windows (e.g. 22:00 – 06:00), use two windows or `"day": "all"` with start > end carefully — the current engine compares `HH:MM` strings within the same calendar day. Overnight spans may need custom handling; test thoroughly.
+For overnight windows (e.g. 22:00 – 06:00), use two windows or `"day": "all"` with start > end carefully - the current engine compares `HH:MM` strings within the same calendar day. Overnight spans may need custom handling; test thoroughly.
 
 ---
 
@@ -195,27 +195,27 @@ For overnight windows (e.g. 22:00 – 06:00), use two windows or `"day": "all"` 
 
 ### Buyer complains about leads at night
 
-- Check schedule windows — missing `timezone` may use server TZ.
+- Check schedule windows - missing `timezone` may use server TZ.
 - Verify `"day": "all"` is not set with 24-hour range unintentionally.
-- Filter delivery logs by buyer and `outside_schedule` — if no rows, leads may be routing to a different buyer.
+- Filter delivery logs by buyer and `outside_schedule` - if no rows, leads may be routing to a different buyer.
 
 ### Buyer gets no leads during business hours
 
-- Timezone likely wrong — buyer in `America/Chicago` but schedule set to `Europe/London`.
+- Timezone likely wrong - buyer in `America/Chicago` but schedule set to `Europe/London`.
 - Window `start`/`end` reversed or typo (`17:00` start, `09:00` end).
-- Day name mismatch — lead arrives Tuesday but only Monday configured.
-- Buyer may be skipped for other reasons (eligibility, prepay) — check full `skipped_reason` in logs.
+- Day name mismatch - lead arrives Tuesday but only Monday configured.
+- Buyer may be skipped for other reasons (eligibility, prepay) - check full `skipped_reason` in logs.
 
 ### `outside_schedule` in logs but buyer insists they were open
 
 - Compare log timestamp (UTC) converted to buyer timezone against window.
-- Daylight saving transition days may shift effective hours — use IANA timezone names.
-- Delivery-level schedule may override buyer schedule — check both records.
+- Daylight saving transition days may shift effective hours - use IANA timezone names.
+- Delivery-level schedule may override buyer schedule - check both records.
 
 ### Schedule change not taking effect
 
 - Confirm buyer record saved successfully.
-- Cached delivery config is rare — retry with fresh lead ingest.
+- Cached delivery config is rare - retry with fresh lead ingest.
 - Check if delivery has its own `schedule` JSON overriding buyer defaults.
 
 ### Leads queue overnight then skip buyer at open
@@ -228,10 +228,10 @@ For overnight windows (e.g. 22:00 – 06:00), use two windows or `"day": "all"` 
 
 ## Tips
 
-- Set buyer `timezone` explicitly — do not assume server TZ.
+- Set buyer `timezone` explicitly - do not assume server TZ.
 - Test with **Routing Simulator** across midnight boundaries and DST transition dates.
 - Document buyer operating hours in the buyer record notes for support reference.
 - Pair schedules with tier waterfall so closed buyers fall through to 24/7 partners.
-- Review delivery logs weekly for `outside_schedule` volume — high counts may mean schedule misconfiguration or traffic arriving outside expected hours.
+- Review delivery logs weekly for `outside_schedule` volume - high counts may mean schedule misconfiguration or traffic arriving outside expected hours.
 MD,
 ];

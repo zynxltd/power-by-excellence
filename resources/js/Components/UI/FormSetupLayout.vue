@@ -12,7 +12,7 @@ const emit = defineEmits(['go']);
 </script>
 
 <template>
-    <div class="grid items-start gap-4 pt-4 lg:grid-cols-12 lg:gap-6 lg:pt-6">
+    <div class="grid gap-4 pt-4 lg:grid-cols-12 lg:gap-6 lg:pt-6">
         <div class="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
                 v-for="(s, i) in steps"
@@ -32,15 +32,17 @@ const emit = defineEmits(['go']);
             </button>
         </div>
 
-        <aside class="hidden space-y-4 lg:col-span-3 lg:block lg:sticky lg:top-32 lg:max-h-[calc(100vh-9rem)] lg:self-start lg:overflow-y-auto">
-            <FormStepSidebar
-                :steps="steps"
-                :current-step="currentStep"
-                :step-status="stepStatus"
-                :title="sidebarTitle"
-                @go="emit('go', $event)"
-            />
-            <slot name="sidebar" />
+        <aside class="hidden lg:col-span-3 lg:block">
+            <div class="sticky top-24 z-20 max-h-[calc(100vh-7rem)] space-y-4 overflow-y-auto overscroll-contain pr-1">
+                <FormStepSidebar
+                    :steps="steps"
+                    :current-step="currentStep"
+                    :step-status="stepStatus"
+                    :title="sidebarTitle"
+                    @go="emit('go', $event)"
+                />
+                <slot name="sidebar" />
+            </div>
         </aside>
 
         <div class="space-y-6 lg:col-span-9">

@@ -109,32 +109,32 @@ const userAgentPresets = [
     { id: 'current', label: 'This browser' },
     {
         id: 'chrome-mac',
-        label: 'Chrome — macOS',
+        label: 'Chrome - macOS',
         ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
     {
         id: 'chrome-win',
-        label: 'Chrome — Windows',
+        label: 'Chrome - Windows',
         ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
     {
         id: 'safari-mac',
-        label: 'Safari — macOS',
+        label: 'Safari - macOS',
         ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
     },
     {
         id: 'firefox-win',
-        label: 'Firefox — Windows',
+        label: 'Firefox - Windows',
         ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
     },
     {
         id: 'chrome-android',
-        label: 'Chrome — Android',
+        label: 'Chrome - Android',
         ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     },
     {
         id: 'safari-iphone',
-        label: 'Safari — iPhone',
+        label: 'Safari - iPhone',
         ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
     },
     {
@@ -179,7 +179,7 @@ const submit = () => {
     form.put(route('integrations.validation.update'), {
         preserveScroll: true,
         onSuccess: () => pushToast('Validation & fraud settings saved.', 'success'),
-        onError: () => pushToast('Could not save settings — check the form.', 'error'),
+        onError: () => pushToast('Could not save settings - check the form.', 'error'),
     });
 };
 
@@ -244,10 +244,10 @@ const runTest = () => {
                         v-if="showPlanUpgradeNotice"
                         class="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100"
                     >
-                        <p class="font-semibold">Fraud Detection add-on not active</p>
+                        <p class="font-semibold">Fraud Detection not included</p>
                         <p class="mt-1 text-violet-800 dark:text-violet-200">
                             Your {{ fraud.plan_label }} plan does not include live fraud checks.
-                            Add Fraud Detection (+£{{ fraud.addon_price }}/mo) or upgrade to Growth — contact your platform operator.
+                            Upgrade to Growth or Enterprise - contact your platform operator.
                         </p>
                         <p class="mt-2 text-xs text-violet-700 dark:text-violet-300">Demo validation still works for testing. Live fraud checks run only when entitled.</p>
                     </div>
@@ -255,9 +255,9 @@ const runTest = () => {
                         v-else-if="showAdminOverrideNotice"
                         class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-100"
                     >
-                        <p class="font-semibold">Super admin — all Fraud Detection features unlocked</p>
+                        <p class="font-semibold">Super admin - all Fraud Detection features unlocked</p>
                         <p class="mt-1 text-indigo-800 dark:text-indigo-200">
-                            This tenant is on {{ fraud.plan_label }} without a live fraud add-on. You can configure and test every check; tenant users still need an active plan or add-on.
+                            This tenant is on {{ fraud.plan_label }} without live fraud protection. You can configure and test every check; tenant users need Growth or Enterprise.
                         </p>
                     </div>
                     <div
@@ -271,7 +271,7 @@ const runTest = () => {
                         v-else
                         class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
                     >
-                        <p class="font-semibold">Fraud Detection active — {{ fraud.plan_label }}</p>
+                        <p class="font-semibold">Fraud Detection active - {{ fraud.plan_label }}</p>
                         <p class="mt-1">
                             {{ fraud.usage_count?.toLocaleString() }} / {{ fraud.monthly_cap ? fraud.monthly_cap.toLocaleString() : '∞' }} validated leads this month
                             <span v-if="fraud.included"> (included)</span>
@@ -309,7 +309,7 @@ const runTest = () => {
                                 v-if="!fraudSubscribed"
                                 class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-500/20 dark:text-amber-200"
                             >
-                                Not in subscription — demo only
+                                Not in subscription - demo only
                             </span>
                         </div>
                         <label class="flex items-center gap-3">
@@ -428,7 +428,7 @@ const runTest = () => {
                                         Residential proxy detection is active on your plan (included in IP check).
                                     </template>
                                     <template v-else>
-                                        Residential proxy detection — not in subscription (requires Growth plan or above).
+                                        Residential proxy detection - not in subscription (requires Growth plan or above).
                                     </template>
                                 </p>
                             </div>
@@ -439,7 +439,7 @@ const runTest = () => {
                         v-else
                         class="space-y-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
                     >
-                        <p>Demo provider — no live API calls. Switch to the live provider for production.</p>
+                        <p>Demo provider - no live API calls. Switch to the live provider for production.</p>
                         <div>
                             <InputLabel value="IP whitelist (demo)" />
                             <textarea

@@ -120,7 +120,7 @@ class LeadSourceIntegrationController extends Controller
                 'page_access_token_label' => null,
                 'page_access_token_help' => null,
                 'webhook_help' => 'Receive POST payloads from Google Ads webhook delivery or middleware that forwards lead-form submissions.',
-                'ingest_help' => 'POST JSON with campaign field names. Easiest path for Zapier, Make, or custom scripts — no Meta-style verify handshake.',
+                'ingest_help' => 'POST JSON with campaign field names. Easiest path for Zapier, Make, or custom scripts - no Meta-style verify handshake.',
                 'requires_verify_token' => false,
             ],
             'tiktok' => [

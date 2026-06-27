@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-The **Supplier Portal** gives affiliates read access to their performance data — lead counts, payout summaries, and CSV exports — without granting admin rights to your platform. This reduces support tickets ("how many leads did I send this week?") and builds trust through transparent reporting.
+The **Supplier Portal** gives affiliates read access to their performance data - lead counts, payout summaries, and CSV exports - without granting admin rights to your platform. This reduces support tickets ("how many leads did I send this week?") and builds trust through transparent reporting.
 
 Portal users log in at `{your-tenant-domain}/login` and access `/portal/supplier`. They see only leads where `supplier_id` matches their linked account.
 
@@ -25,7 +25,7 @@ Portal users log in at `{your-tenant-domain}/login` and access `/portal/supplier
 | Payout disputes | Shared source of truth for lead counts |
 | Onboarding new affiliates | Immediate visibility after first test lead |
 
-Affiliates without portal access can still ingest via API key — the portal is for visibility, not delivery.
+Affiliates without portal access can still ingest via API key - the portal is for visibility, not delivery.
 
 ---
 
@@ -37,8 +37,8 @@ Affiliates without portal access can still ingest via API key — the portal is 
 2. Click **Edit**.
 3. Scroll to **Portal access** section.
 4. Enter user details:
-   - **Email** — login username
-   - **Name** — display name
+   - **Email** - login username
+   - **Name** - display name
 5. Set a password or enable **Send credentials** to email a welcome link on save.
 6. Confirm `supplier_id` linkage on the user record (applied automatically via supplier form).
 7. Save the supplier record.
@@ -55,7 +55,7 @@ Affiliates without portal access can still ingest via API key — the portal is 
 
 ### Linking API keys and portal users
 
-Best practice: link the affiliate's **API key** to the same `supplier_id` as their portal user. Leads ingested via API automatically attribute to that supplier — portal dashboard reflects the same data.
+Best practice: link the affiliate's **API key** to the same `supplier_id` as their portal user. Leads ingested via API automatically attribute to that supplier - portal dashboard reflects the same data.
 
 | Component | Linkage |
 |-----------|---------|
@@ -93,7 +93,7 @@ After login at `/portal/supplier`:
 ### CSV export
 
 - Export filtered lead list for internal reporting
-- Columns include status, campaign, timestamps — not buyer-identifying data unless configured
+- Columns include status, campaign, timestamps - not buyer-identifying data unless configured
 
 ### Payout summary
 
@@ -120,11 +120,11 @@ Portal users only see leads where `supplier_id` matches their linked supplier re
 | API key linked to supplier | Automatic from key |
 | API with supplier reference param | Resolved to supplier record |
 | CSV import | Set during import mapping |
-| Unattributed ingest | No supplier_id — invisible in portal |
+| Unattributed ingest | No supplier_id - invisible in portal |
 
 ### Multi-campaign affiliates
 
-One supplier record can feed multiple campaigns. Portal shows all leads attributed to that supplier across campaigns — affiliates filter by campaign in the leads list.
+One supplier record can feed multiple campaigns. Portal shows all leads attributed to that supplier across campaigns - affiliates filter by campaign in the leads list.
 
 ---
 
@@ -147,11 +147,11 @@ One supplier record can feed multiple campaigns. Portal shows all leads attribut
 
 - Affiliate uses **Forgot password** on login page, or
 - Admin resets from **Users → Edit** when teams change
-- Rotate passwords when affiliate teams change — do not share one login across companies
+- Rotate passwords when affiliate teams change - do not share one login across companies
 
 ### Wrong tenant login
 
-Portal users are tenant-scoped. Affiliates working with multiple networks need separate logins per tenant domain — credentials from one platform do not work on another.
+Portal users are tenant-scoped. Affiliates working with multiple networks need separate logins per tenant domain - credentials from one platform do not work on another.
 
 ---
 
@@ -159,23 +159,23 @@ Portal users are tenant-scoped. Affiliates working with multiple networks need s
 
 ### Affiliate sees empty dashboard
 
-- Confirm leads have `supplier_id` set — unattributed leads are invisible.
+- Confirm leads have `supplier_id` set - unattributed leads are invisible.
 - Check API key is linked to the correct supplier.
 - Verify affiliate ingested to an active campaign on this tenant.
-- Date filter may exclude recent leads — broaden the range.
+- Date filter may exclude recent leads - broaden the range.
 
 ### Lead count mismatch (portal vs affiliate's tracker)
 
 - Affiliate tracker may count attempts; portal counts accepted leads.
-- Rejected and quarantined leads appear with those statuses — not counted as "delivered."
-- Timezone differences on date boundaries — align on UTC vs local.
+- Rejected and quarantined leads appear with those statuses - not counted as "delivered."
+- Timezone differences on date boundaries - align on UTC vs local.
 - Dedupe rejections reduce counted leads vs raw POST attempts.
 
 ### Portal user cannot log in
 
 - Confirm correct tenant domain.
 - Check user is active and role is `supplier_portal`.
-- Verify `supplier_id` is set — users without supplier linkage cannot access portal routes.
+- Verify `supplier_id` is set - users without supplier linkage cannot access portal routes.
 
 ### Affiliate sees another company's data
 
@@ -185,7 +185,7 @@ Portal users are tenant-scoped. Affiliates working with multiple networks need s
 
 ### API ingest works but portal empty
 
-- API key may not be linked to supplier — leads ingest without `supplier_id`.
+- API key may not be linked to supplier - leads ingest without `supplier_id`.
 - Edit API key, set supplier linkage, future leads will appear (past leads remain unattributed).
 
 ---
@@ -196,6 +196,6 @@ Portal users are tenant-scoped. Affiliates working with multiple networks need s
 - Rotate passwords when affiliate teams change.
 - Link API keys and portal users to the same `supplier_id` for consistent attribution.
 - Include portal login URL in affiliate onboarding checklist alongside API credentials.
-- Review unattributed leads monthly — leads without `supplier_id` indicate key misconfiguration.
+- Review unattributed leads monthly - leads without `supplier_id` indicate key misconfiguration.
 MD,
 ];

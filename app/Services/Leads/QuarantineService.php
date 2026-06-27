@@ -13,7 +13,7 @@ class QuarantineService
     public function applyRules(Lead $lead, Campaign $campaign): bool
     {
         if ($this->isOutOfHours($campaign)) {
-            $this->quarantine($lead, 'Out of hours — held for next delivery window', $campaign, 'out_of_hours');
+            $this->quarantine($lead, 'Out of hours - held for next delivery window', $campaign, 'out_of_hours');
 
             return true;
         }
@@ -21,7 +21,7 @@ class QuarantineService
         return false;
     }
 
-    public function quarantineUnsold(Lead $lead, Campaign $campaign, string $reason = 'Unsold — held for retry'): void
+    public function quarantineUnsold(Lead $lead, Campaign $campaign, string $reason = 'Unsold - held for retry'): void
     {
         $config = $campaign->validation_config ?? [];
         if (! ($config['quarantine_unsold'] ?? true)) {

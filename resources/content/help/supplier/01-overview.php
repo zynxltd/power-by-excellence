@@ -10,13 +10,13 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-The **Supplier Portal** is your self-service dashboard for leads you send into a partner platform. If you are an **affiliate, media buyer, or lead source**, this portal lets you monitor submissions, conversion outcomes, and payout earnings — without needing admin access to the platform operator's console.
+The **Supplier Portal** is your self-service dashboard for leads you send into a partner platform. If you are an **affiliate, media buyer, or lead source**, this portal lets you monitor submissions, conversion outcomes, and payout earnings - without needing admin access to the platform operator's console.
 
 You sign in on your **tenant subdomain** (for example `partner-uk.powerbyexcellence.test`), not the central marketing site. After login you land on `/portal/supplier`.
 
 ## Who this is for
 
-Supplier portal users are linked to a **Supplier** record on the platform. Your account manager or platform administrator creates the supplier profile, assigns **Sources (SIDs)**, and provisions portal login credentials. You see only leads attributed to your supplier account — never another affiliate's traffic.
+Supplier portal users are linked to a **Supplier** record on the platform. Your account manager or platform administrator creates the supplier profile, assigns **Sources (SIDs)**, and provisions portal login credentials. You see only leads attributed to your supplier account - never another affiliate's traffic.
 
 Typical users include:
 
@@ -78,29 +78,29 @@ Most affiliates use **both** channels:
 | **REST API** (`POST /api/v1/leads`) | Real-time lead submission with your API key |
 | **Supplier portal** | Performance reporting, CSV exports, payout visibility |
 
-Your **API key** authenticates ingest requests. Your **portal email and password** authenticate the dashboard. These are separate credentials — losing one does not affect the other.
+Your **API key** authenticates ingest requests. Your **portal email and password** authenticate the dashboard. These are separate credentials - losing one does not affect the other.
 
 ## Typical daily workflow
 
-1. **Morning** — Check `/portal/supplier` for yesterday's sold rate and payout
-2. **Midday** — Filter `/portal/supplier/leads` by `quarantined` or `rejected` to spot data-quality issues
-3. **End of day** — Export CSV for the current date range and reconcile against ad spend or sub-affiliate reports
-4. **Weekly** — Compare `/portal/supplier/billing` monthly total with your account manager's statement
+1. **Morning** - Check `/portal/supplier` for yesterday's sold rate and payout
+2. **Midday** - Filter `/portal/supplier/leads` by `quarantined` or `rejected` to spot data-quality issues
+3. **End of day** - Export CSV for the current date range and reconcile against ad spend or sub-affiliate reports
+4. **Weekly** - Compare `/portal/supplier/billing` monthly total with your account manager's statement
 
 ## Tips
 
-- Bookmark your tenant login URL (`{subdomain}/login`) — credentials are not valid on other partner subdomains
-- Your API key and SID values are issued by the platform administrator — portal login is separate from API authentication
+- Bookmark your tenant login URL (`{subdomain}/login`) - credentials are not valid on other partner subdomains
+- Your API key and SID values are issued by the platform administrator - portal login is separate from API authentication
 - Sub-affiliates are tracked via **SSID**; see the dashboard Sources panel and the **SID, SSID & Postback Tracking** article
-- Sold rate = sold ÷ received — benchmark by campaign vertical, not across unrelated offers
+- Sold rate = sold ÷ received - benchmark by campaign vertical, not across unrelated offers
 - Payout shown in the portal is **your rev-share**, not the buyer's purchase price
 
 ## Troubleshooting
 
-- **Cannot sign in on the main website** — Use your partner subdomain `/login` only
-- **Redirected to wrong portal** — Buyer and supplier portals are separate; confirm your account has the `supplier_portal` role
-- **Dashboard shows zero leads** — Verify you are posting with the correct `supplier_id` mapping via API and that SIDs match configured Sources
-- **403 / Supplier account not linked** — Your portal user is not linked to a Supplier record; contact your account manager
-- **Sources panel is empty** — No Sources configured yet; ask the platform admin to add SIDs under your supplier profile
+- **Cannot sign in on the main website** - Use your partner subdomain `/login` only
+- **Redirected to wrong portal** - Buyer and supplier portals are separate; confirm your account has the `supplier_portal` role
+- **Dashboard shows zero leads** - Verify you are posting with the correct `supplier_id` mapping via API and that SIDs match configured Sources
+- **403 / Supplier account not linked** - Your portal user is not linked to a Supplier record; contact your account manager
+- **Sources panel is empty** - No Sources configured yet; ask the platform admin to add SIDs under your supplier profile
 MD,
 ];

@@ -1,4 +1,4 @@
-# 03 — Deliveries & 10-Tier Ping Tree
+# 03 - Deliveries & 10-Tier Ping Tree
 
 ## Purpose
 
@@ -41,14 +41,14 @@ After `migrate:fresh --seed`, the **Auto Insurance** campaign has 10 tier delive
 
 | Tier | Name pattern | Method | Routing mode in ping tree |
 |------|-------------|--------|---------------------------|
-| 1–3 | Tier N — Parallel auction | Ping-post | `parallel_auction` |
-| 4 | Tier 4 — Waterfall | Ping-post | `waterfall` |
-| 5 | Tier 5 — Parallel auction | Ping-post | `parallel_auction` |
-| 6 | Tier 6 — Weighted | Ping-post | `weighted` |
-| 7 | Tier 7 — Waterfall | Ping-post | `waterfall` |
-| 8 | Tier 8 — Parallel auction | Ping-post | `parallel_auction` |
-| 9 | Tier 9 — Sequential ping | Ping-post | `sequential_ping` |
-| 10 | Tier 10 — Waterfall | Store lead | `waterfall` (fallback) |
+| 1–3 | Tier N - Parallel auction | Ping-post | `parallel_auction` |
+| 4 | Tier 4 - Waterfall | Ping-post | `waterfall` |
+| 5 | Tier 5 - Parallel auction | Ping-post | `parallel_auction` |
+| 6 | Tier 6 - Weighted | Ping-post | `weighted` |
+| 7 | Tier 7 - Waterfall | Ping-post | `waterfall` |
+| 8 | Tier 8 - Parallel auction | Ping-post | `parallel_auction` |
+| 9 | Tier 9 - Sequential ping | Ping-post | `sequential_ping` |
+| 10 | Tier 10 - Waterfall | Store lead | `waterfall` (fallback) |
 
 Active distribution config: **10-Tier Enterprise Ping Tree** (replaces inactive Hybrid Ping Tree).
 
@@ -65,7 +65,7 @@ Active distribution config: **10-Tier Enterprise Ping Tree** (replaces inactive 
 
 ### 2. Review a ping-post delivery (Tier 1)
 
-1. Open **Tier 1 — Parallel auction** delivery
+1. Open **Tier 1 - Parallel auction** delivery
 2. Confirm ping URL points to `/api/v1/ping` and post URL to `/api/v1/post`
 3. Check revenue type: **Dynamic** with `Cost` field
 4. Note `bid_hint` for auction demos
@@ -76,12 +76,12 @@ Active distribution config: **10-Tier Enterprise Ping Tree** (replaces inactive 
 ### 3. Walk through the 6-step delivery wizard (create)
 
 1. Go to `/deliveries/create`
-2. **Step 1 — Basics:** name, campaign, buyer, status active
-3. **Step 2 — Method:** select **Ping Post**
-4. **Step 3 — Settings:** enter simulator URLs (`/api/v1/ping`, `/api/v1/post`)
-5. **Step 4 — Routing:** set tier `3`, priority `30`, check advanced distribution only
-6. **Step 5 — Pricing:** select Dynamic, revenue field `Cost`
-7. **Step 6 — Caps:** optional daily cap `50`
+2. **Step 1 - Basics:** name, campaign, buyer, status active
+3. **Step 2 - Method:** select **Ping Post**
+4. **Step 3 - Settings:** enter simulator URLs (`/api/v1/ping`, `/api/v1/post`)
+5. **Step 4 - Routing:** set tier `3`, priority `30`, check advanced distribution only
+6. **Step 5 - Pricing:** select Dynamic, revenue field `Cost`
+7. **Step 6 - Caps:** optional daily cap `50`
 8. Submit
 
 **Expected:** Delivery created. Appears in list. Can be added to a ping tree tier in `/distribution`.
@@ -145,6 +145,6 @@ Submit a unique sync lead to `auto-insurance-uk` (see [09-api-and-sdk.md](./09-a
 
 ## Related Docs
 
-- [04-distribution-ping-tree.md](./04-distribution-ping-tree.md) — tier group configuration
-- [05-reports.md](./05-reports.md) — tier performance analytics
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — lead ingest
+- [04-distribution-ping-tree.md](./04-distribution-ping-tree.md) - tier group configuration
+- [05-reports.md](./05-reports.md) - tier performance analytics
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - lead ingest

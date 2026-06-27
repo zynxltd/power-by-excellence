@@ -15,7 +15,7 @@ defineProps({ events: Object });
     <AuthenticatedLayout>
         <PageHeader
             title="Change Logs"
-            description="Lead processing events — status changes, deliveries, and pipeline activity."
+            description="Lead processing events - status changes, deliveries, and pipeline activity."
         />
 
         <Panel :padding="false">
@@ -37,15 +37,15 @@ defineProps({ events: Object });
                         >
                             {{ event.lead.uuid?.slice(0, 12) }}…
                         </Link>
-                        <span v-else class="text-slate-400">—</span>
+                        <span v-else class="text-slate-400">-</span>
                     </td>
-                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.lead?.campaign?.name ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.lead?.campaign?.name ?? '-' }}</td>
                     <td class="">
                         <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                             {{ event.event_type }}
                         </span>
                     </td>
-                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.message ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.message ?? '-' }}</td>
                 </tr>
             </DataTable>
             <Pagination :links="events.links" />

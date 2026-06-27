@@ -89,8 +89,8 @@ const securityStatStrip = computed(() => [
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
-                    <td class="text-xs text-slate-500">{{ log.path ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '-' }}</td>
+                    <td class="text-xs text-slate-500">{{ log.path ?? '-' }}</td>
                 </tr>
             </DataTable>
             <div v-if="accessLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 dark:border-slate-800">
@@ -129,10 +129,10 @@ const securityStatStrip = computed(() => [
                         </span>
                     </td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">
-                        {{ log.entity_type ?? '—' }}
+                        {{ log.entity_type ?? '-' }}
                         <span v-if="log.entity_id" class="font-mono text-xs text-slate-500">#{{ log.entity_id }}</span>
                     </td>
-                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '-' }}</td>
                 </tr>
             </DataTable>
             <div v-if="auditLogs?.links?.length > 3" class="flex flex-wrap justify-center gap-1 border-t border-slate-100 dark:border-slate-800">

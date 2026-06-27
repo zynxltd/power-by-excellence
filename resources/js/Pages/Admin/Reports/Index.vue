@@ -78,7 +78,7 @@ const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null)
 const formatLeadRate = (value) => {
     const leads = props.summary?.leads_period ?? 0;
     if (!leads) {
-        return '—';
+        return '-';
     }
 
     return `${value ?? 0}%`;
@@ -87,7 +87,7 @@ const formatLeadRate = (value) => {
 const formatDeliveryRate = (rate) => {
     const attempts = delivery.value.attempts ?? 0;
     if (!attempts || rate === null || rate === undefined) {
-        return '—';
+        return '-';
     }
 
     return `${rate}%`;
@@ -97,7 +97,7 @@ const formatDeliveryDuration = () => {
     const attempts = delivery.value.attempts ?? 0;
     const ms = delivery.value.avg_duration_ms;
     if (!attempts || ms === null || ms === undefined) {
-        return '—';
+        return '-';
     }
 
     return `${ms}ms`;
@@ -108,7 +108,7 @@ const kpisByCurrency = computed(() => props.summary?.kpis_by_currency ?? []);
 const formatKpiMoneyMulti = (field) => {
     const rows = kpisByCurrency.value;
     if (!rows.length) {
-        return '—';
+        return '-';
     }
 
     return rows
@@ -119,7 +119,7 @@ const formatKpiMoneyMulti = (field) => {
 const formatKpiPctMulti = (field) => {
     const rows = kpisByCurrency.value;
     if (!rows.length) {
-        return '—';
+        return '-';
     }
 
     return rows.map((row) => `${row.currency} ${row[field]}%`).join(' · ');
@@ -142,7 +142,7 @@ const volumeStrip = computed(() => [
     {
         label: props.hasMultipleCurrencies ? 'Revenue (by currency)' : 'Revenue',
         title: props.hasMultipleCurrencies
-            ? 'Sold-lead revenue by currency — opens sold leads with financials'
+            ? 'Sold-lead revenue by currency - opens sold leads with financials'
             : 'Total buyer revenue from sold leads in this period',
         value: formatFinancial(props.summary?.revenue_period, 'revenue'),
         href: leadsDrill({ status: 'sold' }),
@@ -150,14 +150,14 @@ const volumeStrip = computed(() => [
     },
     {
         label: props.hasMultipleCurrencies ? 'Payout (by currency)' : 'Payout',
-        title: 'Supplier payout totals — opens finance breakdown by buyer and supplier',
+        title: 'Supplier payout totals - opens finance breakdown by buyer and supplier',
         value: formatFinancial(props.summary?.payout_period, 'payout'),
         href: financeDrill(),
         accent: 'amber',
     },
     {
         label: props.hasMultipleCurrencies ? 'Margin (by currency)' : 'Margin',
-        title: 'Revenue minus payout — opens finance summary for this period',
+        title: 'Revenue minus payout - opens finance summary for this period',
         value: formatFinancial(props.summary?.margin_period, 'margin'),
         href: financeDrill(),
         accent: 'violet',
@@ -167,46 +167,46 @@ const volumeStrip = computed(() => [
 const economicsStrip = computed(() => {
     if (props.hasMultipleCurrencies) {
         return [
-            { label: 'EPL (sold)', title: 'Revenue ÷ sold leads — view sold leads with revenue', value: formatKpiMoneyMulti('epl'), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
-            { label: 'EPC (ingest)', title: 'Revenue ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('epc'), href: leadsDrill(), accent: 'indigo' },
-            { label: 'CPA (payout)', title: 'Payout ÷ sold leads — view sold leads with payout', value: formatKpiMoneyMulti('cpa'), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
-            { label: 'CPL (ingest)', title: 'Payout ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('cpl'), href: leadsDrill(), accent: 'rose' },
-            { label: 'MPL (margin)', title: 'Margin ÷ sold leads — view sold leads with margin', value: formatKpiMoneyMulti('mpl'), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
-            { label: 'Margin %', title: 'Margin ÷ revenue — opens finance summary', value: formatKpiPctMulti('margin_pct'), href: financeDrill(), accent: 'violet' },
-            { label: 'Pay share', title: 'Payout ÷ revenue — opens finance summary', value: formatKpiPctMulti('payout_share_pct'), href: financeDrill(), accent: 'amber' },
-            { label: 'Net / lead', title: 'Margin ÷ leads received — view all leads in period', value: formatKpiMoneyMulti('net_per_lead'), href: leadsDrill(), accent: 'violet' },
+            { label: 'EPL (sold)', title: 'Revenue ÷ sold leads - view sold leads with revenue', value: formatKpiMoneyMulti('epl'), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
+            { label: 'EPC (ingest)', title: 'Revenue ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('epc'), href: leadsDrill(), accent: 'indigo' },
+            { label: 'CPA (payout)', title: 'Payout ÷ sold leads - view sold leads with payout', value: formatKpiMoneyMulti('cpa'), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
+            { label: 'CPL (ingest)', title: 'Payout ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('cpl'), href: leadsDrill(), accent: 'rose' },
+            { label: 'MPL (margin)', title: 'Margin ÷ sold leads - view sold leads with margin', value: formatKpiMoneyMulti('mpl'), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
+            { label: 'Margin %', title: 'Margin ÷ revenue - opens finance summary', value: formatKpiPctMulti('margin_pct'), href: financeDrill(), accent: 'violet' },
+            { label: 'Pay share', title: 'Payout ÷ revenue - opens finance summary', value: formatKpiPctMulti('payout_share_pct'), href: financeDrill(), accent: 'amber' },
+            { label: 'Net / lead', title: 'Margin ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('net_per_lead'), href: leadsDrill(), accent: 'violet' },
         ];
     }
 
     return [
-        { label: 'EPL (sold)', title: 'Revenue ÷ sold leads — view sold leads with revenue', value: formatMoney(kpis.value.epl), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
-        { label: 'EPC (ingest)', title: 'Revenue ÷ leads received — view all leads in period', value: formatMoney(kpis.value.epc), href: leadsDrill(), accent: 'indigo' },
-        { label: 'CPA (payout)', title: 'Payout ÷ sold leads — view sold leads with payout', value: formatMoney(kpis.value.cpa), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
-        { label: 'CPL (ingest)', title: 'Payout ÷ leads received — view all leads in period', value: formatMoney(kpis.value.cpl), href: leadsDrill(), accent: 'rose' },
-        { label: 'MPL (margin)', title: 'Margin ÷ sold leads — view sold leads with margin', value: formatMoney(kpis.value.mpl), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
-        { label: 'Margin %', title: 'Margin ÷ revenue — opens finance summary', value: `${kpis.value.margin_pct ?? 0}%`, href: financeDrill(), accent: 'violet' },
-        { label: 'Pay share', title: 'Payout ÷ revenue — opens finance summary', value: `${payoutSharePct.value}%`, href: financeDrill(), accent: 'amber' },
-        { label: 'Net / lead', title: 'Margin ÷ leads received — view all leads in period', value: formatMoney(netPerLead.value), href: leadsDrill(), accent: 'violet' },
+        { label: 'EPL (sold)', title: 'Revenue ÷ sold leads - view sold leads with revenue', value: formatMoney(kpis.value.epl), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
+        { label: 'EPC (ingest)', title: 'Revenue ÷ leads received - view all leads in period', value: formatMoney(kpis.value.epc), href: leadsDrill(), accent: 'indigo' },
+        { label: 'CPA (payout)', title: 'Payout ÷ sold leads - view sold leads with payout', value: formatMoney(kpis.value.cpa), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
+        { label: 'CPL (ingest)', title: 'Payout ÷ leads received - view all leads in period', value: formatMoney(kpis.value.cpl), href: leadsDrill(), accent: 'rose' },
+        { label: 'MPL (margin)', title: 'Margin ÷ sold leads - view sold leads with margin', value: formatMoney(kpis.value.mpl), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
+        { label: 'Margin %', title: 'Margin ÷ revenue - opens finance summary', value: `${kpis.value.margin_pct ?? 0}%`, href: financeDrill(), accent: 'violet' },
+        { label: 'Pay share', title: 'Payout ÷ revenue - opens finance summary', value: `${payoutSharePct.value}%`, href: financeDrill(), accent: 'amber' },
+        { label: 'Net / lead', title: 'Margin ÷ leads received - view all leads in period', value: formatMoney(netPerLead.value), href: leadsDrill(), accent: 'violet' },
     ];
 });
 
 const rateStrip = computed(() => [
-    { label: 'Conversion', title: 'Sold ÷ received — view sold leads in this period', value: formatLeadRate(props.summary?.conversion), href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
-    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold) — view sold leads', value: formatLeadRate(props.summary?.sell_through), href: leadsDrill({ status: 'sold' }), accent: 'emerald' },
-    { label: 'Reject rate', title: 'Rejected ÷ received — view rejected leads', value: formatLeadRate(props.summary?.reject_rate), href: leadsDrill({ status: 'rejected' }), accent: 'rose' },
-    { label: 'Quarantine', title: 'Quarantined ÷ received — view quarantined leads in period', value: quarantineRate.value === null ? '—' : `${quarantineRate.value}%`, href: leadsDrill({ status: 'quarantined' }), accent: 'orange' },
-    { label: 'Avg quality', title: 'Mean lead quality score — view all scored leads', value: (props.summary?.leads_period ?? 0) > 0 ? (quality.value.avg_score ?? '—') : '—', href: leadsDrill(), accent: 'violet' },
-    { label: 'Email pass', title: 'Email deliverability pass rate — view leads that passed email check', value: quality.value.email_checked ? `${quality.value.email_pass_rate}%` : '—', href: quality.value.email_checked ? leadsDrill({ validation: 'email_passed' }) : null, accent: 'cyan' },
-    { label: 'HLR pass', title: 'Mobile HLR pass rate — view leads that passed HLR check', value: quality.value.hlr_checked ? `${quality.value.hlr_pass_rate}%` : '—', href: quality.value.hlr_checked ? leadsDrill({ validation: 'hlr_passed' }) : null, accent: 'indigo' },
-    { label: 'Ping success', title: 'Successful buyer delivery attempts — view success logs', value: formatDeliveryRate(delivery.value.success_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'success' }) : null, accent: 'emerald' },
-    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts — view outbid logs', value: formatDeliveryRate(delivery.value.outbid_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'outbid' }) : null, accent: 'amber' },
-    { label: 'Ping fail', title: 'Failed delivery attempts — view failed ping/post logs', value: pingFailRate.value === null ? '—' : `${pingFailRate.value}%`, href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'failed' }) : null, accent: 'rose' },
-    { label: 'Redirect rate', title: 'Thank-you page clicks ÷ redirects offered — view sold leads that followed redirect', value: (props.summary?.sold_period ?? 0) > 0 && redirect.value.offered ? `${redirect.value.redirect_rate ?? 0}%` : '—', href: leadsDrill({ status: 'sold', redirect: 'followed' }), accent: 'cyan' },
-    { label: 'Avg latency', title: 'Mean delivery duration — view all delivery attempts', value: formatDeliveryDuration(), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill() : null, accent: 'cyan' },
+    { label: 'Conversion', title: 'Sold ÷ received - view sold leads in this period', value: formatLeadRate(props.summary?.conversion), href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
+    { label: 'Sell-through', title: 'Sold ÷ (sold + unsold) - view sold leads', value: formatLeadRate(props.summary?.sell_through), href: leadsDrill({ status: 'sold' }), accent: 'emerald' },
+    { label: 'Reject rate', title: 'Rejected ÷ received - view rejected leads', value: formatLeadRate(props.summary?.reject_rate), href: leadsDrill({ status: 'rejected' }), accent: 'rose' },
+    { label: 'Quarantine', title: 'Quarantined ÷ received - view quarantined leads in period', value: quarantineRate.value === null ? '-' : `${quarantineRate.value}%`, href: leadsDrill({ status: 'quarantined' }), accent: 'orange' },
+    { label: 'Avg quality', title: 'Mean lead quality score - view all scored leads', value: (props.summary?.leads_period ?? 0) > 0 ? (quality.value.avg_score ?? '-') : '-', href: leadsDrill(), accent: 'violet' },
+    { label: 'Email pass', title: 'Email deliverability pass rate - view leads that passed email check', value: quality.value.email_checked ? `${quality.value.email_pass_rate}%` : '-', href: quality.value.email_checked ? leadsDrill({ validation: 'email_passed' }) : null, accent: 'cyan' },
+    { label: 'HLR pass', title: 'Mobile HLR pass rate - view leads that passed HLR check', value: quality.value.hlr_checked ? `${quality.value.hlr_pass_rate}%` : '-', href: quality.value.hlr_checked ? leadsDrill({ validation: 'hlr_passed' }) : null, accent: 'indigo' },
+    { label: 'Ping success', title: 'Successful buyer delivery attempts - view success logs', value: formatDeliveryRate(delivery.value.success_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'success' }) : null, accent: 'emerald' },
+    { label: 'Outbid rate', title: 'Outbid ÷ delivery attempts - view outbid logs', value: formatDeliveryRate(delivery.value.outbid_rate), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'outbid' }) : null, accent: 'amber' },
+    { label: 'Ping fail', title: 'Failed delivery attempts - view failed ping/post logs', value: pingFailRate.value === null ? '-' : `${pingFailRate.value}%`, href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill({ status: 'failed' }) : null, accent: 'rose' },
+    { label: 'Redirect rate', title: 'Thank-you page clicks ÷ redirects offered - view sold leads that followed redirect', value: (props.summary?.sold_period ?? 0) > 0 && redirect.value.offered ? `${redirect.value.redirect_rate ?? 0}%` : '-', href: leadsDrill({ status: 'sold', redirect: 'followed' }), accent: 'cyan' },
+    { label: 'Avg latency', title: 'Mean delivery duration - view all delivery attempts', value: formatDeliveryDuration(), href: (delivery.value.attempts ?? 0) > 0 ? deliveryDrill() : null, accent: 'cyan' },
 ]);
 
 const qualityStrip = computed(() => [
-    { label: 'Avg score', value: quality.value.avg_score ?? '—', title: 'All leads with quality scores in this period', href: leadsDrill(), accent: 'violet' },
+    { label: 'Avg score', value: quality.value.avg_score ?? '-', title: 'All leads with quality scores in this period', href: leadsDrill(), accent: 'violet' },
     { label: 'Excellent (80+)', value: formatNumber(quality.value.excellent ?? 0), title: 'Leads scoring 80 or above', href: leadsDrill({ quality_min: 80 }), accent: 'emerald' },
     { label: 'Good (60–79)', value: formatNumber(quality.value.good ?? 0), title: 'Leads scoring 60–79', href: leadsDrill({ quality_min: 60, quality_max: 79 }), accent: 'cyan' },
     { label: 'Fair (40–59)', value: formatNumber(quality.value.fair ?? 0), title: 'Leads scoring 40–59', href: leadsDrill({ quality_min: 40, quality_max: 59 }), accent: 'amber' },
@@ -248,11 +248,11 @@ const deliveryOutcomeStrip = computed(() => Object.entries(props.distributionOut
 })));
 
 const methodLabels = { direct_post: 'Direct API', ping_post: 'Ping Post', store_lead: 'Store', email: 'Email', sms: 'SMS' };
-const successRate = (row) => (!row.attempts ? '—' : `${Math.round((row.successes / row.attempts) * 100)}%`);
-const winRate = (row) => (!row.attempts ? '—' : `${Math.round((row.wins / row.attempts) * 100)}%`);
-const redirectRate = (row) => (!row.redirects_offered ? '—' : `${Math.round((row.redirects_followed / row.redirects_offered) * 100)}%`);
-const conversionRate = (row) => (!row.received ? '—' : `${Math.round((row.sold / row.received) * 100)}%`);
-const eplForRow = (row) => (!row.sold ? '—' : formatRowMoney(row.revenue / row.sold, row.currency));
+const successRate = (row) => (!row.attempts ? '-' : `${Math.round((row.successes / row.attempts) * 100)}%`);
+const winRate = (row) => (!row.attempts ? '-' : `${Math.round((row.wins / row.attempts) * 100)}%`);
+const redirectRate = (row) => (!row.redirects_offered ? '-' : `${Math.round((row.redirects_followed / row.redirects_offered) * 100)}%`);
+const conversionRate = (row) => (!row.received ? '-' : `${Math.round((row.sold / row.received) * 100)}%`);
+const eplForRow = (row) => (!row.sold ? '-' : formatRowMoney(row.revenue / row.sold, row.currency));
 
 const revenueDataset = computed(() => ([
     {
@@ -295,7 +295,7 @@ const revenueDataset = computed(() => ([
             v-if="hasMultipleCurrencies"
             class="mb-4 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
         >
-            <strong>Multiple currencies</strong> — totals and unit economics are shown <strong>per currency</strong> (not combined).
+            <strong>Multiple currencies</strong> - totals and unit economics are shown <strong>per currency</strong> (not combined).
             Filter by <strong>currency</strong> or <strong>campaign</strong> for a single-currency view.
         </div>
 
@@ -327,7 +327,7 @@ const revenueDataset = computed(() => ([
             <Panel>
                 <template #header>
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume — {{ periodLabel || days + ' days' }}</h3>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Lead volume - {{ periodLabel || days + ' days' }}</h3>
                         <p class="text-xs text-slate-500">Hover points · click to open leads</p>
                     </div>
                 </template>
@@ -346,9 +346,9 @@ const revenueDataset = computed(() => ([
             <Panel>
                 <template #header>
                     <div>
-                        <h3 class="font-semibold text-slate-900 dark:text-white">Revenue — {{ periodLabel || days + ' days' }}</h3>
+                        <h3 class="font-semibold text-slate-900 dark:text-white">Revenue - {{ periodLabel || days + ' days' }}</h3>
                         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            {{ hasMultipleCurrencies ? 'Per-currency totals — filter to one currency for a single chart' : currency }}
+                            {{ hasMultipleCurrencies ? 'Per-currency totals - filter to one currency for a single chart' : currency }}
                             · sold lead revenue by day
                         </p>
                     </div>
@@ -368,7 +368,7 @@ const revenueDataset = computed(() => ([
 
         <Panel class="mt-6">
             <template #header>
-                <h3 class="font-semibold text-slate-900 dark:text-white">Payout &amp; margin — {{ periodLabel || days + ' days' }}</h3>
+                <h3 class="font-semibold text-slate-900 dark:text-white">Payout &amp; margin - {{ periodLabel || days + ' days' }}</h3>
             </template>
             <LineChart
                 :labels="charts?.labels ?? []"
@@ -403,6 +403,7 @@ const revenueDataset = computed(() => ([
             <DataTable :empty="!byCampaign?.data?.length" empty-message="No campaign data for this period.">
                 <template #head>
                     <th class="text-left">Campaign</th>
+                    <th class="text-left">Currency</th>
                     <th class="text-left">Received</th>
                     <th class="text-left">Sold</th>
                     <th class="text-left">Unsold</th>
@@ -444,7 +445,7 @@ const revenueDataset = computed(() => ([
                     <p class="mt-1 text-xs text-slate-500">Source ID (SID) breakdown with EPL and conversion for affiliate traffic analysis.</p>
                 </div>
             </template>
-            <DataTable :empty="!bySid?.data?.length" empty-message="No SID data — leads need sid on ingest.">
+            <DataTable :empty="!bySid?.data?.length" empty-message="No SID data - leads need sid on ingest.">
                 <template #head>
                     <th class="text-left">SID</th>
                     <th class="text-left">Supplier</th>
@@ -462,7 +463,7 @@ const revenueDataset = computed(() => ([
                     :href="row.supplier_id ? route('suppliers.show', row.supplier_id) : route('leads.index')"
                 >
                     <td class="font-mono text-xs font-medium">{{ row.sid }}</td>
-                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.supplier_name ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.supplier_name ?? '-' }}</td>
                     <td class="">{{ row.received }}</td>
                     <td class="text-emerald-600">{{ row.sold }}</td>
                     <td class="text-rose-600">{{ row.rejected }}</td>
@@ -480,12 +481,12 @@ const revenueDataset = computed(() => ([
                 <div>
                     <h3 class="font-semibold text-slate-900 dark:text-white">Ping tree tier summary</h3>
                     <p class="mt-1 text-xs text-slate-500">
-                        Each <strong>tier</strong> is a step in the ping tree — buyers are pinged in tier order.
+                        Each <strong>tier</strong> is a step in the ping tree - buyers are pinged in tier order.
                         <template v-if="selectedCampaign">
                             Showing delivery logs for <strong>{{ selectedCampaign.name }}</strong> only.
                         </template>
                         <template v-else-if="pingTreeCampaigns?.length">
-                            Aggregated across all ping-tree campaigns — filter by <strong>campaign</strong> above to scope tier stats.
+                            Aggregated across all ping-tree campaigns - filter by <strong>campaign</strong> above to scope tier stats.
                         </template>
                     </p>
                     <div v-if="pingTreeCampaigns?.length" class="mt-2 flex flex-wrap gap-2">
@@ -563,8 +564,8 @@ const revenueDataset = computed(() => ([
                     <td class="">
                         <Link :href="route('deliveries.show', row.delivery_id)" class="font-medium text-indigo-600 hover:underline" @click.stop>{{ row.name }}</Link>
                     </td>
-                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.buyer_name ?? '—' }}</td>
-                    <td class="">{{ row.tier ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ row.buyer_name ?? '-' }}</td>
+                    <td class="">{{ row.tier ?? '-' }}</td>
                     <td class="text-xs capitalize text-slate-500">{{ methodLabels[row.method] ?? row.method }}</td>
                     <td class="">{{ row.attempts }}</td>
                     <td class="text-emerald-600">{{ row.successes }}</td>
@@ -572,7 +573,7 @@ const revenueDataset = computed(() => ([
                     <td class="">{{ successRate(row) }}</td>
                     <td class="text-xs text-slate-500">{{ row.redirects_followed ?? 0 }} / {{ row.redirects_offered ?? 0 }}</td>
                     <td class="text-cyan-600">{{ redirectRate(row) }}</td>
-                    <td class="text-xs text-slate-500">{{ row.avg_duration_ms ? Math.round(row.avg_duration_ms) : '—' }}</td>
+                    <td class="text-xs text-slate-500">{{ row.avg_duration_ms ? Math.round(row.avg_duration_ms) : '-' }}</td>
                     <td class="">{{ formatMoney(row.revenue) }}</td>
                 </ClickableTableRow>
             </DataTable>
@@ -625,7 +626,7 @@ const revenueDataset = computed(() => ([
                         <td class="">{{ row.leads }}</td>
                         <td class="text-amber-600">{{ formatMoney(row.payout) }}</td>
                         <td class="text-emerald-600">{{ formatMoney(row.revenue) }}</td>
-                        <td class="font-medium text-amber-600">{{ row.leads ? formatMoney(row.payout / row.leads) : '—' }}</td>
+                        <td class="font-medium text-amber-600">{{ row.leads ? formatMoney(row.payout / row.leads) : '-' }}</td>
                     </ClickableTableRow>
                 </DataTable>
                 <Pagination :links="bySupplier.links" />

@@ -2,7 +2,7 @@
 
 **Route:** `/accounts` (central host, super admin only)
 
-Partner platforms are **tenant accounts** — isolated lead distribution instances on dedicated subdomains (e.g. `excellence-uk.powerbyexcellence.test`).
+Partner platforms are **tenant accounts** - isolated lead distribution instances on dedicated subdomains (e.g. `excellence-uk.powerbyexcellence.test`).
 
 ## Listing
 
@@ -20,7 +20,7 @@ The index shows every `Account` with:
 - Browsing super-admin notification tools scoped to one tenant
 - Preparing to open tenant-scoped admin routes that read session context
 
-This does **not** log you in on the tenant subdomain — data may still be filtered incorrectly for subdomain-only features.
+This does **not** log you in on the tenant subdomain - data may still be filtered incorrectly for subdomain-only features.
 
 ## Visiting a tenant (recommended)
 
@@ -48,16 +48,16 @@ Super admins provision new partner platforms from the **central host** (`powerby
 2. Open **Partner Platforms** (`/accounts`).
 3. Click **New platform** (`/accounts/create`).
 4. Complete the form:
-   - **Platform name** — display label for the tenant.
-   - **Subdomain slug** — becomes `{slug}.{base_domain}` (e.g. `acme-leads.powerbyexcellence.test`).
-   - **Custom domain** (optional) — override the default subdomain hostname.
-   - **Country, currency, timezone** — defaults for new campaigns and billing.
-   - **Account admin** — first tenant user (`account_admin` role) who can configure buyers, suppliers, and campaigns.
+   - **Platform name** - display label for the tenant.
+   - **Subdomain slug** - becomes `{slug}.{base_domain}` (e.g. `acme-leads.powerbyexcellence.test`).
+   - **Custom domain** (optional) - override the default subdomain hostname.
+   - **Country, currency, timezone** - defaults for new campaigns and billing.
+   - **Account admin** - first tenant user (`account_admin` role) who can configure buyers, suppliers, and campaigns.
 5. Submit. The platform appears on the partner list immediately.
 6. **Local dev:** run `herd link {slug}.{base_domain}` or `php artisan platform:link-tenants` so the subdomain resolves.
 7. Use **Open portal ↗** or **Visit** to enter god mode on the new tenant.
 
-The provisioner creates only the `Account` record and one `account_admin` user — no demo buyers, suppliers, or campaigns. Configure those after visiting the tenant portal.
+The provisioner creates only the `Account` record and one `account_admin` user - no demo buyers, suppliers, or campaigns. Configure those after visiting the tenant portal.
 
 ### API / code
 

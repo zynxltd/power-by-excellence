@@ -4,9 +4,13 @@ import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({ accounts: Array, currentAccountId: Number });
+const props = defineProps({ accounts: Array, currentAccountId: Number });
+
+const page = usePage();
+const isSuperAdmin = computed(() => page.props.auth?.isSuperAdmin ?? false);
 
 const switchAccount = (accountId) => router.post(route('accounts.switch'), { account_id: accountId });
 
@@ -28,6 +32,15 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
                 </AppButton>
             </template>
         </PageHeader>
+
+        <div
+            v-if="isSuperAdmin && !currentAccountId"
+            class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+            <strong>Central admin mode.</strong>
+            Account → Settings, Branding, Finance, and Buyer Billing apply to one platform.
+            Click <strong>Switch</strong> on a row below, then open those pages again.
+        </div>
 
         <div
             v-if="currentAccountId"

@@ -1,4 +1,4 @@
-# 02 — Campaigns & Verticals
+# 02 - Campaigns & Verticals
 
 ## Purpose
 
@@ -43,7 +43,7 @@ US platform has one campaign: `solar-us` (Solar vertical).
 
 **Expected:** Five UK campaigns listed with lead counts. Pagination works if more than 25 campaigns (not in default seed).
 
-### 2. Open campaign detail — Auto Insurance
+### 2. Open campaign detail - Auto Insurance
 
 1. Click **Auto Insurance** (or navigate to its show page)
 2. Review sections: overview, fields, linked deliveries, distribution configs
@@ -84,7 +84,7 @@ Repeat show-page review for:
    - Enable advanced distribution: checked
 3. Submit
 
-**Expected:** Redirect to campaign show page. Success flash message. Loan vertical fields auto-created (loan_amount, etc.). No deliveries yet — empty deliveries section.
+**Expected:** Redirect to campaign show page. Success flash message. Loan vertical fields auto-created (loan_amount, etc.). No deliveries yet - empty deliveries section.
 
 ### 5. Edit campaign
 
@@ -117,7 +117,7 @@ Repeat show-page review for:
 
 **Expected:** Only US-scoped campaigns for that partner platform (e.g. **Solar** `solar-us`). No campaigns from Excellence Leads UK or other tenants.
 
-**Note:** UK vs US markets on a *single* partner platform are modeled as separate **campaigns** (country, currency, buyers per campaign) — not as separate tenants. Multi-tenancy is for isolating distinct partner businesses under super-admin.
+**Note:** UK vs US markets on a *single* partner platform are modeled as separate **campaigns** (country, currency, buyers per campaign) - not as separate tenants. Multi-tenancy is for isolating distinct partner businesses under super-admin.
 
 ---
 
@@ -138,15 +138,15 @@ Repeat show-page review for:
 |----------|-------------------|
 | Duplicate campaign reference | Validation error on create |
 | Create campaign without vertical | Default general fields (firstname, lastname, email, phone, zipcode) |
-| Delete campaign with leads | Cascade or block depending on DB constraints — verify no orphaned leads in UI |
+| Delete campaign with leads | Cascade or block depending on DB constraints - verify no orphaned leads in UI |
 | Super admin on wrong tenant | Switch platform at `/accounts` before creating campaigns |
 | Campaign without advanced distribution | Standard priority waterfall routing used instead of ping tree |
-| Edit reference on campaign with API traffic | May break existing integrations — reference should be treated as immutable in production |
+| Edit reference on campaign with API traffic | May break existing integrations - reference should be treated as immutable in production |
 
 ---
 
 ## Related Docs
 
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — buyer delivery methods
-- [04-distribution-ping-tree.md](./04-distribution-ping-tree.md) — tier configuration
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — ingest by `campaign_reference`
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - buyer delivery methods
+- [04-distribution-ping-tree.md](./04-distribution-ping-tree.md) - tier configuration
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - ingest by `campaign_reference`

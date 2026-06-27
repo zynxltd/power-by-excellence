@@ -33,6 +33,9 @@ const unlock = () => {
                 <strong>{{ account.display_name }}</strong> is suspended until billing is resolved.
                 Lead ingest, distribution, and most admin features are unavailable.
             </p>
+            <p class="mt-3 text-sm text-amber-700 dark:text-amber-300">
+                Tenant admins see this page when the platform operator locks the account. Contact your platform provider to restore access.
+            </p>
 
             <Panel class="mt-8 text-left">
                 <dl class="grid gap-4 sm:grid-cols-2">

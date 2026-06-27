@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-**Suppliers** are affiliates — publishers, call centres, or ad networks that send leads into your platform. Each supplier has one or more **Sources** identified by a **SID** (source ID). Optional **sub-suppliers** (SSID) provide second-tier attribution for landing pages, sub-brokers, or A/B tests.
+**Suppliers** are affiliates - publishers, call centres, or ad networks that send leads into your platform. Each supplier has one or more **Sources** identified by a **SID** (source ID). Optional **sub-suppliers** (SSID) provide second-tier attribution for landing pages, sub-brokers, or A/B tests.
 
 Tracking is enforced at ingest (`sid`, `ssid` on API payload) and on outbound **postbacks** when lead status changes.
 
@@ -18,8 +18,8 @@ Tracking is enforced at ingest (`sid`, `ssid` on API payload) and on outbound **
 
 ```
 Supplier (affiliate entity)
-  └── Source (SID) — e.g. google_ppc
-        └── Sub-supplier (SSID) — e.g. landing_page_b
+  └── Source (SID) - e.g. google_ppc
+        └── Sub-supplier (SSID) - e.g. landing_page_b
 ```
 
 | Level | Identifier | Example |
@@ -28,12 +28,12 @@ Supplier (affiliate entity)
 | Source | `sid` | `google_search` |
 | Sub-supplier | `ssid` | `partner_12` |
 
-## Create a supplier — step by step
+## Create a supplier - step by step
 
 1. **Suppliers** → **New** (`/suppliers/create`)
 2. Wizard steps:
 
-### Step 1 — Basics
+### Step 1 - Basics
 
 | Field | Example |
 |-------|---------|
@@ -41,7 +41,7 @@ Supplier (affiliate entity)
 | **Name** | `Acme Media Ltd` |
 | **Status** | Active |
 
-### Step 2 — Affiliate settings
+### Step 2 - Affiliate settings
 
 | Field | Purpose |
 |-------|---------|
@@ -50,7 +50,7 @@ Supplier (affiliate entity)
 | `enable_sub_suppliers` | Allow `ssid` on ingest |
 | `tracking_params` | Passthrough query keys (e.g. `c1`–`c5`) |
 
-### Step 3 — Traffic sources
+### Step 3 - Traffic sources
 
 Add at least one source:
 
@@ -67,7 +67,7 @@ Add **sub-suppliers** under a source if `enable_sub_suppliers` is on:
 | `lp_variant_a` | Landing page A |
 | `lp_variant_b` | Landing page B |
 
-### Step 4 — Portal access
+### Step 4 - Portal access
 
 Optional: create `supplier_portal` user for self-service reporting.
 
@@ -100,7 +100,7 @@ curl -X POST "https://your-tenant.test/api/v1/leads" \
 |-------|----------|-------------|
 | `sid` | Strongly recommended | Must match a source on the supplier |
 | `ssid` | If sub-suppliers enabled | Second-tier attribution |
-| `c1`–`c5` | No | Custom slots — echoed in postbacks |
+| `c1`–`c5` | No | Custom slots - echoed in postbacks |
 | `optin_url` | No | Consumer opt-in page URL |
 | `ip_address` | No | Consumer IP for fraud checks |
 
@@ -111,7 +111,7 @@ Supplier-scoped API keys can only ingest for their linked supplier.
 1. **API Keys** → **New** (`/api-keys`)
 2. Type: **Supplier** → select supplier
 3. Permissions: `leads.create`, `leads.read`
-4. Copy token — provide to affiliate integration team
+4. Copy token - provide to affiliate integration team
 5. Optional: IP allowlist for production
 
 ## Postbacks
@@ -126,25 +126,25 @@ Supplier-scoped API keys can only ingest for their linked supplier.
 | `lead.sold` | Lead sold to buyer |
 | `lead.rejected` | Lead rejected |
 | `lead.unsold` | No buyer accepted |
-| `lead.contacted` | Buyer feedback — contacted |
-| `lead.converted` | Buyer feedback — conversion |
-| `lead.funded` | Buyer feedback — funded |
+| `lead.contacted` | Buyer feedback - contacted |
+| `lead.converted` | Buyer feedback - conversion |
+| `lead.funded` | Buyer feedback - funded |
 | `lead.returned` | Buyer return processed |
 | `delivery.success` | Delivery post succeeded |
 
-### Create a postback — admin UI
+### Create a postback - admin UI
 
 1. **Postbacks** → create new
 2. Configure:
 
 | Field | Example |
 |-------|---------|
-| **Name** | `Acme — sold notification` |
+| **Name** | `Acme - sold notification` |
 | **URL** | `https://affiliate.com/postback?click_id={c1}&payout={payout}` |
 | **Method** | `GET` or `POST` |
 | **Events** | `lead.sold`, `lead.rejected` |
-| **Supplier** | Optional — scope to one affiliate |
-| **Campaign** | Optional — scope to one campaign |
+| **Supplier** | Optional - scope to one affiliate |
+| **Campaign** | Optional - scope to one campaign |
 | **Active** | Yes |
 
 3. Save
@@ -185,9 +185,9 @@ POST postbacks send JSON body merging all lead fields plus:
 
 ### Postback logs
 
-1. **Postbacks** index — recent log strip
+1. **Postbacks** index - recent log strip
 2. Each log row: URL fired, HTTP status, duration, response snippet
-3. Failed postbacks show `failed` — affiliate should retry from their side or fix URL
+3. Failed postbacks show `failed` - affiliate should retry from their side or fix URL
 
 ## Rev-share and payout
 
@@ -214,15 +214,15 @@ Create **supplier_portal** users so affiliates self-serve:
 | Leads | `/portal/supplier/leads` | Submitted lead list with status |
 | Billing | `/portal/supplier/billing` | Payout summary |
 
-Portal data is scoped strictly to the linked supplier — no cross-affiliate visiblity.
+Portal data is scoped strictly to the linked supplier - no cross-affiliate visiblity.
 
 See **Supplier Portal** help category for portal-user documentation.
 
 ## Reporting by SID/SSID
 
-1. **Reports** (`/reports`) — filter by supplier, source, campaign
+1. **Reports** (`/reports`) - filter by supplier, source, campaign
 2. Compare SID performance: sold rate, revenue, margin
-3. Unknown or missing SIDs appear as blank — fix supplier onboarding
+3. Unknown or missing SIDs appear as blank - fix supplier onboarding
 
 ## Troubleshooting
 
@@ -250,10 +250,10 @@ Provide affiliates:
 
 ## Tips
 
-- Validate SID exists before go-live — unknown SIDs may still ingest but skew reporting
-- Document postback macros for affiliates — most use `GET` with query params
+- Validate SID exists before go-live - unknown SIDs may still ingest but skew reporting
+- Document postback macros for affiliates - most use `GET` with query params
 - Use unique SIDs per traffic channel (PPC, native, email) for clean reporting
-- Scope postbacks per supplier when URLs differ — avoids firing wrong affiliate
-- Monitor postback log failure rate — chronic failures mean affiliate integration drift
+- Scope postbacks per supplier when URLs differ - avoids firing wrong affiliate
+- Monitor postback log failure rate - chronic failures mean affiliate integration drift
 MD,
 ];

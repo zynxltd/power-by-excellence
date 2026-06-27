@@ -72,8 +72,12 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
     label: c.name,
     value: `${c.leads} leads · ${c.sold} sold`,
     href: route('leads.index', { campaign_id: c.id }),
-    title: `${c.name} — ${c.leads} leads, ${c.sold} sold`,
+    title: `${c.name} - ${c.leads} leads, ${c.sold} sold`,
 })));
+
+const TABLE_ROWS = 20;
+
+const tablePad = (count = 0) => Math.max(0, TABLE_ROWS - count);
 </script>
 
 <template>
@@ -131,7 +135,7 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                 </div>
             </Panel>
             <Panel v-if="processingLeads.length" title="Processing now" class="lg:col-span-3">
-                <p class="mb-3 text-xs text-slate-600 dark:text-slate-400">Leads actively moving through the pipeline — updates every {{ intervalSeconds }}s.</p>
+                <p class="mb-3 text-xs text-slate-600 dark:text-slate-400">Leads actively moving through the pipeline - updates every {{ intervalSeconds }}s.</p>
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <Link
                         v-for="lead in processingLeads"
@@ -147,7 +151,7 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                     </Link>
                 </div>
             </Panel>
-            <Panel title="Leads received — last 24 hours" class="lg:col-span-2">
+            <Panel title="Leads received - last 24 hours" class="lg:col-span-2">
                 <BarChart
                     :labels="hourlyChart.labels"
                     :datasets="[{ label: 'Leads', data: hourlyChart.data, color: '#6366f1' }]"
@@ -156,8 +160,8 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
             </Panel>
         </div>
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-2">
-            <Panel title="Recent Leads" :padding="false">
+        <div class="mt-6 grid items-stretch gap-6 lg:grid-cols-2">
+            <Panel title="Recent Leads" :padding="false" class="flex h-full flex-col">
                 <DataTable :empty="!recentLeads?.data?.length" :loading="isNavigating">
                     <template #head>
                         <th class="text-left">UUID</th>
@@ -173,16 +177,24 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                         <td class=""><StatusBadge :status="lead.status" /></td>
                         <td class="text-xs text-slate-600 dark:text-slate-400">
                             <Link v-if="lead.campaign_id" :href="route('campaigns.show', lead.campaign_id)" class="hover:text-indigo-600" @click.stop>{{ lead.campaign }}</Link>
-                            <span v-else>—</span>
+                            <span v-else>-</span>
                         </td>
-                        <td class="text-xs text-slate-500">{{ lead.supplier ?? '—' }}</td>
+                        <td class="text-xs text-slate-500">{{ lead.supplier ?? '-' }}</td>
                         <td class=""><FormattedDate :value="lead.received_at" format="relative" /></td>
                     </ClickableTableRow>
+                    <tr
+                        v-for="n in tablePad(recentLeads?.data?.length)"
+                        :key="`lead-pad-${n}`"
+                        aria-hidden="true"
+                        class="pointer-events-none"
+                    >
+                        <td colspan="5" class="py-1.5">&nbsp;</td>
+                    </tr>
                 </DataTable>
-                <Pagination :links="recentLeads.links" />
+                <Pagination :links="recentLeads.links" class="mt-auto" />
             </Panel>
 
-            <Panel :padding="false">
+            <Panel :padding="false" class="flex h-full flex-col">
                 <template #header>
                     <div class="flex w-full items-center justify-between">
                         <h3 class="font-semibold text-slate-900 dark:text-white">Latest Deliveries</h3>
@@ -199,16 +211,24 @@ const topCampaignStrip = computed(() => (props.topCampaigns ?? []).map((c) => ({
                     </template>
                     <ClickableTableRow v-for="log in deliveryPreview.data" :key="log.id" :href="route('logs.delivery.show', log.id)">
                         <td class="text-xs text-slate-900 dark:text-white">
-                            <Link v-if="log.delivery_id" :href="route('deliveries.show', log.delivery_id)" class="hover:text-indigo-600" @click.stop>{{ log.delivery ?? '—' }}</Link>
-                            <span v-else>—</span>
+                            <Link v-if="log.delivery_id" :href="route('deliveries.show', log.delivery_id)" class="hover:text-indigo-600" @click.stop>{{ log.delivery ?? '-' }}</Link>
+                            <span v-else>-</span>
                         </td>
-                        <td class="text-xs text-slate-500">{{ log.buyer ?? '—' }}</td>
-                        <td class="text-xs text-slate-500">{{ log.tier ? `T${log.tier}` : '—' }}</td>
+                        <td class="text-xs text-slate-500">{{ log.buyer ?? '-' }}</td>
+                        <td class="text-xs text-slate-500">{{ log.tier ? `T${log.tier}` : '-' }}</td>
                         <td class=""><StatusBadge :status="log.status" /></td>
                         <td class=""><FormattedDate :value="log.created_at" format="relative" /></td>
                     </ClickableTableRow>
+                    <tr
+                        v-for="n in tablePad(deliveryPreview?.data?.length)"
+                        :key="`delivery-pad-${n}`"
+                        aria-hidden="true"
+                        class="pointer-events-none"
+                    >
+                        <td colspan="5" class="py-1.5">&nbsp;</td>
+                    </tr>
                 </DataTable>
-                <Pagination :links="deliveryPreview.links" />
+                <Pagination :links="deliveryPreview.links" class="mt-auto" />
             </Panel>
         </div>
     </AuthenticatedLayout>

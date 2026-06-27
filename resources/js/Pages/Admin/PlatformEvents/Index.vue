@@ -44,7 +44,7 @@ const hasPayload = (event) => event.payload && Object.keys(event.payload).length
     <AuthenticatedLayout>
         <PageHeader
             title="Platform events"
-            description="Lead pipeline events across all partner platforms — status changes, validations, deliveries, and quarantine."
+            description="Lead pipeline events across all partner platforms - status changes, validations, deliveries, and quarantine."
         >
             <template #actions>
                 <AppButton :href="route('command-center.index')" variant="secondary">Command Center</AppButton>
@@ -94,7 +94,7 @@ const hasPayload = (event) => event.payload && Object.keys(event.payload).length
                             <span class="inline-block text-xs transition" :class="expandedId === event.id ? 'rotate-90' : ''">▸</span>
                         </td>
                         <td class="whitespace-nowrap"><FormattedDate :value="event.created_at" /></td>
-                        <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.tenant ?? '—' }}</td>
+                        <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.tenant ?? '-' }}</td>
                         <td>
                             <span :class="['rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', levelBadgeClass(event.level)]">
                                 {{ event.level ?? 'info' }}
@@ -106,9 +106,9 @@ const hasPayload = (event) => event.payload && Object.keys(event.payload).length
                             </span>
                         </td>
                         <td class="max-w-sm text-xs text-slate-600 dark:text-slate-400">
-                            <span class="line-clamp-2">{{ event.message ?? '—' }}</span>
+                            <span class="line-clamp-2">{{ event.message ?? '-' }}</span>
                         </td>
-                        <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.campaign ?? '—' }}</td>
+                        <td class="text-xs text-slate-600 dark:text-slate-400">{{ event.campaign ?? '-' }}</td>
                         <td @click.stop>
                             <Link
                                 v-if="event.lead_id"
@@ -118,7 +118,7 @@ const hasPayload = (event) => event.payload && Object.keys(event.payload).length
                             >
                                 {{ event.lead_uuid?.slice(0, 12) }}…
                             </Link>
-                            <span v-else class="text-slate-400">—</span>
+                            <span v-else class="text-slate-400">-</span>
                         </td>
                     </tr>
                     <tr v-if="expandedId === event.id" class="bg-slate-50 dark:bg-slate-900/50">
@@ -130,11 +130,11 @@ const hasPayload = (event) => event.payload && Object.keys(event.payload).length
                                 </div>
                                 <div>
                                     <p class="text-xs font-semibold uppercase text-slate-500">Lead status</p>
-                                    <p class="text-slate-700 dark:text-slate-300">{{ event.lead_status ?? '—' }}</p>
+                                    <p class="text-slate-700 dark:text-slate-300">{{ event.lead_status ?? '-' }}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs font-semibold uppercase text-slate-500">Lead UUID</p>
-                                    <p class="font-mono text-xs text-slate-700 dark:text-slate-300">{{ event.lead_uuid ?? '—' }}</p>
+                                    <p class="font-mono text-xs text-slate-700 dark:text-slate-300">{{ event.lead_uuid ?? '-' }}</p>
                                 </div>
                                 <div v-if="event.lead_id" class="md:col-span-2 lg:col-span-3">
                                     <Link

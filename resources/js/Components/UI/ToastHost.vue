@@ -11,7 +11,7 @@ const styles = {
 </script>
 
 <template>
-    <div class="pointer-events-none fixed top-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
+    <div class="pointer-events-none fixed top-16 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 sm:top-[4.25rem] sm:right-6">
         <transition-group name="toast">
             <div
                 v-for="toast in toasts"

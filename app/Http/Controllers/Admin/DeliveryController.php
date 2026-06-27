@@ -207,7 +207,7 @@ class DeliveryController extends Controller
                 'delivery' => $delivery,
                 'tab' => 'logs',
             ])
-            ->with('success', 'Test delivery executed against the latest campaign lead. Review the ping/post log below — this fires a live request to the buyer endpoint.')
+            ->with('success', 'Test delivery executed against the latest campaign lead. Review the ping/post log below - this fires a live request to the buyer endpoint.')
             ->with('test_lead_uuid', $lead->uuid)
             ->with('test_lead_id', $lead->id);
     }
@@ -282,7 +282,7 @@ class DeliveryController extends Controller
             'email' => [
                 'title' => 'Email Delivery',
                 'summary' => 'Email lead details to a buyer inbox using a template.',
-                'when' => 'Buyer has no API — receives leads by email notification.',
+                'when' => 'Buyer has no API - receives leads by email notification.',
                 'icon' => 'email',
             ],
             'email_ping_post' => [
@@ -304,11 +304,11 @@ class DeliveryController extends Controller
     {
         return match ($mode) {
             'waterfall' => 'Try buyers in priority order until one accepts. Best for tiered fallback.',
-            'parallel_auction' => 'Real-time auction: ping all buyers in parallel, highest dynamic bid above floor wins — only the winner receives the full post.',
+            'parallel_auction' => 'Real-time auction: ping all buyers in parallel, highest dynamic bid above floor wins - only the winner receives the full post.',
             'sequential_ping' => 'Ping buyers one-by-one in priority order until one accepts.',
             'weighted' => 'Random selection weighted by the Weight field (e.g. 70/30 split).',
             'round_robin' => 'Rotate fairly between eligible buyers on each lead.',
-            'hybrid' => 'Used inside ping-tree tier groups — configure tiers on the Ping Tree page.',
+            'hybrid' => 'Used inside ping-tree tier groups - configure tiers on the Ping Tree page.',
             default => '',
         };
     }

@@ -24,7 +24,7 @@ const disableForm = useForm({ password: '' });
         </header>
 
         <div v-if="recoveryCodes?.length" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
-            <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Save these recovery codes — they won't be shown again:</p>
+            <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">Save these recovery codes - they won't be shown again:</p>
             <ul class="mt-2 grid grid-cols-2 gap-1 font-mono text-sm">
                 <li v-for="code in recoveryCodes" :key="code">{{ code }}</li>
             </ul>

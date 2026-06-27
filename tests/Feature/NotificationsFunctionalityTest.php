@@ -151,6 +151,66 @@ class NotificationsFunctionalityTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_tenant_admin_can_view_notifications_page(): void
+    {
+        $this->service->broadcast(
+            $this->superAdmin,
+            'Long maintenance notice',
+            'This is a longer platform message that would be truncated in the bell dropdown preview area.',
+            $this->ukAccount->id,
+            'warning',
+        );
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->get(route('notifications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Notifications/Inbox')
+                ->where('unreadCount', 1)
+                ->has('notifications.data', 1)
+                ->where('notifications.data.0.title', 'Long maintenance notice')
+                ->where('notifications.data.0.body', 'This is a longer platform message that would be truncated in the bell dropdown preview area.')
+            );
+    }
+
+    public function test_supplier_portal_user_can_read_tenant_notification_and_clear_badge(): void
+    {
+        $this->service->broadcast(
+            $this->superAdmin,
+            'Supplier notice',
+            'Platform update for all tenant users.',
+            $this->ukAccount->id,
+        );
+
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->firstOrFail();
+
+        $this->assertSame(1, $this->service->unreadCount($supplierUser));
+
+        $inbox = $this->ukHost()
+            ->actingAs($supplierUser)
+            ->getJson(route('notifications.inbox'));
+
+        $inbox->assertOk()
+            ->assertJsonPath('unread_count', 1)
+            ->assertJsonCount(1, 'notifications');
+
+        $notificationId = $inbox->json('notifications.0.id');
+
+        $this->ukHost()
+            ->actingAs($supplierUser)
+            ->post(route('notifications.read', $notificationId))
+            ->assertRedirect();
+
+        $this->assertSame(0, $this->service->unreadCount($supplierUser));
+
+        $this->ukHost()
+            ->actingAs($supplierUser)
+            ->getJson(route('notifications.inbox'))
+            ->assertOk()
+            ->assertJsonPath('unread_count', 0);
+    }
+
     public function test_tenant_admin_cannot_access_notification_admin_pages(): void
     {
         $this->ukHost()

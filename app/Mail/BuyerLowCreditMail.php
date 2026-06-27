@@ -24,7 +24,7 @@ class BuyerLowCreditMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Low credit alert — {$this->buyer->name}",
+            subject: "Low credit alert - {$this->buyer->name}",
         );
     }
 

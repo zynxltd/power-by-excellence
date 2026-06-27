@@ -17,7 +17,7 @@ class SystemStatusController extends Controller
             'canLogin' => true,
             'status' => $status->publicPayload($snapshot),
             'seo' => [
-                'title' => 'System Status — PowerByExcellence',
+                'title' => 'System Status - PowerByExcellence',
                 'description' => 'Live platform health for lead distribution, ping-tree routing, and API availability.',
             ],
         ]);

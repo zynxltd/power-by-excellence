@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-CSV export lets you pull lead batches into Excel, Google Sheets, HubSpot, Salesforce, or your dialler **without using the API**. Downloads are scoped strictly to leads **sold to your buyer account** on your tenant — you cannot access other buyers' data.
+CSV export lets you pull lead batches into Excel, Google Sheets, HubSpot, Salesforce, or your dialler **without using the API**. Downloads are scoped strictly to leads **sold to your buyer account** on your tenant - you cannot access other buyers' data.
 
 The export endpoint is `/portal/buyer/leads/download`. The browser saves a file named `leads.csv`.
 
@@ -23,7 +23,7 @@ The export endpoint is `/portal/buyer/leads/download`. The browser saves a file 
 | Need standard columns in one file | Filtering and paging through live inventory |
 | Building offline reports in Excel | Copying a single UUID quickly |
 
-## How to export — basic (no date filter)
+## How to export - basic (no date filter)
 
 1. Sign in to the buyer portal
 2. From **Buyer Dashboard** (`/portal/buyer`), click **Download CSV** in the hero banner  
@@ -33,11 +33,11 @@ The export endpoint is `/portal/buyer/leads/download`. The browser saves a file 
 
 This path exports up to **5,000** of your **most recent** leads by `distributed_at`, with no date restriction.
 
-## How to export — with date range
+## How to export - with date range
 
 1. Open `/portal/buyer/leads`
 2. In the **Filters** panel, set **From** and/or **To** dates
-3. Click **Apply** — confirm the table shows the expected date range
+3. Click **Apply** - confirm the table shows the expected date range
 4. Click **Export CSV** in the page header (filters are passed to the download URL automatically)
 5. Verify row count in the spreadsheet matches your expectations
 
@@ -59,7 +59,7 @@ uuid,firstname,lastname,email,phone1,zipcode,status,revenue,received_at
 
 | Column | Description |
 |--------|-------------|
-| `uuid` | Unique lead identifier — map as external dedupe key in CRM |
+| `uuid` | Unique lead identifier - map as external dedupe key in CRM |
 | `firstname` | First name from campaign field data |
 | `lastname` | Last name from campaign field data |
 | `email` | Email address |
@@ -69,7 +69,7 @@ uuid,firstname,lastname,email,phone1,zipcode,status,revenue,received_at
 | `revenue` | Cost charged to your buyer account for this lead |
 | `received_at` | Timestamp when the lead was received by the platform |
 
-Vertical-specific fields beyond this set are **not** included in the standard CSV — use API access or ask your administrator about extended export options if you need custom schema fields.
+Vertical-specific fields beyond this set are **not** included in the standard CSV - use API access or ask your administrator about extended export options if you need custom schema fields.
 
 ## Limits and ordering
 
@@ -88,9 +88,9 @@ If you have more than 5,000 leads in a date range, run multiple exports with nar
 1. Map `uuid` as your **unique external ID** to prevent duplicate imports on re-export
 2. Treat `revenue` as **cost** (debit to your account), not supplier payout
 3. Parse `received_at` as ISO datetime for timezone-aware reporting
-4. Import `status` for filtering — most workflows only import `sold` rows
+4. Import `status` for filtering - most workflows only import `sold` rows
 5. Normalise phone numbers in your CRM ETL if diallers require E.164 format
-6. Keep a copy of each export file for audit — filenames are always `leads.csv` (rename after download if needed)
+6. Keep a copy of each export file for audit - filenames are always `leads.csv` (rename after download if needed)
 
 ### Excel on Windows
 
@@ -116,12 +116,12 @@ A CRM stores full UUIDs but the portal table truncates display. Ops pastes the f
 
 ## Tips
 
-- Always **Apply** date filters on **My Leads** before **Export CSV** — the dashboard **Download CSV** button does not include date filters
-- Rename downloaded files immediately (`leads-2026-06-25.csv`) — the server always names the file `leads.csv`
+- Always **Apply** date filters on **My Leads** before **Export CSV** - the dashboard **Download CSV** button does not include date filters
+- Rename downloaded files immediately (`leads-2026-06-25.csv`) - the server always names the file `leads.csv`
 - For recurring exports, document the filter URL your team uses so results stay consistent
-- Compare `revenue` in CSV against the **Revenue** column in **My Leads** — they use the same source
+- Compare `revenue` in CSV against the **Revenue** column in **My Leads** - they use the same source
 - If importing into strict schemas, validate empty `email` or `phone1` rows against campaign optional-field rules
-- Large exports may take a few seconds — wait for the browser download to complete before clicking again
+- Large exports may take a few seconds - wait for the browser download to complete before clicking again
 
 ## Troubleshooting
 

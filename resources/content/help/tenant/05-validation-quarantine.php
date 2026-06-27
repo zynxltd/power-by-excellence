@@ -31,7 +31,7 @@ Configure on the campaign **show page** → **Validation** panel (PATCH `/campai
 | `block_disposable_email` | Reject known disposable domains |
 | Custom rules | Expression engine for field comparisons |
 
-### Admin UI — update validation
+### Admin UI - update validation
 
 1. Open **Campaigns** → select campaign (`/campaigns/{id}`)
 2. Locate **Validation** section on show page
@@ -118,7 +118,7 @@ Quarantine holds leads that need human review before entering (or re-entering) d
 | **Manual rule** | Custom expression flagged for review |
 | **Admin action** | Operator placed lead on hold |
 
-### Admin UI — quarantine queue
+### Admin UI - quarantine queue
 
 1. Navigate to **Operations → Quarantine** (`/quarantine`)
 2. Review list columns:
@@ -147,13 +147,13 @@ Quarantine holds leads that need human review before entering (or re-entering) d
 1. Quarantine list → click lead row
 2. Review **quarantine_message** in metadata
 3. Click **Release**
-4. Lead re-queues through pipeline — check **Leads** for new status
+4. Lead re-queues through pipeline - check **Leads** for new status
 
 #### Bulk operations
 
 1. Select multiple rows via checkboxes
 2. Choose **Bulk release** or **Bulk reject**
-3. Confirm — operation runs asynchronously for large batches
+3. Confirm - operation runs asynchronously for large batches
 
 ### Scheduled expiry
 
@@ -181,7 +181,7 @@ POST /api/v1/quarantine/{uuid}/reject
 | `pending` | Queued, not yet processed |
 | `processing` | Pipeline running |
 | `quarantined` | Held for review |
-| `rejected` | Terminal — validation, dedupe, or admin |
+| `rejected` | Terminal - validation, dedupe, or admin |
 | `duplicate` | Dedupe match |
 | `sold` | Successfully distributed |
 | `unsold` | No buyer accepted |
@@ -199,15 +199,15 @@ POST /api/v1/quarantine/{uuid}/reject
 
 ## Reporting quarantine depth
 
-1. **Dashboard** — quarantined count links to filtered lead list
-2. **Operations** (`/operations`) — live stats include quarantine depth
-3. Monitor daily — growing queue indicates supplier or validation misconfiguration
+1. **Dashboard** - quarantined count links to filtered lead list
+2. **Operations** (`/operations`) - live stats include quarantine depth
+3. Monitor daily - growing queue indicates supplier or validation misconfiguration
 
 ## Tips
 
 - High reject rate? Check supplier data quality first before loosening validation
-- Use quarantine for manual review of borderline HLR results — better than auto-rejecting good leads
-- Document quarantine reasons when rejecting — suppliers see status in portal
+- Use quarantine for manual review of borderline HLR results - better than auto-rejecting good leads
+- Document quarantine reasons when rejecting - suppliers see status in portal
 - Pair **block_disposable_email** with supplier education on email capture
 - Test dedupe with the same email twice in staging before go-live
 MD,

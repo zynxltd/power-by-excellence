@@ -50,7 +50,7 @@ const onSuppressionFile = (e) => { suppressionForm.file = e.target.files[0]; };
 
             <Panel title="Upload suppression list">
                 <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                    One value per row (email or phone). Values are normalised and stored as one-way hashes — matching leads are rejected during validation.
+                    One value per row (email or phone). Values are normalised and stored as one-way hashes - matching leads are rejected during validation.
                 </p>
                 <form @submit.prevent="submitSuppression" class="space-y-4">
                     <div>

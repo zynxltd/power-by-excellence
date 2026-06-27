@@ -79,12 +79,12 @@ const jumpToTab = (tab) => {
 };
 
 const leadStatStrip = computed(() => [
-    { label: 'Status', value: props.lead?.status ?? '—', accent: 'indigo' },
-    { label: 'Quality', value: props.leadQuality ? `${props.leadQuality.score} (${props.leadQuality.grade_label})` : '—', accent: 'violet' },
-    { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '—', accent: 'cyan' },
+    { label: 'Status', value: props.lead?.status ?? '-', accent: 'indigo' },
+    { label: 'Quality', value: props.leadQuality ? `${props.leadQuality.score} (${props.leadQuality.grade_label})` : '-', accent: 'violet' },
+    { label: 'Buyer', value: props.lead?.sold_to_buyer?.name ?? '-', accent: 'cyan' },
     { label: 'Revenue', value: formatMoney(props.lead?.financials?.revenue ?? 0), accent: 'emerald' },
-    { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '—', accent: 'amber' },
-    { label: 'Queue ID', value: props.lead?.queue_id ?? '—' },
+    { label: 'Processing', value: props.processingMs ? `${props.processingMs}ms` : '-', accent: 'amber' },
+    { label: 'Queue ID', value: props.lead?.queue_id ?? '-' },
 ]);
 
 const sortedDeliveryLogs = computed(() => {
@@ -111,7 +111,7 @@ const stageLabel = (stage) => {
         if (stage.key === 'outcome' && props.outcomeDetail?.title) return props.outcomeDetail.title;
         return 'Issue';
     }
-    return '—';
+    return '-';
 };
 </script>
 
@@ -191,7 +191,7 @@ const stageLabel = (stage) => {
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <p class="font-semibold text-rose-900 dark:text-rose-200">{{ outcomeDetail.title }} — what happened</p>
+                        <p class="font-semibold text-rose-900 dark:text-rose-200">{{ outcomeDetail.title }} - what happened</p>
                         <p class="mt-1 text-sm text-rose-800 dark:text-rose-300">{{ outcomeDetail.summary }}</p>
                         <p v-if="outcomeDetail.reason" class="mt-2 text-sm font-medium text-rose-900 dark:text-rose-100">Reason: {{ outcomeDetail.reason }}</p>
                         <ul v-if="outcomeDetail.hints?.length" class="mt-2 list-inside list-disc text-sm text-rose-700 dark:text-rose-300">
@@ -219,7 +219,7 @@ const stageLabel = (stage) => {
         <CompactStatStrip :items="leadStatStrip" class="mt-6" />
 
         <p v-if="processingStatus" class="mt-2 text-sm" :class="processingStatus.class">
-            Pipeline target &lt;200ms — {{ processingStatus.label }}
+            Pipeline target &lt;200ms - {{ processingStatus.label }}
         </p>
 
         <div ref="tabSection" class="mt-6 scroll-mt-24 flex gap-1 border-b border-slate-200 dark:border-slate-700">
@@ -286,8 +286,8 @@ const stageLabel = (stage) => {
             <dl class="grid gap-4 sm:grid-cols-2">
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Received</dt><dd class="mt-1"><FormattedDate :value="lead.received_at" /></dd></div>
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Distributed</dt><dd class="mt-1"><FormattedDate :value="lead.distributed_at" /></dd></div>
-                <div><dt class="text-xs font-semibold uppercase text-slate-500">Tenant</dt><dd class="mt-1">{{ lead.account?.name ?? lead.campaign?.account?.name ?? '—' }}</dd></div>
-                <div><dt class="text-xs font-semibold uppercase text-slate-500">Reject reason</dt><dd class="mt-1">{{ lead.reject_reason ?? '—' }}</dd></div>
+                <div><dt class="text-xs font-semibold uppercase text-slate-500">Tenant</dt><dd class="mt-1">{{ lead.account?.name ?? lead.campaign?.account?.name ?? '-' }}</dd></div>
+                <div><dt class="text-xs font-semibold uppercase text-slate-500">Reject reason</dt><dd class="mt-1">{{ lead.reject_reason ?? '-' }}</dd></div>
             </dl>
         </Panel>
 
@@ -316,7 +316,7 @@ const stageLabel = (stage) => {
                 <FormattedDate :value="e.created_at" class="shrink-0 text-xs" />
                 <div class="min-w-0 flex-1">
                     <span class="font-semibold text-slate-900 dark:text-white">{{ formatEvent(e.event_type) }}</span>
-                    <span class="text-slate-600 dark:text-slate-400"> — {{ e.message }}</span>
+                    <span class="text-slate-600 dark:text-slate-400"> - {{ e.message }}</span>
                     <p v-if="e.payload?.filter_summary?.length" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
                         Filters: {{ e.payload.filter_summary.join(' · ') }}
                     </p>
@@ -339,7 +339,7 @@ const stageLabel = (stage) => {
             </template>
 
             <div v-if="!sortedDeliveryLogs.length" class="py-4 text-sm text-slate-500">
-                No delivery attempts — this lead may have been rejected before distribution.
+                No delivery attempts - this lead may have been rejected before distribution.
             </div>
 
             <div v-else class="space-y-3">

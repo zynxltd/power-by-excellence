@@ -60,16 +60,16 @@ class MockBuyerApiController
         return response()->json([
             'base_path' => '/api/mock/buyers/{tier}/ping|post',
             'tiers' => [
-                1 => 'Premium — always accepts, bid £25',
-                2 => 'Floor — accepts only when bid >= floor',
-                3 => 'Reject — ping and post always decline',
-                4 => 'Standard — accepts at £18.50 (simulates slower buyer)',
-                5 => 'Random — 50% accept based on phone hash',
-                6 => 'Ping-ok-post-fail — ping accepts, post rejects',
-                7 => 'Dynamic — bid scales with zipcode prefix',
-                8 => 'Cap — rejects when X-Mock-Cap-Exceeded header set',
-                9 => 'Malformed — invalid response shapes',
-                10 => 'Auction — competitive bid for parallel auction tests',
+                1 => 'Premium - always accepts, bid £25',
+                2 => 'Floor - accepts only when bid >= floor',
+                3 => 'Reject - ping and post always decline',
+                4 => 'Standard - accepts at £18.50 (simulates slower buyer)',
+                5 => 'Random - 50% accept based on phone hash',
+                6 => 'Ping-ok-post-fail - ping accepts, post rejects',
+                7 => 'Dynamic - bid scales with zipcode prefix',
+                8 => 'Cap - rejects when X-Mock-Cap-Exceeded header set',
+                9 => 'Malformed - invalid response shapes',
+                10 => 'Auction - competitive bid for parallel auction tests',
             ],
         ]);
     }

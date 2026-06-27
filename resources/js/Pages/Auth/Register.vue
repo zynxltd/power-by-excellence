@@ -25,7 +25,7 @@ const inputClass =
 
 <template>
     <GuestLayout>
-        <Head title="Register — PowerByExcellence" />
+        <Head title="Register - PowerByExcellence" />
 
         <template #header>
             <h2>Create your account</h2>

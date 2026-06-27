@@ -140,7 +140,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
             v-if="drillContext.length"
             class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-sm text-indigo-950 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-100"
         >
-            <strong>Filtered view</strong> — {{ drillContext.join(' · ') }}.
+            <strong>Filtered view</strong> - {{ drillContext.join(' · ') }}.
             <Link :href="route('reports.index')" class="ml-1 font-medium underline">Back to reports</Link>
         </div>
 
@@ -285,7 +285,7 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
                 <ClickableTableRow v-for="lead in leads.data" :key="lead.id" :href="route('leads.show', lead.id)">
                     <td class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ lead.uuid?.slice(0, 12) }}…</td>
                     <td v-if="showTenantColumn" class="text-xs text-slate-600 dark:text-slate-400">
-                        {{ lead.account?.brand_name || lead.account?.name || lead.campaign?.account?.brand_name || '—' }}
+                        {{ lead.account?.brand_name || lead.account?.name || lead.campaign?.account?.brand_name || '-' }}
                     </td>
                     <td class="text-slate-900 dark:text-white">{{ lead.campaign?.name }}</td>
                     <td class=""><StatusBadge :status="lead.status" /></td>

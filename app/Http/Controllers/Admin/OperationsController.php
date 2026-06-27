@@ -105,7 +105,7 @@ class OperationsController extends Controller
             ->when($campaignId, fn ($q) => $q->whereHas('lead', fn ($lq) => $lq->where('campaign_id', $campaignId)))
             ->with(['lead', 'delivery', 'buyer'])
             ->orderByDesc('created_at')
-            ->paginate(15, ['*'], 'delivery_page')
+            ->paginate(20, ['*'], 'delivery_page')
             ->withQueryString()
             ->through(fn (DeliveryLog $log) => [
                 'id' => $log->id,

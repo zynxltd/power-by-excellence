@@ -30,7 +30,7 @@ const inputClass =
 
 <template>
     <GuestLayout>
-        <Head title="Reset Password — PowerByExcellence" />
+        <Head title="Reset Password - PowerByExcellence" />
 
         <template #header>
             <h2>Set new password</h2>

@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="PowerByExcellence — real-time lead distribution, ping-tree routing, and buyer management platform.">
+        <meta name="description" content="PowerByExcellence - real-time lead distribution, ping-tree routing, and buyer management platform.">
         <meta name="theme-color" content="#0f172a">
         <link rel="canonical" href="{{ url()->current() }}">
 

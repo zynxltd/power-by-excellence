@@ -98,8 +98,8 @@ class CampaignApiSpecController extends Controller
         return back()->with(
             'success',
             $validated['locked']
-                ? 'API spec locked — editing and saving are disabled.'
-                : 'API spec unlocked — changes may affect live integrations.',
+                ? 'API spec locked - editing and saving are disabled.'
+                : 'API spec unlocked - changes may affect live integrations.',
         );
     }
 
@@ -178,7 +178,7 @@ class CampaignApiSpecController extends Controller
         return [
             [
                 'key' => 'solar_full',
-                'name' => 'Solar — full lead',
+                'name' => 'Solar - full lead',
                 'description' => 'Standard UK solar lead with roof and usage fields',
                 'fields' => [
                     ['name' => 'firstname', 'label' => 'First name', 'type' => 'string', 'required' => true, 'ping_field' => true],
@@ -206,7 +206,7 @@ class CampaignApiSpecController extends Controller
             ],
             [
                 'key' => 'payday_ping',
-                'name' => 'Payday — ping-minimal',
+                'name' => 'Payday - ping-minimal',
                 'description' => 'Minimal PII for ping-post waterfall',
                 'fields' => [
                     ['name' => 'zipcode', 'label' => 'Postcode', 'type' => 'postcode', 'required' => true, 'ping_field' => true],

@@ -35,7 +35,7 @@ const supplierStatStrip = computed(() => [
     <AuthenticatedLayout>
         <PageHeader
             :title="supplier.name"
-            description="Affiliate / publisher profile — sources, attribution, and submitted leads."
+            description="Affiliate / publisher profile - sources, attribution, and submitted leads."
         >
             <template #actions>
                 <AppButton :href="route('api-keys.index')" variant="secondary">API Keys</AppButton>

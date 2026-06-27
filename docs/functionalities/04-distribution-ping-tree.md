@@ -1,4 +1,4 @@
-# 04 — Distribution Ping Tree
+# 04 - Distribution Ping Tree
 
 ## Purpose
 
@@ -58,12 +58,12 @@ The **Distribution Ping Tree** is PowerByExcellence's advanced routing engine. W
 
 **Expected:** 10 tier cards stacked vertically. Each shows: tier number, name, routing mode, floor price, assigned delivery node(s). Arrow or connector between tiers. Bottom shows "No tier accepts → unsold" outcome.
 
-### 3. Edit ping tree — add a tier
+### 3. Edit ping tree - add a tier
 
 1. Click **Edit** on Hybrid Ping Tree (inactive)
 2. Click **Add tier**
 3. Configure:
-   - Name: `Tier 3 — Test Waterfall`
+   - Name: `Tier 3 - Test Waterfall`
    - Mode: Waterfall
    - Floor price: `8`
    - Deliveries: select **Store Lead (Fallback)**
@@ -144,6 +144,6 @@ The **Distribution Ping Tree** is PowerByExcellence's advanced routing engine. W
 
 ## Related Docs
 
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — delivery setup per tier
-- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) — enable advanced distribution
-- [12-operations-and-logs.md](./12-operations-and-logs.md) — live delivery logs
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - delivery setup per tier
+- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) - enable advanced distribution
+- [12-operations-and-logs.md](./12-operations-and-logs.md) - live delivery logs

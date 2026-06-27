@@ -117,7 +117,7 @@ watch(() => props.view, (v) => {
 <template>
     <Head title="Deliveries" />
     <AuthenticatedLayout>
-        <PageHeader title="Deliveries" description="Configure how leads are delivered to buyers — grouped by campaign for quick scanning.">
+        <PageHeader title="Deliveries" description="Configure how leads are delivered to buyers - grouped by campaign for quick scanning.">
             <template #actions>
                 <AppButton :href="route('deliveries.create')">New Delivery</AppButton>
             </template>
@@ -146,7 +146,7 @@ watch(() => props.view, (v) => {
                     <label class="mb-1 block text-xs font-semibold text-slate-500">Campaign</label>
                     <select v-model="localFilters.campaign_id" class="form-select">
                         <option value="">All campaigns</option>
-                        <option v-for="c in filterOptions?.campaigns" :key="c.id" :value="c.id">{{ c.vertical_label }} — {{ c.name }}</option>
+                        <option v-for="c in filterOptions?.campaigns" :key="c.id" :value="c.id">{{ c.vertical_label }} - {{ c.name }}</option>
                     </select>
                 </div>
                 <div>
@@ -263,10 +263,10 @@ watch(() => props.view, (v) => {
                 <ClickableTableRow v-for="d in deliveryRows" :key="d.id" :href="route('deliveries.show', d.id)">
                     <td class="font-medium text-slate-900 dark:text-white">{{ d.name }}</td>
                     <td v-if="showPlatformColumn" class="text-xs text-slate-600 dark:text-slate-400">
-                        {{ d.platform_name ?? '—' }}
+                        {{ d.platform_name ?? '-' }}
                     </td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.campaign?.name }}</td>
-                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '—' }}</td>
+                    <td class="text-xs text-slate-600 dark:text-slate-400">{{ d.buyer?.name ?? '-' }}</td>
                     <td class=""><DeliveryMethodBadge :method="methodValue(d)" /></td>
                     <td class=""><StatusBadge :status="d.status" /></td>
                     <td class="max-w-xs">
@@ -278,7 +278,7 @@ watch(() => props.view, (v) => {
                         </p>
                     </td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">
-                        {{ d.stats?.success_rate != null ? `${d.stats.success_rate}%` : '—' }}
+                        {{ d.stats?.success_rate != null ? `${d.stats.success_rate}%` : '-' }}
                     </td>
                     <td class=""><FormattedDate :value="d.updated_at" format="relative" /></td>
                     <td class="text-right" @click.stop>

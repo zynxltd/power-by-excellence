@@ -2,13 +2,16 @@
 
 namespace App\Services\Platform;
 
+use App\Mail\SupportTicketResolvedMail;
 use App\Models\Account;
 use App\Models\PlatformNotification;
 use App\Models\PlatformNotificationRead;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Support\Tenancy\TenantResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PlatformNotificationService
@@ -32,6 +35,30 @@ class PlatformNotificationService
             'title' => $title,
             'body' => $body,
             'metadata' => array_merge($metadata, ['action' => $action]),
+        ]);
+    }
+
+    public function notifyTenantFormApprovalRequest(
+        Account $account,
+        ?User $actor,
+        \App\Models\HostedForm $form,
+    ): PlatformNotification {
+        $supplierName = $form->supplier?->name ?? 'Supplier';
+
+        return PlatformNotification::create([
+            'account_id' => $account->id,
+            'created_by_user_id' => $actor?->id,
+            'audience' => 'tenant',
+            'type' => 'activity',
+            'severity' => 'warning',
+            'title' => 'Form approval requested',
+            'body' => "{$supplierName} submitted \"{$form->name}\" for review.",
+            'metadata' => [
+                'action' => 'form.approval_requested',
+                'hosted_form_id' => $form->id,
+                'supplier_id' => $form->supplier_id,
+                'campaign_id' => $form->campaign_id,
+            ],
         ]);
     }
 
@@ -73,6 +100,38 @@ class PlatformNotificationService
         ]);
     }
 
+    public function notifySupportTicketResolved(User $staff, SupportTicket $ticket): PlatformNotification
+    {
+        $ticket->loadMissing(['user', 'account']);
+
+        $notification = PlatformNotification::create([
+            'account_id' => $ticket->account_id,
+            'created_by_user_id' => $staff->id,
+            'audience' => 'tenant',
+            'type' => 'support',
+            'severity' => 'info',
+            'title' => 'Support ticket resolved: '.$ticket->subject,
+            'body' => 'Your support request has been marked as resolved.',
+            'metadata' => [
+                'action' => 'support.ticket_resolved',
+                'support_ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+            ],
+        ]);
+
+        $owner = $ticket->user;
+        if ($owner?->email && $ticket->account) {
+            Mail::to($owner->email)->send(new SupportTicketResolvedMail(
+                $ticket,
+                $staff,
+                $owner,
+                TenantResolver::portalUrl($ticket->account, '/support/tickets/'.$ticket->id),
+            ));
+        }
+
+        return $notification;
+    }
+
     public function notifySupportTenantMessage(
         Account $account,
         User $tenantUser,
@@ -106,6 +165,11 @@ class PlatformNotificationService
         $ticketId = $notification->metadata['support_ticket_id'] ?? null;
 
         if (! $ticketId) {
+            $formId = $notification->metadata['hosted_form_id'] ?? null;
+            if ($formId && ($notification->metadata['action'] ?? null) === 'form.approval_requested') {
+                return route('forms.edit', $formId);
+            }
+
             return null;
         }
 
@@ -136,7 +200,7 @@ class PlatformNotificationService
         $isLocal = app()->environment('local');
 
         $title = $isLocal
-            ? 'Laravel Herd — link tenant subdomains'
+            ? 'Laravel Herd - link tenant subdomains'
             : 'Tenant subdomains not resolving';
 
         $hostList = implode(', ', array_slice($missing, 0, 5));
@@ -245,6 +309,44 @@ class PlatformNotificationService
     }
 
     /**
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, PlatformNotification>
+     */
+    public function paginateForUser(User $user, int $perPage = 20): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return $this->visibleQuery($user)
+            ->with(['account:id,name,brand_name', 'createdBy:id,name'])
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->through(function (PlatformNotification $n) use ($user) {
+                return $this->formatForUser($n, $user);
+            });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function formatForUser(PlatformNotification $n, User $user): array
+    {
+        $n->loadMissing(['account:id,name,brand_name', 'createdBy:id,name']);
+
+        return [
+            'id' => $n->id,
+            'title' => $n->title,
+            'body' => $n->body,
+            'severity' => $n->severity,
+            'type' => $n->type,
+            'is_read' => $n->reads()->where('user_id', $user->id)->exists(),
+            'href' => $this->hrefFor($user, $n),
+            'account' => $n->account ? [
+                'id' => $n->account->id,
+                'name' => $n->account->brand_name ?: $n->account->name,
+            ] : null,
+            'created_by' => $n->createdBy?->name,
+            'created_at' => $n->created_at?->toDateTimeString(),
+        ];
+    }
+
+    /**
      * @return Collection<int, PlatformNotification>
      */
     public function recentForUser(User $user, int $limit = 8): Collection
@@ -255,7 +357,8 @@ class PlatformNotificationService
             ->limit($limit)
             ->get()
             ->map(function (PlatformNotification $n) use ($user) {
-                $n->setAttribute('is_read', $n->reads()->where('user_id', $user->id)->exists());
+                $formatted = $this->formatForUser($n, $user);
+                $n->setAttribute('is_read', $formatted['is_read']);
 
                 return $n;
             });

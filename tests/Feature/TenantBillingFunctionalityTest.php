@@ -61,12 +61,10 @@ class TenantBillingFunctionalityTest extends TestCase
             ->put(route('accounts.billing.update', $this->ukAccount), [
                 'monthly_rent' => 799,
                 'contract_reference' => 'MSA-2026-UK',
-                'billing_due_at' => now()->addMonth()->toDateString(),
                 'billing_status' => 'active',
                 'billing_notes' => 'Signed annual contract',
                 'billing_alert_emails' => 'billing@powerbyexcellence.test',
                 'subscription_plan' => 'growth',
-                'fraud_protection_enabled' => true,
             ])
             ->assertRedirect(route('accounts.billing.edit', $this->ukAccount));
 
@@ -99,5 +97,40 @@ class TenantBillingFunctionalityTest extends TestCase
             AccountBillingService::STATUS_ACTIVE,
             app(AccountBillingService::class)->resolveStatus($this->ukAccount->fresh())
         );
+    }
+
+    public function test_past_due_warns_but_does_not_block_processing(): void
+    {
+        $billing = app(AccountBillingService::class);
+
+        $this->centralHost()
+            ->actingAs($this->superAdmin)
+            ->put(route('accounts.billing.update', $this->ukAccount), [
+                'monthly_rent' => 799,
+                'contract_reference' => 'MSA-TEST',
+                'billing_status' => 'past_due',
+                'billing_notes' => '',
+                'billing_alert_emails' => '',
+                'subscription_plan' => 'growth',
+            ])
+            ->assertRedirect();
+
+        $account = $this->ukAccount->fresh();
+        $this->assertSame(AccountBillingService::STATUS_PAST_DUE, $billing->resolveStatus($account));
+        $this->assertTrue($billing->canAcceptLeads($account));
+        $this->assertTrue($billing->canProcessLeads($account));
+        $this->assertTrue($account->is_active);
+    }
+
+    public function test_locked_tenant_admin_redirected_to_billing_lock_page(): void
+    {
+        app(AccountBillingService::class)->lock($this->ukAccount, 'Rent overdue');
+
+        $tenantAdmin = User::where('email', 'uk@powerbyexcellence.test')->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($tenantAdmin)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('billing.lock'));
     }
 }

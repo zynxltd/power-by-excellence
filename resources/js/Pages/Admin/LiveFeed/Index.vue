@@ -41,7 +41,7 @@ const hasMeta = (item) => item.meta && Object.keys(item.meta).length > 0;
     <AuthenticatedLayout>
         <PageHeader
             title="Live feed"
-            description="Real-time activity across all partner platforms — leads, deliveries, and platform events."
+            description="Real-time activity across all partner platforms - leads, deliveries, and platform events."
         >
             <template #actions>
                 <AppButton :href="route('command-center.index')" variant="secondary">Command Center</AppButton>
@@ -92,10 +92,10 @@ const hasMeta = (item) => item.meta && Object.keys(item.meta).length > 0;
                                 {{ feedTypeLabels[item.type] ?? item.type }}
                             </span>
                         </td>
-                        <td class="max-w-[8rem] truncate text-slate-600 dark:text-slate-400">{{ item.tenant ?? '—' }}</td>
+                        <td class="max-w-[8rem] truncate text-slate-600 dark:text-slate-400">{{ item.tenant ?? '-' }}</td>
                         <td class="max-w-xs truncate">{{ item.message }}</td>
                         <td class="max-w-[10rem] truncate text-slate-600 dark:text-slate-400">
-                            {{ item.actor ?? item.detail ?? '—' }}
+                            {{ item.actor ?? item.detail ?? '-' }}
                         </td>
                         <td>
                             <span
@@ -104,7 +104,7 @@ const hasMeta = (item) => item.meta && Object.keys(item.meta).length > 0;
                             >
                                 {{ item.status }}
                             </span>
-                            <span v-else class="text-slate-400">—</span>
+                            <span v-else class="text-slate-400">-</span>
                         </td>
                         <td class="text-right" @click.stop>
                             <Link
@@ -114,7 +114,7 @@ const hasMeta = (item) => item.meta && Object.keys(item.meta).length > 0;
                             >
                                 View
                             </Link>
-                            <span v-else class="text-slate-400">—</span>
+                            <span v-else class="text-slate-400">-</span>
                         </td>
                     </tr>
                     <tr v-if="expandedId === item.id" class="bg-slate-50 dark:bg-slate-900/50">
@@ -122,7 +122,7 @@ const hasMeta = (item) => item.meta && Object.keys(item.meta).length > 0;
                             <div class="grid gap-3 text-xs md:grid-cols-2 lg:grid-cols-4">
                                 <div>
                                     <p class="font-semibold uppercase text-slate-500">Detail</p>
-                                    <p class="text-slate-700 dark:text-slate-300">{{ item.detail ?? '—' }}</p>
+                                    <p class="text-slate-700 dark:text-slate-300">{{ item.detail ?? '-' }}</p>
                                 </div>
                                 <div v-if="item.meta?.lead_uuid">
                                     <p class="font-semibold uppercase text-slate-500">Lead UUID</p>

@@ -183,7 +183,7 @@ class PlatformApiDocsService
                 'field' => 'reject_reason',
                 'type' => 'string|null',
                 'when' => 'status = rejected',
-                'description' => 'Human-readable reason the lead failed platform validation (duplicate email, campaign cap, suppression list, invalid field, inactive campaign, etc.). This is not a buyer ping/post rejection — see Delivery Logs for buyer responses.',
+                'description' => 'Human-readable reason the lead failed platform validation (duplicate email, campaign cap, suppression list, invalid field, inactive campaign, etc.). This is not a buyer ping/post rejection - see Delivery Logs for buyer responses.',
             ],
             [
                 'field' => 'buyer_reference',
@@ -208,6 +208,12 @@ class PlatformApiDocsService
                 'type' => 'string|null',
                 'when' => 'status = sold',
                 'description' => 'Thank-you or confirmation URL to send the consumer to. Resolved from the winning ping-tree tier redirect_url, then delivery redirect_url, then delivery accept_url.',
+            ],
+            [
+                'field' => 'decline_url',
+                'type' => 'string|null',
+                'when' => 'status = unsold or quarantined',
+                'description' => 'Decline or fallback URL when no buyer accepts after all ping-tree tiers. Set on the ping tree as the decline page at the final step.',
             ],
             [
                 'field' => 'received_at',
@@ -235,7 +241,7 @@ class PlatformApiDocsService
             ['status' => 'accepted', 'terminal' => true, 'description' => 'Validation passed. In test mode this is the final state. In live mode, distribution may still run.'],
             ['status' => 'distributing', 'terminal' => false, 'description' => 'Ping tree / waterfall routing in progress.'],
             ['status' => 'sold', 'terminal' => true, 'description' => 'A buyer accepted the lead. redirect_url and revenue are populated.'],
-            ['status' => 'unsold', 'terminal' => true, 'description' => 'No buyer accepted after all tiers. May be quarantined depending on campaign settings.'],
+            ['status' => 'unsold', 'terminal' => true, 'description' => 'No buyer accepted after all tiers. decline_url is populated when configured on the ping tree.'],
             ['status' => 'rejected', 'terminal' => true, 'description' => 'Failed validation before distribution. See reject_reason.'],
             ['status' => 'duplicate', 'terminal' => true, 'description' => 'Matched an existing lead per campaign dedupe rules.'],
             ['status' => 'quarantined', 'terminal' => false, 'description' => 'Held for manual review. May be released or rejected via admin or quarantine API.'],
@@ -258,15 +264,15 @@ class PlatformApiDocsService
             ],
             [
                 'title' => 'Campaign reference',
-                'body' => 'Every ingest request must include campaign_reference (e.g. loans-uk) or campaign_id. Field names and required flags are defined per campaign in the Campaign API Spec — each campaign can have a different schema.',
+                'body' => 'Every ingest request must include campaign_reference (e.g. loans-uk) or campaign_id. Field names and required flags are defined per campaign in the Campaign API Spec - each campaign can have a different schema.',
             ],
             [
                 'title' => 'Buyer rejections vs platform rejections',
-                'body' => 'reject_reason on the lead API is only for ingest/validation failures. When a buyer rejects a ping or post during routing, the lead may still end unsold — the buyer\'s message is stored in Delivery Logs (ping_response / post_response JSON), not in reject_reason.',
+                'body' => 'reject_reason on the lead API is only for ingest/validation failures. When a buyer rejects a ping or post during routing, the lead may still end unsold - the buyer\'s message is stored in Delivery Logs (ping_response / post_response JSON), not in reject_reason.',
             ],
             [
                 'title' => 'Authentication headers',
-                'body' => 'Send your API key as Authorization: Bearer {prefix}|{secret} or as X-API-Key: {prefix}|{secret}. Both formats are equivalent. Keys are tenant-scoped — use the hostname shown on this page (not the central admin domain).',
+                'body' => 'Send your API key as Authorization: Bearer {prefix}|{secret} or as X-API-Key: {prefix}|{secret}. Both formats are equivalent. Keys are tenant-scoped - use the hostname shown on this page (not the central admin domain).',
             ],
             [
                 'title' => 'Rate limits',
@@ -287,7 +293,7 @@ class PlatformApiDocsService
             ],
             [
                 'title' => 'Own platform scenario',
-                'body' => 'Example: you run a white-label partner portal on your domain. Your app stores affiliate users and shows campaign lists from GET /platform. Lead ingest still goes to POST /leads using the campaign_reference and field schema from the export. Status polling uses GET /leads/{lead_id}. Your portal never needs admin UI access — only an API key with platform.read, leads.create, and leads.read.',
+                'body' => 'Example: you run a white-label partner portal on your domain. Your app stores affiliate users and shows campaign lists from GET /platform. Lead ingest still goes to POST /leads using the campaign_reference and field schema from the export. Status polling uses GET /leads/{lead_id}. Your portal never needs admin UI access - only an API key with platform.read, leads.create, and leads.read.',
             ],
             [
                 'title' => 'Partial exports',
@@ -330,7 +336,7 @@ class PlatformApiDocsService
                     ],
                     'api_spec' => ['version' => '1.0', 'fields' => []],
                     'deliveries' => [
-                        ['name' => 'Tier 1 — Acme Buyer', 'tier' => 1, 'method' => 'ping_post'],
+                        ['name' => 'Tier 1 - Acme Buyer', 'tier' => 1, 'method' => 'ping_post'],
                     ],
                     'distribution_configs' => [
                         ['name' => 'Default ping tree', 'is_active' => true],

@@ -10,9 +10,9 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-PowerByExcellence gives you a **white-label lead distribution platform** on your own subdomain (e.g. `excellence-uk.powerbyexcellence.test`). You operate campaigns, buyers, suppliers, routing, billing, and reporting — independent of other partners on the network.
+PowerByExcellence gives you a **white-label lead distribution platform** on your own subdomain (e.g. `excellence-uk.powerbyexcellence.test`). You operate campaigns, buyers, suppliers, routing, billing, and reporting - independent of other partners on the network.
 
-Unlike a shared SaaS login, each partner platform is a **fully isolated tenant**. Your buyers, suppliers, leads, financials, and branding live inside your account boundary. Super-admin network tools run only on the central marketing domain — your day-to-day work happens entirely on your tenant URL.
+Unlike a shared SaaS login, each partner platform is a **fully isolated tenant**. Your buyers, suppliers, leads, financials, and branding live inside your account boundary. Super-admin network tools run only on the central marketing domain - your day-to-day work happens entirely on your tenant URL.
 
 ### What you can do on day one
 
@@ -50,13 +50,13 @@ A typical lead journey:
 4. Winning buyer receives the lead; **financials** record revenue, payout, and margin
 5. **Postbacks** notify the supplier; portals update for both parties
 
-## First login — step by step
+## First login - step by step
 
 ### 1. Open your tenant URL
 
-1. Navigate to `https://{your-slug}.{base-domain}/login` — **not** the central marketing site
+1. Navigate to `https://{your-slug}.{base-domain}/login` - **not** the central marketing site
 2. Confirm the login page shows your **brand name** and logo (once branding is configured)
-3. Bookmark this URL for your team — admin sessions do not work cross-tenant
+3. Bookmark this URL for your team - admin sessions do not work cross-tenant
 
 ### 2. Sign in as Platform Administrator
 
@@ -78,16 +78,16 @@ A typical lead journey:
 
 1. Open **Branding** (`/settings/branding` or via Settings)
 2. Upload **logo** and **favicon**
-3. Set **brand_name** — shown on login, portals, and hosted forms
+3. Set **brand_name** - shown on login, portals, and hosted forms
 4. Save and refresh login page to verify
 
 ### 5. Review seeded data
 
 Most tenants ship with demo campaigns, buyers, and suppliers:
 
-1. **Campaigns** → `/campaigns` — confirm verticals and references (e.g. `auto-insurance-uk`)
-2. **Buyers** → `/buyers` — check credit balance and linked deliveries
-3. **Suppliers** → `/suppliers` — verify sources (SIDs) and API keys at `/api-keys`
+1. **Campaigns** → `/campaigns` - confirm verticals and references (e.g. `auto-insurance-uk`)
+2. **Buyers** → `/buyers` - check credit balance and linked deliveries
+3. **Suppliers** → `/suppliers` - verify sources (SIDs) and API keys at `/api-keys`
 4. Open one campaign's **show page** and confirm fields, deliveries, and active distribution config
 
 ## Navigation guide
@@ -111,13 +111,13 @@ The **Tenant Hub** panel on campaign and buyer pages provides contextual shortcu
 ### Tenant isolation
 
 - All records are scoped by `account_id`
-- UK admins cannot authenticate on the Canada subdomain — sessions and data are separate
+- UK admins cannot authenticate on the Canada subdomain - sessions and data are separate
 - API keys are tenant-bound; a UK key cannot post to a US campaign
 
 ### Async processing
 
 - Default ingest is **async**: API returns `202` with `queue_id`; workers process via Redis/Horizon
-- Use `sync: true` only for staging and low-volume testing — production should queue
+- Use `sync: true` only for staging and low-volume testing - production should queue
 - Run `php artisan queue:work` or **Horizon** in production; without workers, leads stay `pending`
 
 ### Multi-currency
@@ -162,7 +162,7 @@ Use this before going live:
 
 ## Tips
 
-- Run `php artisan queue:work` (or Horizon) in production — async ingest depends on it
+- Run `php artisan queue:work` (or Horizon) in production - async ingest depends on it
 - Link local subdomains: `php artisan platform:link-tenants` on Herd
 - Use **Routing Simulator** (`/routing/simulator`) before enabling new ping trees
 - Use **Help Centre** for buyers/suppliers; internal super-admin guides live in `docs/admin/` only

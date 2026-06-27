@@ -19,7 +19,7 @@ const inputClass =
 
 <template>
     <GuestLayout>
-        <Head title="Confirm Password — PowerByExcellence" />
+        <Head title="Confirm Password - PowerByExcellence" />
 
         <template #header>
             <h2>Confirm password</h2>

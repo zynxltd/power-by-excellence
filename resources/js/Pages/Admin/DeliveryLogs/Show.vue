@@ -15,9 +15,9 @@ const props = defineProps({ log: Object });
 const { formatMoney } = useMoneyFormat();
 
 const logDetailStrip = computed(() => [
-    { label: 'Status', value: props.log?.status ?? '—', accent: props.log?.status === 'success' ? 'emerald' : props.log?.status === 'failed' ? 'rose' : 'amber' },
-    { label: 'Duration', value: props.log?.duration_ms != null ? `${props.log.duration_ms}ms` : '—', accent: (props.log?.duration_ms ?? 0) > 1500 ? 'rose' : 'emerald' },
-    { label: 'HTTP', value: props.log?.http_status ?? '—' },
+    { label: 'Status', value: props.log?.status ?? '-', accent: props.log?.status === 'success' ? 'emerald' : props.log?.status === 'failed' ? 'rose' : 'amber' },
+    { label: 'Duration', value: props.log?.duration_ms != null ? `${props.log.duration_ms}ms` : '-', accent: (props.log?.duration_ms ?? 0) > 1500 ? 'rose' : 'emerald' },
+    { label: 'HTTP', value: props.log?.http_status ?? '-' },
     { label: 'Revenue', value: formatMoney(props.log?.revenue ?? 0), accent: 'emerald' },
 ]);
 </script>
@@ -40,11 +40,11 @@ const logDetailStrip = computed(() => [
                 <div class="space-y-4">
                     <div>
                         <p class="mb-1 text-xs font-semibold uppercase text-slate-500">Ping request</p>
-                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300">{{ JSON.stringify(log.ping_request, null, 2) ?? '—' }}</pre>
+                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300">{{ JSON.stringify(log.ping_request, null, 2) ?? '-' }}</pre>
                     </div>
                     <div>
                         <p class="mb-1 text-xs font-semibold uppercase text-slate-500">Ping response</p>
-                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">{{ JSON.stringify(log.ping_response, null, 2) ?? '—' }}</pre>
+                        <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-emerald-300">{{ JSON.stringify(log.ping_response, null, 2) ?? '-' }}</pre>
                     </div>
                 </div>
             </Panel>
@@ -72,11 +72,11 @@ const logDetailStrip = computed(() => [
                 </div>
                 <div>
                     <dt class="text-xs text-slate-500">Buyer</dt>
-                    <dd class="font-medium">{{ log.buyer?.name ?? '—' }}</dd>
+                    <dd class="font-medium">{{ log.buyer?.name ?? '-' }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-slate-500">Tier</dt>
-                    <dd class="font-medium">{{ log.delivery?.tier ?? '—' }}</dd>
+                    <dd class="font-medium">{{ log.delivery?.tier ?? '-' }}</dd>
                 </div>
                 <div v-if="log.lead">
                     <dt class="text-xs text-slate-500">Lead</dt>

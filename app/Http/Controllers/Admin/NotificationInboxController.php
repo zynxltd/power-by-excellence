@@ -8,6 +8,8 @@ use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NotificationInboxController extends Controller
 {
@@ -17,20 +19,20 @@ class NotificationInboxController extends Controller
 
         return response()->json([
             'unread_count' => $service->unreadCount($user),
-            'notifications' => $service->recentForUser($user, 12)->map(fn (PlatformNotification $n) => [
-                'id' => $n->id,
-                'title' => $n->title,
-                'body' => $n->body,
-                'severity' => $n->severity,
-                'type' => $n->type,
-                'is_read' => (bool) $n->getAttribute('is_read'),
-                'href' => $service->hrefFor($user, $n),
-                'account' => $n->account ? [
-                    'id' => $n->account->id,
-                    'name' => $n->account->brand_name ?: $n->account->name,
-                ] : null,
-                'created_at' => $n->created_at?->toDateTimeString(),
-            ]),
+            'notifications' => $service->recentForUser($user, 12)->map(
+                fn (PlatformNotification $n) => $service->formatForUser($n, $user)
+            ),
+        ]);
+    }
+
+    public function page(Request $request, PlatformNotificationService $service): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('Notifications/Inbox', [
+            'notifications' => $service->paginateForUser($user),
+            'unreadCount' => $service->unreadCount($user),
+            'isSuperAdmin' => $user->isSuperAdmin(),
         ]);
     }
 

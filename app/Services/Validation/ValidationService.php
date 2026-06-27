@@ -31,7 +31,7 @@ class ValidationService
         }
 
         if (! $this->fraudProtection->canValidateLead($account)) {
-            PlatformLogger::leadEvent($lead, 'fraud.cap_exceeded', 'Fraud Protection monthly cap reached — checks skipped for this lead', [
+            PlatformLogger::leadEvent($lead, 'fraud.cap_exceeded', 'Fraud Protection monthly cap reached - checks skipped for this lead', [
                 'usage' => $this->fraudProtection->usageCount($account),
                 'cap' => $this->fraudProtection->monthlyCap($account),
             ], 'warning');

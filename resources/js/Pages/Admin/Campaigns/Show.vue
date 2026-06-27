@@ -33,8 +33,8 @@ const configCount = computed(() => props.campaign?.distribution_configs?.length 
 const activeConfig = computed(() => props.campaign?.distribution_configs?.find((c) => c.is_active));
 
 const campaignStatStrip = computed(() => [
-    { label: 'Reference', value: props.campaign?.reference ?? '—', accent: 'indigo' },
-    { label: 'Status', value: props.campaign?.status ?? '—', accent: 'emerald' },
+    { label: 'Reference', value: props.campaign?.reference ?? '-', accent: 'indigo' },
+    { label: 'Status', value: props.campaign?.status ?? '-', accent: 'emerald' },
     { label: 'Floor', value: formatMoney(props.campaign?.floor_price), accent: 'cyan' },
     { label: 'Distribution', value: props.campaign?.use_advanced_distribution ? 'Ping tree' : 'Standard', accent: 'amber' },
     { label: 'Leads today', value: props.leadsToday ?? 0, accent: 'violet' },
@@ -122,14 +122,14 @@ const campaignStatStrip = computed(() => [
                     <td class="hidden px-6 py-4 md:table-cell">
                         <p v-if="d.buyer" class="text-sm text-slate-700 dark:text-slate-300">{{ d.buyer.name }}</p>
                         <p v-if="d.buyer?.reference" class="font-mono text-xs text-slate-500">{{ d.buyer.reference }}</p>
-                        <span v-else class="text-sm text-slate-400">—</span>
+                        <span v-else class="text-sm text-slate-400">-</span>
                     </td>
                     <td class="px-6 py-4">
                         <DeliveryMethodBadge v-if="d.method" :method="d.method" />
-                        <span v-else class="text-sm text-slate-400">—</span>
+                        <span v-else class="text-sm text-slate-400">-</span>
                     </td>
                     <td class="hidden px-6 py-4 text-slate-600 dark:text-slate-400 sm:table-cell">
-                        {{ d.tier ?? '—' }}
+                        {{ d.tier ?? '-' }}
                     </td>
                     <td class="px-6 py-4"><StatusBadge :status="d.status" /></td>
                     <td class="hidden px-6 py-4 text-slate-600 dark:text-slate-400 lg:table-cell">{{ d.priority }}</td>

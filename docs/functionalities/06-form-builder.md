@@ -1,4 +1,4 @@
-# 06 — Form Builder
+# 06 - Form Builder
 
 ## Purpose
 
@@ -49,20 +49,20 @@ The **Form Builder** creates hosted, multi-step lead capture forms linked to cam
 3. Name: `Loans Quick Apply`
 4. Submit
 
-**Expected:** Redirect to edit page. Success flash: "Form created — add steps and fields."
+**Expected:** Redirect to edit page. Success flash: "Form created - add steps and fields."
 
 ### 3. Configure multi-step form (edit)
 
 1. On edit page for `Loans Quick Apply`:
 2. Enable **Multi-step**
-3. Add Step 1: "Loan details" — fields: `loan_amount` (number), `loan_purpose` (select)
-4. Add Step 2: "Contact" — fields: `firstname`, `lastname`, `email`, `phone1`, `zipcode`
+3. Add Step 1: "Loan details" - fields: `loan_amount` (number), `loan_purpose` (select)
+4. Add Step 2: "Contact" - fields: `firstname`, `lastname`, `email`, `phone1`, `zipcode`
 5. Set redirect URL: `https://powerbyexcellence.test/help`
 6. Save
 
 **Expected:** Form saved. Slug auto-generated or editable. Steps render in builder preview if available.
 
-### 4. Test public form — seeded demo
+### 4. Test public form - seeded demo
 
 1. Open incognito window (no login)
 2. Navigate to `/forms/auto-insurance-quote-uk`
@@ -71,15 +71,15 @@ The **Form Builder** creates hosted, multi-step lead capture forms linked to cam
 
 ### 5. Complete multi-step submission
 
-1. Step 1 — Vehicle:
+1. Step 1 - Vehicle:
    - Vehicle year: `2019`
    - Make: `Ford`
    - Cover type: Comprehensive
-2. Step 2 — About you:
+2. Step 2 - About you:
    - First name: `Form`
    - Last name: `Tester`
    - Email: `form.tester.unique@demo.test`
-3. Step 3 — Contact:
+3. Step 3 - Contact:
    - Phone: `07700900456`
    - Postcode: `EC2A 4NE`
 4. Submit
@@ -89,7 +89,7 @@ The **Form Builder** creates hosted, multi-step lead capture forms linked to cam
 ### 6. Verify lead in admin
 
 1. Return to admin session
-2. Open `/leads` — filter/search for `form.tester.unique@demo.test`
+2. Open `/leads` - filter/search for `form.tester.unique@demo.test`
 3. Open lead detail
 
 **Expected:** Lead associated with Auto Insurance campaign. Source/sid from form config. Field data matches form input. Status reflects distribution outcome.
@@ -143,6 +143,6 @@ The **Form Builder** creates hosted, multi-step lead capture forms linked to cam
 
 ## Related Docs
 
-- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) — campaign fields
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — alternative ingest path
-- [12-operations-and-logs.md](./12-operations-and-logs.md) — verify processing
+- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) - campaign fields
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - alternative ingest path
+- [12-operations-and-logs.md](./12-operations-and-logs.md) - verify processing

@@ -162,16 +162,18 @@ class AccountFunctionalityTest extends TestCase
 
     public function test_settings_billing_lock_deactivates_account(): void
     {
-        $this->tenantRequest()
-            ->actingAs($this->tenantAdmin)
-            ->put(route('settings.update'), [
-                'name' => $this->ukAccount->name,
-                'timezone' => 'Europe/London',
-                'default_country' => 'GB',
-                'default_currency' => 'GBP',
+        $this->actingAs($this->superAdmin)
+            ->withServerVariables(['HTTP_HOST' => 'powerbyexcellence.test'])
+            ->put(route('accounts.billing.update', $this->ukAccount), [
+                'monthly_rent' => 799,
+                'contract_reference' => 'MSA-TEST',
                 'billing_status' => 'locked',
+                'billing_lock_reason' => 'Rent overdue',
+                'billing_notes' => '',
+                'billing_alert_emails' => '',
+                'subscription_plan' => 'growth',
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('accounts.billing.edit', $this->ukAccount));
 
         $account = $this->ukAccount->fresh();
         $this->assertSame('locked', $account->settings['billing_status']);

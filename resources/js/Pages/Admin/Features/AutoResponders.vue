@@ -46,14 +46,14 @@ const triggerOptions = [
     {
         value: 'on_lead_received',
         label: 'Lead received',
-        description: 'Fires when a lead is ingested — confirmation or welcome message.',
+        description: 'Fires when a lead is ingested - confirmation or welcome message.',
         icon: 'M13 10V3L4 14h7v7l9-11h-7z',
         tone: 'indigo',
     },
     {
         value: 'on_lead_sold',
         label: 'Lead sold',
-        description: 'Fires after a buyer accepts — partner handoff or thank-you.',
+        description: 'Fires after a buyer accepts - partner handoff or thank-you.',
         icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
         tone: 'emerald',
     },
@@ -70,7 +70,7 @@ const channelOptions = [
     {
         value: 'sms',
         label: 'SMS',
-        description: 'Short text to the lead phone field — keep under 160 chars.',
+        description: 'Short text to the lead phone field - keep under 160 chars.',
         icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
         tone: 'violet',
     },
@@ -82,18 +82,18 @@ const presets = [
         trigger_event: 'on_lead_received',
         channel: 'email',
         config: {
-            subject: 'Thanks [firstname] — we received your application',
-            body: 'Hi [firstname],\n\nThank you for your enquiry. Our team will review your details and follow up shortly.\n\n— The team',
+            subject: 'Thanks [firstname] - we received your application',
+            body: 'Hi [firstname],\n\nThank you for your enquiry. Our team will review your details and follow up shortly.\n\n- The team',
             to_field: 'email',
         },
     },
     {
-        name: 'Sold — partner handoff',
+        name: 'Sold - partner handoff',
         trigger_event: 'on_lead_sold',
         channel: 'email',
         config: {
             subject: 'Your request has been matched, [firstname]',
-            body: 'Hi [firstname],\n\nGood news — we matched you with a partner who can help. They may contact you at [phone1] or [email].\n\n— The team',
+            body: 'Hi [firstname],\n\nGood news - we matched you with a partner who can help. They may contact you at [phone1] or [email].\n\n- The team',
             to_field: 'email',
         },
     },
@@ -257,7 +257,7 @@ const toggleExpanded = (id) => {
 
                         <div>
                             <InputLabel for="name" value="Name" />
-                            <TextInput id="name" v-model="form.name" class="mt-1 block w-full" required placeholder="e.g. Welcome email — auto insurance" />
+                            <TextInput id="name" v-model="form.name" class="mt-1 block w-full" required placeholder="e.g. Welcome email - auto insurance" />
                             <InputError :message="form.errors.name" class="mt-1" />
                         </div>
 
@@ -353,7 +353,7 @@ const toggleExpanded = (id) => {
                         </div>
 
                         <div class="rounded-xl border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-900 dark:bg-violet-950/20">
-                            <p class="text-xs font-semibold uppercase text-violet-700 dark:text-violet-300">Merge tags — click to insert</p>
+                            <p class="text-xs font-semibold uppercase text-violet-700 dark:text-violet-300">Merge tags - click to insert</p>
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 <button
                                     v-for="tag in mergeTags"
@@ -365,12 +365,12 @@ const toggleExpanded = (id) => {
                                     {{ tag }}
                                 </button>
                             </div>
-                            <p class="mt-2 text-[11px] text-violet-700/80 dark:text-violet-300/80">Tags use square brackets, e.g. <code class="font-mono">[firstname]</code> — replaced from lead field data at send time.</p>
+                            <p class="mt-2 text-[11px] text-violet-700/80 dark:text-violet-300/80">Tags use square brackets, e.g. <code class="font-mono">[firstname]</code> - replaced from lead field data at send time.</p>
                         </div>
 
                         <div v-if="form.channel === 'email'">
                             <InputLabel for="subject" value="Subject" />
-                            <TextInput id="subject" v-model="form.config.subject" class="mt-1 block w-full font-mono text-sm" placeholder="Thanks [firstname] — application received" />
+                            <TextInput id="subject" v-model="form.config.subject" class="mt-1 block w-full font-mono text-sm" placeholder="Thanks [firstname] - application received" />
                             <div class="mt-1.5 flex flex-wrap gap-1">
                                 <button v-for="tag in mergeTags" :key="`sub-${tag}`" type="button" class="rounded border px-1.5 py-0.5 text-[10px] text-indigo-600 dark:text-indigo-400" @click="insertTag('subject', tag)">{{ tag }}</button>
                             </div>
@@ -437,7 +437,7 @@ const toggleExpanded = (id) => {
                             <p class="mt-3 text-right text-[11px] text-slate-500">To: {{ sampleFields.phone1 }}</p>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-500">Preview uses sample data — real sends use each lead's field values.</p>
+                    <p class="mt-3 text-xs text-slate-500">Preview uses sample data - real sends use each lead's field values.</p>
                 </Panel>
 
                 <Panel title="Configured responders">
@@ -477,7 +477,7 @@ const toggleExpanded = (id) => {
                                         · {{ r.campaign?.name ?? 'All campaigns' }}
                                     </p>
                                     <p v-if="!expandedId || expandedId !== r.id" class="mt-2 line-clamp-2 text-xs text-slate-600 dark:text-slate-400">
-                                        {{ r.config?.subject ? `${r.config.subject} — ` : '' }}{{ r.config?.body ?? r.config?.message ?? 'No message configured' }}
+                                        {{ r.config?.subject ? `${r.config.subject} - ` : '' }}{{ r.config?.body ?? r.config?.message ?? 'No message configured' }}
                                     </p>
                                 </div>
                                 <svg
@@ -497,7 +497,7 @@ const toggleExpanded = (id) => {
                                 </div>
                                 <div>
                                     <p class="text-[10px] font-semibold uppercase text-slate-500">Message</p>
-                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{{ r.config?.body ?? r.config?.message ?? '—' }}</p>
+                                    <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{{ r.config?.body ?? r.config?.message ?? '-' }}</p>
                                 </div>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     <button

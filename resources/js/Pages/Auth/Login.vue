@@ -38,15 +38,12 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Sign In — PowerByExcellence" />
+        <Head :title="tenant ? `Sign in - ${tenant.display_name ?? tenant.name}` : 'Sign In - PowerByExcellence'" />
 
         <template #header>
-            <h2>
-                {{ tenant ? `Sign in — ${tenant.display_name ?? tenant.name}` : 'Welcome back' }}
-            </h2>
-            <p v-if="tenant">Partner platform portal — admins, buyers, and suppliers.</p>
-            <p v-else-if="isCentralHost">Super admin sign-in for PowerByExcellence central operations.</p>
-            <p v-else>Sign in to access your admin or portal dashboard.</p>
+            <h2>{{ tenant ? 'Sign in' : 'Welcome back' }}</h2>
+            <p v-if="!tenant && isCentralHost">Super admin sign-in for PowerByExcellence central operations.</p>
+            <p v-else-if="!tenant">Sign in to access your admin or portal dashboard.</p>
         </template>
 
         <div
@@ -169,9 +166,12 @@ const submit = () => {
             </button>
         </form>
 
-        <p class="mt-8 text-center text-xs text-slate-400">
-            <template v-if="isCentralHost && !tenant">
-                Central platform access — partner admins must sign in on their dedicated subdomain.
+        <p class="mt-6 text-center text-xs text-slate-400">
+            <template v-if="tenant">
+                Access is by invitation only. Contact your platform administrator for credentials.
+            </template>
+            <template v-else-if="isCentralHost">
+                Central platform access - partner admins must sign in on their dedicated subdomain.
             </template>
             <template v-else>
                 Access is by invitation only. Contact your platform administrator for credentials.

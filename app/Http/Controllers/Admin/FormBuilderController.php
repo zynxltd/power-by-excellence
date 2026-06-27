@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Supplier;
 use App\Services\Forms\HostedFormEmbedService;
+use App\Services\Forms\SupplierHostedFormService;
 use App\Support\VerticalCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,8 +18,22 @@ class FormBuilderController extends Controller
 {
     public function index(): Response
     {
+        $supplierForms = app(SupplierHostedFormService::class);
+
         return Inertia::render('Admin/Forms/Index', [
-            'forms' => HostedForm::with('campaign:id,name,reference,vertical_id')->orderByDesc('updated_at')->paginate(20),
+            'forms' => HostedForm::with(['campaign:id,name,reference,vertical_id', 'supplier:id,name,reference'])
+                ->orderByDesc('updated_at')
+                ->paginate(20),
+            'pendingApprovals' => $supplierForms->pendingForAdmin()
+                ->map(fn (HostedForm $form) => [
+                    'id' => $form->id,
+                    'name' => $form->name,
+                    'submitted_at' => $form->submitted_at?->toDateTimeString(),
+                    'submission_notes' => $form->submission_notes,
+                    'campaign' => $form->campaign?->only(['id', 'name', 'reference']),
+                    'supplier' => $form->supplier?->only(['id', 'name', 'reference']),
+                ]),
+            'approvalStats' => $supplierForms->adminStats(),
             'campaigns' => VerticalCatalog::decorateCampaigns(
                 Campaign::orderBy('name')->get(['id', 'name', 'reference', 'vertical_id'])
             ),
@@ -85,7 +100,7 @@ class FormBuilderController extends Controller
             );
         }
 
-        return redirect()->route('forms.edit', $form)->with('success', 'Form created — add steps and fields.');
+        return redirect()->route('forms.edit', $form)->with('success', 'Form created - add steps and fields.');
     }
 
     public function update(Request $request, HostedForm $hostedForm): RedirectResponse
@@ -105,6 +120,28 @@ class FormBuilderController extends Controller
         return back()->with('success', 'Form removed.');
     }
 
+    public function approve(Request $request, HostedForm $hostedForm): RedirectResponse
+    {
+        app(SupplierHostedFormService::class)->approve($hostedForm, $request->user());
+
+        return back()->with('success', 'Form approved. The supplier can now embed it.');
+    }
+
+    public function reject(Request $request, HostedForm $hostedForm): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:1000',
+        ]);
+
+        app(SupplierHostedFormService::class)->reject(
+            $hostedForm,
+            $request->user(),
+            $validated['rejection_reason'],
+        );
+
+        return back()->with('success', 'Form rejected. The supplier can revise and resubmit.');
+    }
+
     protected function validateForm(Request $request): array
     {
         return $request->validate([
@@ -120,12 +157,18 @@ class FormBuilderController extends Controller
             'config.embed_height' => 'nullable|integer|min:320|max:2000',
             'config.css' => 'nullable|string',
             'config.thank_you' => 'nullable|array',
-            'config.thank_you.mode' => 'nullable|in:inline,redirect',
+            'config.thank_you.mode' => 'nullable|in:inline,redirect,poll_redirect',
             'config.thank_you.title' => 'nullable|string|max:255',
             'config.thank_you.message' => 'nullable|string|max:2000',
             'config.thank_you.show_reference' => 'boolean',
+            'config.thank_you.show_submit_another' => 'boolean',
             'config.thank_you.button_text' => 'nullable|string|max:100',
             'config.thank_you.confetti' => 'boolean',
+            'config.thank_you.processing_title' => 'nullable|string|max:255',
+            'config.thank_you.processing_message' => 'nullable|string|max:2000',
+            'config.thank_you.poll_interval_ms' => 'nullable|integer|min:500|max:10000',
+            'config.thank_you.poll_max_attempts' => 'nullable|integer|min:5|max:120',
+            'config.thank_you.fallback_redirect_url' => 'nullable|url|max:2048',
             'config.multi_step' => 'boolean',
             'config.steps' => 'nullable|array',
             'config.steps.*.id' => 'required_with:config.steps|string',

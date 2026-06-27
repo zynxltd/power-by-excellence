@@ -7,6 +7,57 @@ use App\Services\Logging\PlatformLogger;
 
 class LeadRedirectService
 {
+    public function resolveDeclineDestination(Lead $lead): ?string
+    {
+        $lead->loadMissing('campaign.distributionConfigs');
+
+        if (! $lead->campaign?->use_advanced_distribution) {
+            return null;
+        }
+
+        $config = $lead->campaign->distributionConfigs->firstWhere('is_active', true);
+        $declineUrl = $config?->config['decline_url'] ?? null;
+
+        return filled($declineUrl) ? $declineUrl : null;
+    }
+
+    public function offerDecline(Lead $lead): ?string
+    {
+        if ($lead->redirect_offered_at) {
+            return $this->trackedUrl($lead);
+        }
+
+        $destination = $this->resolveDeclineDestination($lead);
+
+        if (! $destination) {
+            return null;
+        }
+
+        $lead->update([
+            'redirect_url' => $destination,
+            'redirect_offered_at' => now(),
+        ]);
+
+        PlatformLogger::leadEvent($lead, 'decline.offered', 'Consumer decline URL offered', [
+            'destination' => $destination,
+        ]);
+
+        return $this->trackedUrl($lead);
+    }
+
+    public function publicDeclineUrl(Lead $lead): ?string
+    {
+        if (! in_array($lead->status->value, ['unsold', 'quarantined'], true)) {
+            return null;
+        }
+
+        if (! $lead->redirect_url) {
+            return $this->offerDecline($lead->fresh());
+        }
+
+        return $this->trackedUrl($lead);
+    }
+
     public function resolveDestinationUrl(Lead $lead): ?string
     {
         $soldDelivery = $lead->deliveryLogs()

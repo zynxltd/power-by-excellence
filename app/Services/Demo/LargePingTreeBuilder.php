@@ -4,11 +4,13 @@ namespace App\Services\Demo;
 
 use App\Enums\DeliveryMethod;
 use App\Enums\RoutingMode;
+use App\Enums\UserRole;
 use App\Models\Account;
 use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Models\DistributionConfig;
+use App\Models\User;
 
 class LargePingTreeBuilder
 {
@@ -92,6 +94,8 @@ class LargePingTreeBuilder
             ->where('id', '!=', $distribution->id)
             ->update(['is_active' => false]);
 
+        $this->ensurePortalUsers($account);
+
         return [
             'tiers' => $tierCount,
             'deliveries' => $deliveryCount,
@@ -131,6 +135,41 @@ class LargePingTreeBuilder
         }
 
         return Buyer::where('account_id', $account->id)->orderBy('id')->get();
+    }
+
+    /**
+     * Demo buyers use their buyer email as portal login (password: password).
+     */
+    public function ensurePortalUsers(Account $account): void
+    {
+        Buyer::query()
+            ->where('account_id', $account->id)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->orderBy('id')
+            ->each(function (Buyer $buyer): void {
+                $existingForBuyer = User::query()
+                    ->where('buyer_id', $buyer->id)
+                    ->where('role', UserRole::BuyerPortal)
+                    ->first();
+
+                if ($existingForBuyer) {
+                    return;
+                }
+
+                User::updateOrCreate(
+                    [
+                        'account_id' => $buyer->account_id,
+                        'email' => $buyer->email,
+                    ],
+                    [
+                        'buyer_id' => $buyer->id,
+                        'name' => $buyer->name.' Portal',
+                        'role' => UserRole::BuyerPortal,
+                        'password' => 'password',
+                    ],
+                );
+            });
     }
 
     /**
@@ -196,14 +235,14 @@ class LargePingTreeBuilder
             default => $method->value,
         };
 
-        return "T{$tier} — {$buyerName} — {$methodLabel}{$suffix}";
+        return "T{$tier} - {$buyerName} - {$methodLabel}{$suffix}";
     }
 
     protected function tierName(int $tier, string $mode, float $floor): string
     {
         $modeLabel = str_replace('_', ' ', ucwords($mode, '_'));
 
-        return "Tier {$tier} — {$modeLabel} (floor €".number_format($floor, 2).')';
+        return "Tier {$tier} - {$modeLabel} (floor €".number_format($floor, 2).')';
     }
 
     /**

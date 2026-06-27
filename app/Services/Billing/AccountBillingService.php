@@ -4,7 +4,6 @@ namespace App\Services\Billing;
 
 use App\Models\Account;
 use App\Models\Buyer;
-use Carbon\Carbon;
 
 class AccountBillingService
 {
@@ -27,12 +26,11 @@ class AccountBillingService
             return self::STATUS_LOCKED;
         }
 
-        $dueAt = $settings['billing_due_at'] ?? null;
-        if ($dueAt && Carbon::parse($dueAt)->endOfDay()->isPast()) {
+        if ($explicit === self::STATUS_PAST_DUE) {
             return self::STATUS_PAST_DUE;
         }
 
-        return $explicit === self::STATUS_PAST_DUE ? self::STATUS_PAST_DUE : self::STATUS_ACTIVE;
+        return self::STATUS_ACTIVE;
     }
 
     public function isOperational(Account $account): bool
@@ -47,7 +45,7 @@ class AccountBillingService
 
     public function canProcessLeads(Account $account): bool
     {
-        return $this->resolveStatus($account) === self::STATUS_ACTIVE;
+        return $this->resolveStatus($account) !== self::STATUS_LOCKED;
     }
 
     public function lock(Account $account, ?string $reason = null): void

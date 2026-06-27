@@ -14,10 +14,9 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
         v-if="isSuperAdmin && !account"
         class="mb-4 flex flex-col gap-1.5 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/30 dark:bg-amber-500/10"
     >
-        <p class="text-sm text-amber-950 dark:text-amber-100">
-            <span class="font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">No tenant selected</span>
-            <span class="mx-2 text-amber-300 dark:text-amber-600">·</span>
-            <span>You're viewing data across <strong>all partner platforms</strong>. Select a tenant to manage buyers, suppliers, and scoped settings.</span>
+        <p class="text-sm leading-relaxed text-amber-950 dark:text-amber-100">
+            <span class="block font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">No tenant selected</span>
+            <span class="mt-1 block">You're viewing data across <strong>all partner platforms</strong>. Select a tenant to manage buyers, suppliers, and scoped settings.</span>
         </p>
         <Link
             :href="route('accounts.index')"
@@ -30,12 +29,13 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
         v-else-if="account"
         class="mb-4 flex flex-col gap-1.5 rounded-lg border border-indigo-200/80 bg-indigo-50/90 px-3 py-2 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-500/30 dark:bg-indigo-500/10"
     >
-        <p class="text-sm text-indigo-950 dark:text-indigo-100">
-            <span class="font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Active tenant</span>
-            <span class="mx-2 text-indigo-300 dark:text-indigo-600">·</span>
-            <span class="font-semibold">{{ account.display_name || account.name }}</span>
-            <span v-if="!isSuperAdmin" class="text-indigo-700 dark:text-indigo-300"> — buyers and suppliers are scoped to this platform.</span>
-            <span v-else class="text-indigo-700 dark:text-indigo-300"> — manage buyers and suppliers for this platform below, or switch tenant.</span>
+        <p class="text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
+            <span class="block font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Active tenant</span>
+            <span class="mt-1 block">
+                <span class="font-semibold">{{ account.display_name || account.name }}</span>
+                <span v-if="!isSuperAdmin" class="text-indigo-700 dark:text-indigo-300"> - buyers and suppliers are scoped to this platform.</span>
+                <span v-else class="text-indigo-700 dark:text-indigo-300"> - manage buyers and suppliers for this platform below, or switch tenant.</span>
+            </span>
         </p>
         <div v-if="isSuperAdmin" class="flex shrink-0 flex-wrap items-center gap-3">
             <button

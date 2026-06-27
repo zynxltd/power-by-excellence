@@ -61,8 +61,8 @@ const isManaged = (webhook) => webhook.config?.synced_from === 'buyer_sold_webho
 
         <Panel class="mb-6" title="How this differs from postbacks">
             <ul class="list-inside list-disc space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                <li><strong class="font-medium text-slate-800 dark:text-slate-200">Webhooks</strong> — JSON POST to your endpoints (CRM, data warehouse, buyer integrations).</li>
-                <li><strong class="font-medium text-slate-800 dark:text-slate-200">Postbacks</strong> — tracking pixels / affiliate URLs for <Link :href="route('postbacks.index')" class="text-indigo-600 hover:underline">suppliers</Link> (GET query strings with <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[lead_uuid]</code> tags).</li>
+                <li><strong class="font-medium text-slate-800 dark:text-slate-200">Webhooks</strong> - JSON POST to your endpoints (CRM, data warehouse, buyer integrations).</li>
+                <li><strong class="font-medium text-slate-800 dark:text-slate-200">Postbacks</strong> - tracking pixels / affiliate URLs for <Link :href="route('postbacks.index')" class="text-indigo-600 hover:underline">suppliers</Link> (GET query strings with <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">[lead_uuid]</code> tags).</li>
                 <li>Buyers receive leads via <strong class="font-medium text-slate-800 dark:text-slate-200">deliveries</strong> (ping/post). Optional sold webhook URL can also be set on each <Link :href="route('buyers.index')" class="text-indigo-600 hover:underline">buyer</Link>.</li>
             </ul>
         </Panel>
@@ -80,7 +80,7 @@ const isManaged = (webhook) => webhook.config?.synced_from === 'buyer_sold_webho
                         <p class="mt-1 text-xs text-slate-500">Receives JSON POST with event, lead_uuid, buyer_id, revenue, and field_data.</p>
                     </div>
                     <div>
-                        <InputLabel value="Scope — buyer (optional)" />
+                        <InputLabel value="Scope - buyer (optional)" />
                         <select v-model="form.buyer_id" class="form-select mt-1 w-full">
                             <option value="">All buyers (account-wide)</option>
                             <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }}</option>

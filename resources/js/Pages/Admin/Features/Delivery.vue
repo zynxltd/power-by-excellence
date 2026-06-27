@@ -19,7 +19,7 @@ const methodValue = (d) => d.method?.value ?? d.method;
     <AuthenticatedLayout>
         <PageHeader
             title="Delivery"
-            description="Configure buyer endpoints — API, ping-post, email, SMS, and store lead."
+            description="Configure buyer endpoints - API, ping-post, email, SMS, and store lead."
         >
             <template #actions>
                 <Link :href="route('features.index')" class="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">

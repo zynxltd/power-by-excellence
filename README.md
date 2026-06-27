@@ -1,18 +1,18 @@
-# PowerByExcellence — Lead Distribution Platform
+# PowerByExcellence - Lead Distribution Platform
 
 Laravel 13 + Vue 3 (Inertia) lead generation and distribution platform for real-time ping-tree routing and buyer management.
 
 ## Features
 
-- **Multi-tenant partner platforms** — Each `Account` is an isolated partner with own campaigns, buyers, suppliers, leads
-- **Lead ingest API** — REST JSON with Admin / Supplier API keys
-- **Validation & deduplication** — Field rules, email/phone dedupe, suppression hashes
-- **Distribution engine** — Waterfall, ping-post, parallel auction, weighted, round-robin, hybrid groups (ping tree)
-- **Deliveries** — Direct post, ping-post, store lead with full audit logs
-- **Caps** — Campaign, buyer, delivery caps (hourly/daily/weekly/monthly/total)
-- **Admin UI** — Vue dashboard for campaigns, deliveries, buyers, suppliers, leads
-- **Error logging** — `PlatformLogger` → DB (`system_error_logs`) + `storage/logs/platform.log`
-- **Webhooks** — Outbound events on lead sold/unsold
+- **Multi-tenant partner platforms** - Each `Account` is an isolated partner with own campaigns, buyers, suppliers, leads
+- **Lead ingest API** - REST JSON with Admin / Supplier API keys
+- **Validation & deduplication** - Field rules, email/phone dedupe, suppression hashes
+- **Distribution engine** - Waterfall, ping-post, parallel auction, weighted, round-robin, hybrid groups (ping tree)
+- **Deliveries** - Direct post, ping-post, store lead with full audit logs
+- **Caps** - Campaign, buyer, delivery caps (hourly/daily/weekly/monthly/total)
+- **Admin UI** - Vue dashboard for campaigns, deliveries, buyers, suppliers, leads
+- **Error logging** - `PlatformLogger` → DB (`system_error_logs`) + `storage/logs/platform.log`
+- **Webhooks** - Outbound events on lead sold/unsold
 
 ## Quick Start
 
@@ -94,9 +94,9 @@ php artisan test
 
 | Phase | Status |
 |-------|--------|
-| 1 — Foundation (ingest, validation, dedupe, pipeline) | ✅ |
-| 2 — Distribution (ping-post, ping tree, caps) | ✅ |
-| 3 — Advanced routing (hybrid, weighted, round-robin) | ✅ |
-| 4 — Buyers/suppliers, financials, multi-tenant admin | ✅ |
-| 5 — Buyer/supplier portals, Stripe, CSV import | ✅ |
-| 6 — Facebook/Google integrations, form builder | 🔲 Planned |
+| 1 - Foundation (ingest, validation, dedupe, pipeline) | ✅ |
+| 2 - Distribution (ping-post, ping tree, caps) | ✅ |
+| 3 - Advanced routing (hybrid, weighted, round-robin) | ✅ |
+| 4 - Buyers/suppliers, financials, multi-tenant admin | ✅ |
+| 5 - Buyer/supplier portals, Stripe, CSV import | ✅ |
+| 6 - Facebook/Google integrations, form builder | 🔲 Planned |

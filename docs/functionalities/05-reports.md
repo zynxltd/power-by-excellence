@@ -1,4 +1,4 @@
-# 05 — Reports
+# 05 - Reports
 
 ## Purpose
 
@@ -11,8 +11,8 @@ The Reports dashboard provides admin analytics across lead volume, conversion, r
 | Item | Location |
 |------|----------|
 | Admin reports UI | `/reports` |
-| API — lead report | `GET /api/v1/reports/leads` |
-| API — revenue report | `GET /api/v1/reports/revenue` |
+| API - lead report | `GET /api/v1/reports/leads` |
+| API - revenue report | `GET /api/v1/reports/revenue` |
 | Navigation | Top bar → **Reports** |
 | Access | Account Admin (UI); API requires `reports.read` permission |
 
@@ -22,7 +22,7 @@ The Reports dashboard provides admin analytics across lead volume, conversion, r
 
 | Section | Data shown |
 |---------|------------|
-| KPI strips | Volume, economics (EPL/EPC/CPA), rates, lead status, delivery outcomes — compact horizontal rows (8 columns) |
+| KPI strips | Volume, economics (EPL/EPC/CPA), rates, lead status, delivery outcomes - compact horizontal rows (8 columns) |
 | Trend charts | Daily leads, sold, rejected, revenue over selected period |
 | Top buyers | Lead count and revenue by buyer (top 10) |
 | Top suppliers | Lead count and payout by supplier (top 10) |
@@ -138,14 +138,14 @@ curl "https://powerbyexcellence.test/api/v1/reports/revenue?days=28" \
 | US platform admin | Reports show only US solar campaign data |
 | No leads in period | Charts flat at zero; conversion shows 0% |
 | Campaign with no deliveries | Delivery performance empty for that campaign |
-| Fresh seed without DemoHistoricalDataSeeder | 10-tier panel may be empty — ensure full seed ran |
+| Fresh seed without DemoHistoricalDataSeeder | 10-tier panel may be empty - ensure full seed ran |
 | Invalid `days` query param | Defaults to 28 |
-| Sold leads without financials | Revenue may undercount — verify seed integrity |
+| Sold leads without financials | Revenue may undercount - verify seed integrity |
 
 ---
 
 ## Related Docs
 
-- [01-dashboard.md](./01-dashboard.md) — high-level overview
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — tier delivery setup
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — API report endpoints
+- [01-dashboard.md](./01-dashboard.md) - high-level overview
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - tier delivery setup
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - API report endpoints

@@ -10,14 +10,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Account;
 use App\Models\Buyer;
 use App\Models\Supplier;
+use App\Support\Auth\SignupVerification;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['account_id', 'buyer_id', 'supplier_id', 'name', 'email', 'avatar_path', 'password', 'role', 'allowed_modules', 'is_suspended', 'suspended_at', 'theme', 'accent_color', 'two_factor_enabled', 'two_factor_secret', 'two_factor_recovery_codes', 'allowed_ips'])]
+#[Fillable(['account_id', 'buyer_id', 'supplier_id', 'name', 'email', 'phone', 'address_line1', 'address_line2', 'city', 'region', 'postcode', 'country', 'avatar_path', 'password', 'role', 'allowed_modules', 'is_suspended', 'suspended_at', 'theme', 'accent_color', 'two_factor_enabled', 'two_factor_secret', 'two_factor_recovery_codes', 'allowed_ips'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -26,6 +28,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'address_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'allowed_modules' => 'array',
@@ -56,6 +60,33 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === UserRole::SuperAdmin;
+    }
+
+    public function hasVerifiedEmail(): bool
+    {
+        if ($this->isSuperAdmin() || ! SignupVerification::emailVerificationEnabled()) {
+            return true;
+        }
+
+        return $this->email_verified_at !== null;
+    }
+
+    public function hasVerifiedPhone(): bool
+    {
+        if ($this->isSuperAdmin() || ! SignupVerification::phoneVerificationEnabled()) {
+            return true;
+        }
+
+        return $this->phone_verified_at !== null;
+    }
+
+    public function hasVerifiedAddress(): bool
+    {
+        if ($this->isSuperAdmin() || ! SignupVerification::addressVerificationEnabled()) {
+            return true;
+        }
+
+        return $this->address_verified_at !== null;
     }
 
     public function isBuyerPortal(): bool

@@ -21,7 +21,7 @@ class BlogController extends Controller
                 'word_count' => str_word_count($a['body'] ?? ''),
             ])->values(),
             'seo' => [
-                'title' => 'Lead Distribution Blog — PowerByExcellence',
+                'title' => 'Lead Distribution Blog - PowerByExcellence',
                 'description' => 'Expert articles on ping-tree routing, real-time bidding, buyer management, and lead generation best practices.',
             ],
         ]);
@@ -39,7 +39,7 @@ class BlogController extends Controller
                 'word_count' => str_word_count($article['body'] ?? ''),
             ]),
             'seo' => [
-                'title' => ($article['title'] ?? 'Article').' — PowerByExcellence Blog',
+                'title' => ($article['title'] ?? 'Article').' - PowerByExcellence Blog',
                 'description' => $article['excerpt'] ?? '',
             ],
         ]);

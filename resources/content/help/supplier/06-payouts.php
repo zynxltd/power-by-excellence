@@ -12,7 +12,7 @@ return [
 
 The **Payouts & Revenue** page at `/portal/supplier/billing` summarises your affiliate earnings on the platform. It shows lifetime totals, current-month payout, sold lead count, and a table of the 25 most recent sold leads with individual payout amounts.
 
-This page is **read-only** — payout rates and rev-share percentages are configured by the platform administrator, not in the portal.
+This page is **read-only** - payout rates and rev-share percentages are configured by the platform administrator, not in the portal.
 
 ## Navigating to payouts
 
@@ -51,16 +51,16 @@ Payout per lead is determined when a lead reaches **sold** status:
 3. Your **rev-share percentage** (from `affiliate_settings`) is applied
 4. The result is stored in `lead_financials.payout`
 
-You do not see buyer pricing or platform margin — only your payout amount.
+You do not see buyer pricing or platform margin - only your payout amount.
 
 ### Rev-share configuration (admin-managed)
 
 Your supplier record includes `affiliate_settings` such as:
 
-- `rev_share_percent` — your percentage of campaign payout
+- `rev_share_percent` - your percentage of campaign payout
 - Campaign-specific payout rules may override defaults
 
-Contact your account manager to discuss rate changes — these cannot be edited in the portal.
+Contact your account manager to discuss rate changes - these cannot be edited in the portal.
 
 ## Recent Payouts table
 
@@ -70,7 +70,7 @@ Below the summary cards, the **Recent Payouts** panel lists the **25 most recent
 |--------|-------------|
 | **Lead** | UUID (truncated for display) |
 | **Payout** | Amount earned on that lead |
-| **Sold At** | `distributed_at` timestamp — when the lead was sold |
+| **Sold At** | `distributed_at` timestamp - when the lead was sold |
 
 ### Using recent payouts for spot checks
 
@@ -99,7 +99,7 @@ Small differences may occur due to:
 **Sold Leads** count and **Total Payouts** sum are independent metrics:
 
 - 3,000 sold leads at varying payout rates produce different totals than 3,000 × flat rate
-- Campaign payout rules may differ — higher-value verticals earn more per lead
+- Campaign payout rules may differ - higher-value verticals earn more per lead
 
 ## Payout timeline
 
@@ -132,16 +132,16 @@ Unsold, rejected, quarantined, and duplicate leads **never** generate payout.
 ### Investigate missing payout
 
 1. Find the lead on `/portal/supplier/leads`
-2. If status is `unsold` or `rejected` — no payout is expected
-3. If status is `sold` but payout is £0 — refresh the page; contact account manager if persistent
-4. If lead is not visible — verify API key, SID, and supplier attribution
+2. If status is `unsold` or `rejected` - no payout is expected
+3. If status is `sold` but payout is £0 - refresh the page; contact account manager if persistent
+4. If lead is not visible - verify API key, SID, and supplier attribution
 
 ## Tips
 
 - Compare portal totals with monthly statements from your account manager
-- Unsold leads do not generate payout — optimise traffic quality to improve sold rate
-- **This Month** uses `distributed_at`, not `received_at` — a lead received last month but sold this month counts toward this month
-- Payout currency is set at the tenant account level — you cannot switch currency in the portal
+- Unsold leads do not generate payout - optimise traffic quality to improve sold rate
+- **This Month** uses `distributed_at`, not `received_at` - a lead received last month but sold this month counts toward this month
+- Payout currency is set at the tenant account level - you cannot switch currency in the portal
 - Recent Payouts shows only 25 rows; use CSV export for complete sold-lead history
 
 ## Troubleshooting

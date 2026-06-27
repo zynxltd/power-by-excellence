@@ -61,8 +61,8 @@ defineProps({
                             {{ log.action }}
                         </span>
                     </td>
-                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '—' }}</td>
-                    <td class="text-xs text-slate-500">{{ log.path ?? '—' }}</td>
+                    <td class="font-mono text-xs text-slate-500">{{ log.ip_address ?? '-' }}</td>
+                    <td class="text-xs text-slate-500">{{ log.path ?? '-' }}</td>
                 </tr>
             </DataTable>
             <Pagination :links="logs.links" />

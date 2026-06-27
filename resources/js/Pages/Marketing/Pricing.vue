@@ -26,17 +26,15 @@ const tiers = [
         overage: { lead: '0.08', ping: '0.002', post: '0.04' },
         fraud: {
             included: false,
-            addon: '29',
-            validatedLeads: '5,000',
-            checks: 'Email, phone HLR & IP/proxy/VPN',
-            overage: '0.04',
+            validatedLeads: '-',
+            checks: 'Upgrade to Growth',
+            overage: '-',
         },
         features: [
             'REST API ingest',
             'Ping-tree routing',
             'Direct post delivery',
             'Basic reports & logs',
-            'Fraud Protection add-on (+£29/mo)',
         ],
     },
     {
@@ -114,31 +112,31 @@ const usageRows = [
     { label: 'Partner platforms', key: 'platforms' },
     {
         label: 'Fraud Protection',
-        format: (t) => (t.fraud.included ? 'Included' : `+£${t.fraud.addon}/mo add-on`),
+        format: (t) => (t.fraud.included ? 'Included' : 'Not included'),
     },
     { label: 'Fraud-validated leads / month', key: 'fraud.validatedLeads' },
     {
         label: 'Fraud overage / validated lead',
         format: (t) => (t.fraud.overage === 'Negotiated' ? 'Negotiated' : `£${t.fraud.overage}`),
     },
-    { label: 'Overage — per lead', key: 'overage.lead', format: (t) => (t.overage.lead === 'Negotiated' ? 'Negotiated' : `£${t.overage.lead}`) },
-    { label: 'Overage — per ping', key: 'overage.ping', format: (t) => (t.overage.ping === 'Negotiated' ? 'Negotiated' : `£${t.overage.ping}`) },
-    { label: 'Overage — per post', key: 'overage.post', format: (t) => (t.overage.post === 'Negotiated' ? 'Negotiated' : `£${t.overage.post}`) },
+    { label: 'Overage - per lead', key: 'overage.lead', format: (t) => (t.overage.lead === 'Negotiated' ? 'Negotiated' : `£${t.overage.lead}`) },
+    { label: 'Overage - per ping', key: 'overage.ping', format: (t) => (t.overage.ping === 'Negotiated' ? 'Negotiated' : `£${t.overage.ping}`) },
+    { label: 'Overage - per post', key: 'overage.post', format: (t) => (t.overage.post === 'Negotiated' ? 'Negotiated' : `£${t.overage.post}`) },
 ];
 
 const cellValue = (tier, row) => {
     if (row.format) return row.format(tier);
     if (row.key.includes('.')) {
         const [a, b] = row.key.split('.');
-        return tier[a]?.[b] ?? '—';
+        return tier[a]?.[b] ?? '-';
     }
-    return tier[row.key] ?? '—';
+    return tier[row.key] ?? '-';
 };
 </script>
 
 <template>
     <SeoHead
-        :title="seo.title || 'Pricing — PowerByExcellence Lead Distribution'"
+        :title="seo.title || 'Pricing - PowerByExcellence Lead Distribution'"
         :description="seo.description || 'Transparent pricing for lead distribution. Plans include leads, pings, posts, and overage rates for ping-tree routing and real-time bidding.'"
     />
 
@@ -155,7 +153,7 @@ const cellValue = (tier, row) => {
                     Every plan includes ping-tree routing, buyer management, and API access.
                     <strong class="font-semibold text-indigo-700 marketing-dark:text-indigo-300">Growth</strong> includes
                     <strong class="font-semibold text-indigo-700 marketing-dark:text-indigo-300">Fraud Protection</strong>
-                    on every lead — email, phone, IP &amp; URL fraud checks on ingest.
+                    on every lead - email, phone, IP &amp; URL fraud checks on ingest.
                 </p>
             </section>
 
@@ -171,7 +169,7 @@ const cellValue = (tier, row) => {
                             </p>
                             <p class="mt-3 text-sm font-medium text-indigo-800 marketing-dark:text-indigo-200">
                                 Growth plan: <span class="font-semibold">included</span> for all 25,000 leads/mo.
-                                Starter: add for <span class="font-semibold">+£29/mo</span> (up to 5,000 validated leads).
+                                Starter does not include fraud protection - upgrade to Growth to enable live checks.
                             </p>
                         </div>
                         <ul class="min-w-[240px] space-y-2 text-sm text-slate-700 marketing-dark:text-slate-300">
@@ -213,7 +211,7 @@ const cellValue = (tier, row) => {
                         <p class="border-t border-violet-100 pt-2 marketing-dark:border-white/10">
                             <span class="text-slate-500">Fraud</span>
                             <span v-if="tier.fraud.included" class="font-semibold text-emerald-700 marketing-dark:text-emerald-300"> Included</span>
-                            <span v-else class="font-semibold text-amber-700 marketing-dark:text-amber-300"> +£{{ tier.fraud.addon }}/mo</span>
+                            <span v-else class="font-semibold text-slate-500 marketing-dark:text-slate-400"> Not included</span>
                         </p>
                     </div>
                     <ul class="mt-6 flex-1 space-y-2 text-sm text-slate-700 marketing-dark:text-slate-300">
@@ -248,8 +246,7 @@ const cellValue = (tier, row) => {
                 <p class="mt-4 text-center text-sm text-slate-500">
                     Pings count each buyer ping in waterfall or auction tiers. Posts count successful lead deliveries.
                     Fraud Protection runs up to 4 fraud lookups per lead (email, phone, IP, URL when enabled).
-                    Starter adds Fraud Protection for <strong class="font-medium text-slate-700 marketing-dark:text-slate-300">+£29/mo</strong> (5,000 validated leads included).
-                    Growth includes fraud on all plan leads.
+                    Included on Growth and Enterprise. Starter tenants can upgrade to enable live fraud checks.
                     <Link :href="route('help.index')" class="font-medium text-indigo-600 hover:underline marketing-dark:text-cyan-400">Help Centre →</Link>
                 </p>
             </section>

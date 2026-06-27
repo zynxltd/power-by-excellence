@@ -88,7 +88,7 @@ const integrationStrip = computed(() => [
         <Panel class="mt-8" title="Affiliate / supplier ingest">
             <p class="text-sm text-slate-600 dark:text-slate-400">
                 Suppliers are <strong>affiliates/publishers</strong> who send leads via API.
-                Create supplier API keys and link them to campaigns — see
+                Create supplier API keys and link them to campaigns - see
                 <Link :href="route('suppliers.index')" class="font-medium text-indigo-600 dark:text-indigo-400">Suppliers (Affiliates)</Link>
                 and <Link :href="route('api-keys.index')" class="font-medium text-indigo-600 dark:text-indigo-400">API Keys</Link>.
             </p>

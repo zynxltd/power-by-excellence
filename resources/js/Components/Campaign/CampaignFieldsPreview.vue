@@ -126,7 +126,7 @@ const toggleExpanded = () => {
         <p v-else class="text-sm text-slate-500">No fields defined yet. Add fields in the API spec editor.</p>
 
         <p v-if="!expanded && hiddenCount > 0 && !search" class="mt-3 text-xs text-slate-400">
-            + {{ hiddenCount }} more — open API spec to edit the full schema.
+            + {{ hiddenCount }} more - open API spec to edit the full schema.
         </p>
     </div>
 </template>

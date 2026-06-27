@@ -1,4 +1,4 @@
-# 11 — Automation
+# 11 - Automation
 
 ## Purpose
 
@@ -49,7 +49,7 @@ The **Automation** hub centralises remarketing and monitoring tools: multi-step 
 1. Click create sequence (or use form on page)
 2. Configure:
    - Name: `QA Sold Follow-up`
-   - Campaign: Auto Insurance (optional — blank for all)
+   - Campaign: Auto Insurance (optional - blank for all)
    - Trigger: `on_lead_sold`
 3. Add steps:
    - Step 1: delay 0 min, channel email, subject/body config
@@ -84,7 +84,7 @@ Create and send a bulk SMS campaign (verify in logs). Add a scheduled bulk SMS a
 - Bulk SMS creates and sends (logs in demo environment)
 - Event alerts configurable with metric/operator/threshold
 - Campaign scoping limits automation to specific verticals
-- SMS does not send via real provider in demo — verify via logs
+- SMS does not send via real provider in demo - verify via logs
 - Automation does not block lead processing (async side effects)
 
 ---
@@ -98,13 +98,13 @@ Create and send a bulk SMS campaign (verify in logs). Add a scheduled bulk SMS a
 | Alert with invalid email | Validation error |
 | Duplicate trigger sequences | Both fire independently |
 | Unsold trigger on 10-tier exhaust | Sequence fires if configured |
-| Delete campaign with sequences | Orphan handling — verify cascade |
+| Delete campaign with sequences | Orphan handling - verify cascade |
 | Very short delay (0 min) | Step fires immediately after trigger |
 
 ---
 
 ## Related Docs
 
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — trigger lead events
-- [06-form-builder.md](./06-form-builder.md) — capture leads for nurture
-- [12-operations-and-logs.md](./12-operations-and-logs.md) — monitor pipeline health
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - trigger lead events
+- [06-form-builder.md](./06-form-builder.md) - capture leads for nurture
+- [12-operations-and-logs.md](./12-operations-and-logs.md) - monitor pipeline health

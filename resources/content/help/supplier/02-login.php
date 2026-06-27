@@ -18,14 +18,14 @@ This article covers how accounts are created, how to sign in, and how portal acc
 
 Your platform administrator sets up portal access in one of two ways:
 
-### Option A — From the Supplier record
+### Option A - From the Supplier record
 
 1. Admin navigates to **Suppliers → Edit** your supplier profile
 2. Opens the **Portal access** section
 3. Creates a user with email and password (or generates a temporary password)
 4. Optionally clicks **Send credentials** to email login details
 
-### Option B — From Users
+### Option B - From Users
 
 1. Admin navigates to **Users → New**
 2. Sets role to `supplier_portal`
@@ -86,7 +86,7 @@ Portal login does **not** replace API authentication. You cannot submit leads th
 
 ### Best practices
 
-- Store API keys in a secrets manager or environment variable — they are typically shown only once at creation
+- Store API keys in a secrets manager or environment variable - they are typically shown only once at creation
 - Use a unique, strong password for portal access
 - Request **separate portal users** per team member when your account manager supports it
 - Do not share credentials across sub-affiliates; use **SSID** tracking instead (see tracking article)
@@ -98,7 +98,7 @@ Portal login does **not** replace API authentication. You cannot submit leads th
 3. Check your inbox for the reset link (also check spam)
 4. Set a new password and sign in again at `/login`
 
-If password reset fails, your email may not match a portal user record — contact your account manager.
+If password reset fails, your email may not match a portal user record - contact your account manager.
 
 ## Multi-user and team access
 
@@ -108,11 +108,11 @@ When multiple people on your team need portal visibility:
 2. Each user gets their own email and password
 3. All users see the same supplier-scoped data (leads, payouts, sources)
 
-Rotating passwords when team members leave is recommended — ask the admin to reset or deactivate old accounts.
+Rotating passwords when team members leave is recommended - ask the admin to reset or deactivate old accounts.
 
 ## Tips
 
-- Bookmark `{subdomain}/login` — do not attempt to sign in on the central marketing domain
+- Bookmark `{subdomain}/login` - do not attempt to sign in on the central marketing domain
 - If you also have a buyer account on another tenant, credentials are **not interchangeable** across subdomains
 - Keep API keys out of browser bookmarks, shared documents, and client-side code
 - After receiving credentials, submit a test lead via API and confirm it appears on `/portal/supplier/leads` within seconds
@@ -126,6 +126,6 @@ Rotating passwords when team members leave is recommended — ask the admin to r
 | **403 after login** | User not linked to a Supplier record | Admin must set `supplier_id` on your user profile |
 | **Email verification required** | Tenant enforces verified emails | Click the verification link sent to your inbox |
 | **No leads visible after login** | No API traffic yet, or wrong SID | Submit a test lead and verify SID matches a configured Source |
-| **Cannot find API key in portal** | API keys are admin-managed | Request your key from the platform administrator — it is not displayed in the supplier portal |
+| **Cannot find API key in portal** | API keys are admin-managed | Request your key from the platform administrator - it is not displayed in the supplier portal |
 MD,
 ];

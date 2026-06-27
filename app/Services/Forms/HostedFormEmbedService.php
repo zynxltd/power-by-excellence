@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Source;
 use App\Models\Supplier;
+use App\Services\Forms\SupplierHostedFormService;
 use Illuminate\Http\Request;
 
 class HostedFormEmbedService
@@ -96,8 +97,16 @@ class HostedFormEmbedService
 
         return HostedForm::withoutGlobalScopes()
             ->where('account_id', $supplier->account_id)
-            ->where('is_active', true)
-            ->whereIn('campaign_id', $campaignIds)
+            ->live()
+            ->where(function ($q) use ($campaignIds, $supplier) {
+                $q->where(function ($inner) use ($campaignIds) {
+                    $inner->whereNull('supplier_id')
+                        ->whereIn('campaign_id', $campaignIds);
+                })->orWhere(function ($inner) use ($supplier) {
+                    $inner->where('supplier_id', $supplier->id)
+                        ->where('approval_status', SupplierHostedFormService::STATUS_APPROVED);
+                });
+            })
             ->with('campaign:id,name,reference')
             ->orderBy('name')
             ->get()

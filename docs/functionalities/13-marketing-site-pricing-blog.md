@@ -1,4 +1,4 @@
-# 13 — Marketing Site, Pricing & Blog
+# 13 - Marketing Site, Pricing & Blog
 
 ## Purpose
 
@@ -30,7 +30,7 @@ The public marketing site introduces PowerByExcellence to prospects. It includes
 | `real-time-bidding-for-lead-buyers` | Ping-post bidding |
 | `multi-vertical-lead-capture` | Vertical campaigns |
 
-(Exact slugs from `config/blog.php` — verify on `/blog` index.)
+(Exact slugs from `config/blog.php` - verify on `/blog` index.)
 
 ---
 
@@ -42,7 +42,7 @@ The public marketing site introduces PowerByExcellence to prospects. It includes
 2. Navigate to `https://powerbyexcellence.test/`
 
 **Expected:**
-- Page title: "PowerByExcellence — Real-Time Lead Distribution Platform"
+- Page title: "PowerByExcellence - Real-Time Lead Distribution Platform"
 - Hero section with product value proposition
 - Feature sections: ping-tree, billing, multi-vertical, reporting
 - "Book a demo" or CTA form visible
@@ -72,7 +72,7 @@ The public marketing site introduces PowerByExcellence to prospects. It includes
 3. Check CTA buttons link to login or demo
 
 **Expected:**
-- Page title: "Pricing — PowerByExcellence Lead Distribution"
+- Page title: "Pricing - PowerByExcellence Lead Distribution"
 - Three plan cards with features listed
 - Consistent branding with homepage
 - Login link available
@@ -123,13 +123,13 @@ Browse `/help` articles. Confirm `/sdk/pbe-leads.js` serves JavaScript. Test log
 | Demo request spam | Throttle or validation on email format |
 | Very long blog slug | 404 |
 | HTTP vs HTTPS on Herd | Both work; API calls from SDK should match protocol |
-| Registration URL | Registration disabled — no `/register` route |
+| Registration URL | Registration disabled - no `/register` route |
 | Pricing page direct access while logged in | Page still accessible; admin nav may overlay |
 
 ---
 
 ## Related Docs
 
-- [06-form-builder.md](./06-form-builder.md) — public lead capture forms
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — SDK usage
-- [README.md](./README.md) — demo setup and credentials
+- [06-form-builder.md](./06-form-builder.md) - public lead capture forms
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - SDK usage
+- [README.md](./README.md) - demo setup and credentials

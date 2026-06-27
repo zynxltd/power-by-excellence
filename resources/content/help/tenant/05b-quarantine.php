@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-**Quarantine** temporarily holds leads that should not distribute immediately — for example validation uncertainty, manual review policies, suspicious patterns, or unsold leads held for retry. Quarantined leads have status `quarantined` and do not enter the ping tree until released.
+**Quarantine** temporarily holds leads that should not distribute immediately - for example validation uncertainty, manual review policies, suspicious patterns, or unsold leads held for retry. Quarantined leads have status `quarantined` and do not enter the ping tree until released.
 
 Think of quarantine as a **parking bay** between ingest and distribution. Operators review the queue, fix data if needed, then release (re-process) or reject (terminal).
 
@@ -23,7 +23,7 @@ Think of quarantine as a **parking bay** between ingest and distribution. Operat
 | **Lead pipeline** | `/leads?status=quarantined` | Search/filter alongside other statuses |
 | **Lead detail** | `/leads/{id}` | Single-lead review with events and field data |
 
-The live stats bar (green **LIVE** strip on admin pages) shows **Quarantine** count — click it to jump to filtered leads.
+The live stats bar (green **LIVE** strip on admin pages) shows **Quarantine** count - click it to jump to filtered leads.
 
 ## Why leads enter quarantine
 
@@ -41,16 +41,16 @@ Check the lead **Events** tab on detail view for `lead.quarantined` and the mess
 1. Go to **Operations → Quarantine** (`/quarantine`)
 2. Use filters (campaign, date, search) to find the lead
 3. Click the row to open **Lead detail**, or select checkbox for bulk
-4. Click **Release & repost** — lead status returns to `pending` and `ProcessLeadJob` queues distribution
-5. Confirm **queue worker** is running (`php artisan queue:work` or Horizon) — without it, released leads stay pending
-6. Refresh lead detail — status should move to `processing` then `sold` or `unsold`
+4. Click **Release & repost** - lead status returns to `pending` and `ProcessLeadJob` queues distribution
+5. Confirm **queue worker** is running (`php artisan queue:work` or Horizon) - without it, released leads stay pending
+6. Refresh lead detail - status should move to `processing` then `sold` or `unsold`
 
 ## Step-by-step: reject a lead
 
 1. Open lead from quarantine list
 2. Click **Reject** (or bulk reject from quarantine index)
-3. Enter **reject reason** — visible in lead events and supplier-facing logs where applicable
-4. Lead moves to terminal `rejected` status — no further distribution
+3. Enter **reject reason** - visible in lead events and supplier-facing logs where applicable
+4. Lead moves to terminal `rejected` status - no further distribution
 
 Use reject for confirmed bad data, duplicates you chose not to merge, or compliance blocks.
 
@@ -60,7 +60,7 @@ On `/quarantine`:
 
 1. Select multiple rows via checkboxes
 2. Choose **Bulk release** or **Bulk reject**
-3. Confirm — each lead processes independently in the queue
+3. Confirm - each lead processes independently in the queue
 
 Bulk release is useful after fixing a campaign validation rule that wrongly quarantined a batch.
 
@@ -94,7 +94,7 @@ Scheduled command `quarantine:process-expired` runs every **15 minutes** (see `r
 
 ## Tips
 
-- Document quarantine reasons when rejecting — helps supplier disputes
+- Document quarantine reasons when rejecting - helps supplier disputes
 - After rule changes, bulk-release a test batch of 5 leads before releasing hundreds
 - Pair quarantine review with **Delivery logs** when leads were unsold before hold
 - Use **Lead pipeline → Quarantine** filter for CSV export of held inventory

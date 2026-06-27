@@ -25,7 +25,7 @@ class QuarantineController extends Controller
 
         if ($this->isValidationHold($lead)) {
             return response()->json([
-                'error' => 'Validation holds must be rejected — they cannot be released back into distribution.',
+                'error' => 'Validation holds must be rejected - they cannot be released back into distribution.',
             ], 422);
         }
 

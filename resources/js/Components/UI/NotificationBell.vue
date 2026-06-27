@@ -1,11 +1,22 @@
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const page = usePage();
 const open = ref(false);
 const items = ref([]);
-const unread = computed(() => page.props.notifications?.unread_count ?? 0);
+const badgeCount = ref(page.props.notifications?.unread_count ?? 0);
+
+watch(
+    () => page.props.notifications?.unread_count,
+    (count) => {
+        if (typeof count === 'number') {
+            badgeCount.value = count;
+        }
+    },
+);
+
+const unread = computed(() => badgeCount.value);
 
 const severityDot = (severity) => ({
     info: 'bg-indigo-500',
@@ -22,10 +33,17 @@ const fetchNotifications = async () => {
         if (res.ok) {
             const data = await res.json();
             items.value = data.notifications ?? [];
+            if (typeof data.unread_count === 'number') {
+                badgeCount.value = data.unread_count;
+            }
         }
     } catch {
         // ignore
     }
+};
+
+const syncBadge = () => {
+    router.reload({ only: ['notifications'], preserveScroll: true });
 };
 
 const toggle = () => {
@@ -39,7 +57,9 @@ const markAll = () => {
     router.post(route('notifications.read-all'), {}, {
         preserveScroll: true,
         onSuccess: () => {
+            badgeCount.value = 0;
             items.value = items.value.map((n) => ({ ...n, is_read: true }));
+            syncBadge();
             fetchNotifications();
         },
     });
@@ -49,6 +69,8 @@ const markOne = (id, href = null) => {
     router.post(route('notifications.read', id), {}, {
         preserveScroll: true,
         onSuccess: () => {
+            badgeCount.value = Math.max(0, badgeCount.value - 1);
+            syncBadge();
             fetchNotifications();
             if (href) {
                 open.value = false;
@@ -64,7 +86,11 @@ const onDocClick = (e) => {
     }
 };
 
-onMounted(() => document.addEventListener('click', onDocClick));
+onMounted(() => {
+    document.addEventListener('click', onDocClick);
+    fetchNotifications();
+});
+
 onUnmounted(() => document.removeEventListener('click', onDocClick));
 </script>
 
@@ -72,7 +98,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick));
     <div class="relative" data-notification-root>
         <button
             type="button"
-            class="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            class="relative flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white sm:h-10 sm:w-10"
             aria-label="Notifications"
             @click.stop="toggle"
         >
@@ -95,6 +121,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick));
                 <p class="text-sm font-semibold text-slate-900 dark:text-white">Notifications</p>
                 <div class="flex items-center gap-2">
                     <button v-if="unread > 0" type="button" class="text-xs text-indigo-600 hover:underline" @click="markAll">Mark all read</button>
+                    <Link
+                        :href="route('notifications.index')"
+                        class="text-xs text-indigo-600 hover:underline"
+                        @click="open = false"
+                    >
+                        View all
+                    </Link>
                     <Link
                         v-if="page.props.auth.isSuperAdmin"
                         :href="route('notifications.admin.index')"

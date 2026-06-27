@@ -10,6 +10,7 @@ const LARGE_TREE_THRESHOLD = 10;
 const COMPACT_FLOW_THRESHOLD = 12;
 
 const groups = defineModel('groups', { type: Array, required: true });
+const declineUrl = defineModel('declineUrl', { type: String, default: '' });
 
 const props = defineProps({
     deliveries: { type: Array, default: () => [] },
@@ -287,8 +288,8 @@ const dropZoneClass = (target) => [
 
         <div v-if="isLargeTree" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
             <strong>{{ groups.length }} tiers</strong> in this tree.
-            <template v-if="useCompactFlow"> Compact view enabled — expand a tier to edit deliveries or settings.</template>
-            <template v-else> Tiers start collapsed — click a tier to expand.</template>
+            <template v-if="useCompactFlow"> Compact view enabled - expand a tier to edit deliveries or settings.</template>
+            <template v-else> Tiers start collapsed - click a tier to expand.</template>
         </div>
 
         <div v-if="!deliveries.length" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
@@ -351,7 +352,7 @@ const dropZoneClass = (target) => [
 
                         <div
                             v-if="filteredUnassignedDeliveries.length"
-                            class="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1"
+                            class="flex max-h-[min(18rem,calc(100vh-22rem))] flex-col gap-2 overflow-y-auto pr-1"
                         >
                             <div
                                 v-for="delivery in filteredUnassignedDeliveries"
@@ -438,7 +439,7 @@ const dropZoneClass = (target) => [
                 </div>
             </div>
 
-            <!-- Visual flow — full width, scrolls with page -->
+            <!-- Visual flow - full width, scrolls with page -->
             <div class="relative mx-auto w-full max-w-3xl py-2">
                 <div v-if="!useCompactFlow" class="flex flex-col items-center">
                     <div class="rounded-xl border-2 border-indigo-300 bg-indigo-50 px-6 py-3 text-center dark:border-indigo-700 dark:bg-indigo-950/40">
@@ -573,7 +574,7 @@ const dropZoneClass = (target) => [
                             >
                                 <p class="text-center text-xs text-slate-400">
                                     <template v-if="allDeliveriesAssigned && !deliveriesForTier(group).length">
-                                        No buyers available — all deliveries are in the tree
+                                        No buyers available - all deliveries are in the tree
                                     </template>
                                     <template v-else>
                                         {{ deliveriesForTier(group).length ? 'Drop here to append' : 'Drop deliveries here' }}
@@ -650,9 +651,22 @@ const dropZoneClass = (target) => [
 
                 <div v-if="groups.length" class="mt-2 flex flex-col items-center">
                     <div class="h-8 w-0.5 bg-slate-300 dark:bg-slate-600" />
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-center dark:border-slate-700 dark:bg-slate-800/50">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">No tier accepts</p>
-                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Lead marked unsold</p>
+                    <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+                        <p class="text-center text-xs font-semibold uppercase tracking-wider text-slate-500">No tier accepts</p>
+                        <p class="mt-1 text-center text-sm text-slate-600 dark:text-slate-400">Lead marked unsold</p>
+                        <div class="mt-4" @click.stop>
+                            <InputLabel value="Decline page URL" />
+                            <TextInput
+                                v-model="declineUrl"
+                                type="url"
+                                class="mt-1 w-full"
+                                :disabled="readonly"
+                                placeholder="https://yoursite.com/declined"
+                            />
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                Returned in the API as <code class="rounded bg-slate-200 px-1 dark:bg-slate-700">decline_url</code> when all tiers pass. Send consumers here when no buyer accepts.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

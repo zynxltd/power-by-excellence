@@ -52,6 +52,37 @@ class FraudProtectionTest extends TestCase
         $this->assertFalse($fraud->isEntitled($this->account->fresh()));
     }
 
+    public function test_starter_ignores_stale_fraud_enabled_flag(): void
+    {
+        $settings = $this->account->settings ?? [];
+        $settings['subscription_plan'] = 'starter';
+        $settings['fraud_protection'] = ['enabled' => true, 'included' => false];
+        $this->account->update(['settings' => $settings]);
+
+        $fraud = app(FraudProtectionService::class);
+        $summary = $fraud->summary($this->account->fresh());
+
+        $this->assertFalse($fraud->isPlanEntitled($this->account->fresh()));
+        $this->assertFalse($summary['plan_entitled']);
+    }
+
+    public function test_super_admin_override_does_not_mark_starter_plan_entitled(): void
+    {
+        $settings = $this->account->settings ?? [];
+        $settings['subscription_plan'] = 'starter';
+        $settings['fraud_protection'] = ['enabled' => false, 'included' => false];
+        $this->account->update(['settings' => $settings]);
+
+        $superAdmin = \App\Models\User::where('email', 'admin@powerbyexcellence.test')->first();
+        $this->actingAs($superAdmin);
+
+        $summary = app(FraudProtectionService::class)->summary($this->account->fresh());
+
+        $this->assertTrue($summary['entitled']);
+        $this->assertTrue($summary['admin_override']);
+        $this->assertFalse($summary['plan_entitled']);
+    }
+
     public function test_super_admin_sees_all_fraud_detection_features_on_starter_without_addon(): void
     {
         $settings = $this->account->settings ?? [];
@@ -176,7 +207,7 @@ class FraudProtectionTest extends TestCase
         $this->assertSame('ipqs', $lead->metadata['email_validation']['provider'] ?? null);
     }
 
-    public function test_starter_with_addon_is_entitled_with_cap(): void
+    public function test_starter_addon_is_not_available(): void
     {
         $settings = app(FraudProtectionService::class)->provisionSettingsForPlan(
             $this->account->settings ?? [],
@@ -186,10 +217,11 @@ class FraudProtectionTest extends TestCase
         $this->account->update(['settings' => $settings]);
 
         $fraud = app(FraudProtectionService::class);
+        $summary = $fraud->summary($this->account->fresh());
 
-        $this->assertTrue($fraud->isEntitled($this->account->fresh()));
-        $this->assertSame(5000, $fraud->monthlyCap($this->account->fresh()));
-        $this->assertFalse($fraud->supportsUrlScanner($this->account->fresh()));
+        $this->assertFalse($fraud->isEntitled($this->account->fresh()));
+        $this->assertFalse($summary['addon_available']);
+        $this->assertFalse($summary['entitled']);
     }
 
     public function test_validation_skipped_when_not_entitled(): void
@@ -253,7 +285,7 @@ class FraudProtectionTest extends TestCase
         $this->assertEmpty($lead->fresh()->metadata['email_validation'] ?? null);
     }
 
-    public function test_super_admin_can_set_plan_and_fraud_addon(): void
+    public function test_super_admin_starter_plan_does_not_enable_fraud(): void
     {
         $superAdmin = \App\Models\User::where('email', 'admin@powerbyexcellence.test')->first();
 
@@ -262,14 +294,12 @@ class FraudProtectionTest extends TestCase
             ->put(route('accounts.billing.update', $this->account), [
                 'monthly_rent' => 299,
                 'subscription_plan' => 'starter',
-                'fraud_protection_enabled' => true,
                 'billing_status' => 'active',
             ])
             ->assertRedirect();
 
         $fresh = $this->account->fresh();
         $this->assertSame('starter', $fresh->settings['subscription_plan']);
-        $this->assertTrue($fresh->settings['fraud_protection']['enabled']);
-        $this->assertSame('ipqs', $fresh->settings['validation_integration']['provider']);
+        $this->assertFalse($fresh->settings['fraud_protection']['enabled']);
     }
 }

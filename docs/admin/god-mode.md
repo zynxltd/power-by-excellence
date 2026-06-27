@@ -70,5 +70,5 @@ SESSION_DOMAIN=.powerbyexcellence.test
 
 ## Tips
 
-- Do not confuse god mode with **account switch** on central host — switch alone does not fix subdomain session issues
+- Do not confuse god mode with **account switch** on central host - switch alone does not fix subdomain session issues
 - Cross-tenant bookmarks while in god mode can trigger tenant access redirects; always exit before switching partners

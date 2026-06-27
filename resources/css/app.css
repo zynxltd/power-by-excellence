@@ -106,7 +106,7 @@
         border-color: var(--accent-ring);
     }
 
-    /* Marketing site — logo brand: violet → indigo → cyan */
+    /* Marketing site - logo brand: violet → indigo → cyan */
     .marketing-content {
         @apply bg-white text-slate-900;
         background-image: theme('backgroundImage.brand-mesh-light');

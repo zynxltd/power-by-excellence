@@ -19,7 +19,7 @@ The Command Center is the operational dashboard for the entire multi-tenant plat
 | **Leads today** | Leads received today (all tenants) |
 | **Sold today** | Leads marked `sold` today |
 | **Pings / Posts** | Delivery log rows with ping/post payloads today |
-| **Internal failed** | Platform-side failures (timeouts, exceptions, misconfiguration) — target **~0%** |
+| **Internal failed** | Platform-side failures (timeouts, exceptions, misconfiguration) - target **~0%** |
 | **Post success %** | Successful posts ÷ posts attempted |
 | **Pending queue** | Leads in `pending` or `processing` |
 | **Failed jobs** | Horizon/queue failures |
@@ -42,13 +42,13 @@ Each row is one `Account` with:
 
 ### Actions
 
-- **Visit** — Enter [god mode](./god-mode.md) on the tenant subdomain
-- **Portal URL** — Open tenant dashboard in a new tab (after visit/handoff)
+- **Visit** - Enter [god mode](./god-mode.md) on the tenant subdomain
+- **Portal URL** - Open tenant dashboard in a new tab (after visit/handoff)
 
 ## Recent events
 
-- **Lead events** — Last 30 platform-wide lifecycle events (sold, ingested, rejected, etc.)
-- **Event alert fires** — See **Automation → Event Alerts** for threshold alert history when rules fire
+- **Lead events** - Last 30 platform-wide lifecycle events (sold, ingested, rejected, etc.)
+- **Event alert fires** - See **Automation → Event Alerts** for threshold alert history when rules fire
 
 ## Ops checks
 

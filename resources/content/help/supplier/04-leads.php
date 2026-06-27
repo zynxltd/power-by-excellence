@@ -12,7 +12,7 @@ return [
 
 The **Leads** page at `/portal/supplier/leads` lists every lead attributed to your supplier account. Use it to investigate individual submissions, diagnose quality issues, and prepare data for CSV export.
 
-Only leads where `supplier_id` matches your account are visible — you never see another affiliate's traffic.
+Only leads where `supplier_id` matches your account are visible - you never see another affiliate's traffic.
 
 ## Navigating to the leads page
 
@@ -85,7 +85,7 @@ Buyer identity is typically hidden per platform policy. You see your payout on s
 |--------|---------|---------|
 | **pending** | Received, awaiting processing | No |
 | **processing** | Currently in distribution / validation pipeline | No |
-| **sold** | Monetised — a buyer accepted the lead | Yes |
+| **sold** | Monetised - a buyer accepted the lead | Yes |
 | **unsold** | Processed but no buyer accepted | No |
 | **rejected** | Failed validation, business rules, or filter checks | No |
 | **quarantined** | Held for manual review by the platform operator | No |
@@ -107,7 +107,7 @@ Not every lead passes through every state. Some reject immediately; others quara
 
 - Results are paginated at **25 leads per page**
 - Use pagination links at the bottom to navigate older submissions
-- Filters persist in the URL — bookmark or share a filtered view with your team
+- Filters persist in the URL - bookmark or share a filtered view with your team
 
 ## Export CSV from leads page
 
@@ -138,9 +138,9 @@ Click **Export CSV** (top right) to download leads. The export respects your **d
 
 - Filter **sold** for payout reconciliation; ignore payout values on other statuses (always zero)
 - Use **quarantined** to spot validation issues in your data before they scale
-- **duplicate** status often means the same consumer submitted twice — review dedupe settings with your account manager
-- Date filters use `received_at`, not `distributed_at` — a lead received Monday may sell Tuesday
-- SID column helps segment traffic without exporting — look for one SID with unusually high rejection rates
+- **duplicate** status often means the same consumer submitted twice - review dedupe settings with your account manager
+- Date filters use `received_at`, not `distributed_at` - a lead received Monday may sell Tuesday
+- SID column helps segment traffic without exporting - look for one SID with unusually high rejection rates
 
 ## Troubleshooting
 

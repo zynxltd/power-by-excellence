@@ -1,4 +1,4 @@
-# PowerByExcellence — Manual QA Sense-Check Guide
+# PowerByExcellence - Manual QA Sense-Check Guide
 
 > **Purpose:** Master checklist for tomorrow's hands-on QA session. Each linked document walks through one functional area with step-by-step tests, expected results, and edge cases.
 
@@ -32,7 +32,7 @@ Without the queue worker, API leads submitted without `"sync": true` will remain
 
 | Role | Email | Password | Notes |
 |------|-------|----------|-------|
-| **Account Admin (UK)** | `uk@powerbyexcellence.test` | `password` | Primary QA account — Excellence Leads UK |
+| **Account Admin (UK)** | `uk@powerbyexcellence.test` | `password` | Primary QA account - Excellence Leads UK |
 | Account Admin (US) | `us@powerbyexcellence.test` | `password` | Partner Solar US tenant |
 | Super Admin | `admin@powerbyexcellence.test` | `password` | Switch platform at `/accounts` before tenant CRUD |
 | Buyer Portal (UK) | `buyer-portal@excellence-uk.test` | `password` | Redirects to `/portal/buyer` |
@@ -66,14 +66,14 @@ API keys are printed once in the terminal when you run `php artisan migrate:fres
 
 ## Recommended Test Order
 
-1. **Setup** — migrate, seed, start queue worker, log in as UK admin
-2. **Dashboard & Reports** — confirm seeded historical data is visible
-3. **Campaigns → Deliveries → Distribution** — trace the lead routing stack
-4. **API ingest** — submit a sync lead, verify in Operations and Lead Pipeline
-5. **Form builder** — submit hosted form, confirm lead appears
-6. **Portals** — log in as buyer and supplier, verify isolation
-7. **Integrations** — webhooks, postbacks, automation
-8. **Marketing** — public pages (no login required)
+1. **Setup** - migrate, seed, start queue worker, log in as UK admin
+2. **Dashboard & Reports** - confirm seeded historical data is visible
+3. **Campaigns → Deliveries → Distribution** - trace the lead routing stack
+4. **API ingest** - submit a sync lead, verify in Operations and Lead Pipeline
+5. **Form builder** - submit hosted form, confirm lead appears
+6. **Portals** - log in as buyer and supplier, verify isolation
+7. **Integrations** - webhooks, postbacks, automation
+8. **Marketing** - public pages (no login required)
 
 ---
 
@@ -81,19 +81,19 @@ API keys are printed once in the terminal when you run `php artisan migrate:fres
 
 If time is limited, run this minimum path:
 
-1. Log in → `/dashboard` — stats and charts load
-2. `/campaigns` → open **Auto Insurance** — fields, deliveries, ping tree linked
-3. `/reports` — 28-day charts and 10-tier table populated
-4. `POST /api/v1/leads` with `sync: true` — lead sells, appears in `/operations`
-5. `/forms/auto-insurance-quote-uk` — multi-step form submits
-6. Log out → log in as `buyer-portal@excellence-uk.test` — sold leads visible
-7. Visit `/` and `/pricing` — marketing pages render
+1. Log in → `/dashboard` - stats and charts load
+2. `/campaigns` → open **Auto Insurance** - fields, deliveries, ping tree linked
+3. `/reports` - 28-day charts and 10-tier table populated
+4. `POST /api/v1/leads` with `sync: true` - lead sells, appears in `/operations`
+5. `/forms/auto-insurance-quote-uk` - multi-step form submits
+6. Log out → log in as `buyer-portal@excellence-uk.test` - sold leads visible
+7. Visit `/` and `/pricing` - marketing pages render
 
 ---
 
 ## Known Demo Limitations
 
-- Billing uses credit ledger + admin top-up; Stripe integration is config UI — full Checkout in buyer portal is pending
+- Billing uses credit ledger + admin top-up; Stripe integration is config UI - full Checkout in buyer portal is pending
 - SMS delivery and bulk SMS log to platform log unless provider configured
 - Async leads require `php artisan queue:work`
 - User admin supports create/delete; no edit form for existing users

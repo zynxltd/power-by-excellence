@@ -55,7 +55,7 @@ class CampaignPipelineProfile
             default => [
                 'id' => self::STANDARD_SALE,
                 'label' => 'Standard sale',
-                'description' => 'Full lead routing — validate, then distribute to buyers via ping tree or waterfall.',
+                'description' => 'Full lead routing - validate, then distribute to buyers via ping tree or waterfall.',
                 'stages' => [
                     ['key' => 'ingest', 'label' => 'Ingest', 'accent' => 'slate'],
                     ['key' => 'validate', 'label' => 'Validate', 'accent' => 'violet'],

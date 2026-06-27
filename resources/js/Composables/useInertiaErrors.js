@@ -55,6 +55,6 @@ export function initInertiaErrorHandler() {
     });
 
     router.on('exception', () => {
-        pushToast('Network error — please check your connection and try again.', 'error');
+        pushToast('Network error - please check your connection and try again.', 'error');
     });
 }

@@ -80,12 +80,12 @@ const statusClass = (status) => ({
                     :href="route('support.admin.show', ticket.id)"
                 >
                     <td class="px-6 py-4">
-                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ ticket.account?.brand_name || ticket.account?.name || '—' }}</p>
+                        <p class="text-sm font-medium text-slate-900 dark:text-white">{{ ticket.account?.brand_name || ticket.account?.name || '-' }}</p>
                         <p v-if="ticket.account?.slug" class="text-xs text-slate-500">{{ ticket.account.slug }}</p>
                     </td>
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ ticket.subject }}</td>
                     <td class="px-6 py-4">
-                        <p class="text-sm text-slate-900 dark:text-white">{{ ticket.user?.name ?? '—' }}</p>
+                        <p class="text-sm text-slate-900 dark:text-white">{{ ticket.user?.name ?? '-' }}</p>
                         <p class="text-xs text-slate-500">{{ ticket.user?.email }}</p>
                     </td>
                     <td class="px-6 py-4">

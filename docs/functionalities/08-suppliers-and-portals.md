@@ -1,4 +1,4 @@
-# 08 — Suppliers & Portals
+# 08 - Suppliers & Portals
 
 ## Purpose
 
@@ -8,7 +8,7 @@
 
 ## Where to Find It
 
-### Admin — Suppliers
+### Admin - Suppliers
 
 | Item | Location |
 |------|----------|
@@ -54,21 +54,21 @@
 
 ### Admin: Suppliers
 
-1. List suppliers at `/suppliers` — confirm Main Supplier with SID `google_search`
+1. List suppliers at `/suppliers` - confirm Main Supplier with SID `google_search`
 2. Create test supplier `supplier-qa` with source SID `qa_traffic`, then delete after tests
 
 ### Buyer Portal
 
-3. Log in as `buyer-portal@excellence-uk.test` — lands on `/portal/buyer`
+3. Log in as `buyer-portal@excellence-uk.test` - lands on `/portal/buyer`
 4. Review dashboard stats and 7-day charts (Primary Buyer scope only)
-5. Open `/portal/buyer/leads` — submit feedback/return if UI available
-6. Open billing, export CSV, then try `/dashboard` — expect 403 or redirect
+5. Open `/portal/buyer/leads` - submit feedback/return if UI available
+6. Open billing, export CSV, then try `/dashboard` - expect 403 or redirect
 
 ### Supplier Portal
 
-7. Log in as `supplier-portal@excellence-uk.test` — lands on `/portal/supplier`
-8. Review dashboard, leads table, and payout billing — all scoped to Main Supplier
-9. Navigate to `/portal/buyer` — expect blocked
+7. Log in as `supplier-portal@excellence-uk.test` - lands on `/portal/supplier`
+8. Review dashboard, leads table, and payout billing - all scoped to Main Supplier
+9. Navigate to `/portal/buyer` - expect blocked
 
 ---
 
@@ -78,7 +78,7 @@
 - Buyer portal shows purchased leads and credit ledger
 - Supplier portal shows submitted leads and payout earnings
 - Portal roles are strictly isolated from admin and each other
-- Portal data respects tenant boundaries — users only see their partner platform's data
+- Portal data respects tenant boundaries - users only see their partner platform's data
 
 ---
 
@@ -90,7 +90,7 @@
 | Admin user hits portal URL | Redirect based on role or 403 |
 | Buyer returns a lead | Return recorded; verify admin lead detail |
 | Supplier API key scoped | Can only ingest to own supplier's traffic |
-| US portal users | Only their tenant platform's data visible — not other partner platforms |
+| US portal users | Only their tenant platform's data visible - not other partner platforms |
 | Empty lead history | Tables show empty state, not error |
 | CSV download with no leads | Empty file or headers only |
 
@@ -98,6 +98,6 @@
 
 ## Related Docs
 
-- [07-buyers-and-billing.md](./07-buyers-and-billing.md) — admin billing and top-up
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — supplier API ingest with SID
-- [10-postbacks-webhooks.md](./10-postbacks-webhooks.md) — supplier postbacks
+- [07-buyers-and-billing.md](./07-buyers-and-billing.md) - admin billing and top-up
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - supplier API ingest with SID
+- [10-postbacks-webhooks.md](./10-postbacks-webhooks.md) - supplier postbacks

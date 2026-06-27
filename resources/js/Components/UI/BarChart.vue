@@ -82,7 +82,21 @@ const yAxisWidth = computed(() => {
     return Math.min(52, Math.max(28, maxLen * 6.5 + 6));
 });
 
-const formatValue = (v) => (props.valueFormatter ? props.valueFormatter(v) : v);
+const formatValue = (v) => {
+    if (props.valueFormatter) {
+        return props.valueFormatter(v);
+    }
+
+    const n = Number(v);
+    if (Number.isNaN(n)) {
+        return String(v ?? '');
+    }
+
+    return new Intl.NumberFormat('en-GB', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(n);
+};
 
 const barHeightPct = (value) => {
     const v = toNumber(value);

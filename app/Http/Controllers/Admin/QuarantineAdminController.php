@@ -79,7 +79,7 @@ class QuarantineAdminController extends Controller
             || ! empty($lead->metadata['email_validation'])
             || ! empty($lead->metadata['hlr_validation'])
             || ! empty($lead->metadata['field_validation'])) {
-            abort(422, 'Validation holds must be rejected — they cannot be released back into distribution.');
+            abort(422, 'Validation holds must be rejected - they cannot be released back into distribution.');
         }
 
         $lead->update([

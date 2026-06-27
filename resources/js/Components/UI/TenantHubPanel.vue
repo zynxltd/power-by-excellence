@@ -26,7 +26,7 @@ const switchToTenant = () => {
 
 <template>
     <div v-if="tenantHub" class="tenant-hub-panel">
-        <Panel :title="`Tenant — ${tenantHub.name}`">
+        <Panel :title="`Tenant - ${tenantHub.name}`">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p class="text-sm text-slate-600 dark:text-slate-400">
                     Manage all portal functionality for

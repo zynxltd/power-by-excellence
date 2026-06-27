@@ -34,7 +34,7 @@ const hasTenantContext = computed(() => Boolean(account.value));
 
 const needsTenantOnCentral = computed(() => isSuperAdmin.value && isCentralHost.value && !hasTenantContext.value);
 
-/** Tenant switcher lives on Partner platforms / page banners — not in central admin header. */
+/** Tenant switcher lives on Partner platforms / page banners - not in central admin header. */
 const showHeaderTenantSwitcher = computed(() => isSuperAdmin.value && Boolean(account.value) && !isCentralHost.value);
 
 const guardTenantRoute = (event) => {
@@ -43,7 +43,7 @@ const guardTenantRoute = (event) => {
     }
 
     event.preventDefault();
-    pushToast('Select a partner platform first — click Switch on a platform row.', 'error');
+    pushToast('Select a partner platform first - click Switch on a platform row.', 'error');
 
     if (!route().current('accounts.index')) {
         router.visit(route('accounts.index'));
@@ -102,6 +102,7 @@ const mobileSections = computed(() => {
             { id: 'buyer-dashboard', label: 'Dashboard', href: route('portal.buyer.dashboard'), links: [] },
             { id: 'buyer-leads', label: 'My Leads', href: route('portal.buyer.leads'), links: [] },
             { id: 'buyer-billing', label: 'Billing', href: route('portal.buyer.billing'), links: [] },
+            { id: 'buyer-integrations', label: 'Integrations', href: route('portal.buyer.integrations'), links: [] },
             { id: 'buyer-profile', label: 'Profile', href: route('profile.edit'), links: [] },
         ];
     }
@@ -111,6 +112,7 @@ const mobileSections = computed(() => {
             { id: 'supplier-dashboard', label: 'Dashboard', href: route('portal.supplier.dashboard'), links: [] },
             { id: 'supplier-leads', label: 'My Leads', href: route('portal.supplier.leads'), links: [] },
             { id: 'supplier-embeds', label: 'Form embeds', href: route('portal.supplier.embeds'), links: [] },
+            { id: 'supplier-integrations', label: 'Integrations', href: route('portal.supplier.integrations'), links: [] },
             { id: 'supplier-billing', label: 'Payouts', href: route('portal.supplier.billing'), links: [] },
             { id: 'supplier-profile', label: 'Profile', href: route('profile.edit'), links: [] },
         ];
@@ -238,6 +240,7 @@ const mobileSections = computed(() => {
                 ...(canAccess('finance') ? [{ label: 'Finance', href: route('finance.index'), requiresTenant: true }] : []),
                 ...(canAccess('billing') ? [{ label: 'Buyer Billing', href: route('billing.index'), requiresTenant: true }] : []),
                 { label: 'Support', href: isSuperAdmin.value ? route('support.admin.index') : route('support.index') },
+                { label: 'Notifications', href: route('notifications.index') },
                 { label: 'Help Centre', href: route('help.index') },
                 { label: 'Profile', href: route('profile.edit') },
             ],
@@ -394,7 +397,7 @@ const mobileSections = computed(() => {
                     v-if="canAccess('settings') || canAccess('billing') || canAccess('finance')"
                     id="account"
                     label="Account"
-                    :active="isAdminRoute(['settings.*', 'billing.*', 'finance.*', 'profile.*', 'support.*', 'help.*', 'branding.*'])"
+                    :active="isAdminRoute(['settings.*', 'billing.*', 'finance.*', 'profile.*', 'support.*', 'help.*', 'branding.*', 'notifications.index'])"
                 >
                     <p
                         v-if="needsTenantOnCentral"
@@ -437,6 +440,7 @@ const mobileSections = computed(() => {
                     <Link :href="isSuperAdmin ? route('support.admin.index') : route('support.index')" :class="dropdownLinkClass">
                         {{ isSuperAdmin ? 'Support Queue' : 'Support' }}
                     </Link>
+                    <Link :href="route('notifications.index')" :class="dropdownLinkClass">Notifications</Link>
                     <Link :href="route('help.index')" :class="dropdownLinkClass">Help Centre</Link>
                     <Link :href="route('profile.edit')" :class="dropdownLinkClass">Profile</Link>
                 </TopNavDropdown>
@@ -446,11 +450,13 @@ const mobileSections = computed(() => {
                 <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">Dashboard</Link>
                 <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">My Leads</Link>
                 <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">Billing</Link>
+                <Link :href="route('portal.buyer.integrations')" :class="navLinkClass(route().current('portal.buyer.integrations'))">Integrations</Link>
             </nav>
             <nav v-else-if="isSupplier" class="hidden items-center justify-center gap-1 md:flex">
                 <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>
                 <Link :href="route('portal.supplier.leads')" :class="navLinkClass(route().current('portal.supplier.leads'))">My Leads</Link>
                 <Link :href="route('portal.supplier.embeds')" :class="navLinkClass(route().current('portal.supplier.embeds'))">Form embeds</Link>
+                <Link :href="route('portal.supplier.integrations')" :class="navLinkClass(route().current('portal.supplier.integrations'))">Integrations</Link>
                 <Link :href="route('portal.supplier.billing')" :class="navLinkClass(route().current('portal.supplier.billing'))">Payouts</Link>
             </nav>
 

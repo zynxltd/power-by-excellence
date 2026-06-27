@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-API keys let suppliers and integrations ingest leads programmatically. Webhooks push events out to your systems when leads change state. Together they form the integration layer — but they also expand your attack surface. This guide covers creating and scoping keys, configuring webhooks, hardening staff accounts, and operational security practices.
+API keys let suppliers and integrations ingest leads programmatically. Webhooks push events out to your systems when leads change state. Together they form the integration layer - but they also expand your attack surface. This guide covers creating and scoping keys, configuring webhooks, hardening staff accounts, and operational security practices.
 
 All API keys are tenant-scoped: a key created on your platform cannot read or write another account's data.
 
@@ -38,16 +38,16 @@ Optionally restrict a key to specific source IPs. When enabled, requests from ot
 
 ### Supplier linkage
 
-Keys can be linked to a **supplier** record. When linked, ingested leads automatically attribute `supplier_id` — no need for affiliates to pass supplier reference in every request.
+Keys can be linked to a **supplier** record. When linked, ingested leads automatically attribute `supplier_id` - no need for affiliates to pass supplier reference in every request.
 
 ### Step-by-step: create a production API key
 
 1. Go to **Integrations → API Keys → New**.
-2. Enter a descriptive name (e.g. `Acme Media — production ingest`).
+2. Enter a descriptive name (e.g. `Acme Media - production ingest`).
 3. Select permissions: typically `leads:write` for ingest-only affiliates.
 4. Link to the **supplier** record if this key belongs to a specific affiliate.
 5. Add IP allowlist entries if the affiliate provides static egress IPs.
-6. Click **Create** and copy the key immediately — it is shown only once.
+6. Click **Create** and copy the key immediately - it is shown only once.
 7. Send the key to the affiliate securely (password manager share link, not email body).
 8. Ask them to test with a single lead before bulk traffic.
 
@@ -63,10 +63,10 @@ Keys can be linked to a **supplier** record. When linked, ingested leads automat
 
 | Environment | Key name | IP allowlist | Supplier |
 |-------------|----------|--------------|----------|
-| Staging | `Acme — staging` | Your office IP | Acme (staging supplier) |
-| Production | `Acme — prod` | Affiliate server IPs | Acme |
+| Staging | `Acme - staging` | Your office IP | Acme (staging supplier) |
+| Production | `Acme - prod` | Affiliate server IPs | Acme |
 
-Never reuse production keys in staging — staging errors can pollute live campaigns.
+Never reuse production keys in staging - staging errors can pollute live campaigns.
 
 ---
 
@@ -91,7 +91,7 @@ Payloads include the lead UUID and field data (respecting your configured field 
 
 1. Go to **Integrations → Webhooks → New**.
 2. Enter your endpoint URL (must be HTTPS in production).
-3. Select events to subscribe to — start with `lead.sold` if you only need sold notifications.
+3. Select events to subscribe to - start with `lead.sold` if you only need sold notifications.
 4. Optionally set a signing secret for HMAC verification of inbound payloads.
 5. Save and use the **Test** button to send a sample payload.
 6. Confirm your endpoint returns `2xx` within the timeout window.
@@ -111,7 +111,7 @@ Your endpoint should:
 | Symptom | Likely cause |
 |---------|--------------|
 | No payloads received | URL wrong, firewall blocking, or event not subscribed |
-| Intermittent failures | Endpoint timeout — respond with `200` quickly and process async |
+| Intermittent failures | Endpoint timeout - respond with `200` quickly and process async |
 | Duplicate events | Your endpoint retried; use lead UUID for idempotency |
 | 401/403 on your side | Auth middleware on your endpoint rejecting platform IPs |
 
@@ -128,14 +128,14 @@ Enable **2FA** on all staff accounts:
 3. Save recovery codes in a secure location.
 4. Enforce 2FA for admin roles via platform policy if available.
 
-Staff accounts have full tenant access — a compromised password without 2FA exposes all campaigns, buyers, and billing.
+Staff accounts have full tenant access - a compromised password without 2FA exposes all campaigns, buyers, and billing.
 
 ### Access logs and security logs
 
 Review periodically:
 
-- **Access logs** — who logged in, from which IP, when
-- **Security logs** — failed logins, API key auth failures, permission denials
+- **Access logs** - who logged in, from which IP, when
+- **Security logs** - failed logins, API key auth failures, permission denials
 
 Set a monthly calendar reminder to scan for unfamiliar IPs or brute-force patterns.
 
@@ -144,7 +144,7 @@ Set a monthly calendar reminder to scan for unfamiliar IPs or brute-force patter
 - Rotate keys when an affiliate offboards or changes technical teams.
 - Never commit API keys to git, Slack, or ticket systems.
 - Use separate keys per environment (staging vs production).
-- Revoke unused keys — old keys are a common breach vector.
+- Revoke unused keys - old keys are a common breach vector.
 
 ### Portal user security
 
@@ -164,10 +164,10 @@ Navigate to **Support** to manage tickets from tenants and portal users.
 
 1. Portal users or staff open a ticket with a subject and description.
 2. Assignees receive notification (email if configured).
-3. Reply in-thread — the requester sees updates in their portal or email.
+3. Reply in-thread - the requester sees updates in their portal or email.
 4. Close the ticket when resolved; reopen if the issue recurs.
 
-Use Support for affiliate integration questions, buyer billing disputes, and portal access issues — keep API keys and passwords out of ticket bodies.
+Use Support for affiliate integration questions, buyer billing disputes, and portal access issues - keep API keys and passwords out of ticket bodies.
 
 ---
 
@@ -182,8 +182,8 @@ Use Support for affiliate integration questions, buyer billing disputes, and por
 ### API returns 403 Forbidden
 
 - Key may lack the required scope (e.g. `reports:read` for report endpoints).
-- IP allowlist may block the request source — check affiliate egress IP.
-- Campaign may be inactive — ingest rejects at pipeline start.
+- IP allowlist may block the request source - check affiliate egress IP.
+- Campaign may be inactive - ingest rejects at pipeline start.
 
 ### Webhook payloads missing fields
 
@@ -200,9 +200,9 @@ Use Support for affiliate integration questions, buyer billing disputes, and por
 
 ## Tips
 
-- Never commit API keys to git — use environment variables or secret managers.
+- Never commit API keys to git - use environment variables or secret managers.
 - Use separate keys per environment (staging vs production).
-- Rotate API keys on affiliate offboarding — do not leave dormant keys active.
+- Rotate API keys on affiliate offboarding - do not leave dormant keys active.
 - Subscribe webhooks to the minimum events needed to reduce endpoint load.
 - Enable 2FA on every staff account before inviting additional admins.
 MD,

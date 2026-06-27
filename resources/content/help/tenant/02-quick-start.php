@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-This guide walks through a **minimal production-ready setup**: one campaign, one buyer, one supplier, distribution routing, and a test ingest. Follow the steps in order — each builds on the previous.
+This guide walks through a **minimal production-ready setup**: one campaign, one buyer, one supplier, distribution routing, and a test ingest. Follow the steps in order - each builds on the previous.
 
 **Time estimate:** 20–30 minutes if you have admin access and queue workers running.
 
@@ -20,7 +20,7 @@ This guide walks through a **minimal production-ready setup**: one campaign, one
 - Queue worker or Horizon running (`php artisan queue:work`)
 - For sync testing only: workers optional if you pass `"sync": true`
 
-## Step 1 — Create a campaign
+## Step 1 - Create a campaign
 
 ### Admin UI
 
@@ -47,9 +47,9 @@ This guide walks through a **minimal production-ready setup**: one campaign, one
 1. Scroll to **Campaign fields** on the show page
 2. Ensure these exist and are marked **required** where needed:
    - `firstname`, `lastname`, `email`, `phone1`, `zipcode`
-3. Note which fields are **ping fields** — these are sent during ping-post, not the full post
+3. Note which fields are **ping fields** - these are sent during ping-post, not the full post
 
-## Step 2 — Create a buyer
+## Step 2 - Create a buyer
 
 ### Admin UI
 
@@ -77,7 +77,7 @@ This guide walks through a **minimal production-ready setup**: one campaign, one
 1. On buyer edit form, add **Portal access** email and password
 2. Buyer can later log in at `/portal/buyer`
 
-## Step 3 — Add a delivery
+## Step 3 - Add a delivery
 
 1. From campaign show page, click **Add delivery** (or **Deliveries** → **New** with `?campaign_id={id}`)
 2. Configure:
@@ -99,7 +99,7 @@ This guide walks through a **minimal production-ready setup**: one campaign, one
 
 Built-in simulators (`POST /api/v1/ping` and `POST /api/v1/post`) require **no authentication** and return success responses for staging.
 
-## Step 4 — Create supplier and API key
+## Step 4 - Create supplier and API key
 
 ### Supplier
 
@@ -127,10 +127,10 @@ Built-in simulators (`POST /api/v1/ping` and `POST /api/v1/post`) require **no a
 | **Type** | Supplier (scoped to QA Supplier) |
 | **Permissions** | `leads.create`, `leads.read` |
 
-4. **Copy the token immediately** — it is shown only once
+4. **Copy the token immediately** - it is shown only once
 5. Optional: set IP allowlist for production keys
 
-## Step 5 — Configure distribution
+## Step 5 - Configure distribution
 
 1. Open **Routing / Distribution** (`/distribution/create?campaign_id={id}`) or from campaign show → **Ping tree**
 2. Create a distribution config:
@@ -150,11 +150,11 @@ Built-in simulators (`POST /api/v1/ping` and `POST /api/v1/post`) require **no a
 
 ### Optional: tier filters
 
-If testing geo routing, add a filter on `zipcode` or `state` — see the **Tier Filters** help article.
+If testing geo routing, add a filter on `zipcode` or `state` - see the **Tier Filters** help article.
 
-## Step 6 — Test ingest
+## Step 6 - Test ingest
 
-### cURL example (sync — immediate result)
+### cURL example (sync - immediate result)
 
 ```bash
 curl -X POST "https://your-tenant.test/api/v1/leads" \
@@ -177,7 +177,7 @@ curl -X POST "https://your-tenant.test/api/v1/leads" \
 
 ### Async example (production pattern)
 
-Omit `sync` — expect HTTP **202**:
+Omit `sync` - expect HTTP **202**:
 
 ```json
 {
@@ -218,7 +218,7 @@ const result = await pbe.ingestLead({
 });
 ```
 
-## Step 7 — Verify results
+## Step 7 - Verify results
 
 ### Leads pipeline
 
@@ -232,7 +232,7 @@ const result = await pbe.ingestLead({
 | `unsold` | No buyer accepted after full waterfall |
 | `rejected` | Validation or dedupe failed |
 | `quarantined` | Held for manual review |
-| `pending` | Still queued — check workers |
+| `pending` | Still queued - check workers |
 
 ### Delivery logs
 
@@ -242,8 +242,8 @@ const result = await pbe.ingestLead({
 
 ### Reports and finance
 
-1. **Reports** (`/reports`) — revenue and margin for today
-2. **Finance** (`/finance`) — account-level summary
+1. **Reports** (`/reports`) - revenue and margin for today
+2. **Finance** (`/finance`) - account-level summary
 3. If prepay enabled: **Billing** → buyer transactions show debit for sold lead
 
 ## Troubleshooting
@@ -251,18 +251,18 @@ const result = await pbe.ingestLead({
 | Problem | Check |
 |---------|-------|
 | HTTP 401 | API key missing, revoked, or wrong tenant |
-| HTTP 422 | Required field missing — compare payload to **Campaign → API Spec** |
+| HTTP 422 | Required field missing - compare payload to **Campaign → API Spec** |
 | HTTP 403 | Supplier key posting outside its scope |
 | Lead stays `pending` | Queue worker not running |
 | Lead `unsold` | Distribution inactive, delivery filtered, or buyer ineligible (no credit) |
 | Ping `failed` | Ping URL unreachable; timeout too low; buyer API down |
-| Unknown SID | Create source in supplier form — unknown SIDs may still ingest but skew reporting |
+| Unknown SID | Create source in supplier form - unknown SIDs may still ingest but skew reporting |
 
 ## Tips
 
-- Use **Routing Simulator** (`/routing/simulator`) before go-live — paste sample field JSON and preview tier decisions
-- Start with `sync: true` in **staging only** — production should use async ingest at volume
+- Use **Routing Simulator** (`/routing/simulator`) before go-live - paste sample field JSON and preview tier decisions
+- Start with `sync: true` in **staging only** - production should use async ingest at volume
 - Clone this setup from seeded UK data (`auto-insurance-uk`) if you want a working reference before building from scratch
-- Document your `campaign_reference` and `sid` values for suppliers — they are required on every API post
+- Document your `campaign_reference` and `sid` values for suppliers - they are required on every API post
 MD,
 ];

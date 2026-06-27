@@ -39,8 +39,8 @@ Accept: application/json
 
 Keys are managed at **API Keys** (`/api-keys`). Additional controls:
 
-- **IP allowlist** — reject requests from unknown IPs
-- **Revocation** — instant 401 on revoked keys
+- **IP allowlist** - reject requests from unknown IPs
+- **Revocation** - instant 401 on revoked keys
 
 ### Permission reference
 
@@ -58,7 +58,7 @@ Keys are managed at **API Keys** (`/api-keys`). Additional controls:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `campaign_reference` | Yes* | Campaign slug (e.g. `auto-insurance-uk`) |
-| `campaign_id` | Yes* | Numeric ID — alternative to reference |
+| `campaign_id` | Yes* | Numeric ID - alternative to reference |
 | `sid` | Recommended | Source ID for affiliate tracking |
 | `ssid` | No | Sub-source ID (requires supplier config) |
 | `fields` | Yes | Object matching campaign schema |
@@ -200,7 +200,7 @@ Imports respect the same validation, dedupe, and quarantine rules as API ingest.
 | `401` | Missing, invalid, or revoked API key |
 | `403` | Key not permitted for this action or tenant |
 | `404` | Unknown `campaign_reference` |
-| `422` | Validation failed — see `errors` object for field messages |
+| `422` | Validation failed - see `errors` object for field messages |
 | `400` | Malformed JSON body |
 
 ### 422 example
@@ -229,7 +229,7 @@ Imports respect the same validation, dedupe, and quarantine rules as API ingest.
 
 ## Tips
 
-- Map buyer API fields using **Campaign → API Spec** — share this page with integration partners
+- Map buyer API fields using **Campaign → API Spec** - share this page with integration partners
 - Log sample payloads in **API request logs** for debugging supplier issues
 - Use built-in ping/post simulators (`/api/v1/ping`, `/api/v1/post`) during development
 - Load `/sdk/pbe-leads.js` for browser or Node ESM integrations

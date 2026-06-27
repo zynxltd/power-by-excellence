@@ -13,7 +13,7 @@ class HelpMarkdownTest extends TestCase
             $this->assertGreaterThan(
                 400,
                 strlen($article['body']),
-                "Article \"{$article['slug']}\" body is too short — expand documentation."
+                "Article \"{$article['slug']}\" body is too short - expand documentation."
             );
             $this->assertStringContainsString('##', $article['body'], "Article {$article['slug']} should use markdown headings.");
         }

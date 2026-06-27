@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'central.host' => \App\Http\Middleware\EnsureCentralHost::class,
             'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
             'hosted-form.embed' => \App\Http\Middleware\HostedFormEmbedHeaders::class,
+            'signup.complete' => \App\Http\Middleware\EnsureSignupComplete::class,
         ]);
 
         $middleware->priority([

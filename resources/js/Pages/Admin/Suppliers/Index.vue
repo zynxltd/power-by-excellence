@@ -39,7 +39,7 @@ const suppliersStrip = computed(() => [
 <template>
     <Head title="Suppliers" />
     <AuthenticatedLayout>
-        <PageHeader title="Suppliers (Affiliates)" description="Publishers who submit leads — SIDs, API keys, and supplier portal access.">
+        <PageHeader title="Suppliers (Affiliates)" description="Publishers who submit leads - SIDs, API keys, and supplier portal access.">
             <template #actions>
                 <AppButton :href="route('api-keys.index')" variant="secondary">API Keys</AppButton>
                 <AppButton :href="route('suppliers.create')">New Supplier</AppButton>
@@ -73,7 +73,7 @@ const suppliersStrip = computed(() => [
                 <ClickableTableRow v-for="s in suppliers.data" :key="s.id" :href="route('suppliers.show', s.id)">
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ s.name }}</td>
                     <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ s.reference }}</td>
-                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ s.sources?.map((x) => x.sid).join(', ') || '—' }}</td>
+                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ s.sources?.map((x) => x.sid).join(', ') || '-' }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ s.leads_count ?? 0 }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="s.status" /></td>
                     <td class="px-6 py-4 text-right space-x-3" @click.stop>

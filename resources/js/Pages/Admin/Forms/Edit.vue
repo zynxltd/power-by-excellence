@@ -22,8 +22,14 @@ const defaultThankYou = () => ({
     title: props.form.config?.thank_you?.title ?? 'Thank you!',
     message: props.form.config?.thank_you?.message ?? 'Your enquiry has been received. We will be in touch shortly.',
     show_reference: props.form.config?.thank_you?.show_reference ?? true,
+    show_submit_another: props.form.config?.thank_you?.show_submit_another ?? true,
     button_text: props.form.config?.thank_you?.button_text ?? 'Submit another response',
     confetti: props.form.config?.thank_you?.confetti ?? true,
+    processing_title: props.form.config?.thank_you?.processing_title ?? 'Processing your application…',
+    processing_message: props.form.config?.thank_you?.processing_message ?? 'Please wait while we match you with a provider. This usually takes a few seconds.',
+    poll_interval_ms: props.form.config?.thank_you?.poll_interval_ms ?? 1500,
+    poll_max_attempts: props.form.config?.thank_you?.poll_max_attempts ?? 40,
+    fallback_redirect_url: props.form.config?.thank_you?.fallback_redirect_url ?? '',
 });
 
 const defaultSteps = () => props.form.config?.steps?.length
@@ -126,9 +132,9 @@ const addFieldFromSpec = (step, specName) => {
 </script>
 
 <template>
-    <Head :title="`Edit Form — ${form.name}`" />
+    <Head :title="`Edit Form - ${form.name}`" />
     <AuthenticatedLayout>
-        <PageHeader :title="form.name" description="Multi-step form builder — sync fields from your API spec.">
+        <PageHeader :title="form.name" description="Multi-step form builder - sync fields from your API spec.">
             <template #actions>
                 <Link :href="route('campaigns.api-spec', form.campaign_id)" class="text-sm text-violet-600 hover:text-violet-500">API Spec →</Link>
                 <a :href="route('forms.show', form.slug)" target="_blank" class="ml-4 text-sm text-indigo-600">Preview ↗</a>
@@ -137,19 +143,50 @@ const addFieldFromSpec = (step, specName) => {
 
         <form class="space-y-6" @submit.prevent="f.put(route('forms.update', form.id))">
             <Panel title="Thank you & submission">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Choose a simple thank-you page, an immediate redirect, or an advanced flow that waits for lead routing and sends the visitor to the buyer redirect URL when sold.
+                </p>
                 <div class="grid gap-4 md:grid-cols-2">
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="text-sm font-medium">After submit</label>
                         <select v-model="f.config.thank_you.mode" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-                            <option value="inline">Show thank you message on this page</option>
-                            <option value="redirect">Redirect to external URL</option>
+                            <option value="inline">Simple — thank you message on this page</option>
+                            <option value="redirect">Simple — redirect to a fixed URL immediately</option>
+                            <option value="poll_redirect">Advanced — wait for routing, then redirect when available</option>
                         </select>
                     </div>
-                    <div v-if="f.config.thank_you.mode === 'redirect'">
+
+                    <div v-if="f.config.thank_you.mode === 'redirect'" class="md:col-span-2">
                         <label class="text-sm font-medium">Redirect URL</label>
                         <input v-model="f.config.redirect_url" type="url" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" placeholder="https://yoursite.com/thanks" required />
+                        <p class="mt-1 text-xs text-slate-500">Visitors leave as soon as the form is submitted — no waiting for buyer routing.</p>
                     </div>
-                    <template v-if="f.config.thank_you.mode === 'inline'">
+
+                    <template v-if="f.config.thank_you.mode === 'poll_redirect'">
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-medium">Processing title</label>
+                            <input v-model="f.config.thank_you.processing_title" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-medium">Processing message</label>
+                            <textarea v-model="f.config.thank_you.processing_message" rows="2" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Poll interval (ms)</label>
+                            <input v-model.number="f.config.thank_you.poll_interval_ms" type="number" min="500" max="10000" step="100" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Max poll attempts</label>
+                            <input v-model.number="f.config.thank_you.poll_max_attempts" type="number" min="5" max="120" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-medium">Fallback redirect URL (optional)</label>
+                            <input v-model="f.config.thank_you.fallback_redirect_url" type="url" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" placeholder="https://yoursite.com/no-match" />
+                            <p class="mt-1 text-xs text-slate-500">Used when routing finishes but no buyer redirect URL is returned (e.g. unsold).</p>
+                        </div>
+                    </template>
+
+                    <template v-if="['inline', 'poll_redirect'].includes(f.config.thank_you.mode)">
                         <div>
                             <label class="text-sm font-medium">Thank you title</label>
                             <input v-model="f.config.thank_you.title" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
@@ -157,11 +194,13 @@ const addFieldFromSpec = (step, specName) => {
                         <div class="md:col-span-2">
                             <label class="text-sm font-medium">Thank you message</label>
                             <textarea v-model="f.config.thank_you.message" rows="3" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+                            <p v-if="f.config.thank_you.mode === 'poll_redirect'" class="mt-1 text-xs text-slate-500">Shown when routing completes without a redirect URL.</p>
                         </div>
                         <label class="flex items-center gap-2 text-sm"><input v-model="f.config.thank_you.show_reference" type="checkbox" class="rounded" /> Show queue reference ID</label>
                         <label class="flex items-center gap-2 text-sm"><input v-model="f.config.thank_you.confetti" type="checkbox" class="rounded" /> Celebration animation</label>
-                        <div>
-                            <label class="text-sm font-medium">Submit another button</label>
+                        <label class="flex items-center gap-2 text-sm md:col-span-2"><input v-model="f.config.thank_you.show_submit_another" type="checkbox" class="rounded" /> Show “submit another” button</label>
+                        <div v-if="f.config.thank_you.show_submit_another">
+                            <label class="text-sm font-medium">Submit another button label</label>
                             <input v-model="f.config.thank_you.button_text" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
                         </div>
                     </template>
@@ -172,13 +211,13 @@ const addFieldFromSpec = (step, specName) => {
                 <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
                     Host on your site via a direct link or <strong>iframe</strong>. Pass <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">sid</code>,
                     <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">ssid</code>/<code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">subid</code>,
-                    and click IDs on the URL — they are stored on the lead for postbacks and supplier reporting.
+                    and click IDs on the URL - they are stored on the lead for postbacks and supplier reporting.
                 </p>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="text-sm font-medium">Default supplier (optional)</label>
                         <select v-model="f.config.default_supplier_id" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-                            <option value="">— None —</option>
+                            <option value="">- None -</option>
                             <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} ({{ s.reference }})</option>
                         </select>
                     </div>
@@ -291,7 +330,7 @@ const addFieldFromSpec = (step, specName) => {
                             <button type="button" class="text-xs text-violet-600 underline" title="Copy label, type, and required from API spec field with same name" @click="syncFieldFromSpec(field)">↻ Sync from spec</button>
                             <button type="button" class="text-sm text-rose-500" @click="removeField(step, fi)">Remove</button>
                         </div>
-                        <p v-if="field.name && !specFieldOptions?.some((sf) => sf.name === field.name)" class="md:col-span-6 text-xs text-amber-700 dark:text-amber-400">Not in API spec — submissions may fail validation.</p>
+                        <p v-if="field.name && !specFieldOptions?.some((sf) => sf.name === field.name)" class="md:col-span-6 text-xs text-amber-700 dark:text-amber-400">Not in API spec - submissions may fail validation.</p>
                         <div v-if="['radio', 'select', 'checkbox'].includes(field.type)" class="md:col-span-6">
                             <label class="text-xs text-slate-500">Options (one per line)</label>
                             <textarea :value="(field.options || []).join('\n')" rows="2" class="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800" @input="field.options = $event.target.value.split('\n').filter(Boolean)" />

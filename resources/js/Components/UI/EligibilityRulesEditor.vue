@@ -40,14 +40,14 @@ const scopeCopy = computed(() => (
     props.scope === 'delivery'
         ? {
             intro: 'Only leads matching these rules will be pinged/posted on this delivery.',
-            empty: 'No filters — all leads that reach this delivery are eligible.',
+            empty: 'No filters - all leads that reach this delivery are eligible.',
             summaryTitle: 'Delivery will only accept leads where:',
         }
         : {
             intro: props.compact
                 ? 'Only leads matching these rules enter this tier.'
                 : 'Leads must match these rules before this tier is tried. Per-delivery filters are configured on each delivery.',
-            empty: 'No filters — every lead can enter this tier.',
+            empty: 'No filters - every lead can enter this tier.',
             summaryTitle: 'This tier only accepts leads where:',
         }
 ));
@@ -325,7 +325,7 @@ ensureShape();
                         class="min-w-0 w-full text-xs"
                         :placeholder="valuePlaceholder(cond.op, cond.field)"
                     />
-                    <span v-else class="text-xs text-slate-400">—</span>
+                    <span v-else class="text-xs text-slate-400">-</span>
                 </div>
                 <button
                     type="button"

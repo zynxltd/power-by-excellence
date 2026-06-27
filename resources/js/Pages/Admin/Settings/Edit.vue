@@ -23,8 +23,6 @@ const form = useForm({
     default_currency: props.account.default_currency ?? 'GBP',
     require_buyer_prepay: props.account.require_buyer_prepay ?? false,
     supplier_iframe_embed: props.account.supplier_iframe_embed ?? false,
-    billing_due_at: props.account.billing_due_at ?? '',
-    billing_status: props.account.billing_status ?? 'active',
     billing_alert_emails: props.account.billing_alert_emails ?? '',
     default_low_credit_alert: props.account.default_low_credit_alert ?? '',
 });
@@ -56,7 +54,7 @@ const submit = () => {
                     <div>
                         <InputLabel value="Default country" />
                         <select v-model="form.default_country" class="form-select">
-                            <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} — {{ label }}</option>
+                            <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} - {{ label }}</option>
                         </select>
                         <InputError class="mt-1" :message="form.errors.default_country" />
                     </div>
@@ -89,10 +87,10 @@ const submit = () => {
                     <div v-if="form.require_buyer_prepay" class="mt-4 rounded-lg border border-indigo-200/80 bg-white p-3 text-sm text-slate-600 dark:border-indigo-500/30 dark:bg-slate-900/50 dark:text-slate-300">
                         <p class="font-semibold text-slate-900 dark:text-white">What happens when credit is insufficient?</p>
                         <ul class="mt-2 list-disc space-y-1 pl-5">
-                            <li>During routing, the buyer is <strong>skipped</strong> with reason “Insufficient buyer credit” — the lead continues to the next tier/buyer.</li>
+                            <li>During routing, the buyer is <strong>skipped</strong> with reason “Insufficient buyer credit” - the lead continues to the next tier/buyer.</li>
                             <li>Buyers with <strong>zero or low balance</strong> never receive pings/posts until an admin tops up their ledger.</li>
                             <li><strong>Inactive buyers</strong> or accounts with a <strong>billing lock</strong> are also blocked from receiving leads.</li>
-                            <li>When prepay is <strong>disabled</strong>, credit checks are skipped — leads can sell without a balance (post-paid).</li>
+                            <li>When prepay is <strong>disabled</strong>, credit checks are skipped - leads can sell without a balance (post-paid).</li>
                             <li>Buyer portal users see their balance and prepay status on the Billing page.</li>
                         </ul>
                     </div>
@@ -129,25 +127,6 @@ const submit = () => {
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Platform billing</h4>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Control account lock and billing cycle due date.</p>
-                    <div class="mt-4 grid gap-4 md:grid-cols-2">
-                        <div>
-                            <InputLabel value="Billing due date" />
-                            <TextInput v-model="form.billing_due_at" type="date" class="mt-1 w-full" />
-                            <InputError class="mt-1" :message="form.errors.billing_due_at" />
-                        </div>
-                        <div>
-                            <InputLabel value="Billing status" />
-                            <select v-model="form.billing_status" class="form-select mt-1">
-                                <option value="active">Active</option>
-                                <option value="locked">Locked (suspend platform)</option>
-                            </select>
-                            <InputError class="mt-1" :message="form.errors.billing_status" />
-                        </div>
-                    </div>
-                </div>
                 <PrimaryButton :disabled="form.processing">Save Settings</PrimaryButton>
             </form>
         </Panel>

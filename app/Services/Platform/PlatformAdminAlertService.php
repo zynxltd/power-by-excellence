@@ -98,12 +98,12 @@ class PlatformAdminAlertService
             $severity = ($check['status'] ?? '') === 'critical' ? 'critical' : 'warning';
             $body = $check['message'];
             if (! empty($check['hint'])) {
-                $body .= ' — '.$check['hint'];
+                $body .= ' - '.$check['hint'];
             }
 
             $this->notifications->syncSystemAlert(
                 $key,
-                $check['label'].' — '.ucfirst($check['status']),
+                $check['label'].' - '.ucfirst($check['status']),
                 $body,
                 $severity,
                 [
@@ -168,7 +168,7 @@ class PlatformAdminAlertService
         $this->notifications->syncSystemAlert(
             self::ALERT_FAILED_JOBS,
             'Failed queue jobs',
-            "{$count} job(s) in the failed queue — leads or webhooks may not have processed.",
+            "{$count} job(s) in the failed queue - leads or webhooks may not have processed.",
             $severity,
             [
                 'count' => $count,
@@ -243,7 +243,7 @@ class PlatformAdminAlertService
         $this->notifications->syncSystemAlert(
             self::ALERT_TENANT_HEALTH,
             count($criticalTenants).' tenant(s) in critical health',
-            $listed.' — low post success, sell rate, or slow processing.',
+            $listed.' - low post success, sell rate, or slow processing.',
             'critical',
             [
                 'tenant_count' => count($criticalTenants),
@@ -268,7 +268,7 @@ class PlatformAdminAlertService
         $this->notifications->syncSystemAlert(
             self::ALERT_QUEUE_BACKLOG,
             'Lead queue backlog',
-            "{$pending} lead(s) pending or processing — check queue workers and Horizon.",
+            "{$pending} lead(s) pending or processing - check queue workers and Horizon.",
             $severity,
             ['pending' => $pending],
         );

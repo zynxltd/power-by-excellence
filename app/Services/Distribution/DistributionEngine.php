@@ -427,7 +427,9 @@ class DistributionEngine
         $campaign = $lead->campaign;
         if ($campaign && ($campaign->validation_config['quarantine_unsold'] ?? true)) {
             app(\App\Services\Leads\QuarantineService::class)
-                ->quarantineUnsold($lead, $campaign, 'Unsold after ping tree — held for retry');
+                ->quarantineUnsold($lead, $campaign, 'Unsold after ping tree - held for retry');
+
+            app(\App\Services\Leads\LeadRedirectService::class)->offerDecline($lead->fresh());
 
             return new DistributionResult(false);
         }
@@ -439,6 +441,7 @@ class DistributionEngine
         }
 
         $lead->update(['status' => LeadStatus::Unsold]);
+        app(\App\Services\Leads\LeadRedirectService::class)->offerDecline($lead->fresh());
         PlatformLogger::leadEvent($lead, 'lead.unsold', 'Lead unsold', [], 'warning');
         app(\App\Services\Automation\AutomationSequenceService::class)->dispatchForLead($lead, 'on_lead_unsold');
         app(WebhookDispatcher::class)->dispatch($lead->account()->first(), 'lead.unsold', $lead);

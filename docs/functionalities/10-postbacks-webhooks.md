@@ -1,11 +1,11 @@
-# 10 — Postbacks & Webhooks
+# 10 - Postbacks & Webhooks
 
 ## Purpose
 
 PowerByExcellence supports two outbound notification mechanisms:
 
-- **Webhooks** — JSON POST payloads to external systems on platform events (lead sold, rejected, etc.). Managed under Integrations.
-- **Postbacks** — Affiliate-style tracking pixels and URL callbacks (GET or POST) scoped to suppliers and campaigns. Includes audit log of fired postbacks.
+- **Webhooks** - JSON POST payloads to external systems on platform events (lead sold, rejected, etc.). Managed under Integrations.
+- **Postbacks** - Affiliate-style tracking pixels and URL callbacks (GET or POST) scoped to suppliers and campaigns. Includes audit log of fired postbacks.
 
 Both fire during lead lifecycle events via `WebhookDispatcher` and `PostbackDispatcher`.
 
@@ -125,7 +125,7 @@ Repeat create/trigger cycle for a POST postback on `lead.accepted`. Edit to add 
 - Postbacks support GET and POST with field interpolation
 - Postback manager shows audit log of recent fires
 - Scoping by supplier/campaign limits which leads trigger postbacks
-- Both respect tenant isolation — only fire for current platform's leads
+- Both respect tenant isolation - only fire for current platform's leads
 - Failed outbound calls logged (verify in postback logs or delivery logs)
 
 ---
@@ -139,7 +139,7 @@ Repeat create/trigger cycle for a POST postback on `lead.accepted`. Edit to add 
 | Postback URL with unknown merge tag | Tag left literal or stripped |
 | Postback scoped to wrong supplier | Does not fire for other suppliers' leads |
 | Multiple postbacks on same event | All active postbacks fire |
-| Webhook edit | Not supported — delete and recreate |
+| Webhook edit | Not supported - delete and recreate |
 | HTTPS required | HTTP URLs may work in demo but blocked in production config |
 | Quarantined lead | May fire `lead.accepted` but not `lead.sold` |
 
@@ -147,6 +147,6 @@ Repeat create/trigger cycle for a POST postback on `lead.accepted`. Edit to add 
 
 ## Related Docs
 
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — trigger events via ingest
-- [08-suppliers-and-portals.md](./08-suppliers-and-portals.md) — supplier scoping
-- [12-operations-and-logs.md](./12-operations-and-logs.md) — delivery log correlation
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - trigger events via ingest
+- [08-suppliers-and-portals.md](./08-suppliers-and-portals.md) - supplier scoping
+- [12-operations-and-logs.md](./12-operations-and-logs.md) - delivery log correlation

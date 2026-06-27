@@ -22,7 +22,7 @@ const verificationLinkSent = computed(
 
 <template>
     <GuestLayout>
-        <Head title="Verify Email — PowerByExcellence" />
+        <Head title="Verify Email - PowerByExcellence" />
 
         <template #header>
             <h2>Verify your email</h2>

@@ -194,7 +194,7 @@ const submit = () => {
 <template>
     <Head :title="delivery ? 'Edit Delivery' : 'New Delivery'" />
     <AuthenticatedLayout>
-        <PageHeader :title="delivery ? 'Edit Delivery' : 'New Delivery'" description="Step-by-step setup — choose method, connect buyer, set pricing.">
+        <PageHeader :title="delivery ? 'Edit Delivery' : 'New Delivery'" description="Step-by-step setup - choose method, connect buyer, set pricing.">
             <template #actions>
                 <AppButton v-if="delivery" :href="route('deliveries.show', delivery.id)" variant="secondary">View stats</AppButton>
                 <AppButton v-if="delivery" :href="route('deliveries.test', delivery.id)" method="post" variant="secondary">Test delivery</AppButton>
@@ -278,13 +278,13 @@ const submit = () => {
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="md:col-span-2">
                             <InputLabel value="Delivery name" />
-                            <TextInput v-model="form.name" class="mt-1 w-full" placeholder="e.g. Tier 3 — Hastings Direct" required />
+                            <TextInput v-model="form.name" class="mt-1 w-full" placeholder="e.g. Tier 3 - Hastings Direct" required />
                             <InputError class="mt-1" :message="form.errors.name" />
                         </div>
                         <div>
                             <InputLabel value="Campaign" />
                             <select v-model="form.campaign_id" class="form-select w-full" required>
-                                <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.vertical_label }} — {{ c.name }}</option>
+                                <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.vertical_label }} - {{ c.name }}</option>
                             </select>
                             <p v-if="selectedCampaign" class="mt-1 text-xs text-slate-500">Floor {{ formatMoney(selectedCampaign.floor_price, { currency: selectedCampaign.currency }) }} · {{ selectedCampaign.bidding_mode?.replace(/_/g, ' ') }}</p>
                         </div>
@@ -369,7 +369,7 @@ const submit = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div v-else-if="form.method === 'store_lead'" class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/50">No URL needed — lead appears in buyer portal.</div>
+                            <div v-else-if="form.method === 'store_lead'" class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/50">No URL needed - lead appears in buyer portal.</div>
                             <div v-else-if="isEmailMethod" class="space-y-4">
                                 <label class="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/40">
                                     <input v-model="form.config.use_buyer_email" type="checkbox" class="mt-1 rounded" />
@@ -451,7 +451,7 @@ const submit = () => {
                     </div>
                     <label class="mt-4 flex items-start gap-3">
                         <input v-model="form.advanced_distribution_only" type="checkbox" class="mt-1 rounded" />
-                        <span class="text-sm text-slate-600 dark:text-slate-400"><strong>Advanced distribution only</strong> — use inside Ping Tree tiers only.</span>
+                        <span class="text-sm text-slate-600 dark:text-slate-400"><strong>Advanced distribution only</strong> - use inside Ping Tree tiers only.</span>
                     </label>
                     <div class="mt-4 flex justify-between">
                         <AppButton type="button" variant="secondary" @click="goStep('config')">← Back</AppButton>
@@ -461,7 +461,7 @@ const submit = () => {
 
                 <Panel v-show="currentStep === 'filters'" title="5. Eligibility filters">
                     <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                        Optional field rules — only leads matching these conditions will be pinged/posted to this buyer API.
+                        Optional field rules - only leads matching these conditions will be pinged/posted to this buyer API.
                         Tier-level filters can also be set on the <Link :href="campaignContext?.active_distribution_config_id ? route('distribution.edit', campaignContext.active_distribution_config_id) : route('distribution.index')" class="text-indigo-600 hover:underline">ping tree</Link>.
                     </p>
                     <EligibilityRulesEditor

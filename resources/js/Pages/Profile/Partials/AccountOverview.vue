@@ -32,7 +32,7 @@ const memberSince = computed(() => formatDate(user.value?.created_at));
             </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                 <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Platform</dt>
-                <dd class="mt-1 text-sm font-medium text-slate-900 dark:text-white">{{ account?.display_name ?? account?.name ?? '—' }}</dd>
+                <dd class="mt-1 text-sm font-medium text-slate-900 dark:text-white">{{ account?.display_name ?? account?.name ?? '-' }}</dd>
             </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                 <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Member since</dt>
@@ -42,6 +42,21 @@ const memberSince = computed(() => formatDate(user.value?.created_at));
                 <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Email verified</dt>
                 <dd class="mt-1 text-sm font-medium" :class="user?.email_verified_at ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
                     {{ user?.email_verified_at ? 'Yes' : 'Pending verification' }}
+                </dd>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Phone verified</dt>
+                <dd class="mt-1 text-sm font-medium" :class="user?.phone_verified_at ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
+                    {{ user?.phone_verified_at ? (user?.phone || 'Yes') : 'Pending verification' }}
+                </dd>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50 sm:col-span-2">
+                <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">Address verified</dt>
+                <dd class="mt-1 text-sm font-medium" :class="user?.address_verified_at ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
+                    <template v-if="user?.address_verified_at">
+                        {{ [user.address_line1, user.city, user.postcode].filter(Boolean).join(', ') }}
+                    </template>
+                    <template v-else>Pending verification</template>
                 </dd>
             </div>
         </dl>

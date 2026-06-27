@@ -29,6 +29,6 @@ class GodModeHandoffController extends Controller
             'god_mode' => true,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'God mode — viewing '.$hostAccount->name);
+        return redirect()->route('dashboard')->with('success', 'God mode - viewing '.$hostAccount->name);
     }
 }

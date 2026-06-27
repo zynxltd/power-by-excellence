@@ -25,7 +25,7 @@ A campaign without an active delivery on an active distribution config will prod
 | **SMS** | Text notification | Urgent callbacks |
 | **Email Ping-Post** | Email accept/reject links before full send | Legacy buyers |
 
-## Create a delivery — step by step
+## Create a delivery - step by step
 
 1. **Deliveries** → **New** (`/deliveries/create`) or campaign show → **Add delivery**
 2. Select **Campaign** and **Buyer**
@@ -68,7 +68,7 @@ Use these URLs during QA before buyer endpoints are ready.
 
 Distribution configs define ordered **tiers**. Each tier contains one or more **deliveries** with priority, filters, and optional parallel ping groups.
 
-### Create distribution — admin UI
+### Create distribution - admin UI
 
 1. **Routing / Distribution** → **New** (`/distribution/create`)
 2. Or campaign show → **Ping tree** link with `?campaign_id={id}`
@@ -89,14 +89,14 @@ Distribution configs define ordered **tiers**. Each tier contains one or more **
 
 ```
 Tier 1 (premium buyers)
-  ├── Delivery A (priority 1) — filters: state=TX
-  └── Delivery B (priority 2) — filters: state=CA
+  ├── Delivery A (priority 1) - filters: state=TX
+  └── Delivery B (priority 2) - filters: state=CA
 
 Tier 2 (secondary buyers)
-  └── Delivery C (priority 1) — no filters
+  └── Delivery C (priority 1) - no filters
 
 Tier 3 (remainder)
-  └── Delivery D — store lead fallback
+  └── Delivery D - store lead fallback
 ```
 
 ### Tier filters
@@ -110,7 +110,7 @@ Restrict which leads reach a delivery within a tier:
 | **Numeric range** | `loan_amount >= 5000` |
 | **Field equals** | `homeowner = yes` |
 
-Skipped deliveries log status `skipped` — this is normal waterfall behaviour, not an error.
+Skipped deliveries log status `skipped` - this is normal waterfall behaviour, not an error.
 
 ### Auction mode
 
@@ -173,7 +173,7 @@ Use before go-live and after any tier filter change.
 
 | Action | Path |
 |--------|------|
-| **Clone delivery** | Delivery show → Clone — duplicates config to new row |
+| **Clone delivery** | Delivery show → Clone - duplicates config to new row |
 | **Test delivery** | Fires test ping/post to configured URLs |
 | **Reprocess lead** | Lead detail → re-run pipeline through current tree |
 
@@ -197,14 +197,14 @@ Use before go-live and after any tier filter change.
 | Post | 3000 ms |
 | Email | N/A (async) |
 
-Increase only if buyer SLA requires — long timeouts delay unsold fallback.
+Increase only if buyer SLA requires - long timeouts delay unsold fallback.
 
 ## Tips
 
 - Use **Routing Simulator** before go-live and after every filter change
 - Set ping timeout 2s and post timeout 3s as baselines
 - Always attach at least one **store lead** or email fallback tier for unsold recovery
-- Name deliveries clearly: `{Buyer} — {Method} — {Tier}` aids log debugging
+- Name deliveries clearly: `{Buyer} - {Method} - {Tier}` aids log debugging
 - Clone working deliveries across campaigns instead of retyping URLs
 MD,
 ];

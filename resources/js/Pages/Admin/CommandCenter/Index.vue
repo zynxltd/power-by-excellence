@@ -114,7 +114,7 @@ const platformStatItems = computed(() => {
         { label: 'Posts', value: s.posts_today, href: deliveryLogUrl({ has_post: 1 }), accent: 'cyan', title: 'Posts today' },
         {
             label: 'Post %',
-            value: s.post_success_rate != null ? `${s.post_success_rate}%` : '—',
+            value: s.post_success_rate != null ? `${s.post_success_rate}%` : '-',
             href: deliveryLogUrl({ has_post: 1, status: 'success' }),
             accent: s.post_success_rate != null && s.post_success_rate >= 95 ? 'emerald' : (s.post_success_rate != null && s.post_success_rate < 90 ? 'amber' : undefined),
             title: 'Post success rate today (target ≥95%)',
@@ -182,7 +182,7 @@ const platformStatItems = computed(() => {
                 <span class="mx-1 text-slate-300">/</span>
                 <span class="text-rose-600">{{ healthSummary?.critical ?? 0 }} crit</span>
             </p>
-            <p class="text-slate-500">Post success &amp; sold rate — not ping rejections</p>
+            <p class="text-slate-500">Post success &amp; sold rate - not ping rejections</p>
         </div>
 
         <CompactStatStrip :items="platformStatItems" class="mb-4" />
@@ -270,7 +270,7 @@ const platformStatItems = computed(() => {
 
         <Panel title="Tenant overview" class="mt-6" :padding="false">
             <p class="border-b border-slate-100 px-3 py-2 text-[10px] text-slate-500 dark:border-slate-800">
-                <strong class="text-slate-700 dark:text-slate-300">Errors</strong> = platform issues (missing URL, timeout, exception) — target 0.
+                <strong class="text-slate-700 dark:text-slate-300">Errors</strong> = platform issues (missing URL, timeout, exception) - target 0.
                 <strong class="ml-2 text-slate-700 dark:text-slate-300">Buyer fail</strong> = buyer rejected a post (normal in routing).
                 <strong class="ml-2 text-slate-700 dark:text-slate-300">Skipped / Outbid</strong> = ping-tree waterfall (expected).
                 Post success % target ≥95%.
@@ -284,7 +284,7 @@ const platformStatItems = computed(() => {
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Pings</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Posts</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Post success rate today">Post %</th>
-                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Platform delivery errors — target 0">Errors</th>
+                    <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Platform delivery errors - target 0">Errors</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500" title="Buyer post rejections">Buyer fail</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Skipped</th>
                     <th class="px-3 py-2 text-left text-[10px] font-semibold uppercase text-slate-500">Pending</th>
@@ -318,7 +318,7 @@ const platformStatItems = computed(() => {
                         >
                             {{ t.post_success_rate }}%
                         </span>
-                        <span v-else class="text-slate-400">—</span>
+                        <span v-else class="text-slate-400">-</span>
                     </td>
                     <td class="px-3 py-2">
                         <Link

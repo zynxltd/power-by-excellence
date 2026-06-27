@@ -1,4 +1,4 @@
-# 12 — Operations & Logs
+# 12 - Operations & Logs
 
 ## Purpose
 
@@ -30,7 +30,7 @@
 | Section | Content |
 |---------|---------|
 | KPI strip | Leads today, sold, unsold, rejected, in queue, quarantined, ping-posts, revenue (compact horizontal row) |
-| Top campaigns | Compact strip — leads/sold per campaign (links to filtered pipeline) |
+| Top campaigns | Compact strip - leads/sold per campaign (links to filtered pipeline) |
 | Queue breakdown | Pending, processing, accepted, quarantined |
 | Hourly chart | Ingest volume by hour |
 | Recent leads | Paginated with drill-down |
@@ -144,6 +144,6 @@ Review `/logs/access` (login entries), `/logs/changes` (config edits), and `/log
 
 ## Related Docs
 
-- [01-dashboard.md](./01-dashboard.md) — summary stats
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — delivery log context
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — generate live traffic
+- [01-dashboard.md](./01-dashboard.md) - summary stats
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - delivery log context
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - generate live traffic

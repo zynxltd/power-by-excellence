@@ -1,6 +1,6 @@
 # Tenant Billing (Super Admin)
 
-When operating in **god mode** or with a switched `current_account_id`, super admins use the same tenant **Finance** and **Billing** screens as account admins — scoped to the active tenant.
+When operating in **god mode** or with a switched `current_account_id`, super admins use the same tenant **Finance** and **Billing** screens as account admins - scoped to the active tenant.
 
 ## Finance dashboard
 
@@ -32,5 +32,5 @@ Super admins use this during onboarding and make-good adjustments.
 ## Tips
 
 - Always confirm `current_account_id` matches the tenant you intend (banner + dashboard subtitle)
-- Buyer portal billing view mirrors the same transaction table — impersonate a buyer to verify their view after top-up
+- Buyer portal billing view mirrors the same transaction table - impersonate a buyer to verify their view after top-up
 - Multi-currency: check buyer `currency` vs account `default_currency` before crediting

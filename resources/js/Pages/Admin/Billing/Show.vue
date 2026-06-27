@@ -72,7 +72,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head :title="`Billing — ${buyer.name}`" />
+    <Head :title="`Billing - ${buyer.name}`" />
     <AuthenticatedLayout>
         <PageHeader
             :title="buyer.name"

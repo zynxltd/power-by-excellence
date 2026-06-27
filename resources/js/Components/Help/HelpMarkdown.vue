@@ -1,5 +1,5 @@
 <script setup>
-import { parseHelpMarkdown, parseInline } from '@/utils/helpMarkdown';
+import { parseHelpMarkdown, parseInline, headingToId } from '@/utils/helpMarkdown';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -14,13 +14,15 @@ const blocks = computed(() => parseHelpMarkdown(props.body));
         <template v-for="(block, i) in blocks" :key="i">
             <h2
                 v-if="block.type === 'h2'"
-                class="border-b border-slate-100 pb-2 text-xl font-bold text-slate-900 dark:border-slate-800 dark:text-white"
+                :id="headingToId(block.text)"
+                class="scroll-mt-24 border-b border-slate-100 pb-2 text-xl font-bold text-slate-900 dark:border-slate-800 dark:text-white"
             >
                 {{ block.text }}
             </h2>
             <h3
                 v-else-if="block.type === 'h3'"
-                class="text-lg font-semibold text-slate-900 dark:text-white"
+                :id="headingToId(block.text)"
+                class="scroll-mt-24 text-lg font-semibold text-slate-900 dark:text-white"
             >
                 {{ block.text }}
             </h3>

@@ -1,11 +1,11 @@
 # Impersonation
 
-Impersonation lets admins **act as another user** with that user's exact permissions — for support, QA, and portal troubleshooting.
+Impersonation lets admins **act as another user** with that user's exact permissions - for support, QA, and portal troubleshooting.
 
 ## Who can impersonate
 
-- **Super admin** — any impersonatable user (tenant staff, buyer portal, supplier portal)
-- **Account admin** — users within their tenant only
+- **Super admin** - any impersonatable user (tenant staff, buyer portal, supplier portal)
+- **Account admin** - users within their tenant only
 
 `User::canBeImpersonatedBy()` enforces the policy.
 

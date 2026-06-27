@@ -114,7 +114,7 @@ class PlatformStatusService
     }
 
     /**
-     * Customer-facing service list — no internal env/config checks (domains, Horizon, Redis, etc.).
+     * Customer-facing service list - no internal env/config checks (domains, Horizon, Redis, etc.).
      *
      * @param  list<array{key: string, label: string, status: string, message: string, category?: string}>  $checks
      * @return list<array{key: string, name: string, status: string, message: string}>
@@ -140,7 +140,7 @@ class PlatformStatusService
                 'name' => 'Lead ingest API',
                 'status' => $apiStatus,
                 'message' => match ($apiStatus) {
-                    'critical' => 'Lead ingest is unavailable — we are investigating',
+                    'critical' => 'Lead ingest is unavailable - we are investigating',
                     'warning' => 'Lead ingest may be delayed',
                     default => 'Accepting leads via API and webhooks',
                 },
@@ -218,7 +218,7 @@ class PlatformStatusService
         }
 
         if (str_contains($message, 'below')) {
-            return 'Monitoring buyer post success — low volume today';
+            return 'Monitoring buyer post success - low volume today';
         }
 
         return 'Ping-post and direct post delivery to buyers';
@@ -234,7 +234,7 @@ class PlatformStatusService
         }
 
         if (preg_match('/(\d+) platform delivery error/', (string) ($check['message'] ?? ''), $matches)) {
-            return "{$matches[1]} delivery error(s) detected today — under investigation";
+            return "{$matches[1]} delivery error(s) detected today - under investigation";
         }
 
         return 'Some delivery errors detected today';

@@ -115,7 +115,7 @@ class IntegrationController extends Controller
                 'id' => 'zapier',
                 'name' => 'Zapier',
                 'category' => 'Automation',
-                'description' => 'Connect 5,000+ apps via webhooks — use Outbound Webhooks as your Zapier trigger.',
+                'description' => 'Connect 5,000+ apps via webhooks - use Outbound Webhooks as your Zapier trigger.',
                 'status' => $webhookCount > 0 ? 'connected' : 'available',
                 'route' => 'webhooks.index',
                 'icon' => 'zapier',

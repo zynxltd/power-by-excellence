@@ -18,7 +18,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Reset Password — PowerByExcellence" />
+        <Head title="Reset Password - PowerByExcellence" />
 
         <template #header>
             <h2>Forgot password?</h2>

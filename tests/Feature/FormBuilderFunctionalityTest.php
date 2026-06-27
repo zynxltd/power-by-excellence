@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LeadStatus;
 use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Lead;
@@ -471,6 +472,123 @@ class FormBuilderFunctionalityTest extends TestCase
             'firstname' => 'Redirect',
             'email' => 'redirect.'.uniqid().'@example.com',
         ])->assertRedirect('https://example.com/thanks');
+    }
+
+    public function test_poll_redirect_mode_returns_submitted_without_immediate_redirect(): void
+    {
+        Queue::fake();
+
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Poll redirect',
+            'slug' => 'poll-redirect-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'thank_you' => ['mode' => 'poll_redirect'],
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $this->post(route('forms.submit', $form->slug), [
+            'firstname' => 'Poll',
+            'email' => 'poll.'.uniqid().'@example.com',
+        ])
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Forms/Show')
+                ->where('submitted', true)
+                ->where('thankYou.mode', 'poll_redirect')
+                ->has('submission.uuid')
+            );
+    }
+
+    public function test_form_status_endpoint_returns_redirect_for_sold_lead(): void
+    {
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Status poll',
+            'slug' => 'status-poll-form',
+            'is_active' => true,
+            'config' => [
+                'multi_step' => true,
+                'thank_you' => ['mode' => 'poll_redirect'],
+                'steps' => $this->validSteps(),
+            ],
+        ]);
+
+        $lead = Lead::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'status' => LeadStatus::Sold,
+            'source' => 'hosted_form:'.$form->slug,
+            'field_data' => ['firstname' => 'Sold', 'email' => 'sold@example.com'],
+            'redirect_url' => 'https://buyer.example/thanks',
+            'received_at' => now(),
+        ]);
+
+        $this->getJson(route('forms.status', ['slug' => $form->slug, 'uuid' => $lead->uuid]))
+            ->assertOk()
+            ->assertJsonPath('status', LeadStatus::Sold->value)
+            ->assertJsonPath('terminal', true)
+            ->assertJsonPath('redirect_url', url('/r/'.$lead->uuid));
+    }
+
+    public function test_form_status_endpoint_rejects_lead_from_other_form(): void
+    {
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'Status guard',
+            'slug' => 'status-guard-form',
+            'is_active' => true,
+            'config' => ['steps' => $this->validSteps()],
+        ]);
+
+        $lead = Lead::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'status' => LeadStatus::Sold,
+            'source' => 'hosted_form:other-form',
+            'field_data' => ['firstname' => 'Other', 'email' => 'other@example.com'],
+            'received_at' => now(),
+        ]);
+
+        $this->getJson(route('forms.status', ['slug' => $form->slug, 'uuid' => $lead->uuid]))
+            ->assertNotFound();
+    }
+
+    public function test_admin_can_disable_submit_another_button(): void
+    {
+        $form = HostedForm::create([
+            'account_id' => $this->campaign->account_id,
+            'campaign_id' => $this->campaign->id,
+            'name' => 'No resubmit',
+            'slug' => 'no-resubmit-form',
+            'is_active' => true,
+            'config' => ['steps' => []],
+        ]);
+
+        $this->actingAs($this->admin)
+            ->put(route('forms.update', $form), [
+                'campaign_id' => $this->campaign->id,
+                'name' => 'No resubmit',
+                'is_active' => true,
+                'config' => [
+                    'multi_step' => true,
+                    'steps' => $this->validSteps(),
+                    'thank_you' => [
+                        'mode' => 'inline',
+                        'show_submit_another' => false,
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $form->refresh();
+        $this->assertFalse($form->config['thank_you']['show_submit_another']);
     }
 
     public function test_tenant_admin_cannot_create_form_for_other_tenant_campaign(): void

@@ -17,7 +17,7 @@ defineProps({
             <h3 v-if="title" class="text-sm font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
             <slot name="header" />
         </div>
-        <div :class="padding ? 'p-4' : ''">
+        <div :class="padding ? 'p-4' : 'flex min-h-0 flex-1 flex-col'">
             <slot />
         </div>
     </div>

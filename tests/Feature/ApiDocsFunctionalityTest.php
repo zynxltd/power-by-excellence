@@ -32,7 +32,7 @@ class ApiDocsFunctionalityTest extends TestCase
                 ->component('Admin/ApiDocs/Index')
                 ->has('apiBaseUrl')
                 ->has('endpoints', 15)
-                ->has('statusFields', 11)
+                ->has('statusFields', 12)
                 ->has('leadStatuses', 9)
                 ->has('guides', 6)
                 ->where('selectedCampaign.id', $campaign->id)

@@ -117,7 +117,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
             <Panel class="!p-4">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">24h success rate</p>
                 <p class="mt-2 text-xl font-bold text-slate-900 dark:text-white">
-                    {{ stats?.success_rate != null ? `${stats.success_rate}%` : '—' }}
+                    {{ stats?.success_rate != null ? `${stats.success_rate}%` : '-' }}
                 </p>
             </Panel>
             <Panel class="!p-4">
@@ -170,7 +170,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase text-slate-500">Buyer</dt>
-                            <dd class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ delivery.buyer?.name ?? '—' }}</dd>
+                            <dd class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ delivery.buyer?.name ?? '-' }}</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase text-slate-500">Routing</dt>
@@ -223,7 +223,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Avg duration</dt>
-                        <dd class="mt-1 text-lg font-bold text-slate-900 dark:text-white">{{ stats?.avg_duration_ms ? `${stats.avg_duration_ms}ms` : '—' }}</dd>
+                        <dd class="mt-1 text-lg font-bold text-slate-900 dark:text-white">{{ stats?.avg_duration_ms ? `${stats.avg_duration_ms}ms` : '-' }}</dd>
                     </div>
                 </dl>
             </Panel>
@@ -274,8 +274,8 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                                 </Link>
                             </td>
                             <td class="px-6 py-4"><StatusBadge :status="log.status" /></td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ log.revenue ? formatMoney(log.revenue) : '—' }}</td>
-                            <td class="px-6 py-4 text-xs text-slate-500">{{ log.duration_ms ? `${log.duration_ms}ms` : '—' }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ log.revenue ? formatMoney(log.revenue) : '-' }}</td>
+                            <td class="px-6 py-4 text-xs text-slate-500">{{ log.duration_ms ? `${log.duration_ms}ms` : '-' }}</td>
                         </tr>
                         <tr v-if="expandedLogId === log.id" class="bg-slate-50 dark:bg-slate-800/30">
                             <td colspan="6" class="px-6 py-4">
@@ -357,7 +357,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Routing mode</dt>
-                        <dd class="mt-1 text-sm capitalize text-slate-700 dark:text-slate-300">{{ delivery.routing_mode?.replace(/_/g, ' ') ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm capitalize text-slate-700 dark:text-slate-300">{{ delivery.routing_mode?.replace(/_/g, ' ') ?? '-' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Weight</dt>
@@ -365,7 +365,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Tier</dt>
-                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ delivery.tier ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ delivery.tier ?? '-' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase text-slate-500">Advanced only</dt>

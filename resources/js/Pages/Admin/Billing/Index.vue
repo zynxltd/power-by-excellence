@@ -141,7 +141,7 @@ const ledgerTypeLabel = (type) => ({
                 <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p class="text-sm font-medium text-slate-900 dark:text-white">Prepay enforcement</p>
                     <p class="mt-1 text-sm text-slate-500">
-                        {{ summary.require_prepay ? 'Buyers must have credit before leads are sold.' : 'Credit checks are optional — buyers can receive leads without prepay.' }}
+                        {{ summary.require_prepay ? 'Buyers must have credit before leads are sold.' : 'Credit checks are optional - buyers can receive leads without prepay.' }}
                     </p>
                     <AppButton :href="route('settings.edit')" variant="secondary" class="mt-3">Change in Settings</AppButton>
                 </div>

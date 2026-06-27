@@ -51,7 +51,7 @@ const financeStrip = computed(() => [
         <CompactStatStrip :items="financeStrip" :columns="5" class="mb-6" />
 
         <div class="grid gap-6 lg:grid-cols-2">
-            <Panel title="Buyers — revenue & credit" :padding="false">
+            <Panel title="Buyers - revenue & credit" :padding="false">
                 <DataTable :empty="!buyers?.length">
                     <template #head>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Buyer</th>
@@ -75,7 +75,7 @@ const financeStrip = computed(() => [
                 </DataTable>
             </Panel>
 
-            <Panel title="Suppliers — volume & payout" :padding="false">
+            <Panel title="Suppliers - volume & payout" :padding="false">
                 <DataTable :empty="!suppliers?.length">
                     <template #head>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Supplier</th>

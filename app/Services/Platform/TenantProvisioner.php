@@ -43,7 +43,6 @@ class TenantProvisioner
                 'email' => $data['admin_email'],
                 'password' => $data['admin_password'],
                 'role' => UserRole::AccountAdmin,
-                'email_verified_at' => now(),
             ]);
 
             return ['account' => $account, 'admin' => $admin];

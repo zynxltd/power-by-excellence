@@ -51,6 +51,7 @@ class DistributionCrudTest extends TestCase
             'campaign_id' => $campaign->id,
             'name' => 'Updated Ping Tree',
             'is_active' => true,
+            'decline_url' => 'https://example.com/declined',
             'groups' => [
                 [
                     'name' => 'Tier 1 Auction',
@@ -66,6 +67,7 @@ class DistributionCrudTest extends TestCase
         $this->assertSame('Updated Ping Tree', $config->name);
         $this->assertSame('parallel_auction', $config->config['groups'][0]['mode']);
         $this->assertSame('https://example.com/tier-thanks', $config->config['groups'][0]['redirect_url']);
+        $this->assertSame('https://example.com/declined', $config->config['decline_url']);
 
         $this->assertDatabaseHas('account_audit_logs', [
             'action' => 'distribution_config.updated',

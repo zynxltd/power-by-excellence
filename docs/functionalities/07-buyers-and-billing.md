@@ -1,4 +1,4 @@
-# 07 — Buyers & Billing
+# 07 - Buyers & Billing
 
 ## Purpose
 
@@ -91,7 +91,7 @@ Historical seeder adds weekly top-ups and lead purchase debits.
 
 ### 7. Insufficient credit scenario
 
-1. Edit QA Test Buyer — set credit to `0` via billing (no top-up)
+1. Edit QA Test Buyer - set credit to `0` via billing (no top-up)
 2. Create delivery assigned to QA Test Buyer on a test campaign
 3. Submit lead that routes only to that delivery
 
@@ -129,7 +129,7 @@ Historical seeder adds weekly top-ups and lead purchase debits.
 - Top-ups create credit transactions with running balance
 - Buyer caps enforced during distribution
 - Billing page shows cross-buyer summary and per-buyer detail
-- No Stripe/card payment in demo — manual top-up only
+- No Stripe/card payment in demo - manual top-up only
 
 ---
 
@@ -139,7 +139,7 @@ Historical seeder adds weekly top-ups and lead purchase debits.
 |----------|-------------------|
 | Top-up negative amount | Validation error |
 | Buyer with no deliveries | Credit unchanged; no debits |
-| Direct edit of credit_balance on buyer form | May bypass ledger — prefer billing top-up |
+| Direct edit of credit_balance on buyer form | May bypass ledger - prefer billing top-up |
 | Deleted buyer with past leads | Historical leads retain buyer reference |
 | Multi-currency (US platform) | USD displayed for US buyers |
 | require_buyer_prepay enabled | Zero-balance buyers skipped |
@@ -149,6 +149,6 @@ Historical seeder adds weekly top-ups and lead purchase debits.
 
 ## Related Docs
 
-- [08-suppliers-and-portals.md](./08-suppliers-and-portals.md) — buyer portal view
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — buyer-delivery assignment
-- [09-api-and-sdk.md](./09-api-and-sdk.md) — API credit endpoint
+- [08-suppliers-and-portals.md](./08-suppliers-and-portals.md) - buyer portal view
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - buyer-delivery assignment
+- [09-api-and-sdk.md](./09-api-and-sdk.md) - API credit endpoint

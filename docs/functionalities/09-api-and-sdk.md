@@ -1,4 +1,4 @@
-# 09 — API & SDK
+# 09 - API & SDK
 
 ## Purpose
 
@@ -50,9 +50,9 @@ Keys are printed once when running `php artisan migrate:fresh --seed`.
 
 ### 2–4. Sync, async, and queue polling
 
-**Sync:** POST `/leads` with `"sync": true` — expect HTTP 200 and final status in response.
+**Sync:** POST `/leads` with `"sync": true` - expect HTTP 200 and final status in response.
 
-**Async:** Omit `sync` — expect HTTP 202 with `queue_id`. Poll `GET /leads/queue/{queueId}` after `php artisan queue:work` runs.
+**Async:** Omit `sync` - expect HTTP 202 with `queue_id`. Poll `GET /leads/queue/{queueId}` after `php artisan queue:work` runs.
 
 **Show:** `GET /leads/{uuid}` returns financials, buyer, and delivery logs.
 
@@ -76,7 +76,7 @@ Load `/sdk/pbe-leads.js` as ESM, call `createClient({ apiKey, baseUrl: '/api/v1'
 4. Optional: `GET /api/v1/platform?include=campaigns,buyers` for partial sync
 5. Optional: `GET /api/v1/platform/campaigns/loans-uk` for one campaign
 
-**Use case:** Partner runs their own white-label portal. They poll platform export to mirror campaign schemas and buyer routing locally, then POST leads via `/leads` and poll status — no admin UI login required.
+**Use case:** Partner runs their own white-label portal. They poll platform export to mirror campaign schemas and buyer routing locally, then POST leads via `/leads` and poll status - no admin UI login required.
 
 ### 8. Auth failure and revoke
 
@@ -113,6 +113,6 @@ Load `/sdk/pbe-leads.js` as ESM, call `createClient({ apiKey, baseUrl: '/api/v1'
 
 ## Related Docs
 
-- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) — ping-post flow
-- [06-form-builder.md](./06-form-builder.md) — alternative ingest
-- [10-postbacks-webhooks.md](./10-postbacks-webhooks.md) — outbound notifications
+- [03-deliveries-and-10-tier-ping-tree.md](./03-deliveries-and-10-tier-ping-tree.md) - ping-post flow
+- [06-form-builder.md](./06-form-builder.md) - alternative ingest
+- [10-postbacks-webhooks.md](./10-postbacks-webhooks.md) - outbound notifications

@@ -290,7 +290,7 @@ class PlatformSeeder extends Seeder
         $pingPrimary = Delivery::create([
             'campaign_id' => $campaign->id,
             'buyer_id' => $buyer->id,
-            'name' => 'Real-Time Auction — Primary',
+            'name' => 'Real-Time Auction - Primary',
             'method' => DeliveryMethod::PingPost,
             'status' => 'active',
             'priority' => 20,
@@ -312,7 +312,7 @@ class PlatformSeeder extends Seeder
         $pingSecondary = Delivery::create([
             'campaign_id' => $campaign->id,
             'buyer_id' => $buyerSecondary->id,
-            'name' => 'Real-Time Auction — Secondary',
+            'name' => 'Real-Time Auction - Secondary',
             'method' => DeliveryMethod::PingPost,
             'status' => 'active',
             'priority' => 21,
@@ -334,7 +334,7 @@ class PlatformSeeder extends Seeder
         Delivery::create([
             'campaign_id' => $campaign->id,
             'buyer_id' => $buyerSecondary->id,
-            'name' => 'Direct API — Waterfall',
+            'name' => 'Direct API - Waterfall',
             'method' => DeliveryMethod::DirectPost,
             'status' => 'active',
             'priority' => 30,
@@ -375,13 +375,13 @@ class PlatformSeeder extends Seeder
             'config' => [
                 'groups' => [
                     [
-                        'name' => 'Tier 1 — Real-Time Auction',
+                        'name' => 'Tier 1 - Real-Time Auction',
                         'mode' => 'parallel_auction',
                         'floor_price' => $floor,
                         'delivery_ids' => [$pingPrimary->id, $pingSecondary->id],
                     ],
                     [
-                        'name' => 'Tier 2 — Waterfall Fallback',
+                        'name' => 'Tier 2 - Waterfall Fallback',
                         'mode' => 'waterfall',
                         'delivery_ids' => [$storeDelivery->id],
                     ],
@@ -507,7 +507,7 @@ class PlatformSeeder extends Seeder
         return [
             'multi_step' => count($fields) > 4,
             'embed_height' => 720,
-            'thank_you' => ['mode' => 'inline', 'message' => 'Thanks — your '.$campaign->name.' enquiry was received.'],
+            'thank_you' => ['mode' => 'inline', 'message' => 'Thanks - your '.$campaign->name.' enquiry was received.'],
             'steps' => count($fields) > 4
                 ? [
                     [

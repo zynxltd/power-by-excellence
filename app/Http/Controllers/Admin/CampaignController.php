@@ -294,7 +294,7 @@ class CampaignController extends Controller
         return [
             ['value' => 'real_time_auction', 'label' => 'Real-time auction', 'help' => 'Ping all buyers in parallel; highest bid above floor wins, then post only to winner.'],
             ['value' => 'dynamic_ping', 'label' => 'Dynamic ping', 'help' => 'Each buyer returns a dynamic bid via ping-post; standard waterfall routing.'],
-            ['value' => 'waterfall', 'label' => 'Waterfall (fixed)', 'help' => 'Priority order with fixed or rule-based pricing — no parallel bidding.'],
+            ['value' => 'waterfall', 'label' => 'Waterfall (fixed)', 'help' => 'Priority order with fixed or rule-based pricing - no parallel bidding.'],
         ];
     }
 

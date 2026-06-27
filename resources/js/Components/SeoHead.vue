@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 
 const props = defineProps({
-    title: { type: String, default: 'PowerByExcellence — Lead Distribution Platform' },
+    title: { type: String, default: 'PowerByExcellence - Lead Distribution Platform' },
     description: { type: String, default: 'Real-time lead distribution, ping-tree routing, multi-vertical capture, and buyer management for agencies and lead sellers.' },
     image: { type: String, default: null },
     canonical: { type: String, default: null },

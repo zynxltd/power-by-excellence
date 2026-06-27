@@ -34,7 +34,7 @@ class QuarantineAdminTest extends TestCase
             'quarantined_until' => now()->addDay(),
             'metadata' => [
                 'quarantine_reason' => 'out_of_hours',
-                'quarantine_message' => 'Out of hours — held for next delivery window',
+                'quarantine_message' => 'Out of hours - held for next delivery window',
             ],
         ]);
 

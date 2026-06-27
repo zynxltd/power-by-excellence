@@ -38,7 +38,7 @@ When **Prepay Mode** is **Required**, an info panel explains:
 
 > Your account uses **prepay billing**. Leads are charged against your credit balance when sold. Contact your platform administrator to top up credit.
 
-Buyer portal users cannot add credit themselves — top-ups are performed by administrators from the admin console.
+Buyer portal users cannot add credit themselves - top-ups are performed by administrators from the admin console.
 
 ### Transaction History table
 
@@ -48,7 +48,7 @@ Buyer portal users cannot add credit themselves — top-ups are performed by adm
 | **Type** | `debit` or `credit` (capitalised in UI) |
 | **Amount** | Negative (red) for debits, positive (green) for credits |
 | **Balance** | Running `balance_after` after this transaction |
-| **Description** | Human-readable context — often includes lead UUID for purchases |
+| **Description** | Human-readable context - often includes lead UUID for purchases |
 
 Transactions paginate at **25 per page**, newest first.
 
@@ -58,10 +58,10 @@ When the platform has **`require_buyer_prepay`** enabled in account settings:
 
 1. Each sold lead **debits** your `credit_balance` by the lead **revenue** amount at sale time
 2. Before you are pinged or posted to, the engine checks whether balance ≥ lead price
-3. If balance is **insufficient**, your buyer node is **skipped** in the ping tree — you lose auctions without error emails to consumers
+3. If balance is **insufficient**, your buyer node is **skipped** in the ping tree - you lose auctions without error emails to consumers
 4. Administrators add credit via **Billing** in the admin console (manual top-up, return approval, promotions)
 
-When prepay is **disabled** (**Prepay Mode: Optional**), you may be invoiced separately off-platform. The portal still shows transaction history for transparency, but distribution may not block on balance — confirm terms with your account manager.
+When prepay is **disabled** (**Prepay Mode: Optional**), you may be invoiced separately off-platform. The portal still shows transaction history for transparency, but distribution may not block on balance - confirm terms with your account manager.
 
 ## Transaction types
 
@@ -79,16 +79,16 @@ Each row includes **`balance_after`** so you can reconcile running totals withou
 | Balance adequate | Normal ping/post participation |
 | Balance low | Platform may email `billing_alert_emails` and/or per-buyer alert contacts |
 | Balance insufficient | Skipped in distribution until topped up |
-| Account suspended | Separate from credit — admin suspension blocks login entirely |
+| Account suspended | Separate from credit - admin suspension blocks login entirely |
 
-Low-balance alert thresholds are configured by your platform operator — not in the buyer portal UI.
+Low-balance alert thresholds are configured by your platform operator - not in the buyer portal UI.
 
 ## Requesting a top-up
 
 1. Note **Current Balance** and recent daily **Spend** from `/portal/buyer` charts
 2. Estimate days of credit remaining: `balance ÷ average daily spend`
 3. Email or ticket your account manager with buyer name, requested amount, and urgency
-4. After admin posts credit, refresh `/portal/buyer/billing` — a **credit** row appears with updated **Balance**
+4. After admin posts credit, refresh `/portal/buyer/billing` - a **credit** row appears with updated **Balance**
 5. Confirm pings resume if you were skipped (check **Leads Today** on dashboard)
 
 ## Reconciling with leads and CSV
@@ -96,7 +96,7 @@ Low-balance alert thresholds are configured by your platform operator — not in
 1. Pick a date range on **My Leads** and sum **Revenue** column
 2. On **Billing**, filter mentally by the same dates in **Transaction History** (debits for purchases)
 3. Export CSV for the same range and sum `revenue` column
-4. Totals should align — small timing differences may occur if sales straddle midnight platform time
+4. Totals should align - small timing differences may occur if sales straddle midnight platform time
 
 ## Example scenarios
 
@@ -114,16 +114,16 @@ Buyer submitted a return that administrators approved. A **credit** transaction 
 
 ### Prepay off but tracking spend
 
-**Prepay Mode** shows **Optional**. Buyer still uses **Transaction History** monthly to verify lead counts against the invoice their account manager sends — portal is the operational source of truth for per-lead charges.
+**Prepay Mode** shows **Optional**. Buyer still uses **Transaction History** monthly to verify lead counts against the invoice their account manager sends - portal is the operational source of truth for per-lead charges.
 
 ## Tips
 
 - Request top-ups **before weekends and holidays** if you run always-on campaigns
 - Match transaction **Date** with CSV `received_at` / `distributed_at` for accounting cutoffs
-- **Currency** is set per buyer/account — confirm with your account manager if you operate multi-currency brands
-- Watch **Prepay Mode** after contract changes — switching to required prepay changes ping behaviour immediately
-- Screenshot or export billing history before disputes — descriptions contain UUID audit trails
-- Dashboard **Credit Balance** and billing **Current Balance** should always match — if not, hard-refresh the page
+- **Currency** is set per buyer/account - confirm with your account manager if you operate multi-currency brands
+- Watch **Prepay Mode** after contract changes - switching to required prepay changes ping behaviour immediately
+- Screenshot or export billing history before disputes - descriptions contain UUID audit trails
+- Dashboard **Credit Balance** and billing **Current Balance** should always match - if not, hard-refresh the page
 
 ## Troubleshooting
 

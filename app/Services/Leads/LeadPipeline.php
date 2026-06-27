@@ -35,7 +35,7 @@ class LeadPipeline
 
             $account = $campaign->account;
             if ($account && ! app(\App\Services\Billing\AccountBillingService::class)->canProcessLeads($account)) {
-                return $this->reject($lead, 'Account billing locked or past due');
+                return $this->reject($lead, 'Account billing locked');
             }
 
             if (! $this->capService->hasCapacity('campaign', $campaign->id, $campaign->caps)) {
@@ -115,7 +115,7 @@ class LeadPipeline
             $this->dedupe->index($lead, $campaign);
 
             if ($lead->metadata['test_mode'] ?? false) {
-                PlatformLogger::leadEvent($lead, 'lead.test_mode', 'Test lead accepted — validation passed, no deliveries fired');
+                PlatformLogger::leadEvent($lead, 'lead.test_mode', 'Test lead accepted - validation passed, no deliveries fired');
                 $this->recordDuration($lead, $startedAt);
 
                 return $lead->fresh();

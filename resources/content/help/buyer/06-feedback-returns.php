@@ -14,8 +14,8 @@ After purchasing leads, you report outcomes back to the platform from `/portal/b
 
 There are two distinct actions:
 
-1. **Conversion feedback** — tell the platform what happened after you worked the lead (contacted, converted, invalid, etc.)
-2. **Return request** — dispute lead quality and ask for administrator review (and possible credit)
+1. **Conversion feedback** - tell the platform what happened after you worked the lead (contacted, converted, invalid, etc.)
+2. **Return request** - dispute lead quality and ask for administrator review (and possible credit)
 
 Returns are **not** instant refunds. Feedback is **not** a billing adjustment. Each flow has its own form at the bottom of the **My Leads** page.
 
@@ -43,11 +43,11 @@ Feedback does **not** automatically credit your account or reverse a lead charge
 1. Locate the lead on **My Leads** and copy its **UUID** (search by email or name if needed)
 2. In **Submit Feedback**, paste the UUID into **Lead UUID**
 3. Select **Status** from the dropdown:
-   - `contacted` — you reached the consumer but no sale yet
-   - `converted` — sale or funded outcome (pair with checkbox below)
-   - `invalid` — lead data failed validation on contact (wrong number, fake details, etc.)
+   - `contacted` - you reached the consumer but no sale yet
+   - `converted` - sale or funded outcome (pair with checkbox below)
+   - `invalid` - lead data failed validation on contact (wrong number, fake details, etc.)
 4. Optionally tick **Converted** for funded/sale events (boolean flag used in reporting)
-5. Add **Notes** — free text for your account manager (optional but recommended for edge cases)
+5. Add **Notes** - free text for your account manager (optional but recommended for edge cases)
 6. Click **Submit Feedback**
 7. On success, you see a confirmation: **Feedback submitted.** The form resets
 
@@ -64,17 +64,17 @@ Feedback does **not** automatically credit your account or reverse a lead charge
 
 ### What returns are used for
 
-When a lead fails quality standards — wrong number, duplicate in your system, fraud, out-of-geo — you submit a **return request** for tenant staff review. Approved returns may credit your account per platform policy.
+When a lead fails quality standards - wrong number, duplicate in your system, fraud, out-of-geo - you submit a **return request** for tenant staff review. Approved returns may credit your account per platform policy.
 
 ### Submitting a return step by step
 
 1. Confirm the lead is in your inventory (`sold` to your buyer)
 2. In **Return Lead**, paste the **Lead UUID**
-3. Enter **Return Reason** — factual explanation (required, max **500 characters**)
+3. Enter **Return Reason** - factual explanation (required, max **500 characters**)
 4. Click **Submit Return**
 5. On success: **Return submitted for review.** Status in the system is **pending** until staff acts
 
-Good reasons are specific: *"Phone number disconnected — auto message on dial"* beats *"Bad lead"*.
+Good reasons are specific: *"Phone number disconnected - auto message on dial"* beats *"Bad lead"*.
 
 ### Return fields reference
 
@@ -90,7 +90,7 @@ Administrators can also record feedback via the REST API (`POST /api/v1/buyers/{
 - `POST /portal/buyer/feedback`
 - `POST /portal/buyer/returns`
 
-Use whichever channel your integration supports; duplicate feedback on the same lead may depend on platform dedupe rules — ask your account manager if you run both.
+Use whichever channel your integration supports; duplicate feedback on the same lead may depend on platform dedupe rules - ask your account manager if you run both.
 
 ## Example scenarios
 
@@ -100,7 +100,7 @@ A lender contacts a lead, completes underwriting, and funds the loan. Ops copies
 
 ### Invalid wrong-number
 
-Dialler marks the phone as invalid after three attempts. QA submits feedback with **Status** `invalid` and notes *"Number not in service per carrier message."* This is feedback only — no automatic refund.
+Dialler marks the phone as invalid after three attempts. QA submits feedback with **Status** `invalid` and notes *"Number not in service per carrier message."* This is feedback only - no automatic refund.
 
 ### Return for duplicate
 
@@ -112,12 +112,12 @@ Call centre reached the consumer; no sale. Agent submits **Status** `contacted` 
 
 ## Tips
 
-- Submit feedback **promptly** — downstream reporting often uses same-day aggregates
-- Returns are **not** automatic refunds — await administrator approval and check `/portal/buyer/billing` for credits
+- Submit feedback **promptly** - downstream reporting often uses same-day aggregates
+- Returns are **not** automatic refunds - await administrator approval and check `/portal/buyer/billing` for credits
 - Keep return reasons **factual and specific** for faster resolution (include dialer dispositions, timestamps)
 - Use **invalid** feedback for reporting bad data; use **returns** when you seek financial remedy
 - Copy UUID from CSV export if the table truncation makes copy-paste awkward
-- One return per quality dispute — do not spam duplicate requests for the same UUID
+- One return per quality dispute - do not spam duplicate requests for the same UUID
 - Notes in feedback help account managers defend or improve supplier relationships
 
 ## Troubleshooting

@@ -18,12 +18,12 @@ Correct tracking setup is essential for accurate performance segmentation and su
 
 | Term | Meaning | Who sets it |
 |------|---------|-------------|
-| **SID** | Source identifier — maps to a Source record under your supplier | Platform admin creates Sources; you pass `sid` in API |
+| **SID** | Source identifier - maps to a Source record under your supplier | Platform admin creates Sources; you pass `sid` in API |
 | **SSID** | Sub-supplier / sub-affiliate token for downstream tracking | You pass `ssid` in API; admin may enable `enable_sub_suppliers` |
 | **Source** | Database record linking a SID to your supplier profile | Visible on dashboard **Your Sources (SID)** panel |
 | **Postback** | HTTP callback fired on conversion events (e.g. sold) | Admin configures `default_postback_url` on your supplier |
 
-## SID — source tracking
+## SID - source tracking
 
 Every lead you submit should include a `sid` value matching one of your configured Sources.
 
@@ -49,7 +49,7 @@ Every lead you submit should include a `sid` value matching one of your configur
 
 **Tip:** Use lowercase, underscore-separated names (`google_ppc` not `Google PPC`) for consistency.
 
-## SSID — sub-affiliate tracking
+## SSID - sub-affiliate tracking
 
 If you work with sub-affiliates or downstream partners, pass an **SSID** per partner on each lead:
 
@@ -114,7 +114,7 @@ Content-Type: application/json
 
 ### Response UUID
 
-The API returns a lead UUID. Store this UUID — it links your internal tracking, portal rows, CSV exports, and postback callbacks.
+The API returns a lead UUID. Store this UUID - it links your internal tracking, portal rows, CSV exports, and postback callbacks.
 
 ## Postbacks
 
@@ -124,8 +124,8 @@ When a lead **sells**, the platform may fire an HTTP request to your configured 
 
 Postback URLs are set by the platform administrator:
 
-- **Default postback** — `default_postback_url` on your supplier `affiliate_settings`
-- **Per-source postback** — override on individual Source records
+- **Default postback** - `default_postback_url` on your supplier `affiliate_settings`
+- **Per-source postback** - override on individual Source records
 
 You cannot edit postback URLs in the supplier portal. Request changes from your account manager.
 
@@ -150,7 +150,7 @@ You cannot edit postback URLs in the supplier portal. Request changes from your 
 ### Dashboard
 
 - `/portal/supplier` → **Your Sources (SID)** lists all configured sources
-- 7-day charts aggregate all SIDs — use Leads filters for per-source analysis
+- 7-day charts aggregate all SIDs - use Leads filters for per-source analysis
 
 ### Leads page
 
@@ -165,16 +165,16 @@ Export from `/portal/supplier/leads` includes `campaign` and `status` but not `s
 
 ## Tracking parameters
 
-Your supplier may have `tracking_params` configured — passthrough query keys appended to postback URLs (e.g. `click_id`, `sub_id`). Ask your account manager for the macro reference document.
+Your supplier may have `tracking_params` configured - passthrough query keys appended to postback URLs (e.g. `click_id`, `sub_id`). Ask your account manager for the macro reference document.
 
 ## End-to-end tracking workflow
 
-1. **Setup** — Admin creates Sources (SIDs) under your supplier; you receive API key
-2. **Ingest** — Every API post includes `sid` and optional `ssid`
-3. **Monitor** — Check `/portal/supplier/leads` for status and SID column
-4. **Convert** — Sold leads trigger postbacks to your URL
-5. **Reconcile** — Match postback UUIDs to CSV exports and internal sub-affiliate reports
-6. **Optimise** — Pause SIDs with low sold rates; scale SIDs with strong performance
+1. **Setup** - Admin creates Sources (SIDs) under your supplier; you receive API key
+2. **Ingest** - Every API post includes `sid` and optional `ssid`
+3. **Monitor** - Check `/portal/supplier/leads` for status and SID column
+4. **Convert** - Sold leads trigger postbacks to your URL
+5. **Reconcile** - Match postback UUIDs to CSV exports and internal sub-affiliate reports
+6. **Optimise** - Pause SIDs with low sold rates; scale SIDs with strong performance
 
 ## Tips
 

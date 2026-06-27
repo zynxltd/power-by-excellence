@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-The **Buyer Portal** gives purchasers self-service access to leads sold to them, credit balances, and conversion feedback — without granting admin rights to your platform. As a tenant admin, you provision portal users, link them to buyer records, and manage access when buyer teams change.
+The **Buyer Portal** gives purchasers self-service access to leads sold to them, credit balances, and conversion feedback - without granting admin rights to your platform. As a tenant admin, you provision portal users, link them to buyer records, and manage access when buyer teams change.
 
 Portal users log in at `{your-tenant-domain}/login` and land on `/portal/buyer`. They see only data scoped to their linked `buyer_id`.
 
@@ -25,7 +25,7 @@ Portal users log in at `{your-tenant-domain}/login` and land on `/portal/buyer`.
 | Quality feedback loops | Conversion and return requests directly in portal |
 | Multi-user buyer teams | Separate logins per team member |
 
-Buyers without portal access still receive leads via ping/post — the portal is for visibility and self-service, not delivery.
+Buyers without portal access still receive leads via ping/post - the portal is for visibility and self-service, not delivery.
 
 ---
 
@@ -37,8 +37,8 @@ Buyers without portal access still receive leads via ping/post — the portal is
 2. Click **Edit**.
 3. Scroll to the **Portal access** section.
 4. Enter portal user details:
-   - **Email** — login username (must be unique on your tenant)
-   - **Name** — display name for the user
+   - **Email** - login username (must be unique on your tenant)
+   - **Name** - display name for the user
 5. Set role to `buyer_portal` (applied automatically when creating via buyer form).
 6. Confirm `buyer_id` is linked to this buyer record.
 7. Optionally check **Send credentials** to email a welcome message with password setup link on save.
@@ -73,7 +73,7 @@ One portal user per buyer organisation is typical, but you can create multiple u
 
 - View current `credit_balance`
 - Transaction ledger: debits (lead purchases), credits (top-ups), refunds
-- Mirrors admin **Billing** view for that buyer — same `buyer_transactions` table
+- Mirrors admin **Billing** view for that buyer - same `buyer_transactions` table
 
 ### Lead search and export
 
@@ -121,8 +121,8 @@ Reconcile monthly: export transactions from admin **Finance** view and compare t
 
 ### Team member leaves
 
-1. **Users → Edit** — disable or delete the portal user.
-2. Do not delete the buyer record — only the user login.
+1. **Users → Edit** - disable or delete the portal user.
+2. Do not delete the buyer record - only the user login.
 
 ### Buyer offboarding
 
@@ -142,20 +142,20 @@ Reconcile monthly: export transactions from admin **Finance** view and compare t
 
 ### Buyer cannot log in
 
-- Confirm they use the correct **tenant domain** — portal users are not portable across accounts.
+- Confirm they use the correct **tenant domain** - portal users are not portable across accounts.
 - Check user status is active (not disabled).
-- Verify `buyer_id` is set on the user record — users without buyer linkage cannot access portal routes.
-- Check buyer `status` — locked or inactive buyers may block portal features.
+- Verify `buyer_id` is set on the user record - users without buyer linkage cannot access portal routes.
+- Check buyer `status` - locked or inactive buyers may block portal features.
 
 ### Portal shows zero leads
 
 - Confirm leads are actually **sold** to this buyer (`sold_to_buyer_id` matches).
-- Check date filters — default view may show only recent leads.
+- Check date filters - default view may show only recent leads.
 - Verify portal user `buyer_id` matches the buyer receiving deliveries.
 
 ### Credit balance mismatch
 
-- Admin and portal read the same ledger — mismatch suggests caching or wrong buyer linked.
+- Admin and portal read the same ledger - mismatch suggests caching or wrong buyer linked.
 - Refresh the page; check admin **Billing** for the same buyer ID.
 - Look for pending transactions not yet committed.
 
@@ -167,7 +167,7 @@ Reconcile monthly: export transactions from admin **Finance** view and compare t
 
 ### Buyer sees another org's data
 
-- Critical: check `buyer_id` on user record — data leak if mislinked.
+- Critical: check `buyer_id` on user record - data leak if mislinked.
 - Each portal user must link to exactly one buyer.
 - Report immediately and rotate passwords if misconfiguration confirmed.
 
@@ -177,8 +177,8 @@ Reconcile monthly: export transactions from admin **Finance** view and compare t
 
 - One portal user per buyer org is typical; create multiple for teams if needed.
 - Direct buyers to Help Centre → **Buyer Portal** category for self-service how-to articles.
-- Enable prepay and top up credit before sending portal credentials — empty balance frustrates first login.
+- Enable prepay and top up credit before sending portal credentials - empty balance frustrates first login.
 - Use buyer `reference` in internal docs to map portal users to contracts.
-- Rotate passwords when buyer teams change — do not share a single login across departments.
+- Rotate passwords when buyer teams change - do not share a single login across departments.
 MD,
 ];

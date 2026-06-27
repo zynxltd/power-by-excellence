@@ -92,7 +92,7 @@ class ApiKeyController extends Controller
         );
 
         return back()
-            ->with('success', 'API key created. Copy the token below — it will not be shown again.')
+            ->with('success', 'API key created. Copy the token below - it will not be shown again.')
             ->with('api_token', $result['token']);
     }
 

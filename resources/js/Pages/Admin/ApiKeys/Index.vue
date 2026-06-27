@@ -91,7 +91,7 @@ const copyText = async (text, key) => {
     <AuthenticatedLayout>
         <PageHeader
             title="API Keys"
-            description="Bearer tokens for lead ingest and integrations. Keys are tenant-scoped — use your platform hostname, not the central admin URL."
+            description="Bearer tokens for lead ingest and integrations. Keys are tenant-scoped - use your platform hostname, not the central admin URL."
         >
             <template #actions>
                 <AppButton :href="route('api-docs.index')" variant="secondary">REST API Docs</AppButton>
@@ -101,7 +101,7 @@ const copyText = async (text, key) => {
         <div v-if="newToken" class="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                    <p class="font-semibold text-amber-900 dark:text-amber-100">New API key — copy now</p>
+                    <p class="font-semibold text-amber-900 dark:text-amber-100">New API key - copy now</p>
                     <p class="mt-1 text-sm text-amber-800/80 dark:text-amber-200/80">This token is shown once. Store it in your secrets manager before leaving this page.</p>
                     <code class="mt-3 block break-all rounded-lg bg-white/80 px-3 py-2 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:text-emerald-300">{{ newToken }}</code>
                 </div>
@@ -159,13 +159,13 @@ const copyText = async (text, key) => {
                 <form @submit.prevent="submit" class="grid gap-4 md:grid-cols-2">
                     <div>
                         <InputLabel value="Name" />
-                        <TextInput v-model="form.name" class="mt-1 block w-full" placeholder="Supplier ingest — Main affiliate" required />
+                        <TextInput v-model="form.name" class="mt-1 block w-full" placeholder="Supplier ingest - Main affiliate" required />
                     </div>
                     <div>
                         <InputLabel value="Type" />
                         <select v-model="form.type" class="form-select mt-1 w-full">
-                            <option value="administrator">Administrator — full API access</option>
-                            <option value="supplier">Supplier — ingest for one affiliate</option>
+                            <option value="administrator">Administrator - full API access</option>
+                            <option value="supplier">Supplier - ingest for one affiliate</option>
                         </select>
                     </div>
                     <div v-if="form.type === 'supplier'" class="md:col-span-2">
@@ -177,7 +177,7 @@ const copyText = async (text, key) => {
                         <p class="mt-1 text-xs text-slate-500">Scoped to <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">leads.create</code> and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">leads.read</code> for this supplier only.</p>
                     </div>
                     <div v-else class="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                        Administrator keys receive <strong>full access</strong> (all endpoints). Use supplier keys for affiliate traffic — they cannot access reports, quarantine, or buyer management.
+                        Administrator keys receive <strong>full access</strong> (all endpoints). Use supplier keys for affiliate traffic - they cannot access reports, quarantine, or buyer management.
                     </div>
                     <div class="md:col-span-2">
                         <PrimaryButton :disabled="form.processing">Generate key</PrimaryButton>
@@ -202,7 +202,7 @@ const copyText = async (text, key) => {
                         <td>
                             <span :class="typeBadgeClass(k.type)" class="rounded-full px-2 py-0.5 text-xs font-medium capitalize">{{ k.type }}</span>
                         </td>
-                        <td class="text-slate-600 dark:text-slate-400">{{ k.supplier?.name ?? '—' }}</td>
+                        <td class="text-slate-600 dark:text-slate-400">{{ k.supplier?.name ?? '-' }}</td>
                         <td class="max-w-[10rem] truncate text-xs text-slate-600 dark:text-slate-400" :title="formatPermissions(k.permissions)">
                             {{ formatPermissions(k.permissions) }}
                         </td>

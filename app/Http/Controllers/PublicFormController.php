@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller as BaseController;
 use App\Jobs\ProcessLeadJob;
 use App\Models\HostedForm;
+use App\Models\Lead;
 use App\Services\Forms\HostedFormEmbedService;
+use App\Services\Forms\HostedFormSubmissionService;
 use App\Services\Leads\LeadIngestService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,11 +19,15 @@ class PublicFormController extends BaseController
 {
     public function __construct(
         protected HostedFormEmbedService $embedService,
+        protected HostedFormSubmissionService $submissions,
     ) {}
 
     public function show(Request $request, string $slug): Response
     {
-        $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $form = HostedForm::withoutGlobalScopes()
+            ->where('slug', $slug)
+            ->live()
+            ->firstOrFail();
         $this->embedService->assertEmbedAllowed($form, $request);
 
         return Inertia::render('Forms/Show', $this->formPageProps($request, $slug));
@@ -28,7 +35,10 @@ class PublicFormController extends BaseController
 
     public function submit(Request $request, string $slug): Response|RedirectResponse
     {
-        $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $form = HostedForm::withoutGlobalScopes()
+            ->where('slug', $slug)
+            ->live()
+            ->firstOrFail();
         $form->load('campaign');
 
         $this->embedService->assertSubmitRefererAllowed($form, $request);
@@ -45,10 +55,11 @@ class PublicFormController extends BaseController
 
         ProcessLeadJob::dispatch($lead->id);
 
-        $thankYou = $this->thankYouConfig($form);
+        $thankYou = $this->submissions->thankYouConfig($form);
         $redirectUrl = $form->config['redirect_url'] ?? null;
+        $mode = $thankYou['mode'] ?? 'inline';
 
-        if ($redirectUrl && ($thankYou['mode'] ?? 'inline') === 'redirect') {
+        if ($redirectUrl && $mode === 'redirect') {
             if ($request->header('X-Inertia')) {
                 return Inertia::location($redirectUrl);
             }
@@ -65,12 +76,30 @@ class PublicFormController extends BaseController
         ]));
     }
 
+    public function status(string $slug, string $uuid): JsonResponse
+    {
+        $form = HostedForm::withoutGlobalScopes()
+            ->where('slug', $slug)
+            ->live()
+            ->firstOrFail();
+
+        $lead = Lead::query()
+            ->where('uuid', $uuid)
+            ->where('campaign_id', $form->campaign_id)
+            ->firstOrFail();
+
+        return response()->json($this->submissions->statusPayload($form, $lead));
+    }
+
     /**
      * @return array<string, mixed>
      */
     protected function formPageProps(Request $request, string $slug): array
     {
-        $form = HostedForm::withoutGlobalScopes()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $form = HostedForm::withoutGlobalScopes()
+            ->where('slug', $slug)
+            ->live()
+            ->firstOrFail();
         $form->load('campaign.fields');
 
         $config = $form->config ?? [];
@@ -95,26 +124,13 @@ class PublicFormController extends BaseController
             'steps' => $steps,
             'multiStep' => $multiStep,
             'submitUrl' => route('forms.submit', $form->slug),
-            'thankYou' => $this->thankYouConfig($form),
+            'statusUrl' => route('forms.status', ['slug' => $form->slug, 'uuid' => '__UUID__']),
+            'thankYou' => $this->submissions->thankYouConfig($form),
             'submitted' => false,
             'submission' => null,
             'embed' => $embed,
             'tracking' => $tracking,
             'trackingParams' => HostedFormEmbedService::TRACKING_QUERY_PARAMS,
         ];
-    }
-
-    protected function thankYouConfig(HostedForm $form): array
-    {
-        $defaults = [
-            'mode' => 'inline',
-            'title' => 'Thank you!',
-            'message' => 'Your enquiry has been received. We will be in touch shortly.',
-            'show_reference' => true,
-            'button_text' => 'Submit another response',
-            'confetti' => true,
-        ];
-
-        return array_merge($defaults, $form->config['thank_you'] ?? []);
     }
 }

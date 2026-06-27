@@ -13,7 +13,7 @@ export function useDateFormat() {
 
     const formatDateTime = (value, options = {}) => {
         const date = parse(value);
-        if (!date) return '—';
+        if (!date) return '-';
 
         return new Intl.DateTimeFormat('en-GB', {
             timeZone: timezone.value,
@@ -28,7 +28,7 @@ export function useDateFormat() {
 
     const formatDate = (value, options = {}) => {
         const date = parse(value);
-        if (!date) return '—';
+        if (!date) return '-';
 
         return new Intl.DateTimeFormat('en-GB', {
             timeZone: timezone.value,
@@ -41,7 +41,7 @@ export function useDateFormat() {
 
     const formatTime = (value) => {
         const date = parse(value);
-        if (!date) return '—';
+        if (!date) return '-';
 
         return new Intl.DateTimeFormat('en-GB', {
             timeZone: timezone.value,
@@ -53,7 +53,7 @@ export function useDateFormat() {
 
     const formatRelative = (value) => {
         const date = parse(value);
-        if (!date) return '—';
+        if (!date) return '-';
 
         const now = Date.now();
         const diffSec = Math.round((date.getTime() - now) / 1000);

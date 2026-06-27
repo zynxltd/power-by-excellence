@@ -41,7 +41,7 @@ class SeedLargePingTreeCommand extends Command
 
         $tierCount = max(30, (int) $this->option('tiers'));
 
-        $this->info("Building {$tierCount}-tier ping tree for {$account->name} — {$campaign->name} (distribution #{$distribution->id})…");
+        $this->info("Building {$tierCount}-tier ping tree for {$account->name} - {$campaign->name} (distribution #{$distribution->id})…");
 
         $result = $builder->build($campaign, $account, $distribution, $tierCount);
 

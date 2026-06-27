@@ -98,7 +98,7 @@ const submit = () => {
 <template>
     <Head :title="supplier ? 'Edit Supplier' : 'New Supplier'" />
     <AuthenticatedLayout>
-        <PageHeader :title="supplier ? 'Edit Supplier' : 'New Supplier'" description="Step-by-step setup — affiliate profile, SIDs, and portal login.">
+        <PageHeader :title="supplier ? 'Edit Supplier' : 'New Supplier'" description="Step-by-step setup - affiliate profile, SIDs, and portal login.">
             <template v-if="supplier" #actions>
                 <AppButton :href="route('suppliers.show', supplier.id)" variant="secondary">View supplier</AppButton>
             </template>
@@ -118,7 +118,7 @@ const submit = () => {
                         </div>
                         <div>
                             <dt class="text-slate-500">SIDs</dt>
-                            <dd class="font-medium">{{ form.sources.filter((s) => s.sid).length || '—' }}</dd>
+                            <dd class="font-medium">{{ form.sources.filter((s) => s.sid).length || '-' }}</dd>
                         </div>
                     </dl>
                 </Panel>

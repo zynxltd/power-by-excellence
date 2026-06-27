@@ -15,6 +15,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
     config: Object,
+    declineUrl: { type: String, default: null },
     tiers: Array,
     campaign: Object,
     campaignWorkflow: { type: Object, default: null },
@@ -38,7 +39,7 @@ const tierGroups = computed(() =>
 <template>
     <Head :title="config.name" />
     <AuthenticatedLayout>
-        <PageHeader :title="config.name" description="Visual ping tree — tiered routing with delivery nodes.">
+        <PageHeader :title="config.name" description="Visual ping tree - tiered routing with delivery nodes.">
             <template #actions>
                 <StatusBadge :status="config.is_active ? 'active' : 'inactive'" />
                 <StatusBadge v-if="config.is_locked" status="locked" />
@@ -203,6 +204,8 @@ const tierGroups = computed(() =>
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-center dark:border-slate-700 dark:bg-slate-800/50">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">No tier accepts</p>
                         <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Lead marked unsold</p>
+                        <p v-if="declineUrl" class="mt-2 break-all font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ declineUrl }}</p>
+                        <p v-else class="mt-2 text-xs text-slate-400">No decline page configured</p>
                     </div>
                 </div>
             </div>

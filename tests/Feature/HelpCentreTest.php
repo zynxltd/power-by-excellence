@@ -39,7 +39,24 @@ class HelpCentreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('categories')
+                ->has('audienceFilters')
+                ->has('learningPaths')
+                ->has('featured')
                 ->where('categories', fn ($categories) => collect($categories)->pluck('name')->doesntContain('Admin'))
+            );
+    }
+
+    public function test_help_show_includes_table_of_contents_and_navigation(): void
+    {
+        $article = HelpArticle::where('audience', 'tenant')->where('slug', 'quick-start')->first();
+        $this->assertNotNull($article);
+
+        $this->get(route('help.show', $article->slug))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('article.tableOfContents')
+                ->has('navigation')
+                ->has('categoryArticles')
             );
     }
 

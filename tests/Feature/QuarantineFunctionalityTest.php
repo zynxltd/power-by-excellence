@@ -62,7 +62,7 @@ class QuarantineFunctionalityTest extends TestCase
         $ooh = $this->createQuarantinedLead([
             'metadata' => [
                 'quarantine_reason' => 'out_of_hours',
-                'quarantine_message' => 'Out of hours — held for next delivery window',
+                'quarantine_message' => 'Out of hours - held for next delivery window',
             ],
         ]);
 
@@ -115,7 +115,7 @@ class QuarantineFunctionalityTest extends TestCase
             'field_data' => ['email' => 'unsold-filter@test.test'],
             'metadata' => [
                 'quarantine_reason' => 'unsold',
-                'quarantine_message' => 'Unsold — held for retry',
+                'quarantine_message' => 'Unsold - held for retry',
             ],
         ]);
 
@@ -212,7 +212,7 @@ class QuarantineFunctionalityTest extends TestCase
             $this->apiAuth(['quarantine.manage'])
         )
             ->assertStatus(422)
-            ->assertJsonPath('error', 'Validation holds must be rejected — they cannot be released back into distribution.');
+            ->assertJsonPath('error', 'Validation holds must be rejected - they cannot be released back into distribution.');
 
         $this->assertSame(LeadStatus::Quarantined, $lead->fresh()->status);
     }

@@ -41,17 +41,36 @@ class AccountBillingLockTest extends TestCase
         $this->actingAs($admin)->get('/billing/lock')->assertOk();
     }
 
-    public function test_past_due_account_rejects_lead_processing(): void
+    public function test_past_due_account_continues_lead_processing(): void
     {
-        ['campaign' => $campaign, 'buyer' => $buyer] = $this->seedMinimalPlatform();
+        ['campaign' => $campaign] = $this->seedMinimalPlatform();
 
         $account = $campaign->account;
         $settings = $account->settings ?? [];
-        $settings['billing_due_at'] = now()->subDay()->toDateString();
+        $settings['billing_status'] = AccountBillingService::STATUS_PAST_DUE;
         $account->update(['settings' => $settings]);
 
         $lead = Lead::create([
             'account_id' => $account->id,
+            'campaign_id' => $campaign->id,
+            'status' => 'pending',
+            'field_data' => ['email' => 'test@example.com', 'phone1' => '07700900000', 'zipcode' => 'SW1A 1AA', 'lastname' => 'Test'],
+            'received_at' => now(),
+        ]);
+
+        $processed = app(LeadPipeline::class)->process($lead->fresh());
+
+        $this->assertNotEquals('rejected', $processed->fresh()->status->value);
+    }
+
+    public function test_locked_account_rejects_lead_processing(): void
+    {
+        ['campaign' => $campaign] = $this->seedMinimalPlatform();
+
+        app(AccountBillingService::class)->lock($campaign->account, 'Payment overdue');
+
+        $lead = Lead::create([
+            'account_id' => $campaign->account_id,
             'campaign_id' => $campaign->id,
             'status' => 'pending',
             'field_data' => ['email' => 'test@example.com', 'phone1' => '07700900000'],

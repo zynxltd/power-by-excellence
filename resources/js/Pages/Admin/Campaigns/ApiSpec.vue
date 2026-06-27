@@ -196,7 +196,7 @@ const save = () => {
 </script>
 
 <template>
-    <Head :title="`API Spec — ${campaign.name}`" />
+    <Head :title="`API Spec - ${campaign.name}`" />
     <AuthenticatedLayout>
         <PageHeader :title="`API Spec`" :description="`${campaign.name} · ${campaign.reference}`">
             <template #actions>
@@ -379,10 +379,10 @@ const save = () => {
 
                     <Panel title="Response codes">
                         <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202</code> — Lead accepted and queued</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">401</code> — Invalid or missing API key</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">422</code> — Validation failed (field errors in body)</li>
-                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">429</code> — Rate limit exceeded</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">202</code> - Lead accepted and queued</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">401</code> - Invalid or missing API key</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">422</code> - Validation failed (field errors in body)</li>
+                            <li><code class="rounded bg-slate-100 px-1 dark:bg-slate-800">429</code> - Rate limit exceeded</li>
                         </ul>
                     </Panel>
                 </div>
@@ -514,7 +514,7 @@ const save = () => {
                     >
                         <div>
                             <p class="text-sm font-semibold text-slate-900 dark:text-white">Test mode</p>
-                            <p class="mt-0.5 text-sm text-slate-500">When enabled, sample requests include <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">"test": true</code> — no live buyer deliveries.</p>
+                            <p class="mt-0.5 text-sm text-slate-500">When enabled, sample requests include <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">"test": true</code> - no live buyer deliveries.</p>
                         </div>
                         <label class="flex cursor-pointer items-center gap-3">
                             <span class="text-sm font-medium" :class="testMode ? 'text-emerald-600' : 'text-slate-500'">
@@ -551,17 +551,17 @@ const save = () => {
 
                     <Panel title="Success response (202 Accepted)">
                         <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-violet-300">{{ JSON.stringify(sampleResponse, null, 2) }}</pre>
-                        <p class="mt-3 text-sm text-slate-500">Save <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">lead_id</code> and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">queue_id</code> from the response — use either to poll status below.</p>
+                        <p class="mt-3 text-sm text-slate-500">Save <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">lead_id</code> and <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">queue_id</code> from the response - use either to poll status below.</p>
                     </Panel>
 
                     <div class="grid gap-6 lg:grid-cols-2">
-                        <Panel title="Check status — by lead_id">
+                        <Panel title="Check status - by lead_id">
                             <p class="mb-3 text-sm text-slate-500">Requires <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">leads.read</code>. Poll every 1–2s until status is no longer in-flight.</p>
                             <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ statusByLeadCurl }}</pre>
                             <button type="button" class="mt-3 text-sm text-indigo-600" @click="copyText(statusByLeadCurl, 'status-lead')">Copy status cURL</button>
                         </Panel>
-                        <Panel title="Check status — by queue_id">
-                            <p class="mb-3 text-sm text-slate-500">Same payload as lead_id lookup — use whichever ID you stored from the 202 response.</p>
+                        <Panel title="Check status - by queue_id">
+                            <p class="mb-3 text-sm text-slate-500">Same payload as lead_id lookup - use whichever ID you stored from the 202 response.</p>
                             <pre class="overflow-auto rounded-xl bg-slate-900 p-4 text-xs text-cyan-300 whitespace-pre-wrap">{{ statusByQueueCurl }}</pre>
                             <button type="button" class="mt-3 text-sm text-indigo-600" @click="copyText(statusByQueueCurl, 'status-queue')">Copy status cURL</button>
                         </Panel>

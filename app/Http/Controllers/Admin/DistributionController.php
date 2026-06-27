@@ -86,6 +86,7 @@ class DistributionController extends Controller
 
         return Inertia::render('Admin/Distribution/Show', [
             'config' => $distribution,
+            'declineUrl' => $distribution->config['decline_url'] ?? null,
             'tiers' => $tiers,
             'campaign' => $campaign->only(['id', 'name', 'reference', 'use_advanced_distribution', 'floor_price']),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
@@ -179,8 +180,8 @@ class DistributionController extends Controller
         return back()->with(
             'success',
             $validated['locked']
-                ? 'Ping tree locked — editing and deletion are disabled.'
-                : 'Ping tree unlocked — changes may affect live routing.',
+                ? 'Ping tree locked - editing and deletion are disabled.'
+                : 'Ping tree unlocked - changes may affect live routing.',
         );
     }
 
@@ -204,6 +205,7 @@ class DistributionController extends Controller
             'groups.*.mode' => 'required|string',
             'groups.*.floor_price' => 'nullable|numeric|min:0',
             'groups.*.redirect_url' => 'nullable|url|max:2048',
+            'decline_url' => 'nullable|url|max:2048',
             'groups.*.delivery_ids' => 'required|array|min:1',
             'groups.*.delivery_ids.*' => 'integer',
             'groups.*.rules' => 'nullable|array',
@@ -225,11 +227,16 @@ class DistributionController extends Controller
             ], fn ($v) => $v !== null);
         })->values()->all();
 
+        $config = ['groups' => $groups];
+        if (filled($validated['decline_url'] ?? null)) {
+            $config['decline_url'] = $validated['decline_url'];
+        }
+
         return [
             'campaign_id' => $validated['campaign_id'],
             'name' => $validated['name'],
             'is_active' => $validated['is_active'] ?? true,
-            'config' => ['groups' => $groups],
+            'config' => $config,
         ];
     }
 

@@ -11,7 +11,7 @@ Internal guides for **PowerByExcellence platform operators** (super admins). The
 | [Live Feed](./live-feed.md) | Real-time platform-wide lead event stream |
 | [Tenant Billing](./tenant-billing.md) | Finance and billing while managing a tenant |
 
-**Product UX (all roles):** [UX & Navigation Audit](../UX_NAVIGATION_AUDIT.md) — friction analysis and IA recommendations.
+**Product UX (all roles):** [UX & Navigation Audit](../UX_NAVIGATION_AUDIT.md) - friction analysis and IA recommendations.
 
 ## Audience
 

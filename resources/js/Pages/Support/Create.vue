@@ -63,7 +63,7 @@ const submit = () => {
                         rows="8"
                         required
                         class="form-input mt-1 w-full"
-                        placeholder="Include as much detail as possible — campaign names, error messages, steps to reproduce..."
+                        placeholder="Include as much detail as possible - campaign names, error messages, steps to reproduce..."
                     />
                     <InputError class="mt-1" :message="form.errors.body" />
                 </div>

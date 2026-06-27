@@ -10,7 +10,7 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-The supplier portal lets you download lead data as a CSV file for spreadsheet analysis, sub-affiliate reconciliation, and accounting. Exports are scoped to **your supplier only** — you cannot access other affiliates' data.
+The supplier portal lets you download lead data as a CSV file for spreadsheet analysis, sub-affiliate reconciliation, and accounting. Exports are scoped to **your supplier only** - you cannot access other affiliates' data.
 
 **Download URL:** `/portal/supplier/leads/download`
 **Filename:** `supplier-leads.csv`
@@ -35,7 +35,7 @@ You can also trigger a download by visiting:
 /portal/supplier/leads/download?from_date=2026-06-01&to_date=2026-06-30
 ```
 
-Replace dates with your desired range. You must be signed in — unauthenticated requests redirect to login.
+Replace dates with your desired range. You must be signed in - unauthenticated requests redirect to login.
 
 ## What filters apply to export
 
@@ -113,9 +113,9 @@ The export always returns the **5,000 most recent** leads within the date range.
 
 - Match `uuid` to postback logs for conversion attribution
 - `payout` is `0` for unsold, rejected, quarantined, and duplicate leads
-- `campaign` shows the reference code (not display name) — consistent with API `campaign_reference`
+- `campaign` shows the reference code (not display name) - consistent with API `campaign_reference`
 - Set date filters **before** clicking Export CSV to avoid downloading unneeded rows
-- Store exports securely — they contain PII (email, phone, name)
+- Store exports securely - they contain PII (email, phone, name)
 
 ## Troubleshooting
 
@@ -126,6 +126,6 @@ The export always returns the **5,000 most recent** leads within the date range.
 | **Status/campaign filter ignored** | Export only respects dates | Filter status/campaign in spreadsheet after download |
 | **Download redirects to login** | Session expired | Sign in again at `/login` and retry |
 | **Special characters garbled** | Spreadsheet encoding issue | Open as UTF-8 in Excel (Data → From Text/CSV) |
-| **Payout doesn't match billing page** | Billing uses `distributed_at`; export filters on `received_at` | Align date logic — sold leads may span different received dates |
+| **Payout doesn't match billing page** | Billing uses `distributed_at`; export filters on `received_at` | Align date logic - sold leads may span different received dates |
 MD,
 ];

@@ -164,7 +164,7 @@ class DemoHistoricalDataSeeder extends Seeder
 
             \App\Models\Source::updateOrCreate(
                 ['supplier_id' => $supplier->id, 'sid' => str_replace('-', '_', $ref)],
-                ['name' => $name.' — Primary Source']
+                ['name' => $name.' - Primary Source']
             );
         }
     }
@@ -185,7 +185,7 @@ class DemoHistoricalDataSeeder extends Seeder
                 ['campaign_id' => $campaign->id, 'tier' => $tier],
                 [
                     'buyer_id' => $buyer->id,
-                    'name' => "Tier {$tier} — {$buyer->name}",
+                    'name' => "Tier {$tier} - {$buyer->name}",
                     'method' => $tier === 10 ? DeliveryMethod::StoreLead : DeliveryMethod::PingPost,
                     'status' => 'active',
                     'priority' => $tier * 10,
@@ -324,7 +324,7 @@ class DemoHistoricalDataSeeder extends Seeder
                         'level' => 'info',
                         'message' => $status === LeadStatus::Sold->value
                             ? 'Lead sold to '.$buyer->name
-                            : 'Lead processed — status: '.$status,
+                            : 'Lead processed - status: '.$status,
                         'created_at' => $receivedAt->copy()->addSeconds(random_int(2, 30)),
                     ]);
                 }
@@ -390,6 +390,8 @@ class DemoHistoricalDataSeeder extends Seeder
 
     protected function seedPortalActivity(Account $account): void
     {
+        app(LargePingTreeBuilder::class)->ensurePortalUsers($account);
+
         $buyers = Buyer::where('account_id', $account->id)->get();
         $users = User::where('account_id', $account->id)->get();
 
@@ -476,15 +478,15 @@ class DemoHistoricalDataSeeder extends Seeder
             ],
             'out_of_hours' => [
                 'quarantine_reason' => 'out_of_hours',
-                'quarantine_message' => 'Out of hours — held for next delivery window',
+                'quarantine_message' => 'Out of hours - held for next delivery window',
             ],
             'unsold' => [
                 'quarantine_reason' => 'unsold',
-                'quarantine_message' => 'Unsold — held for retry',
+                'quarantine_message' => 'Unsold - held for retry',
             ],
             default => [
                 'quarantine_reason' => 'hold',
-                'quarantine_message' => 'General hold — manual review',
+                'quarantine_message' => 'General hold - manual review',
             ],
         };
     }

@@ -1,7 +1,9 @@
 <script setup>
 import BrandLogo from '@/Components/BrandLogo.vue';
+import MarketingSignInLink from '@/Components/Marketing/MarketingSignInLink.vue';
 import MarketingThemeToggle from '@/Components/Marketing/MarketingThemeToggle.vue';
 import SystemStatusBadge from '@/Components/Marketing/SystemStatusBadge.vue';
+import { useMarketingSignIn } from '@/Composables/useMarketingSignIn';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -11,8 +13,7 @@ defineProps({
 });
 
 const page = usePage();
-const signInUrl = computed(() => page.props.urls?.marketingSignIn ?? route('login'));
-const isAuthenticated = computed(() => !!page.props.auth?.user);
+const { isAuthenticated } = useMarketingSignIn();
 const systemStatus = computed(() => page.props.systemStatus);
 
 const mobileOpen = ref(false);
@@ -83,21 +84,17 @@ const navLinkClass = (isActive) => [
             <div class="flex items-center gap-2">
                 <SystemStatusBadge v-if="systemStatus" :status="systemStatus" compact class="hidden sm:inline-flex" />
                 <MarketingThemeToggle class="hidden lg:flex" />
-                <Link
+                <MarketingSignInLink
                     v-if="canLogin"
-                    :href="signInUrl"
                     class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:text-cyan-300 lg:hidden"
                 >
                     {{ isAuthenticated ? 'Platform' : 'Sign In' }}
-                </Link>
+                </MarketingSignInLink>
                 <div class="hidden items-center gap-2 lg:flex">
-                    <Link
+                    <MarketingSignInLink
                         v-if="canLogin"
-                        :href="signInUrl"
                         class="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-cyan-300"
-                    >
-                        {{ isAuthenticated ? 'Go to Platform' : 'Sign In' }}
-                    </Link>
+                    />
                     <a href="/#demo" class="brand-btn-primary px-4 py-2 text-sm shadow-indigo-500/25">
                         Book a Demo
                     </a>
@@ -130,7 +127,7 @@ const navLinkClass = (isActive) => [
                 <Link :href="route('help.index')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">Help Centre</Link>
                 <Link :href="route('status.index')" class="rounded-lg px-2 py-2 text-slate-300 hover:text-cyan-300" @click="closeMobile">System status</Link>
                 <a href="/#demo" class="brand-btn-primary mt-2 px-3 py-2.5 text-center text-sm" @click="closeMobile">Book a Demo</a>
-                <Link v-if="canLogin" :href="signInUrl" class="px-2 py-2 text-cyan-400" @click="closeMobile">{{ isAuthenticated ? 'Go to Platform' : 'Sign In' }}</Link>
+                <MarketingSignInLink v-if="canLogin" class="px-2 py-2 text-cyan-400" @click="closeMobile" />
             </div>
         </div>
     </nav>

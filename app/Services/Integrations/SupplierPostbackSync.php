@@ -40,7 +40,7 @@ class SupplierPostbackSync
             'account_id' => $supplier->account_id,
             'supplier_id' => $supplier->id,
             'campaign_id' => null,
-            'name' => "Supplier default — {$supplier->name}",
+            'name' => "Supplier default - {$supplier->name}",
             'url' => $url,
             'method' => 'get',
             'events' => self::defaultEvents(),

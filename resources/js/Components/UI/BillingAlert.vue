@@ -6,7 +6,7 @@ const page = usePage();
 const billing = computed(() => page.props.auth?.billing);
 
 const messages = {
-    past_due: 'Your platform billing is past due. Lead processing may be suspended until payment is received.',
+    past_due: 'Your platform billing is past due. Lead processing continues - please arrange payment to avoid a platform lock.',
     locked: 'This account is locked due to billing. Most features are unavailable until resolved.',
 };
 

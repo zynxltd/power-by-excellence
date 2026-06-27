@@ -62,7 +62,7 @@ defineProps({
                         />
                     </td>
                     <td v-if="showTenantColumn" class="text-xs text-slate-600 dark:text-slate-400">
-                        {{ c.account?.brand_name || c.account?.name || '—' }}
+                        {{ c.account?.brand_name || c.account?.name || '-' }}
                     </td>
                     <td class="font-mono text-xs text-slate-500">{{ c.reference }}</td>
                     <td class="text-xs text-slate-600 dark:text-slate-400">{{ c.country }} / {{ c.currency }}</td>

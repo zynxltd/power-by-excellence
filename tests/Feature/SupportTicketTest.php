@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SupportTicketResolvedMail;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
 use App\Services\Platform\PlatformNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SupportTicketTest extends TestCase
@@ -145,5 +147,59 @@ class SupportTicketTest extends TestCase
             ->getJson(route('notifications.inbox'))
             ->assertOk()
             ->assertJsonFragment(['title' => 'New support ticket: API limits']);
+    }
+
+    public function test_super_admin_resolving_ticket_notifies_tenant_email_and_inbox(): void
+    {
+        Mail::fake();
+
+        $ticket = SupportTicket::create([
+            'user_id' => $this->tenantAdmin->id,
+            'account_id' => $this->tenantAdmin->account_id,
+            'portal_role' => 'admin',
+            'subject' => 'Billing issue',
+            'priority' => 'normal',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($this->superAdmin)
+            ->patch(route('support.admin.status', $ticket), ['status' => 'resolved'])
+            ->assertRedirect();
+
+        $this->assertSame('resolved', $ticket->fresh()->status);
+        $this->assertSame(1, app(PlatformNotificationService::class)->unreadCount($this->tenantAdmin));
+
+        Mail::assertSent(SupportTicketResolvedMail::class, function (SupportTicketResolvedMail $mail) use ($ticket) {
+            return $mail->ticket->id === $ticket->id
+                && $mail->recipient->id === $this->tenantAdmin->id;
+        });
+
+        $this->actingAs($this->tenantAdmin)
+            ->getJson(route('notifications.inbox'))
+            ->assertOk()
+            ->assertJsonPath('unread_count', 1)
+            ->assertJsonPath('notifications.0.title', 'Support ticket resolved: Billing issue')
+            ->assertJsonPath('notifications.0.type', 'support');
+    }
+
+    public function test_super_admin_re_saving_resolved_status_does_not_notify_again(): void
+    {
+        Mail::fake();
+
+        $ticket = SupportTicket::create([
+            'user_id' => $this->tenantAdmin->id,
+            'account_id' => $this->tenantAdmin->account_id,
+            'portal_role' => 'admin',
+            'subject' => 'Already resolved',
+            'priority' => 'normal',
+            'status' => 'resolved',
+        ]);
+
+        $this->actingAs($this->superAdmin)
+            ->patch(route('support.admin.status', $ticket), ['status' => 'resolved'])
+            ->assertRedirect();
+
+        Mail::assertNothingSent();
+        $this->assertSame(0, app(PlatformNotificationService::class)->unreadCount($this->tenantAdmin));
     }
 }

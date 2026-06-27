@@ -1,4 +1,4 @@
-# Fraud Protection Add-on — Integration Plan
+# Fraud Protection Add-on - Integration Plan
 
 Maps marketing pricing to platform behaviour. Reference: [Pricing.vue](../resources/js/Pages/Marketing/Pricing.vue).
 
@@ -13,7 +13,7 @@ Maps marketing pricing to platform behaviour. Reference: [Pricing.vue](../resour
 ## Status legend
 
 - ✅ Done
-- ⏳ Pending — not started
+- ⏳ Pending - not started
 - ➖ N/A
 
 ---
@@ -37,9 +37,9 @@ Maps marketing pricing to platform behaviour. Reference: [Pricing.vue](../resour
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `/accounts/billing` — plan tier select | ✅ | starter \| growth \| enterprise |
-| `/accounts/billing` — Fraud add-on toggle (Starter) | ✅ | `fraud_protection_enabled` |
-| Billing index — plan + fraud column | ✅ | |
+| `/accounts/billing` - plan tier select | ✅ | starter \| growth \| enterprise |
+| `/accounts/billing` - Fraud add-on toggle (Starter) | ✅ | `fraud_protection_enabled` |
+| Billing index - plan + fraud column | ✅ | |
 | Billing save syncs validation integration defaults | ✅ | Growth → IPQS + URL on Starter addon → IPQS without URL |
 
 ---
@@ -49,12 +49,12 @@ Maps marketing pricing to platform behaviour. Reference: [Pricing.vue](../resour
 | Item | Status | Notes |
 |------|--------|-------|
 | Shared Inertia `auth.fraudProtection` prop | ✅ | `HandleInertiaRequests` |
-| `/integrations/validation` — entitlement banner | ✅ | Plan, usage, cap, upgrade copy |
-| `/integrations/validation` — block IPQS save if not entitled | ✅ | Forces demo provider |
-| `/integrations` index — fraud status reflects entitlement | ✅ | connected \| upgrade \| cap_reached |
-| `/leads` show — quality panel notes when fraud off | ⏳ | Optional copy |
-| `/reports` — fraud metrics only when entitled | ⏳ | Hide IP rows if no fraud |
-| Campaign form — fraud requires add-on note | ⏳ | Link to integrations |
+| `/integrations/validation` - entitlement banner | ✅ | Plan, usage, cap, upgrade copy |
+| `/integrations/validation` - block IPQS save if not entitled | ✅ | Forces demo provider |
+| `/integrations` index - fraud status reflects entitlement | ✅ | connected \| upgrade \| cap_reached |
+| `/leads` show - quality panel notes when fraud off | ⏳ | Optional copy |
+| `/reports` - fraud metrics only when entitled | ⏳ | Hide IP rows if no fraud |
+| Campaign form - fraud requires add-on note | ⏳ | Link to integrations |
 | Tenant-facing billing page (read-only fraud usage) | ⏳ | `/billing` account section |
 
 ---

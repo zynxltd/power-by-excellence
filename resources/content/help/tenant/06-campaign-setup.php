@@ -19,7 +19,7 @@ Think of a campaign as the contract between your suppliers (what data they send)
 | Setting | Purpose | Locked after first lead? |
 |---------|---------|--------------------------|
 | **reference** | Unique slug used in API ingest (`auto-insurance-uk`) | Often yes |
-| **vertical** | Vertical catalog — seeds default fields and floor prices | Varies |
+| **vertical** | Vertical catalog - seeds default fields and floor prices | Varies |
 | **currency** | Financial reporting currency | Often yes |
 | **payout** | Default supplier payout basis | No |
 | **floor_price** | Minimum acceptable buyer bid in ping trees | No |
@@ -28,7 +28,7 @@ Think of a campaign as the contract between your suppliers (what data they send)
 | **caps** | Daily/monthly lead limits | No |
 | **use_advanced_distribution** | Enable multi-tier ping tree | No |
 
-## Create a campaign — step by step
+## Create a campaign - step by step
 
 1. Navigate to **Campaigns** → **New** (`/campaigns/create`)
 2. Complete the form:
@@ -36,15 +36,15 @@ Think of a campaign as the contract between your suppliers (what data they send)
 | Field | Guidance |
 |-------|----------|
 | **Name** | Internal display name (e.g. `Auto Insurance UK`) |
-| **Reference** | API slug — lowercase, hyphens, no spaces |
-| **Vertical** | Select from catalog — auto-creates field template |
+| **Reference** | API slug - lowercase, hyphens, no spaces |
+| **Vertical** | Select from catalog - auto-creates field template |
 | **Country** | Drives phone/postcode validation rules |
 | **Currency** | GBP, USD, CAD, EUR |
 | **Floor price** | Minimum ping bid you'll accept |
 | **Payout** | Default amount owed to supplier on sold lead |
 | **Bidding mode** | Waterfall (first accept wins) or auction (highest bid) |
 
-3. Submit — redirect to campaign **show page**
+3. Submit - redirect to campaign **show page**
 4. Confirm vertical fields appeared (e.g. `vehicle_year` for Auto Insurance)
 5. Set status to **Active**
 
@@ -63,7 +63,7 @@ Fields define the ingest schema and ping-post parameter mapping.
 | `select` | Enumerated options |
 | `number` | Numeric, optional min/max |
 
-### Admin UI — manage fields
+### Admin UI - manage fields
 
 Fields are auto-seeded from the vertical on create. To customise:
 
@@ -72,14 +72,14 @@ Fields are auto-seeded from the vertical on create. To customise:
 
 | Property | Notes |
 |----------|-------|
-| **Name** | API key (e.g. `loan_amount`) — match buyer contracts exactly |
+| **Name** | API key (e.g. `loan_amount`) - match buyer contracts exactly |
 | **Label** | Display label for forms |
 | **Type** | See table above |
 | **Required** | API 422 if missing |
 | **Ping field** | Included in ping request (not full post) |
 | **Sort order** | Form and API spec display order |
 
-3. Save — changes apply to new ingests immediately
+3. Save - changes apply to new ingests immediately
 
 ### Ping fields vs post fields
 
@@ -88,7 +88,7 @@ Fields are auto-seeded from the vertical on create. To customise:
 | **Ping fields** | Ping request only | `zipcode`, `state`, `loan_amount` |
 | **All fields** | Full post after ping accept | Includes PII: name, email, phone |
 
-Buyers often bid on partial data — mark only non-PII fields as ping fields unless buyer contract requires otherwise.
+Buyers often bid on partial data - mark only non-PII fields as ping fields unless buyer contract requires otherwise.
 
 ## Caps
 
@@ -126,7 +126,7 @@ Monitor cap usage on campaign show page stats (**leads today**, etc.).
 | **Apply to form** | Sync hosted form fields from spec |
 
 4. Customise ping/post parameter names if buyer API uses different keys
-5. Save — share URL or export with integration partners
+5. Save - share URL or export with integration partners
 
 Tier filters in distribution use the **same field names** as campaign fields.
 
@@ -148,17 +148,17 @@ Match `bidding_mode` on campaign to distribution config mode. Mismatch causes un
 | **Draft** | Typically rejects or hidden from suppliers |
 | **Active** | Accepts ingest |
 | **Paused** | Rejects new ingest at pipeline start |
-| **Archived** | Historical only — no new leads |
+| **Archived** | Historical only - no new leads |
 
 ### Pause a campaign
 
 1. Campaign edit → set status **Paused**
-2. Save — API returns rejection for new posts
+2. Save - API returns rejection for new posts
 3. In-flight queued leads may still process
 
 ### Delete
 
-Deletion is blocked if leads exist — archive instead.
+Deletion is blocked if leads exist - archive instead.
 
 ## Seeded reference campaigns (UK demo)
 
@@ -170,14 +170,14 @@ Deletion is blocked if leads exist — archive instead.
 | Payday Loans | `payday-loans-uk` | Payday Loans |
 | Solar | `solar-uk` | Solar |
 
-Use these as templates — open show page and inspect fields, deliveries, and distribution.
+Use these as templates - open show page and inspect fields, deliveries, and distribution.
 
 ## Validation panel
 
 On campaign show page:
 
 1. Toggle `require_email`, `require_phone`, `block_disposable_email`
-2. Save validation — see **Validation, Dedupe & Quarantine** help article
+2. Save validation - see **Validation, Dedupe & Quarantine** help article
 
 ## Troubleshooting
 
@@ -193,7 +193,7 @@ On campaign show page:
 ## Tips
 
 - Clone seeded campaigns as starting points before building from scratch
-- Match field names to buyer contracts **exactly** — renaming after go-live breaks mappings
+- Match field names to buyer contracts **exactly** - renaming after go-live breaks mappings
 - Set floor price slightly below expected buyer bids to avoid unnecessary `unsold`
 - Enable `use_advanced_distribution` for any campaign with more than one buyer tier
 - Review **leads today** on show page daily during launch week

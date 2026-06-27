@@ -121,7 +121,7 @@ watch(() => props.simulation, (sim) => {
                         <select id="lead_id" v-model="form.lead_id" class="form-select mt-1 w-full">
                             <option value="">Synthetic test lead</option>
                             <option v-for="l in recentLeads" :key="l.id" :value="l.id">
-                                {{ l.uuid?.slice(0, 12) }}… — {{ l.campaign?.name }}
+                                {{ l.uuid?.slice(0, 12) }}… - {{ l.campaign?.name }}
                             </option>
                         </select>
                     </div>

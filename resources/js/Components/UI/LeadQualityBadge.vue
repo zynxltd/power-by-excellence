@@ -21,9 +21,9 @@ const badgeClass = computed(() => [
 </script>
 
 <template>
-    <span v-if="quality" :class="badgeClass" :title="`${quality.grade_label} — email: ${quality.email?.label}, HLR: ${quality.hlr?.label}, IP: ${quality.ip?.label ?? 'n/a'}`">
+    <span v-if="quality" :class="badgeClass" :title="`${quality.grade_label} - email: ${quality.email?.label}, HLR: ${quality.hlr?.label}, IP: ${quality.ip?.label ?? 'n/a'}`">
         <span>{{ quality.score }}</span>
         <span v-if="!compact" class="font-normal opacity-80">{{ quality.grade_label }}</span>
     </span>
-    <span v-else class="text-xs text-slate-400">—</span>
+    <span v-else class="text-xs text-slate-400">-</span>
 </template>

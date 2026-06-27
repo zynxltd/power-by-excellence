@@ -140,17 +140,19 @@ class HandleInertiaRequests extends Middleware
             return route('login');
         }
 
-        if ($user->isSuperAdmin()) {
-            return route('dashboard');
+        if (TenantResolver::isCentralHost($request->getHost())) {
+            return route('platform.entry');
         }
 
-        $account = $user->resolveAccount();
-
-        if ($account) {
-            return TenantResolver::portalUrl($account, '/dashboard');
+        if ($user->isBuyerPortal()) {
+            return route('portal.buyer.dashboard');
         }
 
-        return route('login');
+        if ($user->isSupplierPortal()) {
+            return route('portal.supplier.dashboard');
+        }
+
+        return route('dashboard');
     }
 
     protected function shouldShowLiveStats(Request $request): bool

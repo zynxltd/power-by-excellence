@@ -76,14 +76,14 @@ const statusClass = (status) => ({
                         </select>
                     </div>
                     <div>
-                        <InputLabel value="Scope — supplier (optional)" />
+                        <InputLabel value="Scope - supplier (optional)" />
                         <select v-model="form.supplier_id" class="form-select mt-1 w-full">
                             <option value="">All suppliers</option>
                             <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
                         </select>
                     </div>
                     <div>
-                        <InputLabel value="Scope — campaign (optional)" />
+                        <InputLabel value="Scope - campaign (optional)" />
                         <select v-model="form.campaign_id" class="form-select mt-1 w-full">
                             <option value="">All campaigns</option>
                             <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>

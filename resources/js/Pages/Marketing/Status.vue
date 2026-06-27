@@ -46,7 +46,7 @@ const componentStatusLabel = (s) => ({
 
 <template>
     <SeoHead
-        :title="seo?.title || 'System Status — PowerByExcellence'"
+        :title="seo?.title || 'System Status - PowerByExcellence'"
         :description="seo?.description || 'Live platform health for lead distribution and API availability.'"
     />
 
@@ -83,14 +83,14 @@ const componentStatusLabel = (s) => ({
                     <div class="brand-card-sm text-center">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg processing</p>
                         <p class="mt-2 text-2xl font-bold text-slate-900 marketing-dark:text-white">
-                            {{ status?.metrics?.avg_processing_ms ?? '—' }}<span class="text-sm font-normal text-slate-500">ms</span>
+                            {{ status?.metrics?.avg_processing_ms ?? '-' }}<span class="text-sm font-normal text-slate-500">ms</span>
                         </p>
                         <p class="mt-1 text-xs text-slate-500">Target &lt;{{ status?.metrics?.processing_target_ms ?? 200 }}ms</p>
                     </div>
                     <div class="brand-card-sm text-center">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Post success</p>
                         <p class="mt-2 text-2xl font-bold text-slate-900 marketing-dark:text-white">
-                            {{ status?.metrics?.post_success_rate != null ? status.metrics.post_success_rate + '%' : '—' }}
+                            {{ status?.metrics?.post_success_rate != null ? status.metrics.post_success_rate + '%' : '-' }}
                         </p>
                         <p class="mt-1 text-xs text-slate-500">Today · delivery posts</p>
                     </div>

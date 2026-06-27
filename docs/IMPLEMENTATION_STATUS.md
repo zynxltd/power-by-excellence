@@ -1,4 +1,4 @@
-# PowerByExcellence — Implementation Status
+# PowerByExcellence - Implementation Status
 
 > **Last updated:** 25 June 2026  
 > **Stack:** Laravel 13 · Vue 3 · Inertia · SQLite/MySQL · Laravel Queues  
@@ -17,10 +17,10 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 npm install && npm run build
 
-# Terminal 1 — web
+# Terminal 1 - web
 php artisan serve   # or use Herd: powerbyexcellence.test
 
-# Terminal 2 — REQUIRED for async lead processing
+# Terminal 2 - REQUIRED for async lead processing
 php artisan queue:work
 ```
 
@@ -49,13 +49,13 @@ All passwords: **`password`**
 | UK | `auto-insurance-uk`, `loans-uk`, `mortgage-uk`, `payday-loans-uk`, `solar-uk` | `buyer-primary`, `buyer-secondary` | `google_search` |
 | US | `auto-insurance-us`, `loans-us`, `mortgage-us`, `payday-loans-us`, `solar-us` | `buyer-primary`, `buyer-secondary` | `google_search` |
 
-API keys are printed once when you run `php artisan db:seed` — copy immediately.
+API keys are printed once when you run `php artisan db:seed` - copy immediately.
 
 ---
 
 ## How Laravel Job Queues Work Here
 
-### Yes — the platform uses Laravel queues
+### Yes - the platform uses Laravel queues
 
 | Component | File | Role |
 |-----------|------|------|
@@ -99,7 +99,7 @@ POST /api/v1/leads
 A **delivery** with `method: ping_post` runs a two-step HTTP flow in `DeliveryExecutor`:
 
 ```
-1. PING  — partial fields only (campaign fields marked ping_field=true)
+1. PING  - partial fields only (campaign fields marked ping_field=true)
            POST → ping_url (timeout: config.ping_timeout, default 5s)
            Logged to delivery_logs.ping_request / ping_response
 
@@ -107,7 +107,7 @@ A **delivery** with `method: ping_post` runs a two-step HTTP flow in `DeliveryEx
            - matchesPingSuccess() checks Success + floor price (Cost >= campaign floor)
            - If rejected → delivery skipped, try next in routing
 
-3. POST  — full lead fields + ping response interpolation
+3. POST  - full lead fields + ping response interpolation
            POST → post_url (timeout: config.timeout, default 10s)
            Logged to delivery_logs.post_request / post_response
 
@@ -119,7 +119,7 @@ A **delivery** with `method: ping_post` runs a two-step HTTP flow in `DeliveryEx
 - `POST /api/v1/ping` → `{ Success: true, Cost: 15, PingID: "ping_..." }`
 - `POST /api/v1/post` → `{ Success: true, Approved: true }`
 
-Seeded UK delivery **"Ping Post — Primary Buyer"** points at these URLs.
+Seeded UK delivery **"Ping Post - Primary Buyer"** points at these URLs.
 
 ### Ping-tree (advanced distribution)
 
@@ -128,14 +128,14 @@ When a campaign has `use_advanced_distribution: true`, `DistributionEngine` read
 ```
 Campaign (advanced mode)
     └── DistributionConfig (e.g. "Hybrid Ping Tree")
-            └── groups[] — each tier has:
+            └── groups[] - each tier has:
                     name, mode, floor_price?, delivery_ids[]
                     mode → RoutingMode enum:
-                        waterfall        — priority order until sold
-                        parallel_auction — ping all deliveries, highest bid ≥ floor wins
-                        sequential_ping  — same as waterfall for ping deliveries
-                        weighted         — random pick by delivery.weight
-                        round_robin      — rotate fairly between deliveries
+                        waterfall        - priority order until sold
+                        parallel_auction - ping all deliveries, highest bid ≥ floor wins
+                        sequential_ping  - same as waterfall for ping deliveries
+                        weighted         - random pick by delivery.weight
+                        round_robin      - rotate fairly between deliveries
 ```
 
 **Flow per lead:**
@@ -191,13 +191,13 @@ Each **Account** is an isolated partner platform (tenant). All business data bel
 
 Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhook, etc.):
 
-1. **Global scope** — all queries auto-filter `WHERE account_id = AccountContext::id()`
-2. **Auto-fill** — new records get `account_id` from context on create
+1. **Global scope** - all queries auto-filter `WHERE account_id = AccountContext::id()`
+2. **Auto-fill** - new records get `account_id` from context on create
 
 ### Isolation guarantees
 
 - Admin user on UK platform only sees UK campaigns, leads, buyers
-- API key scoped to one account — cannot ingest to another tenant's campaigns
+- API key scoped to one account - cannot ingest to another tenant's campaigns
 - `ProcessLeadJob` explicitly sets context from lead's campaign account
 - Super admin switches tenant at `/accounts` → session stores `current_account_id`
 
@@ -209,9 +209,9 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 
 ### Test coverage
 
-- `MultiTenancyTest` — scoped campaign queries
-- `LeadIngestApiTest::test_multi_tenant_isolation` — cannot post to another account's campaign
-- `PlatformModulesTest` — UK and US admins isolated
+- `MultiTenancyTest` - scoped campaign queries
+- `LeadIngestApiTest::test_multi_tenant_isolation` - cannot post to another account's campaign
+- `PlatformModulesTest` - UK and US admins isolated
 
 ---
 
@@ -247,29 +247,29 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | Resource | List | Create | Read/Show | Update | Delete | Tested |
 |----------|------|--------|-----------|--------|--------|--------|
 | Campaigns | ✅ | ✅ | ✅ show page | ✅ | ✅ | `AdminCrudTest` |
-| Deliveries | ✅ | ✅ | — | ✅ | ✅ | `AdminCrudTest` |
-| Distribution (Ping Tree) | ✅ | ✅ | — | ✅ | ✅ | `DistributionCrudTest` |
-| Buyers | ✅ | ✅ | — | ✅ | ✅ | `AdminCrudTest` |
-| Suppliers | ✅ | ✅ | — | ✅ | ✅ | `AdminCrudTest` |
-| Leads | ✅ | — (API only) | ✅ detail | — | — | `AdminCrudTest` filters |
-| Webhooks | ✅ | ✅ | — | — | ✅ | `AdminCrudTest` |
-| API Keys | ✅ | ✅ | — | — | ✅ | `AdminCrudTest` |
-| Users | ✅ | ✅ | — | — | ✅ | `AdminCrudTest` |
-| Imports | ✅ | ✅ upload | — | — | — | Route health |
-| Billing | ✅ | — | ✅ per buyer | top-up ✅ | — | `DistributionCrudTest` |
-| Finance | ✅ | — | — | — | — | Route health |
-| Reports | ✅ | — | — | — | — | Route health |
-| Quarantine | ✅ | — | — | release/reject ✅ | — | Feature tests |
-| Settings | ✅ | — | — | ✅ | — | `CampaignValidationTest` |
-| Branding | ✅ | — | — | ✅ upload | — | `AdminCrudTest` |
-| Accounts (super) | ✅ switch | — | — | — | — | Route health |
-| Command Center (super) | ✅ | — | — | — | — | Central host |
-| Profile | ✅ | — | — | ✅ name/email/avatar | — | `ProfileTest` |
-| Profile preferences | — | — | — | ✅ theme/accent | — | `ProfilePreferencesTest` |
+| Deliveries | ✅ | ✅ | - | ✅ | ✅ | `AdminCrudTest` |
+| Distribution (Ping Tree) | ✅ | ✅ | - | ✅ | ✅ | `DistributionCrudTest` |
+| Buyers | ✅ | ✅ | - | ✅ | ✅ | `AdminCrudTest` |
+| Suppliers | ✅ | ✅ | - | ✅ | ✅ | `AdminCrudTest` |
+| Leads | ✅ | - (API only) | ✅ detail | - | - | `AdminCrudTest` filters |
+| Webhooks | ✅ | ✅ | - | - | ✅ | `AdminCrudTest` |
+| API Keys | ✅ | ✅ | - | - | ✅ | `AdminCrudTest` |
+| Users | ✅ | ✅ | - | - | ✅ | `AdminCrudTest` |
+| Imports | ✅ | ✅ upload | - | - | - | Route health |
+| Billing | ✅ | - | ✅ per buyer | top-up ✅ | - | `DistributionCrudTest` |
+| Finance | ✅ | - | - | - | - | Route health |
+| Reports | ✅ | - | - | - | - | Route health |
+| Quarantine | ✅ | - | - | release/reject ✅ | - | Feature tests |
+| Settings | ✅ | - | - | ✅ | - | `CampaignValidationTest` |
+| Branding | ✅ | - | - | ✅ upload | - | `AdminCrudTest` |
+| Accounts (super) | ✅ switch | - | - | - | - | Route health |
+| Command Center (super) | ✅ | - | - | - | - | Central host |
+| Profile | ✅ | - | - | ✅ name/email/avatar | - | `ProfileTest` |
+| Profile preferences | - | - | - | ✅ theme/accent | - | `ProfilePreferencesTest` |
 
 **Not implemented as CRUD:**
 
-- Lead create/edit in admin (by design — ingest via API/import)
+- Lead create/edit in admin (by design - ingest via API/import)
 - User edit form (create + delete only)
 - Webhook edit (create + delete only)
 
@@ -283,7 +283,7 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | `direct_post` | ✅ HTTP | ✅ URL, timeout | ✅ secondary buyer |
 | `ping_post` | ✅ two-phase | ✅ ping/post URLs, timeouts | ✅ → `/api/ping` |
 | `email` | ✅ Mail::raw | ✅ to/subject/body templates | ✅ inactive |
-| `sms` | ✅ log only | ✅ to/message | — |
+| `sms` | ✅ log only | ✅ to/message | - |
 
 | Pricing model | Service | UI | Tested |
 |---------------|---------|-----|--------|
@@ -294,11 +294,11 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | Routing mode | Engine | Ping-tree UI | Delivery form |
 |--------------|--------|--------------|---------------|
 | waterfall | ✅ | ✅ tier mode | ✅ |
-| parallel_auction | ✅ | ✅ tier mode | — |
-| sequential_ping | ✅ | ✅ tier mode | — |
+| parallel_auction | ✅ | ✅ tier mode | - |
+| sequential_ping | ✅ | ✅ tier mode | - |
 | weighted | ✅ | ✅ tier mode | ✅ weight field |
 | round_robin | ✅ | ✅ tier mode | ✅ routing_mode |
-| hybrid | ✅ rule groups | ✅ | — |
+| hybrid | ✅ rule groups | ✅ | - |
 
 ---
 
@@ -325,7 +325,7 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 | `/buyers` | Buyer CRUD + billing link |
 | `/suppliers` | Supplier + SID CRUD |
 | `/leads` | Lead pipeline (filters, live processing) + detail tabs |
-| `/quarantine` | Held leads queue — release, reject, bulk actions |
+| `/quarantine` | Held leads queue - release, reject, bulk actions |
 | `/billing` | Credit pool + per-buyer ledger |
 | `/billing/{buyer}` | Top-up + transaction history |
 | `/finance` | Revenue, payout, margin roll-up |
@@ -393,7 +393,7 @@ Models using `BelongsToAccount` (Campaign, Lead, Buyer, Supplier, ApiKey, Webhoo
 
 Admin uses a **compact horizontal top nav** (`AdminTopNav.vue`), not a sidebar.
 
-### Admin — primary nav
+### Admin - primary nav
 
 | Item | Contents |
 |------|----------|
@@ -401,7 +401,7 @@ Admin uses a **compact horizontal top nav** (`AdminTopNav.vue`), not a sidebar.
 | **Campaigns** ▾ | All campaigns, Form builder |
 | **Ops** ▾ | Live operations, Lead pipeline, Quarantine · Deliveries, Ping tree, Routing simulator, Automation |
 | **Reports** | `/reports` |
-| **More** ▾ | `NavHubMenu` — tenant shortcuts (buyers, suppliers, finance, logs, integrations, settings, help, …) |
+| **More** ▾ | `NavHubMenu` - tenant shortcuts (buyers, suppliers, finance, logs, integrations, settings, help, …) |
 | *(super, no tenant)* | Command Center, Partner platforms |
 
 **Also visible:** Live stats bar (leads/sold/queue/quarantine/revenue), tenant switcher (super admin), notifications, theme toggle.
@@ -433,7 +433,7 @@ See **[`UX_NAVIGATION_AUDIT.md`](./UX_NAVIGATION_AUDIT.md)** for friction analys
 | Whitelabel logo | ✅ `/branding` |
 | Compact KPI strips | ✅ `CompactStatStrip` on dashboard, ops, reports, finance, entity pages |
 | Slim panels & page headers | ✅ reduced padding (`Panel`, `PageHeader`, layout) |
-| Tenant-scoped currency | ✅ `useMoneyFormat` — platform/buyer/campaign currency |
+| Tenant-scoped currency | ✅ `useMoneyFormat` - platform/buyer/campaign currency |
 | Campaign revenue budget caps | ✅ daily/monthly spend cap on campaign + `BuyerEligibilityService` |
 | Dashboard charts | ✅ admin, buyer, supplier |
 | Form validation summaries | ✅ admin forms |
@@ -529,48 +529,69 @@ Per platform:
 
 ## Phase Summary
 
-### Phases 1–5 — Complete ✅ (tested)
+### Phases 1–5 - Complete ✅ (tested)
 
 Foundation, distribution engine, advanced routing, network/financials, portals, admin tools, billing UI, ping-tree UI, operations monitor, guided deliveries, user theme preferences, help centre, ticketing, automation/remarketing, form builder, security logs, table pagination, buyer prepay enforcement.
 
-### Phase 6 — Partial ✅ / 🔲
+### Phase 6 - Partial ✅ / 🔲
 
 | Feature | Status |
 |---------|--------|
-| Postback Manager | ✅ `/postbacks` — pixels, supplier/campaign scope, audit log |
+| Postback Manager | ✅ `/postbacks` - pixels, supplier/campaign scope, audit log |
 | JavaScript SDK | ✅ `/sdk/pbe-leads.js` |
 | PHP SDK | ✅ `sdk/php/PbeClient.php` |
 | Hosted form builder | ✅ `/forms` |
-| Bulk SMS + email campaigns | ✅ `/automation` — Twilio/SendGrid/Mailgun/Postmark/Resend providers |
-| Admin Command Center | ✅ `/command-center` (super admin) — cross-tenant pings/posts, health, events |
+| Bulk SMS + email campaigns | ✅ `/automation` - Twilio/SendGrid/Mailgun/Postmark/Resend providers |
+| Admin Command Center | ✅ `/command-center` (super admin) - cross-tenant pings/posts, health, events |
 | Delivery schedules (advanced) | ✅ Per-delivery window editor on delivery form |
 | Billing pagination | ✅ `/billing` buyers + transactions paginated |
 | Lead detail UX | ✅ Tabs, prev/next nav, processing time, delivery log links |
-| 2FA enable/disable | ✅ Profile — recovery codes (TOTP app login challenge 🔲) |
+| 2FA enable/disable | ✅ Profile - recovery codes (TOTP app login challenge 🔲) |
 | Event alerts | ✅ Webhook, Slack, SMS, email + fire history |
 | Help centre + ticketing | ✅ `/help`, `/support` |
 | Email ping-post delivery | ✅ `DeliveryMethod::EmailPingPost` |
-| Stripe card payments | ✅ `/integrations/stripe` — keys, webhook URL, buyer self-serve toggle |
-| Facebook / Google / TikTok sync | ✅ `/integrations/lead-sources/{provider}` — webhook + ingest endpoints |
+| Stripe card payments | ✅ `/integrations/stripe` - keys, webhook URL, buyer self-serve toggle |
+| Facebook / Google / TikTok sync | ✅ `/integrations/lead-sources/{provider}` - webhook + ingest endpoints |
 | Custom portal domains | 🔲 |
 | FTP / scheduled CSV exports | 🔲 |
 | Full 2FA TOTP login challenge | 🔲 (enable/disable + recovery codes ✅) |
 | 2-step auth delivery method | 🔲 |
 | Campaign transfer delivery | 🔲 |
 | Custom report builder UI | 🔲 |
+| **Call routing / call logic** | 📋 **Noted - deferred** (see below) |
+
+---
+
+## Call logic - noted, not implementing yet
+
+The platform does **not** support live call routing today. Ping tree and deliveries are **HTTP-only** (ping/post, email, SMS). Phone numbers are lead fields + fraud validation, not voice sessions.
+
+**Decision:** Call logic is documented for future planning only - **no implementation in the current build.**
+
+When prioritised, treat it as a **separate “Call Routing” module** (not a bolt-on to the HTTP ping tree):
+
+| Reuse | Build new |
+|-------|-----------|
+| Buyer caps, schedules, eligibility, financials, postbacks | `CallSession` model, inbound DNI/tracking numbers |
+| `RuleEngine` for geo | Twilio Voice (or Telnyx) webhooks + transfer |
+| Tier/floor concepts from distribution | Call ping-for-accept → warm transfer → disposition API |
+
+**Suggested MVP (future):** campaign channel `call`, inbound DID → waterfall over call-capable buyers → `<Dial>` transfer → `POST /api/v1/calls/{id}/disposition` → connect-rate in reports. Hybrid campaigns could fall back to HTTP ping tree when unsold.
+
+**Enum stubs only (unwired):** `DeliveryMethod::TwoStepAuth`, `DeliveryMethod::CampaignTransfer`.
 
 ---
 
 ## Known Limitations
 
-1. **Queue worker required** — async leads need `php artisan queue:work`
-2. **Stripe** — configuration UI + webhook stub; full Checkout flow in buyer portal is next step
-3. **Lead source sync** — webhook ingest accepts payloads; field mapping to campaigns is manual/demo queue
-4. **Parallel auction** — pings all buyers then picks winner; no distributed lock
-5. **Super admin on tenant** — god mode via “Open portal”; Command Center / Partner Platforms are central-host only
-6. **Buyer form** — includes Advanced tab (pricing, caps, geo, auto top-up thresholds)
-7. **Users** — renamed from Employees; super admin hidden on partner platform user lists
-8. **Demo data** — `DemoHistoricalDataSeeder` seeds 30 days of leads per tenant (`migrate:fresh --seed`)
+1. **Queue worker required** - async leads need `php artisan queue:work`
+2. **Stripe** - configuration UI + webhook stub; full Checkout flow in buyer portal is next step
+3. **Lead source sync** - webhook ingest accepts payloads; field mapping to campaigns is manual/demo queue
+4. **Parallel auction** - pings all buyers then picks winner; no distributed lock
+5. **Super admin on tenant** - god mode via “Open portal”; Command Center / Partner Platforms are central-host only
+6. **Buyer form** - includes Advanced tab (pricing, caps, geo, auto top-up thresholds)
+7. **Users** - renamed from Employees; super admin hidden on partner platform user lists
+8. **Demo data** - `DemoHistoricalDataSeeder` seeds 30 days of leads per tenant (`migrate:fresh --seed`)
 
 ---
 

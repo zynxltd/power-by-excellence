@@ -6,7 +6,7 @@
     <p>A new lead was purchased on your account.</p>
     <ul>
         <li><strong>Lead ID:</strong> {{ $lead->uuid }}</li>
-        <li><strong>Campaign:</strong> {{ $lead->campaign?->name ?? '—' }}</li>
+        <li><strong>Campaign:</strong> {{ $lead->campaign?->name ?? '-' }}</li>
         <li><strong>Cost:</strong> {{ $currency }} {{ number_format($revenue, 2) }}</li>
         <li><strong>Received:</strong> {{ $lead->received_at?->toDayDateTimeString() }}</li>
     </ul>

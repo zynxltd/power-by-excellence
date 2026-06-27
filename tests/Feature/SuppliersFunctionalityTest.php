@@ -352,6 +352,7 @@ class SuppliersFunctionalityTest extends TestCase
                 ->where('currency', 'GBP')
                 ->where('summary.total_payout', fn ($v) => (float) $v >= 42.50)
                 ->where('summary.sold_count', fn ($v) => $v >= 1)
+                ->has('payouts.data')
             );
     }
 

@@ -27,6 +27,13 @@ class UserFactory extends Factory
             'name' => 'Test User',
             'email' => 'user.'.Str::lower(Str::random(12)).'@example.test',
             'email_verified_at' => now(),
+            'phone' => '+447700900123',
+            'phone_verified_at' => now(),
+            'address_line1' => '1 Test Street',
+            'city' => 'London',
+            'postcode' => 'SW1A 1AA',
+            'country' => 'GB',
+            'address_verified_at' => now(),
             'password' => static::$password ??= 'password',
             'remember_token' => Str::random(10),
         ];
@@ -39,6 +46,22 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+            'phone_verified_at' => null,
+            'address_verified_at' => null,
+        ]);
+    }
+
+    public function signupIncomplete(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email_verified_at' => null,
+            'phone_verified_at' => null,
+            'address_verified_at' => null,
+            'phone' => null,
+            'address_line1' => null,
+            'city' => null,
+            'postcode' => null,
+            'country' => null,
         ]);
     }
 }

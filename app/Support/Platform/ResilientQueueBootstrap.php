@@ -39,7 +39,7 @@ class ResilientQueueBootstrap
         }
 
         try {
-            Log::channel('platform')->warning('Redis unavailable — queue driver fell back to database.', [
+            Log::channel('platform')->warning('Redis unavailable - queue driver fell back to database.', [
                 'preferred' => $preferred,
                 'fallback' => $fallback,
             ]);

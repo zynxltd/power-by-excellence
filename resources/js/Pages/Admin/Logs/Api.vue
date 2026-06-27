@@ -85,14 +85,14 @@ const apiStatStrip = computed(() => [
                             </span>
                         </td>
                         <td class="font-mono text-xs" :class="timingClass(log.duration_ms)">{{ log.duration_ms }}ms</td>
-                        <td class="max-w-xs truncate text-sm text-rose-600 dark:text-rose-400">{{ log.error_message ?? '—' }}</td>
+                        <td class="max-w-xs truncate text-sm text-rose-600 dark:text-rose-400">{{ log.error_message ?? '-' }}</td>
                     </tr>
                     <tr v-if="expandedId === log.id" class="bg-slate-50 dark:bg-slate-900/50">
                         <td colspan="6" class="">
                             <div class="grid gap-4 text-sm md:grid-cols-2">
                                 <div>
                                     <p class="text-xs font-semibold uppercase text-slate-500">API Key</p>
-                                    <p class="text-slate-700 dark:text-slate-300">{{ log.api_key?.name ?? 'Unauthenticated' }} ({{ log.api_key?.key_prefix ?? '—' }})</p>
+                                    <p class="text-slate-700 dark:text-slate-300">{{ log.api_key?.name ?? 'Unauthenticated' }} ({{ log.api_key?.key_prefix ?? '-' }})</p>
                                 </div>
                                 <div>
                                     <p class="text-xs font-semibold uppercase text-slate-500">IP</p>

@@ -10,17 +10,17 @@ return [
     'body' => <<<'MD'
 ## Overview
 
-The **Buyer Portal** is your self-service dashboard for leads purchased through your partner platform. After your account administrator creates your buyer profile and portal login, you sign in on the **tenant subdomain** assigned to your brand — for example `excellence-uk.powerbyexcellence.test` or `insurance-ca.powerbyexcellence.test`. You cannot use the central marketing domain or another partner's subdomain with the same credentials.
+The **Buyer Portal** is your self-service dashboard for leads purchased through your partner platform. After your account administrator creates your buyer profile and portal login, you sign in on the **tenant subdomain** assigned to your brand - for example `excellence-uk.powerbyexcellence.test` or `insurance-ca.powerbyexcellence.test`. You cannot use the central marketing domain or another partner's subdomain with the same credentials.
 
-The portal is designed for day-to-day lead operations: checking credit, reviewing what was sold to you, exporting data for your CRM, and reporting outcomes back to the platform. You do not configure campaigns, ping trees, or routing rules — those are managed by the platform operator on your behalf.
+The portal is designed for day-to-day lead operations: checking credit, reviewing what was sold to you, exporting data for your CRM, and reporting outcomes back to the platform. You do not configure campaigns, ping trees, or routing rules - those are managed by the platform operator on your behalf.
 
 ## Who this is for
 
-Buyer portal users are **lead purchasers** — call centres, lenders, insurers, aggregators, or marketing agencies who receive leads via ping-post or direct post. Typical roles include:
+Buyer portal users are **lead purchasers** - call centres, lenders, insurers, aggregators, or marketing agencies who receive leads via ping-post or direct post. Typical roles include:
 
-- **Operations managers** — monitor daily volume, credit, and spend trends
-- **Dialler / CRM admins** — export CSV batches and reconcile UUIDs with imports
-- **Quality teams** — submit conversion feedback and return requests for disputed leads
+- **Operations managers** - monitor daily volume, credit, and spend trends
+- **Dialler / CRM admins** - export CSV batches and reconcile UUIDs with imports
+- **Quality teams** - submit conversion feedback and return requests for disputed leads
 
 Each portal user is linked to exactly one **buyer account**. If your organisation runs multiple buyer IDs (e.g. separate brands or geographies), you need a separate login for each unless your administrator consolidates access.
 
@@ -57,7 +57,7 @@ You only see leads where `sold_to_buyer_id` matches your account. Leads you were
 4. You land on **Buyer Dashboard** at `/portal/buyer`
 5. Confirm **Credit Balance** and **Leads Today** look reasonable for your campaigns
 6. Open **My Leads** to verify recent deliveries match your dialler or CRM
-7. Bookmark the subdomain login URL — it is unique to your platform
+7. Bookmark the subdomain login URL - it is unique to your platform
 
 ## Portal URLs reference
 
@@ -85,12 +85,12 @@ After onboarding a new campaign, Priya filters **My Leads** by that campaign ref
 
 ## Tips
 
-- Bookmark your tenant login URL — credentials are not valid on other partner subdomains or the central domain
+- Bookmark your tenant login URL - credentials are not valid on other partner subdomains or the central domain
 - If prepay is required, monitor **Credit Balance** daily; insufficient credit causes your buyer to be skipped in the ping tree
 - Use **Download CSV** for bulk exports; the on-screen table supports search, status, campaign, and date filters
-- Copy the full **UUID** from the leads table when submitting feedback or returns — partial fragments in the UI are for display only
+- Copy the full **UUID** from the leads table when submitting feedback or returns - partial fragments in the UI are for display only
 - Date filters use the **platform timezone**, not your local timezone or UTC
-- Share filtered lead URLs with teammates — filters persist in the query string on `/portal/buyer/leads`
+- Share filtered lead URLs with teammates - filters persist in the query string on `/portal/buyer/leads`
 
 ## Troubleshooting
 
@@ -99,7 +99,7 @@ After onboarding a new campaign, Priya filters **My Leads** by that campaign ref
 | Cannot sign in on central domain | Buyer accounts must use the partner subdomain | Use `https://{your-brand}.powerbyexcellence.test/login` (URL from your agreement) |
 | **"This account is not registered on {brand}."** | Wrong subdomain for your user record | Confirm the exact subdomain your administrator assigned |
 | **"Partner platforms sign in at …"** | You tried logging in on the central host | Follow the link in the error to your partner `/login` |
-| **403 — Buyer account not linked to this user.** | User exists but has no `buyer_id` link | Ask admin to link your portal user to the correct buyer profile |
+| **403 - Buyer account not linked to this user.** | User exists but has no `buyer_id` link | Ask admin to link your portal user to the correct buyer profile |
 | **Your account is not registered on this platform domain.** | Session or navigation on wrong tenant host | Sign out, use correct subdomain, sign in again |
 | No leads visible | No sales yet, or filters too narrow | Clear filters on **My Leads**; confirm leads were sold to your buyer reference |
 | Leads stopped arriving | Low credit (prepay) or buyer suspended | Check `/portal/buyer/billing` and contact your account manager |

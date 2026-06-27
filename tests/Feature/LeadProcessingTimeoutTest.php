@@ -104,7 +104,7 @@ class LeadProcessingTimeoutTest extends TestCase
         $elapsedMs = (microtime(true) - $start) * 1000;
 
         $response->assertOk();
-        $this->assertLessThan(3000, $elapsedMs, "Sync processing took {$elapsedMs}ms — expected < 3000ms");
+        $this->assertLessThan(3000, $elapsedMs, "Sync processing took {$elapsedMs}ms - expected < 3000ms");
     }
 
     protected function fixtures(): array

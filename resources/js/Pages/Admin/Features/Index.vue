@@ -101,7 +101,7 @@ const statLabel = (key) => ({
     <AuthenticatedLayout>
         <PageHeader
             title="Platform Features"
-            description="Feature hubs — capture, validate, route, deliver, and report."
+            description="Feature hubs - capture, validate, route, deliver, and report."
         />
 
         <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -135,7 +135,7 @@ const statLabel = (key) => ({
                         class="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/50"
                     >
                         <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ statLabel(key) }}</p>
-                        <p class="text-lg font-bold text-slate-900 dark:text-white">{{ stats?.[key] ?? '—' }}</p>
+                        <p class="text-lg font-bold text-slate-900 dark:text-white">{{ stats?.[key] ?? '-' }}</p>
                     </div>
                 </div>
 

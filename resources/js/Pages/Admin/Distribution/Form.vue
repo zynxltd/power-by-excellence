@@ -91,6 +91,7 @@ const form = useForm({
     campaign_id: props.config?.campaign_id ?? new URLSearchParams(window.location.search).get('campaign_id') ?? '',
     name: props.config?.name ?? '',
     is_active: props.config?.is_active ?? true,
+    decline_url: props.config?.config?.decline_url ?? '',
     groups: initialGroups,
 });
 
@@ -140,7 +141,7 @@ const submit = () => {
 
     const options = {
         onSuccess: () => pushToast(successMessage, 'success'),
-        onError: () => pushToast('Could not save ping tree — check the highlighted fields.', 'error'),
+        onError: () => pushToast('Could not save ping tree - check the highlighted fields.', 'error'),
     };
 
     if (props.config) {
@@ -156,7 +157,7 @@ const submit = () => {
     <AuthenticatedLayout>
         <PageHeader
             :title="config ? 'Edit Ping Tree' : 'New Ping Tree'"
-            description="Step-by-step setup — link a campaign, then visually build tiers with drag-and-drop."
+            description="Step-by-step setup - link a campaign, then visually build tiers with drag-and-drop."
         >
             <template v-if="config" #actions>
                 <button
@@ -215,11 +216,12 @@ const submit = () => {
                     v-if="currentStep === 'tiers' && form.campaign_id"
                     title="Buyers & deliveries"
                     class="mt-4"
+                    overflow-visible
                 >
                     <p class="mb-3 text-xs text-slate-500">
                         Drag buyers into tiers on the right. Drop back here to unassign.
                     </p>
-                    <div id="ping-tree-deliveries-sidebar" />
+                    <div id="ping-tree-deliveries-sidebar" class="min-h-0" />
                 </Panel>
             </template>
 
@@ -257,6 +259,7 @@ const submit = () => {
                         <PingTreeBuilder
                             v-else
                             v-model:groups="form.groups"
+                            v-model:decline-url="form.decline_url"
                             :deliveries="availableDeliveries"
                             :routing-modes="routingModes"
                             :filter-field-options="tierFilterFieldOptions"

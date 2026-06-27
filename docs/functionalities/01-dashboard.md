@@ -1,4 +1,4 @@
-# 01 — Dashboard
+# 01 - Dashboard
 
 ## Purpose
 
@@ -26,7 +26,7 @@ The admin dashboard is the landing page after login. It provides a real-time sna
 |---------|-------------|
 | Header row | Platform overview title + actions (platforms, settings, live ops, new campaign) |
 | Tenant context banner | Shown when super admin has no tenant selected, or when tenant is active |
-| Partner platforms table | Super admin only — compact tenant list with switch / campaigns link |
+| Partner platforms table | Super admin only - compact tenant list with switch / campaigns link |
 | **Today KPI strip** | Compact horizontal stats: leads, sold, unsold, revenue, reject %, quarantine, pending (clickable) |
 | Quick link panels | Grouped chips: tenant management, campaigns & leads, operations, finance |
 | Charts | 7/14/30-day lead volume + status donut + revenue line chart |
@@ -76,7 +76,7 @@ Inspect the horizontal **compact stat strip** (not large cards):
 
 ### 4. Verify charts
 
-1. Find **Lead volume** chart — toggle 7d / 14d / 30d
+1. Find **Lead volume** chart - toggle 7d / 14d / 30d
 2. Confirm **Status breakdown** donut for the same period
 3. Scroll to **Revenue** chart
 
@@ -128,7 +128,7 @@ Use quick-link chip panels or top nav:
 | Scenario | Expected behaviour |
 |----------|-------------------|
 | Fresh seed, no leads today | Today strip may show 0; charts still show history |
-| Super admin without platform switch | May see all-tenant aggregate — select tenant for buyer/supplier CRUD |
+| Super admin without platform switch | May see all-tenant aggregate - select tenant for buyer/supplier CRUD |
 | Billing-locked account | Redirect to `/billing/lock` |
 | Queue worker stopped | Pending rises after async API ingest |
 
@@ -136,7 +136,7 @@ Use quick-link chip panels or top nav:
 
 ## Related Docs
 
-- [12-operations-and-logs.md](./12-operations-and-logs.md) — live pipeline monitor
-- [05-reports.md](./05-reports.md) — deeper analytics
-- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) — campaign configuration
-- [../UX_NAVIGATION_AUDIT.md](../UX_NAVIGATION_AUDIT.md) — navigation improvement backlog
+- [12-operations-and-logs.md](./12-operations-and-logs.md) - live pipeline monitor
+- [05-reports.md](./05-reports.md) - deeper analytics
+- [02-campaigns-and-verticals.md](./02-campaigns-and-verticals.md) - campaign configuration
+- [../UX_NAVIGATION_AUDIT.md](../UX_NAVIGATION_AUDIT.md) - navigation improvement backlog

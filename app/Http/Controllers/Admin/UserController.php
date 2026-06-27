@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -141,8 +142,9 @@ class UserController extends Controller
             'allowed_modules' => $validated['role'] === UserRole::Staff->value
                 ? ($validated['allowed_modules'] ?? \App\Support\AdminModules::defaultsForStaff())
                 : null,
-            'email_verified_at' => now(),
         ]);
+
+        event(new Registered($user));
 
         if ($request->boolean('send_credentials')) {
             $this->mailCredentials($request, $user, $password);
@@ -192,7 +194,7 @@ class UserController extends Controller
     public function suspend(User $user): RedirectResponse
     {
         if ($user->id === auth()->id()) {
-            return back()->with('error', 'You cannot suspend your own account — end impersonation first or ask another admin.');
+            return back()->with('error', 'You cannot suspend your own account - end impersonation first or ask another admin.');
         }
 
         if ($user->isSuperAdmin()) {
@@ -201,7 +203,7 @@ class UserController extends Controller
 
         $user->update(['is_suspended' => true, 'suspended_at' => now()]);
 
-        return back()->with('success', "{$user->name} suspended — they cannot sign in.");
+        return back()->with('success', "{$user->name} suspended - they cannot sign in.");
     }
 
     public function activate(User $user): RedirectResponse

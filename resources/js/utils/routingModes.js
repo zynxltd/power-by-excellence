@@ -17,7 +17,7 @@ export const ROUTING_MODE_STYLES = {
 };
 
 export function routingModeLabel(mode) {
-    if (!mode) return '—';
+    if (!mode) return '-';
     return ROUTING_MODE_LABELS[mode] ?? mode.replace(/_/g, ' ');
 }
 

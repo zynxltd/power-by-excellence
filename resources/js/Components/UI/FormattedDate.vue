@@ -11,7 +11,7 @@ const props = defineProps({
 const { formatDateTime, formatDate, formatTime, formatRelative } = useDateFormat();
 
 const display = computed(() => {
-    if (!props.value) return '—';
+    if (!props.value) return '-';
 
     return {
         datetime: formatDateTime(props.value),
@@ -31,5 +31,5 @@ const display = computed(() => {
     >
         {{ display }}
     </time>
-    <span v-else :class="['text-slate-400', props.class]">—</span>
+    <span v-else :class="['text-slate-400', props.class]">-</span>
 </template>

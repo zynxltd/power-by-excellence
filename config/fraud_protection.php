@@ -5,8 +5,8 @@ return [
         'starter' => [
             'label' => 'Starter',
             'fraud_included' => false,
-            'addon_price' => 29,
-            'validated_leads_cap' => 5000,
+            'addon_available' => false,
+            'validated_leads_cap' => null,
             'url_scanner' => false,
             'residential_proxy' => false,
         ],

@@ -26,7 +26,7 @@ class BuyerWebhookSync
         $payload = [
             'account_id' => $buyer->account_id,
             'buyer_id' => $buyer->id,
-            'name' => "Buyer sold — {$buyer->name}",
+            'name' => "Buyer sold - {$buyer->name}",
             'url' => $url,
             'events' => ['lead.sold'],
             'is_active' => true,

@@ -25,7 +25,7 @@ class BuyerLeadPurchaseMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Lead purchased — '.$this->lead->uuid,
+            subject: 'Lead purchased - '.$this->lead->uuid,
         );
     }
 

@@ -110,7 +110,7 @@ const submit = () => {
 <template>
     <Head :title="buyer ? 'Edit Buyer' : 'New Buyer'" />
     <AuthenticatedLayout>
-        <PageHeader :title="buyer ? 'Edit Buyer' : 'New Buyer'" description="Step-by-step setup — profile, credit, advanced rules, and portal login.">
+        <PageHeader :title="buyer ? 'Edit Buyer' : 'New Buyer'" description="Step-by-step setup - profile, credit, advanced rules, and portal login.">
             <template v-if="buyer" #actions>
                 <AppButton :href="route('buyers.show', buyer.id)" variant="secondary">View buyer</AppButton>
             </template>
@@ -162,7 +162,7 @@ const submit = () => {
                     <div class="mt-4">
                         <InputLabel value="Contact email" />
                         <TextInput v-model="form.email" type="email" class="mt-1 w-full" placeholder="ops@buyer.com" />
-                        <p class="mt-1 text-xs text-slate-500">For notifications — separate from portal login.</p>
+                        <p class="mt-1 text-xs text-slate-500">For notifications - separate from portal login.</p>
                     </div>
                     <div class="mt-4">
                         <InputLabel value="Billing currency" />
@@ -222,7 +222,7 @@ const submit = () => {
                             <select v-model="form.settings.pricing_model" class="form-select mt-1 w-full">
                                 <option value="cpl">CPL (cost per lead)</option>
                                 <option value="cpc">CPC (cost per contact)</option>
-                                <option value="cpf">CPF (cost per funded — finance verticals)</option>
+                                <option value="cpf">CPF (cost per funded - finance verticals)</option>
                                 <option value="rev_share">Revenue share</option>
                             </select>
                         </div>
@@ -267,7 +267,7 @@ const submit = () => {
                     <div class="mt-4">
                         <InputLabel value="Conversion postback URL (optional)" />
                         <TextInput v-model="form.settings.conversion_postback_url" class="mt-1 w-full font-mono text-sm" placeholder="https://buyer-crm.com/conversion?lead=[lead_uuid]" />
-                        <p class="mt-1 text-xs text-slate-500">Fired when you report a conversion back (funded, contacted, etc.) — not on initial sale.</p>
+                        <p class="mt-1 text-xs text-slate-500">Fired when you report a conversion back (funded, contacted, etc.) - not on initial sale.</p>
                     </div>
                     <label class="mt-4 flex items-center gap-2 text-sm font-medium">
                         <input v-model="form.settings.exclusive_only" type="checkbox" class="rounded" />

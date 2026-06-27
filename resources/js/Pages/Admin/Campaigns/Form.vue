@@ -189,7 +189,7 @@ const submit = () => {
     <AuthenticatedLayout>
         <PageHeader
             :title="campaign ? 'Edit Campaign' : 'New Campaign'"
-            :description="campaign ? `Editing ${campaign.reference}` : 'Step-by-step setup — identity, pricing, routing, and volume caps.'"
+            :description="campaign ? `Editing ${campaign.reference}` : 'Step-by-step setup - identity, pricing, routing, and volume caps.'"
         >
             <template v-if="campaign" #actions>
                 <AppButton :href="route('campaigns.show', campaign.id)" variant="secondary">View campaign</AppButton>
@@ -302,7 +302,7 @@ const submit = () => {
                         <div>
                             <InputLabel value="Primary country (ISO)" />
                             <select v-model="form.country" class="form-select w-full" :disabled="form.multi_geo">
-                                <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} — {{ label }}</option>
+                                <option v-for="(label, code) in countries" :key="code" :value="code">{{ code }} - {{ label }}</option>
                             </select>
                             <p class="mt-1 text-xs text-slate-500">Billing and default market. Used for the flag when not multi-geo.</p>
                             <InputError class="mt-1" :message="form.errors.country" />
@@ -444,7 +444,7 @@ const submit = () => {
                     <div class="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800">
                         <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Revenue budget</h3>
                         <p class="mt-1 text-xs text-slate-500">
-                            Max buyer revenue sold through this campaign ({{ capCurrency }}). Stops distribution when reached — separate from buyer credit limits.
+                            Max buyer revenue sold through this campaign ({{ capCurrency }}). Stops distribution when reached - separate from buyer credit limits.
                         </p>
                         <div class="mt-3 grid max-w-lg grid-cols-2 gap-4">
                             <div>

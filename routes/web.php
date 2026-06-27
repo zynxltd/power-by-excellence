@@ -49,6 +49,7 @@ use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserSupportTicketController;
+use App\Http\Controllers\PlatformEntryController;
 use App\Http\Controllers\Portal\BuyerPortalController;
 use App\Http\Controllers\Portal\SupplierPortalController;
 use App\Http\Controllers\PublicFormController;
@@ -71,18 +72,20 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'seo' => [
-            'title' => 'PowerByExcellence — Real-Time Lead Distribution Platform',
+            'title' => 'PowerByExcellence - Real-Time Lead Distribution Platform',
             'description' => 'Ping-tree routing, real-time buyer auctions, multi-vertical lead capture, and enterprise reporting for agencies and lead sellers.',
         ],
     ]);
 })->name('home');
+
+Route::middleware('auth')->get('/platform', PlatformEntryController::class)->name('platform.entry');
 
 Route::middleware('marketing.central')->group(function () {
     Route::get('/pricing', function () {
         return Inertia::render('Marketing/Pricing', [
             'canLogin' => Route::has('login'),
             'seo' => [
-                'title' => 'Pricing — PowerByExcellence Lead Distribution',
+                'title' => 'Pricing - PowerByExcellence Lead Distribution',
                 'description' => 'Starter, Growth, and Enterprise plans for lead distribution with ping-tree routing, real-time bidding, and fraud protection on Growth.',
             ],
         ]);
@@ -110,11 +113,12 @@ Route::get('/sdk/pbe-leads.js', function () {
 Route::middleware('hosted-form.embed')->group(function () {
     Route::get('/forms/{slug}', [PublicFormController::class, 'show'])->name('forms.show');
     Route::post('/forms/{slug}', [PublicFormController::class, 'submit'])->name('forms.submit');
+    Route::get('/forms/{slug}/status/{uuid}', [PublicFormController::class, 'status'])->name('forms.status');
 });
 Route::get('/r/{lead:uuid}', \App\Http\Controllers\LeadRedirectController::class)->name('lead.redirect');
 Route::get('/god-mode/handoff/{token}', GodModeHandoffController::class)->name('god-mode.handoff');
 
-Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
+Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/live-stats', \App\Http\Controllers\Admin\LiveStatsController::class)->name('live-stats');
     Route::get('/command-center', [CommandCenterController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('command-center.index');
@@ -189,6 +193,8 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::get('forms/{hostedForm}/edit', [FormBuilderController::class, 'edit'])->name('forms.edit');
     Route::put('forms/{hostedForm}', [FormBuilderController::class, 'update'])->name('forms.update');
     Route::delete('forms/{hostedForm}', [FormBuilderController::class, 'destroy'])->name('forms.destroy');
+    Route::post('forms/{hostedForm}/approve', [FormBuilderController::class, 'approve'])->name('forms.approve');
+    Route::post('forms/{hostedForm}/reject', [FormBuilderController::class, 'reject'])->name('forms.reject');
 
     Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
     Route::get('integrations/validation', [ValidationIntegrationController::class, 'edit'])->name('integrations.validation');
@@ -251,10 +257,6 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::post('impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
     Route::post('impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
 
-    Route::get('notifications/inbox', [NotificationInboxController::class, 'index'])->name('notifications.inbox');
-    Route::post('notifications/read-all', [NotificationInboxController::class, 'markAllRead'])->name('notifications.read-all');
-    Route::post('notifications/{notification}/read', [NotificationInboxController::class, 'markRead'])->name('notifications.read');
-
     Route::middleware('superadmin')->prefix('notifications/admin')->name('notifications.admin.')->group(function () {
         Route::get('/', [PlatformNotificationAdminController::class, 'index'])->name('index');
         Route::post('/', [PlatformNotificationAdminController::class, 'store'])->name('store');
@@ -269,7 +271,12 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::put('settings', [AccountSettingsController::class, 'update'])->name('settings.update');
 });
 
-Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active'])->group(function () {
+Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active'])->group(function () {
+    Route::get('notifications', [NotificationInboxController::class, 'page'])->name('notifications.index');
+    Route::get('notifications/inbox', [NotificationInboxController::class, 'index'])->name('notifications.inbox');
+    Route::post('notifications/read-all', [NotificationInboxController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationInboxController::class, 'markRead'])->name('notifications.read');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences');
@@ -284,27 +291,34 @@ Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAc
     Route::post('support/tickets/{ticket}/reply', [UserSupportTicketController::class, 'reply'])->name('support.reply');
 });
 
-Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':buyer'])
+Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':buyer'])
     ->prefix('portal/buyer')
     ->name('portal.buyer.')
     ->group(function () {
         Route::get('/', [BuyerPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/leads', [BuyerPortalController::class, 'leads'])->name('leads');
         Route::get('/leads/download', [BuyerPortalController::class, 'downloadLeads'])->name('leads.download');
+        Route::get('/leads/{uuid}', [BuyerPortalController::class, 'showLead'])->name('leads.show');
         Route::post('/feedback', [BuyerPortalController::class, 'feedback'])->name('feedback');
         Route::post('/returns', [BuyerPortalController::class, 'returnLead'])->name('returns');
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
+        Route::get('/integrations', [BuyerPortalController::class, 'integrations'])->name('integrations');
     });
 
-Route::middleware(['auth', 'verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':supplier'])
+Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':supplier'])
     ->prefix('portal/supplier')
     ->name('portal.supplier.')
     ->group(function () {
         Route::get('/', [SupplierPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/leads', [SupplierPortalController::class, 'leads'])->name('leads');
         Route::get('/leads/download', [SupplierPortalController::class, 'downloadLeads'])->name('leads.download');
+        Route::get('/leads/{uuid}', [SupplierPortalController::class, 'showLead'])->name('leads.show');
         Route::get('/embeds', [SupplierPortalController::class, 'embeds'])->name('embeds');
+        Route::post('/forms', [SupplierPortalController::class, 'storeForm'])->name('forms.store');
+        Route::put('/forms/{hostedForm}', [SupplierPortalController::class, 'updateForm'])->name('forms.update');
+        Route::post('/forms/{hostedForm}/submit', [SupplierPortalController::class, 'submitForm'])->name('forms.submit');
+        Route::get('/integrations', [SupplierPortalController::class, 'integrations'])->name('integrations');
         Route::get('/billing', [SupplierPortalController::class, 'billing'])->name('billing');
     });
 

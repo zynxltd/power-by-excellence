@@ -171,8 +171,12 @@ const sendBulk = (id) => {
     <AuthenticatedLayout>
         <PageHeader
             title="Automation"
-            description="Sequences, bulk SMS campaigns, and event alerts."
-        />
+            description="Sequences, bulk SMS campaigns, event alerts, and consumer auto responders."
+        >
+            <template #actions>
+                <AppButton :href="route('features.auto-responders')" variant="secondary">SMS &amp; email responders</AppButton>
+            </template>
+        </PageHeader>
 
         <div class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800">
             <button
@@ -195,9 +199,9 @@ const sendBulk = (id) => {
         <div v-show="activeTab === 'routing'" class="space-y-6">
             <div class="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
                 <p class="font-semibold">Your platform ping trees only</p>
-                <p class="mt-1">Routing configs shown here belong to <strong>this tenant</strong> — campaigns, buyers, and tiers from other platforms are never visible.</p>
+                <p class="mt-1">Routing configs shown here belong to <strong>this tenant</strong> - campaigns, buyers, and tiers from other platforms are never visible.</p>
                 <p class="mt-2 text-xs text-indigo-700 dark:text-indigo-300">
-                    <strong>Parallel auction</strong> — all buyers in a tier are pinged at once; highest bid above the floor wins and receives the full post. Other modes: waterfall (first accept wins), weighted, round-robin, sequential ping.
+                    <strong>Parallel auction</strong> - all buyers in a tier are pinged at once; highest bid above the floor wins and receives the full post. Other modes: waterfall (first accept wins), weighted, round-robin, sequential ping.
                 </p>
             </div>
             <div class="flex flex-wrap gap-3">
@@ -277,7 +281,7 @@ const sendBulk = (id) => {
                                     <option value="on_lead_sold">On lead sold</option>
                                     <option value="on_lead_unsold">On lead unsold</option>
                                 </select>
-                                <p class="mt-1 text-xs text-slate-500">{{ triggerLabels[sequenceForm.trigger_event] }} — steps run in order with delays between each.</p>
+                                <p class="mt-1 text-xs text-slate-500">{{ triggerLabels[sequenceForm.trigger_event] }} - steps run in order with delays between each.</p>
                             </div>
                         </div>
                         <div>
@@ -388,7 +392,7 @@ const sendBulk = (id) => {
                             <ol class="space-y-2 border-l-2 border-indigo-200 pl-4 dark:border-indigo-800">
                                 <li v-for="(step, si) in seq.steps" :key="si" class="text-xs text-slate-600 dark:text-slate-400">
                                     <span class="font-semibold text-slate-800 dark:text-slate-200">Step {{ si + 1 }}</span>
-                                    — {{ channelIcons[step.channel] }} {{ step.channel }}
+                                    - {{ channelIcons[step.channel] }} {{ step.channel }}
                                     <span v-if="step.delay_minutes"> after {{ formatDelay(step.delay_minutes) }}</span>
                                     <span v-else-if="si === 0"> immediately</span>
                                     <p v-if="step.config?.subject" class="truncate text-slate-500">Subject: {{ step.config.subject }}</p>
@@ -571,7 +575,7 @@ const sendBulk = (id) => {
 
                 <Panel title="Alert fire history" :padding="false">
                     <p class="border-b border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-slate-800">
-                        When a threshold is breached, the alert fires here — useful for auditing notifications sent via email, SMS, Slack, or webhook.
+                        When a threshold is breached, the alert fires here - useful for auditing notifications sent via email, SMS, Slack, or webhook.
                     </p>
                     <div v-if="!recentAlertFires?.length" class="p-6 text-sm text-slate-500">No alerts have fired yet.</div>
                     <div

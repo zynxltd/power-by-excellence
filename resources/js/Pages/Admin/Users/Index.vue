@@ -125,7 +125,7 @@ const submit = () => {
             form.send_credentials = true;
             closeCreate();
         },
-        onError: () => pushToast('Could not create user — check the form.', 'error'),
+        onError: () => pushToast('Could not create user - check the form.', 'error'),
     });
 };
 
@@ -188,7 +188,7 @@ const saveEdit = () => {
             editingId.value = null;
             showAdvancedEdit.value = false;
         },
-        onError: () => pushToast('Could not update user — check the form.', 'error'),
+        onError: () => pushToast('Could not update user - check the form.', 'error'),
     });
 };
 
@@ -519,7 +519,7 @@ const roleLabel = (role) => ({
                             <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">{{ roleLabel(u.role) }}</span>
                             <p v-if="u.role === 'staff'" class="mt-1 text-xs text-slate-500">{{ u.allowed_modules?.length ?? 0 }} modules</p>
                         </td>
-                        <td class="px-6 py-4 text-xs text-slate-500">{{ u.buyer?.name ?? u.supplier?.name ?? '—' }}</td>
+                        <td class="px-6 py-4 text-xs text-slate-500">{{ u.buyer?.name ?? u.supplier?.name ?? '-' }}</td>
                         <td class="px-6 py-4">
                             <span :class="['rounded-full px-2 py-0.5 text-xs font-medium', u.is_suspended ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700']">
                                 {{ u.is_suspended ? 'Suspended' : 'Active' }}

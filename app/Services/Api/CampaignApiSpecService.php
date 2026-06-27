@@ -177,6 +177,7 @@ class CampaignApiSpecService
             'revenue' => null,
             'currency' => 'GBP',
             'redirect_url' => null,
+            'decline_url' => null,
             'received_at' => '2026-06-26T12:00:00+00:00',
             'distributed_at' => null,
         ];

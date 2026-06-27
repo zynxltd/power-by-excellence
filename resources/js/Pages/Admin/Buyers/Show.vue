@@ -45,7 +45,7 @@ const buyerStatStrip = computed(() => [
         <ManagementHubNav type="buyer" :entity="buyer" />
 
         <div v-if="!isOperational" class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            This buyer cannot receive leads — check status, credit balance, or account billing.
+            This buyer cannot receive leads - check status, credit balance, or account billing.
         </div>
 
         <Panel v-if="portalUser" title="Buyer portal" class="mb-6">

@@ -1,7 +1,7 @@
 # UX & Navigation Audit
 
 > **Last updated:** 25 June 2026  
-> **Status:** Recommendations only — not yet implemented unless noted in [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md).
+> **Status:** Recommendations only - not yet implemented unless noted in [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md).
 
 This document captures a product/UX review of admin navigation and user flows. The goal is to make the platform **dead simple** for operators while keeping advanced routing, ping-tree, and delivery configuration available behind progressive disclosure.
 
@@ -38,8 +38,8 @@ The platform is **powerful but operator-shaped**. Technical users who already un
 
 | Area | Detail |
 |------|--------|
-| **Top nav** | Home · Campaigns · Ops · Reports · More — compact, scrollable on small screens |
-| **Campaign workflow bar** | Overview → Settings → API spec → Leads → Deliveries → Ping tree → Live ops — keeps campaign context |
+| **Top nav** | Home · Campaigns · Ops · Reports · More - compact, scrollable on small screens |
+| **Campaign workflow bar** | Overview → Settings → API spec → Leads → Deliveries → Ping tree → Live ops - keeps campaign context |
 | **Live stats bar** | Persistent today-metrics with drill-down links |
 | **Compact stat strips** | Horizontal KPI rows on dashboard, ops, reports, finance, entity show pages |
 | **Tenant hub (More)** | Campaign-scoped shortcuts when inside a campaign context |
@@ -67,7 +67,7 @@ Typical path: create campaign → API spec → buyer + credit → delivery (8 st
 
 Nothing on campaign overview shows progress (“3 of 6 complete”) or blockers (“no active delivery”).
 
-**Recommendation:** Setup checklist on campaign show: buyer exists, delivery active, API key, first lead today — each linking to the right screen. Optional “Send test lead” CTA.
+**Recommendation:** Setup checklist on campaign show: buyer exists, delivery active, API key, first lead today - each linking to the right screen. Optional “Send test lead” CTA.
 
 #### 3. Tenant context explained in three places
 
@@ -190,7 +190,7 @@ Gate behind **Advanced** or **More**:
 
 ## Related docs
 
-- [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) — built features and URL map
-- [`functionalities/01-dashboard.md`](./functionalities/01-dashboard.md) — dashboard QA
-- [`functionalities/02-campaigns-and-verticals.md`](./functionalities/02-campaigns-and-verticals.md) — campaign setup
-- [`admin/command-center.md`](./admin/command-center.md) — super-admin cross-tenant view
+- [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) - built features and URL map
+- [`functionalities/01-dashboard.md`](./functionalities/01-dashboard.md) - dashboard QA
+- [`functionalities/02-campaigns-and-verticals.md`](./functionalities/02-campaigns-and-verticals.md) - campaign setup
+- [`admin/command-center.md`](./admin/command-center.md) - super-admin cross-tenant view

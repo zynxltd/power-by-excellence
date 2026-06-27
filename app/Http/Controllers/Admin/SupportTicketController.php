@@ -71,10 +71,19 @@ class SupportTicketController extends Controller
 
         $validated = $request->validate(['status' => 'required|in:open,pending,resolved,closed']);
 
+        $previousStatus = $ticket->status;
+
         $ticket->update([
             'status' => $validated['status'],
             'closed_at' => $validated['status'] === 'closed' ? now() : null,
         ]);
+
+        if ($validated['status'] === 'resolved' && $previousStatus !== 'resolved') {
+            app(PlatformNotificationService::class)->notifySupportTicketResolved(
+                $request->user(),
+                $ticket,
+            );
+        }
 
         return back()->with('success', 'Ticket updated.');
     }

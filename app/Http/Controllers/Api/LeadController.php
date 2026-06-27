@@ -96,9 +96,8 @@ class LeadController extends Controller
 
     protected function formatResponse(Lead $lead): array
     {
-        $redirectUrl = $lead->status->value === 'sold'
-            ? app(\App\Services\Leads\LeadRedirectService::class)->publicRedirectUrl($lead->fresh())
-            : null;
+        $redirects = app(\App\Services\Leads\LeadRedirectService::class);
+        $freshLead = $lead->fresh();
 
         return [
             'status' => $lead->status->value,
@@ -109,7 +108,10 @@ class LeadController extends Controller
             'buyer_reference' => $lead->soldToBuyer?->reference,
             'revenue' => $lead->financials?->revenue,
             'currency' => $lead->financials?->currency ?? $lead->campaign?->currency,
-            'redirect_url' => $lead->status->value === 'sold' ? $redirectUrl : null,
+            'redirect_url' => $lead->status->value === 'sold' ? $redirects->publicRedirectUrl($freshLead) : null,
+            'decline_url' => in_array($lead->status->value, ['unsold', 'quarantined'], true)
+                ? $redirects->publicDeclineUrl($freshLead)
+                : null,
             'received_at' => $lead->received_at?->toIso8601String(),
             'distributed_at' => $lead->distributed_at?->toIso8601String(),
         ];

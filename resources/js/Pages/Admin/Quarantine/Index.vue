@@ -93,7 +93,7 @@ const quarantineStrip = computed(() => [
     <AuthenticatedLayout>
         <PageHeader
             title="Quarantine Queue"
-            description="Review, release, extend, or reject held leads — validation failures, out-of-hours, and unsold retries."
+            description="Review, release, extend, or reject held leads - validation failures, out-of-hours, and unsold retries."
         >
             <template #actions>
                 <AppButton v-if="selected.length" variant="secondary" @click="bulkRelease">
