@@ -217,6 +217,12 @@ useApprovalHighlight();
                             </label>
                         </div>
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                            <input v-model="form.is_active" type="checkbox" class="rounded" />
+                            Active — fire on matching events
+                        </label>
+                    </div>
                     <div class="flex items-end md:col-span-2">
                         <PrimaryButton :disabled="form.processing || !form.events.length">Add Webhook</PrimaryButton>
                     </div>
@@ -252,6 +258,12 @@ useApprovalHighlight();
                                 {{ ev }}
                             </label>
                         </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                            <input v-model="editForm.is_active" type="checkbox" class="rounded" />
+                            Active — fire on matching events
+                        </label>
                     </div>
                     <div class="flex items-end gap-2 md:col-span-2">
                         <PrimaryButton :disabled="editForm.processing || !editForm.events.length">Save changes</PrimaryButton>

@@ -28,6 +28,12 @@ const onSuppressionFile = (e) => { suppressionForm.file = e.target.files[0]; };
     <AuthenticatedLayout>
         <PageHeader title="CSV Imports" description="Bulk import leads or upload suppression lists (hashed opt-outs)." />
 
+        <Panel class="mb-6">
+            <p class="text-sm text-slate-700 dark:text-slate-300">
+                <strong>Supplier self-serve:</strong> linked suppliers can bulk-upload CSV files from the supplier portal import page (same validation pipeline, attributed to their account).
+            </p>
+        </Panel>
+
         <Panel class="mb-6 border-amber-200 bg-amber-50/50 dark:border-amber-500/30 dark:bg-amber-500/5">
             <p class="text-sm text-slate-700 dark:text-slate-300">
                 <strong>Queue worker required.</strong> CSV imports are processed asynchronously. Ensure a queue worker is running
