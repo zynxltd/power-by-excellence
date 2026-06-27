@@ -9,6 +9,8 @@ use App\Models\Lead;
 use App\Services\Logging\PlatformLogger;
 use App\Services\Rules\RuleEngine;
 use App\Support\Delivery\EmailRecipientResolver;
+use App\Services\Messaging\MessagingCredentialsResolver;
+use App\Services\Messaging\MessagingGateway;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -68,10 +70,15 @@ class DeliveryExecutor
             $result = match ($delivery->method) {
                 DeliveryMethod::DirectPost => $this->directPost($fields, $config, $log, $delivery),
                 DeliveryMethod::PingPost => $this->pingPost($fields, $pingFields ?: $fields, $config, $log, $lead, $delivery),
+                DeliveryMethod::TwoStepAuth => $this->twoStepAuth($fields, $pingFields ?: $fields, $config, $log, $lead, $delivery),
+                DeliveryMethod::CampaignTransfer => $this->campaignTransfer($lead, $delivery, $config, $log),
                 DeliveryMethod::StoreLead => $this->storeLead($delivery, $log, $fields),
                 DeliveryMethod::Email => $this->sendEmail($fields, $config, $log, $delivery),
                 DeliveryMethod::EmailPingPost => $this->emailPingPost($fields, $pingFields ?: $fields, $config, $log, $delivery),
                 DeliveryMethod::Sms => $this->sendSms($fields, $config, $log, $delivery),
+                DeliveryMethod::CallPingPost,
+                DeliveryMethod::CallDirectTransfer,
+                DeliveryMethod::CallWarmTransfer => DeliveryResult::skipped('call_delivery'),
                 default => DeliveryResult::failed('Unsupported delivery method'),
             };
 
@@ -446,16 +453,25 @@ class DeliveryExecutor
         $log->update(['post_request' => array_merge(['subject' => $subject], $recipients)]);
 
         try {
-            \Illuminate\Support\Facades\Mail::raw($body, function ($message) use ($recipients, $subject) {
-                $message->to($recipients['to']);
-                if (! empty($recipients['cc'])) {
-                    $message->cc($recipients['cc']);
-                }
-                if (! empty($recipients['bcc'])) {
-                    $message->bcc($recipients['bcc']);
-                }
-                $message->subject($subject);
-            });
+            $account = $delivery->loadMissing('campaign.account')->campaign?->account;
+            $resolver = app(MessagingCredentialsResolver::class);
+            $resolved = $resolver->resolveForAccount($account);
+
+            $gateway = app(MessagingGateway::class);
+            $sent = false;
+
+            foreach ($recipients['to'] as $to) {
+                $sent = $gateway->sendEmail($to, $subject, $body, [
+                    'provider' => $resolved['provider'],
+                    'from' => $resolved['from'],
+                    'reply_to' => $resolved['reply_to'],
+                    'credentials' => $resolved['credentials'],
+                ]) || $sent;
+            }
+
+            if (! $sent) {
+                return DeliveryResult::failed('Email delivery failed');
+            }
 
             $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
 
@@ -492,16 +508,20 @@ class DeliveryExecutor
         ]);
 
         try {
-            \Illuminate\Support\Facades\Mail::raw($body, function ($message) use ($recipients, $subject) {
-                $message->to($recipients['to']);
-                if (! empty($recipients['cc'])) {
-                    $message->cc($recipients['cc']);
-                }
-                if (! empty($recipients['bcc'])) {
-                    $message->bcc($recipients['bcc']);
-                }
-                $message->subject($subject);
-            });
+            $account = $delivery->loadMissing('campaign.account')->campaign?->account;
+            $resolver = app(MessagingCredentialsResolver::class);
+            $resolved = $resolver->resolveForAccount($account);
+            $gateway = app(MessagingGateway::class);
+            $sent = false;
+
+            foreach ($recipients['to'] as $to) {
+                $sent = $gateway->sendEmail($to, $subject, $body, [
+                    'provider' => $resolved['provider'],
+                    'from' => $resolved['from'],
+                    'reply_to' => $resolved['reply_to'],
+                    'credentials' => $resolved['credentials'],
+                ]) || $sent;
+            }
 
             $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
 
@@ -509,6 +529,82 @@ class DeliveryExecutor
         } catch (Throwable $e) {
             return DeliveryResult::failed('Email ping-post failed: '.$e->getMessage());
         }
+    }
+
+    protected function twoStepAuth(array $fullFields, array $pingFields, array $config, DeliveryLog $log, Lead $lead, Delivery $delivery): DeliveryResult
+    {
+        $ping = $this->pingOnly($lead, $delivery, $pingFields, (float) ($lead->campaign->floor_price ?? 0), $log);
+
+        if ($ping->skipped) {
+            return DeliveryResult::skipped($ping->skipReason ?? 'ping_rejected');
+        }
+
+        if (! $ping->success) {
+            return DeliveryResult::failed('Ping rejected');
+        }
+
+        $otpUrl = $config['otp_url'] ?? $config['post_url'] ?? null;
+        if (! $otpUrl) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_otp_url']);
+
+            return DeliveryResult::failed('OTP URL not configured');
+        }
+
+        $otpPayload = $this->payloadBuilder->buildPostPayload($config, $fullFields, $ping->pingBody, $lead);
+        $otpField = $config['otp_field'] ?? 'otp';
+        $otpPayload[$otpField] = $config['otp_value'] ?? $otpPayload[$otpField] ?? '';
+
+        $log->update(['post_request' => ['url' => $otpUrl, 'body' => $otpPayload]]);
+
+        $otpResponse = Http::timeout($config['timeout'] ?? config('performance.post_timeout_seconds', 3))
+            ->post($otpUrl, $otpPayload);
+        $otpBody = $otpResponse->json() ?? ['raw' => $otpResponse->body()];
+        $log->update(['post_response' => $otpBody, 'http_status' => $otpResponse->status()]);
+
+        if ($this->responseMatcher->matchesPostSuccess($config, $otpResponse->status(), $otpBody)) {
+            $revenue = $this->resolveRevenue($config, $otpBody, $ping->pingBody, $delivery, $fullFields);
+
+            return DeliveryResult::success($revenue, $otpResponse->status());
+        }
+
+        return DeliveryResult::failed('OTP post rejected', $otpResponse->status());
+    }
+
+    protected function campaignTransfer(Lead $lead, Delivery $delivery, array $config, DeliveryLog $log): DeliveryResult
+    {
+        $targetCampaignId = (int) ($config['campaign_id'] ?? 0);
+
+        if (! $targetCampaignId) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_campaign_id']);
+
+            return DeliveryResult::failed('Target campaign not configured');
+        }
+
+        $targetCampaign = \App\Models\Campaign::withoutGlobalScopes()->find($targetCampaignId);
+
+        if (! $targetCampaign || $targetCampaign->account_id !== $lead->account_id) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'invalid_target_campaign']);
+
+            return DeliveryResult::failed('Target campaign not in account');
+        }
+
+        $lead->update([
+            'campaign_id' => $targetCampaignId,
+            'status' => 'accepted',
+            'sold_to_buyer_id' => null,
+            'distributed_at' => null,
+        ]);
+
+        $log->update([
+            'status' => 'success',
+            'post_response' => ['transferred_to_campaign_id' => $targetCampaignId],
+        ]);
+
+        \App\Support\Queue\LeadJobDispatcher::dispatch($lead->id);
+
+        $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $lead->allFields());
+
+        return DeliveryResult::success($revenue);
     }
 
     protected function sendSms(array $fields, array $config, DeliveryLog $log, Delivery $delivery): DeliveryResult
