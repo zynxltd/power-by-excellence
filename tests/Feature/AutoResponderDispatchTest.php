@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RunAutoResponderJob;
 use App\Models\AutoResponder;
 use App\Models\Campaign;
 use App\Models\Lead;
 use App\Models\LeadEvent;
 use App\Services\Automation\AutoResponderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AutoResponderDispatchTest extends TestCase
@@ -69,6 +71,36 @@ class AutoResponderDispatchTest extends TestCase
 
         app(AutoResponderService::class)->dispatchForLead($lead->fresh(), 'on_lead_sold');
 
+        $this->assertFalse(
+            LeadEvent::where('lead_id', $lead->id)->where('event_type', 'auto_responder.sent')->exists()
+        );
+    }
+
+    public function test_delayed_auto_responder_is_queued_not_sent_immediately(): void
+    {
+        Queue::fake();
+
+        $campaign = Campaign::first();
+        $lead = Lead::where('campaign_id', $campaign->id)->first();
+
+        AutoResponder::create([
+            'account_id' => $campaign->account_id,
+            'campaign_id' => $campaign->id,
+            'name' => '24h follow-up',
+            'channel' => 'email',
+            'trigger_event' => 'on_lead_received',
+            'delay_minutes' => 1440,
+            'status' => 'active',
+            'config' => [
+                'subject' => 'Following up',
+                'body' => 'Hi [firstname]',
+                'to_field' => 'email',
+            ],
+        ]);
+
+        app(AutoResponderService::class)->dispatchForLead($lead, 'on_lead_received');
+
+        Queue::assertPushed(RunAutoResponderJob::class);
         $this->assertFalse(
             LeadEvent::where('lead_id', $lead->id)->where('event_type', 'auto_responder.sent')->exists()
         );

@@ -4,6 +4,17 @@
 
 Partner platforms are **tenant accounts** - isolated lead distribution instances on dedicated subdomains (e.g. `excellence-uk.powerbyexcellence.test`).
 
+## Self-service model
+
+Every partner platform is **fully self-serviced** by its tenant admin. After provisioning, the partner runs their own:
+
+- Campaigns, deliveries, and ping trees
+- Buyers, suppliers, and portal users
+- Branding, platform settings, and API keys
+- Buyer billing, credits, and day-to-day operations
+
+**Super admin role** is intentionally lightweight: provision new platforms, monitor cross-tenant health (Command Center, Live Feed), handle billing locks, and use god mode or impersonation only when support is needed. You should not need to manage buyers, suppliers, or campaigns for healthy tenants.
+
 ## Listing
 
 The index shows every `Account` with:

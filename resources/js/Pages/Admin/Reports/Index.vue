@@ -12,7 +12,7 @@ import ReportMetricSection from '@/Components/UI/ReportMetricSection.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import LogFilters from '@/Components/UI/LogFilters.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
-import { useMoneyFormat } from '@/Composables/useMoneyFormat';
+import { useMoneyFormat, averageFieldFromRows } from '@/Composables/useMoneyFormat';
 import { useReportDrilldown } from '@/Composables/useReportDrilldown';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -40,27 +40,62 @@ const props = defineProps({
     summary: Object,
 });
 
-const { formatMoney, formatNumber, formatMoneyMulti } = useMoneyFormat(props.currency);
+const { formatMoney, formatNumber } = useMoneyFormat(props.currency);
 const { leadsDrill, deliveryDrill, financeDrill, periodForLeads, periodForFinance } = useReportDrilldown(props);
 
 const hasLeadVolume = computed(() => (props.summary?.leads_period ?? 0) > 0);
 const revenueByCurrency = computed(() => props.summary?.revenue_by_currency ?? []);
-const financialDecimals = computed(() => (props.hasMultipleCurrencies ? 0 : 0));
+const financialDecimals = computed(() => 0);
 
-const formatFinancial = (amount, field = 'revenue') => {
-    if (props.hasMultipleCurrencies && field === 'revenue') {
-        return formatMoneyMulti(revenueByCurrency.value, { decimals: 0, field: 'revenue' });
+const displayFinancial = computed(() => {
+    if (!props.hasMultipleCurrencies) {
+        return {
+            revenue: props.summary?.revenue_period ?? 0,
+            payout: props.summary?.payout_period ?? 0,
+            margin: props.summary?.margin_period ?? 0,
+        };
     }
 
-    if (props.hasMultipleCurrencies && field === 'payout') {
-        return formatMoneyMulti(revenueByCurrency.value, { decimals: 0, field: 'payout' });
+    const rows = revenueByCurrency.value;
+
+    return {
+        revenue: averageFieldFromRows(rows, 'revenue'),
+        payout: averageFieldFromRows(rows, 'payout'),
+        margin: averageFieldFromRows(rows, 'margin'),
+    };
+});
+
+const displayKpis = computed(() => {
+    if (!props.hasMultipleCurrencies) {
+        return {
+            ...kpis.value,
+            payout_share_pct: payoutSharePct.value,
+            net_per_lead: netPerLead.value,
+        };
     }
 
-    if (props.hasMultipleCurrencies && field === 'margin') {
-        return formatMoneyMulti(revenueByCurrency.value, { decimals: 0, field: 'margin' });
+    const rows = kpisByCurrency.value;
+
+    return {
+        epl: averageFieldFromRows(rows, 'epl'),
+        epc: averageFieldFromRows(rows, 'epc'),
+        cpa: averageFieldFromRows(rows, 'cpa'),
+        cpl: averageFieldFromRows(rows, 'cpl'),
+        mpl: averageFieldFromRows(rows, 'mpl'),
+        margin_pct: averageFieldFromRows(rows, 'margin_pct'),
+        payout_share_pct: averageFieldFromRows(rows, 'payout_share_pct'),
+        net_per_lead: averageFieldFromRows(rows, 'net_per_lead'),
+    };
+});
+
+const formatFinancial = (amount) => formatMoney(amount, { decimals: financialDecimals.value });
+
+const formatPctValue = (value) => {
+    if (value === null || value === undefined) {
+        return '-';
     }
 
-    return formatMoney(amount, { decimals: financialDecimals.value });
+    return `${Math.round(Number(value) * 10) / 10}%`;
 };
 
 const formatRowMoney = (amount, rowCurrency) => formatMoney(amount, {
@@ -105,26 +140,6 @@ const formatDeliveryDuration = () => {
 
 const kpisByCurrency = computed(() => props.summary?.kpis_by_currency ?? []);
 
-const formatKpiMoneyMulti = (field) => {
-    const rows = kpisByCurrency.value;
-    if (!rows.length) {
-        return '-';
-    }
-
-    return rows
-        .map((row) => formatMoney(row[field], { decimals: 2, currency: row.currency }))
-        .join(' · ');
-};
-
-const formatKpiPctMulti = (field) => {
-    const rows = kpisByCurrency.value;
-    if (!rows.length) {
-        return '-';
-    }
-
-    return rows.map((row) => `${row.currency} ${row[field]}%`).join(' · ');
-};
-
 const payoutSharePct = computed(() => pct(props.summary?.payout_period ?? 0, props.summary?.revenue_period ?? 0));
 const netPerLead = computed(() => {
     const leads = props.summary?.leads_period ?? 0;
@@ -140,55 +155,44 @@ const volumeStrip = computed(() => [
     { label: 'Rejected', value: formatNumber(props.summary?.rejected_period), href: leadsDrill({ status: 'rejected' }), title: 'Leads rejected at validation or ingest', accent: 'rose' },
     { label: 'Quarantined', value: formatNumber(props.summary?.quarantined_period), href: leadsDrill({ status: 'quarantined' }), title: 'Leads held in quarantine during this period', accent: 'orange' },
     {
-        label: props.hasMultipleCurrencies ? 'Revenue (by currency)' : 'Revenue',
+        label: 'Revenue',
         title: props.hasMultipleCurrencies
-            ? 'Sold-lead revenue by currency - opens sold leads with financials'
+            ? 'Average sold-lead revenue across currencies in this view'
             : 'Total buyer revenue from sold leads in this period',
-        value: formatFinancial(props.summary?.revenue_period, 'revenue'),
+        value: formatFinancial(displayFinancial.value.revenue),
         href: leadsDrill({ status: 'sold' }),
         accent: 'cyan',
     },
     {
-        label: props.hasMultipleCurrencies ? 'Payout (by currency)' : 'Payout',
-        title: 'Supplier payout totals - opens finance breakdown by buyer and supplier',
-        value: formatFinancial(props.summary?.payout_period, 'payout'),
+        label: 'Payout',
+        title: props.hasMultipleCurrencies
+            ? 'Average supplier payout across currencies in this view'
+            : 'Supplier payout totals - opens finance breakdown by buyer and supplier',
+        value: formatFinancial(displayFinancial.value.payout),
         href: financeDrill(),
         accent: 'amber',
     },
     {
-        label: props.hasMultipleCurrencies ? 'Margin (by currency)' : 'Margin',
-        title: 'Revenue minus payout - opens finance summary for this period',
-        value: formatFinancial(props.summary?.margin_period, 'margin'),
+        label: 'Margin',
+        title: props.hasMultipleCurrencies
+            ? 'Average margin across currencies in this view'
+            : 'Revenue minus payout - opens finance summary for this period',
+        value: formatFinancial(displayFinancial.value.margin),
         href: financeDrill(),
         accent: 'violet',
     },
 ]);
 
-const economicsStrip = computed(() => {
-    if (props.hasMultipleCurrencies) {
-        return [
-            { label: 'EPL (sold)', title: 'Revenue ÷ sold leads - view sold leads with revenue', value: formatKpiMoneyMulti('epl'), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
-            { label: 'EPC (ingest)', title: 'Revenue ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('epc'), href: leadsDrill(), accent: 'indigo' },
-            { label: 'CPA (payout)', title: 'Payout ÷ sold leads - view sold leads with payout', value: formatKpiMoneyMulti('cpa'), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
-            { label: 'CPL (ingest)', title: 'Payout ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('cpl'), href: leadsDrill(), accent: 'rose' },
-            { label: 'MPL (margin)', title: 'Margin ÷ sold leads - view sold leads with margin', value: formatKpiMoneyMulti('mpl'), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
-            { label: 'Margin %', title: 'Margin ÷ revenue - opens finance summary', value: formatKpiPctMulti('margin_pct'), href: financeDrill(), accent: 'violet' },
-            { label: 'Pay share', title: 'Payout ÷ revenue - opens finance summary', value: formatKpiPctMulti('payout_share_pct'), href: financeDrill(), accent: 'amber' },
-            { label: 'Net / lead', title: 'Margin ÷ leads received - view all leads in period', value: formatKpiMoneyMulti('net_per_lead'), href: leadsDrill(), accent: 'violet' },
-        ];
-    }
-
-    return [
-        { label: 'EPL (sold)', title: 'Revenue ÷ sold leads - view sold leads with revenue', value: formatMoney(kpis.value.epl), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
-        { label: 'EPC (ingest)', title: 'Revenue ÷ leads received - view all leads in period', value: formatMoney(kpis.value.epc), href: leadsDrill(), accent: 'indigo' },
-        { label: 'CPA (payout)', title: 'Payout ÷ sold leads - view sold leads with payout', value: formatMoney(kpis.value.cpa), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
-        { label: 'CPL (ingest)', title: 'Payout ÷ leads received - view all leads in period', value: formatMoney(kpis.value.cpl), href: leadsDrill(), accent: 'rose' },
-        { label: 'MPL (margin)', title: 'Margin ÷ sold leads - view sold leads with margin', value: formatMoney(kpis.value.mpl), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
-        { label: 'Margin %', title: 'Margin ÷ revenue - opens finance summary', value: `${kpis.value.margin_pct ?? 0}%`, href: financeDrill(), accent: 'violet' },
-        { label: 'Pay share', title: 'Payout ÷ revenue - opens finance summary', value: `${payoutSharePct.value}%`, href: financeDrill(), accent: 'amber' },
-        { label: 'Net / lead', title: 'Margin ÷ leads received - view all leads in period', value: formatMoney(netPerLead.value), href: leadsDrill(), accent: 'violet' },
-    ];
-});
+const economicsStrip = computed(() => [
+    { label: 'EPL (sold)', title: 'Revenue ÷ sold leads - view sold leads with revenue', value: formatMoney(displayKpis.value.epl), href: leadsDrill({ status: 'sold' }), accent: 'cyan' },
+    { label: 'EPC (ingest)', title: 'Revenue ÷ leads received - view all leads in period', value: formatMoney(displayKpis.value.epc), href: leadsDrill(), accent: 'indigo' },
+    { label: 'CPA (payout)', title: 'Payout ÷ sold leads - view sold leads with payout', value: formatMoney(displayKpis.value.cpa), href: leadsDrill({ status: 'sold' }), accent: 'amber' },
+    { label: 'CPL (ingest)', title: 'Payout ÷ leads received - view all leads in period', value: formatMoney(displayKpis.value.cpl), href: leadsDrill(), accent: 'rose' },
+    { label: 'MPL (margin)', title: 'Margin ÷ sold leads - view sold leads with margin', value: formatMoney(displayKpis.value.mpl), href: leadsDrill({ status: 'sold' }), accent: 'violet' },
+    { label: 'Margin %', title: 'Margin ÷ revenue - opens finance summary', value: formatPctValue(displayKpis.value.margin_pct), href: financeDrill(), accent: 'violet' },
+    { label: 'Pay share', title: 'Payout ÷ revenue - opens finance summary', value: formatPctValue(displayKpis.value.payout_share_pct), href: financeDrill(), accent: 'amber' },
+    { label: 'Net / lead', title: 'Margin ÷ leads received - view all leads in period', value: formatMoney(displayKpis.value.net_per_lead), href: leadsDrill(), accent: 'violet' },
+]);
 
 const rateStrip = computed(() => [
     { label: 'Conversion', title: 'Sold ÷ received - view sold leads in this period', value: formatLeadRate(props.summary?.conversion), href: leadsDrill({ status: 'sold' }), accent: 'indigo' },
@@ -295,8 +299,8 @@ const revenueDataset = computed(() => ([
             v-if="hasMultipleCurrencies"
             class="mb-4 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
         >
-            <strong>Multiple currencies</strong> - totals and unit economics are shown <strong>per currency</strong> (not combined).
-            Filter by <strong>currency</strong> or <strong>campaign</strong> for a single-currency view.
+            <strong>Multiple currencies</strong> - card values show the <strong>average across currencies</strong> in this view.
+            Filter by <strong>currency</strong> or <strong>tenant</strong> for exact single-currency totals.
         </div>
 
         <ReportMetricSection

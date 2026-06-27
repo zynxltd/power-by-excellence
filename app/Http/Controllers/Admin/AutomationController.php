@@ -16,6 +16,7 @@ use App\Services\Alerts\EventAlertService;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -60,16 +61,63 @@ class AutomationController extends Controller
             'steps.*.delay_minutes' => 'integer|min:0',
             'steps.*.channel' => 'required|in:email,sms',
             'steps.*.config' => 'nullable|array',
+            'steps.*.config.subject' => 'nullable|string|max:255',
+            'steps.*.config.body' => 'nullable|string',
+            'steps.*.config.to_field' => 'nullable|string|max:64',
+            'steps.*.config.provider' => 'nullable|string|max:64',
         ]);
 
+        $accountId = $this->resolveAutomationAccountId($validated['campaign_id'] ?? null);
+
         $sequence = AutomationSequence::create([
+            'account_id' => $accountId,
             'name' => $validated['name'],
             'campaign_id' => $validated['campaign_id'] ?? null,
             'trigger_event' => $validated['trigger_event'],
             'status' => 'active',
         ]);
 
-        foreach ($validated['steps'] as $i => $step) {
+        $this->syncSequenceSteps($sequence, $validated['steps']);
+
+        return back()->with('success', 'Automation sequence created.');
+    }
+
+    public function updateSequence(Request $request, AutomationSequence $sequence): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'campaign_id' => 'nullable|exists:campaigns,id',
+            'trigger_event' => 'required|in:on_lead_received,on_lead_sold,on_lead_unsold',
+            'status' => 'nullable|in:active,inactive',
+            'steps' => 'required|array|min:1',
+            'steps.*.delay_minutes' => 'integer|min:0',
+            'steps.*.channel' => 'required|in:email,sms',
+            'steps.*.config' => 'nullable|array',
+            'steps.*.config.subject' => 'nullable|string|max:255',
+            'steps.*.config.body' => 'nullable|string',
+            'steps.*.config.to_field' => 'nullable|string|max:64',
+            'steps.*.config.provider' => 'nullable|string|max:64',
+        ]);
+
+        $accountId = $this->resolveAutomationAccountId($validated['campaign_id'] ?? null, $sequence->account_id);
+
+        $sequence->update([
+            'account_id' => $accountId,
+            'name' => $validated['name'],
+            'campaign_id' => $validated['campaign_id'] ?? null,
+            'trigger_event' => $validated['trigger_event'],
+            'status' => $validated['status'] ?? $sequence->status ?? 'active',
+        ]);
+
+        $sequence->steps()->delete();
+        $this->syncSequenceSteps($sequence, $validated['steps']);
+
+        return back()->with('success', 'Automation sequence updated.');
+    }
+
+    protected function syncSequenceSteps(AutomationSequence $sequence, array $steps): void
+    {
+        foreach ($steps as $i => $step) {
             AutomationSequenceStep::create([
                 'automation_sequence_id' => $sequence->id,
                 'sort_order' => $i,
@@ -78,8 +126,32 @@ class AutomationController extends Controller
                 'config' => $step['config'] ?? [],
             ]);
         }
+    }
 
-        return back()->with('success', 'Automation sequence created.');
+    protected function resolveAutomationAccountId(?int $campaignId = null, ?int $fallbackAccountId = null): int
+    {
+        if ($accountId = AccountContext::id()) {
+            return $accountId;
+        }
+
+        if ($campaignId) {
+            $campaignAccountId = Campaign::query()->whereKey($campaignId)->value('account_id');
+            if ($campaignAccountId) {
+                return (int) $campaignAccountId;
+            }
+        }
+
+        if ($fallbackAccountId) {
+            return $fallbackAccountId;
+        }
+
+        if ($sessionAccountId = session('current_account_id')) {
+            return (int) $sessionAccountId;
+        }
+
+        throw ValidationException::withMessages([
+            'campaign_id' => 'Select a tenant or choose a campaign so this automation belongs to a platform.',
+        ]);
     }
 
     public function storeBulkSms(Request $request): RedirectResponse

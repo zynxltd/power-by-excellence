@@ -16,7 +16,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
     >
         <p class="text-sm leading-relaxed text-amber-950 dark:text-amber-100">
             <span class="block font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">No tenant selected</span>
-            <span class="mt-1 block">You're viewing data across <strong>all partner platforms</strong>. Select a tenant to manage buyers, suppliers, and scoped settings.</span>
+            <span class="mt-1 block">You're viewing data across <strong>all partner platforms</strong>. Each platform is self-serviced by its tenant admin — select one here only when you need to support or inspect a specific partner.</span>
         </p>
         <Link
             :href="route('accounts.index')"

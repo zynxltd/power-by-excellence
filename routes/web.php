@@ -151,6 +151,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
 
     Route::get('automation', [AutomationController::class, 'index'])->name('automation.index');
     Route::post('automation/sequences', [AutomationController::class, 'storeSequence'])->name('automation.sequences.store');
+    Route::patch('automation/sequences/{sequence}', [AutomationController::class, 'updateSequence'])->name('automation.sequences.update');
     Route::post('automation/bulk-sms', [AutomationController::class, 'storeBulkSms'])->name('automation.bulk-sms.store');
     Route::post('automation/bulk-sms/{bulkSms}/send', [AutomationController::class, 'sendBulkSms'])->name('automation.bulk-sms.send');
     Route::post('automation/alerts', [AutomationController::class, 'storeAlert'])->name('automation.alerts.store');
@@ -178,7 +179,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', SetAccountFromUser::cl
     Route::get('features/routing', [FeaturesController::class, 'routing'])->name('features.routing');
     Route::get('features/delivery', [FeaturesController::class, 'delivery'])->name('features.delivery');
     Route::get('features/auto-responders', [AutoResponderController::class, 'index'])->name('features.auto-responders');
+    Route::post('features/auto-responders/test', [AutoResponderController::class, 'test'])->name('features.auto-responders.test');
     Route::post('features/auto-responders', [AutoResponderController::class, 'store'])->name('features.auto-responders.store');
+    Route::patch('features/auto-responders/{autoResponder}', [AutoResponderController::class, 'update'])->name('features.auto-responders.update');
     Route::delete('features/auto-responders/{autoResponder}', [AutoResponderController::class, 'destroy'])->name('features.auto-responders.destroy');
 
     Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');

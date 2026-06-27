@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Support\Admin\ResolvesAdminAccount;
+use App\Support\BuyerPortal\BuyerPortalLocale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,11 +26,13 @@ class AccountSettingsController extends Controller
                     'supplier_iframe_embed' => $account->settings['supplier_iframe_embed'] ?? false,
                     'billing_alert_emails' => $account->settings['billing_alert_emails'] ?? '',
                     'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
+                    'buyer_portal_locale' => $account->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
                 ]
             ),
             'timezones' => timezone_identifiers_list(),
             'currencies' => $this->currencies(),
             'countries' => $this->countries(),
+            'buyerPortalLanguages' => BuyerPortalLocale::options(),
         ]);
     }
 
@@ -46,6 +49,7 @@ class AccountSettingsController extends Controller
             'supplier_iframe_embed' => 'boolean',
             'billing_alert_emails' => 'nullable|string|max:500',
             'default_low_credit_alert' => 'nullable|numeric|min:0',
+            'buyer_portal_locale' => 'nullable|string|max:5',
         ], $this->messages());
 
         $settings = $account->settings ?? [];
@@ -53,6 +57,9 @@ class AccountSettingsController extends Controller
         $settings['supplier_iframe_embed'] = $validated['supplier_iframe_embed'] ?? false;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
         $settings['default_low_credit_alert'] = $validated['default_low_credit_alert'] ?? null;
+        $settings['buyer_portal_locale'] = BuyerPortalLocale::isValid($validated['buyer_portal_locale'] ?? null)
+            ? $validated['buyer_portal_locale']
+            : BuyerPortalLocale::default();
 
         $account->update([
             'name' => $validated['name'],

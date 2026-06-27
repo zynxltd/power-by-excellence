@@ -71,6 +71,41 @@ class LeadByteFeaturesTest extends TestCase
         $this->assertDatabaseMissing('auto_responders', ['id' => $responder->id]);
     }
 
+    public function test_auto_responder_test_send_returns_preview_before_provider_is_connected(): void
+    {
+        config([
+            'messaging.sms_provider' => 'log',
+            'messaging.email_provider' => 'sendgrid',
+            'services.sendgrid.key' => null,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('features.auto-responders.test'), [
+                'channel' => 'sms',
+                'recipient' => '+447700900123',
+                'config' => [
+                    'body' => 'Hi [firstname], thanks for your enquiry.',
+                ],
+            ]);
+
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('autoResponderTestResult', fn (array $result) => $result['mode'] === 'preview'
+                && $result['channel'] === 'sms'
+                && str_contains($result['body'], 'Alex'));
+
+        $this->actingAs($this->admin)
+            ->post(route('features.auto-responders.test'), [
+                'channel' => 'email',
+                'recipient' => 'not-an-email',
+                'config' => [
+                    'subject' => 'Test',
+                    'body' => 'Hello',
+                ],
+            ])
+            ->assertSessionHasErrors('recipient');
+    }
+
     public function test_campaign_validation_rules_can_be_updated(): void
     {
         $campaign = Campaign::first();

@@ -56,6 +56,12 @@ Buyers without portal access still receive leads via ping/post - the portal is f
 
 One portal user per buyer organisation is typical, but you can create multiple users linked to the same `buyer_id` for teams (sales, finance, compliance). Each user sees the same buyer-scoped data.
 
+### Portal language
+
+European platforms often deliver leads to purchasers in different countries. Set the default buyer portal language under **Platform settings → Buyer portal language**. Override per buyer on the buyer form (**Portal access → Portal language**) when a purchaser's team needs German, French, Spanish, or another supported locale.
+
+Supported languages: English, Deutsch, Français, Español, Italiano, Nederlands, Polski, Português.
+
 ### Example: onboarding a new prepay buyer
 
 1. Create buyer record with name, reference, and currency.

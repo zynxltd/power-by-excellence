@@ -7,12 +7,14 @@ import TopNavDropdown from '@/Components/UI/TopNavDropdown.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import { provideNavDropdown } from '@/Composables/useNavDropdown';
 import { pushToast } from '@/Composables/useToast';
+import { useBuyerPortalI18n } from '@/Composables/useBuyerPortalI18n';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 provideNavDropdown();
 
 const page = usePage();
+const { t: buyerT } = useBuyerPortalI18n();
 const user = computed(() => page.props.auth.user);
 const account = computed(() => page.props.auth.account);
 const branding = computed(() => {
@@ -99,10 +101,10 @@ const brandTitle = computed(() => branding.value?.display_name ?? 'PowerByExcell
 const mobileSections = computed(() => {
     if (isBuyer.value) {
         return [
-            { id: 'buyer-dashboard', label: 'Dashboard', href: route('portal.buyer.dashboard'), links: [] },
-            { id: 'buyer-leads', label: 'My Leads', href: route('portal.buyer.leads'), links: [] },
-            { id: 'buyer-billing', label: 'Billing', href: route('portal.buyer.billing'), links: [] },
-            { id: 'buyer-integrations', label: 'Integrations', href: route('portal.buyer.integrations'), links: [] },
+            { id: 'buyer-dashboard', label: buyerT('nav.dashboard'), href: route('portal.buyer.dashboard'), links: [] },
+            { id: 'buyer-leads', label: buyerT('nav.leads'), href: route('portal.buyer.leads'), links: [] },
+            { id: 'buyer-billing', label: buyerT('nav.billing'), href: route('portal.buyer.billing'), links: [] },
+            { id: 'buyer-integrations', label: buyerT('nav.integrations'), href: route('portal.buyer.integrations'), links: [] },
             { id: 'buyer-profile', label: 'Profile', href: route('profile.edit'), links: [] },
         ];
     }
@@ -449,10 +451,10 @@ const mobileSections = computed(() => {
             </nav>
 
             <nav v-else-if="isBuyer" class="hidden items-center justify-center gap-1 md:flex">
-                <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">Dashboard</Link>
-                <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">My Leads</Link>
-                <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">Billing</Link>
-                <Link :href="route('portal.buyer.integrations')" :class="navLinkClass(route().current('portal.buyer.integrations'))">Integrations</Link>
+                <Link :href="route('portal.buyer.dashboard')" :class="navLinkClass(route().current('portal.buyer.dashboard'))">{{ buyerT('nav.dashboard') }}</Link>
+                <Link :href="route('portal.buyer.leads')" :class="navLinkClass(route().current('portal.buyer.leads'))">{{ buyerT('nav.leads') }}</Link>
+                <Link :href="route('portal.buyer.billing')" :class="navLinkClass(route().current('portal.buyer.billing'))">{{ buyerT('nav.billing') }}</Link>
+                <Link :href="route('portal.buyer.integrations')" :class="navLinkClass(route().current('portal.buyer.integrations'))">{{ buyerT('nav.integrations') }}</Link>
             </nav>
             <nav v-else-if="isSupplier" class="hidden items-center justify-center gap-1 md:flex">
                 <Link :href="route('portal.supplier.dashboard')" :class="navLinkClass(route().current('portal.supplier.dashboard'))">Dashboard</Link>

@@ -2,6 +2,8 @@
 
 Internal guides for **PowerByExcellence platform operators** (super admins). These documents are **not** published to the public Help Centre at `/help`.
 
+Each partner platform is **fully self-serviced** by its tenant admin (campaigns, buyers, suppliers, branding, billing). Super admins provision tenants and monitor network health — day-to-day operations stay with the partner.
+
 | Guide | Description |
 |-------|-------------|
 | [Command Center](./command-center.md) | Cross-tenant health, delivery metrics, ops checks |

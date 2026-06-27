@@ -22,7 +22,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
     <AuthenticatedLayout>
         <PageHeader
             title="Partner Platforms (Tenants)"
-            description="Each tenant runs on its own subdomain. Switch context, open the tenant portal, or impersonate the tenant admin."
+            description="Each tenant is fully self-serviced on its own subdomain — tenant admins run day-to-day ops. Provision platforms here, then switch context or open a portal only when support is needed."
         >
             <template #actions>
                 <AppButton :href="route('accounts.billing.index')" variant="secondary">Tenant billing</AppButton>
@@ -38,8 +38,7 @@ const clearTenantContext = () => router.post(route('accounts.clear'));
             class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
         >
             <strong>Central admin mode.</strong>
-            Account → Settings, Branding, Finance, and Buyer Billing apply to one platform.
-            Click <strong>Switch</strong> on a row below, then open those pages again.
+            Each partner platform is self-serviced by its tenant admin. Use this view to provision tenants and monitor the network — switch into a platform only when support is needed.
         </div>
 
         <div

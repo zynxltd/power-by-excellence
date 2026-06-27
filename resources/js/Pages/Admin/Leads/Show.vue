@@ -354,6 +354,45 @@ const stageLabel = (stage) => {
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Tenant</dt><dd class="mt-1">{{ lead.account?.name ?? lead.campaign?.account?.name ?? '-' }}</dd></div>
                 <div><dt class="text-xs font-semibold uppercase text-slate-500">Reject reason</dt><dd class="mt-1">{{ lead.reject_reason ?? '-' }}</dd></div>
             </dl>
+
+            <div class="mt-6 border-t border-slate-200 pt-6 dark:border-slate-700">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Source &amp; affiliate</p>
+                <dl class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Supplier</dt>
+                        <dd class="mt-1">
+                            <Link v-if="lead.supplier" :href="route('suppliers.show', lead.supplier.id)" class="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                                {{ lead.supplier.name }}
+                            </Link>
+                            <span v-else class="text-slate-500">Direct / unknown</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Source (SID)</dt>
+                        <dd class="mt-1 font-mono text-sm text-slate-900 dark:text-white">
+                            <template v-if="lead.source">
+                                {{ lead.source.name }}
+                                <span class="text-slate-500">·</span>
+                                {{ lead.source.sid ?? lead.sid }}
+                            </template>
+                            <template v-else-if="lead.sid">{{ lead.sid }}</template>
+                            <span v-else class="text-slate-500">—</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Sub-supplier (SSID)</dt>
+                        <dd class="mt-1 font-mono text-sm text-slate-900 dark:text-white">
+                            <template v-if="lead.sub_supplier">{{ lead.sub_supplier.name }} · {{ lead.sub_supplier.ssid ?? lead.ssid }}</template>
+                            <template v-else-if="lead.ssid">{{ lead.ssid }}</template>
+                            <span v-else class="text-slate-500">—</span>
+                        </dd>
+                    </div>
+                    <div v-if="lead.ip_address">
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Ingest IP</dt>
+                        <dd class="mt-1 font-mono text-sm text-slate-900 dark:text-white">{{ lead.ip_address }}</dd>
+                    </div>
+                </dl>
+            </div>
         </Panel>
 
         <Panel v-if="activeTab === 'fields'" title="Field data" class="mt-6" :padding="false">

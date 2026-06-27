@@ -6,12 +6,12 @@ import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import Spinner from '@/Components/UI/Spinner.vue';
 
 const { stats, loading, intervalSeconds } = useLiveStats();
-const { formatMoney, formatMoneyMulti } = useMoneyFormat();
+const { formatMoney, averageMoney } = useMoneyFormat();
 
 const revenueLabel = computed(() => {
     const rows = stats.value?.revenue_by_currency ?? [];
     if (rows.length > 1) {
-        return formatMoneyMulti(rows, { decimals: 0 });
+        return averageMoney(rows, { decimals: 0 });
     }
 
     if (rows.length === 1) {

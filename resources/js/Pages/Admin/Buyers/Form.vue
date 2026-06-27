@@ -18,6 +18,8 @@ const props = defineProps({
     portalUser: Object,
     currencies: { type: Array, default: () => [] },
     defaultCurrency: { type: String, default: 'GBP' },
+    buyerPortalLanguages: { type: Object, default: () => ({ en: 'English' }) },
+    defaultBuyerPortalLocale: { type: String, default: 'en' },
 });
 const { currency, formatMoney } = useMoneyFormat(props.buyer?.currency ?? props.defaultCurrency);
 const currencyLabel = currency;
@@ -66,6 +68,7 @@ const form = useForm({
         sold_webhook_url: props.buyer?.settings?.sold_webhook_url ?? '',
         notify_on_sale: props.buyer?.settings?.notify_on_sale ?? false,
         geo_countries: (props.buyer?.settings?.geo_countries ?? []).join(', '),
+        portal_locale: props.buyer?.settings?.portal_locale ?? '',
     },
     portal_email: props.portalUser?.email ?? '',
     portal_name: props.portalUser?.name ?? '',
@@ -292,6 +295,16 @@ const submit = () => {
                     <div class="mt-4">
                         <InputLabel value="Portal display name" />
                         <TextInput v-model="form.portal_name" class="mt-1 w-full" />
+                    </div>
+                    <div class="mt-4">
+                        <InputLabel value="Portal language" />
+                        <select v-model="form.settings.portal_locale" class="form-select mt-1 w-full max-w-md">
+                            <option value="">Platform default ({{ buyerPortalLanguages[defaultBuyerPortalLocale] ?? defaultBuyerPortalLocale }})</option>
+                            <option v-for="(label, code) in buyerPortalLanguages" :key="code" :value="code">
+                                {{ label }}
+                            </option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">Set when this buyer's team uses a different language than your platform default.</p>
                     </div>
                     <div class="mt-4">
                         <InputLabel :value="`New portal password (${buyer ? 'optional' : 'required if email set'})`" />

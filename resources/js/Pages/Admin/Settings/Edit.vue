@@ -14,6 +14,7 @@ const props = defineProps({
     timezones: Array,
     currencies: Array,
     countries: Object,
+    buyerPortalLanguages: Object,
 });
 
 const form = useForm({
@@ -25,6 +26,7 @@ const form = useForm({
     supplier_iframe_embed: props.account.supplier_iframe_embed ?? false,
     billing_alert_emails: props.account.billing_alert_emails ?? '',
     default_low_credit_alert: props.account.default_low_credit_alert ?? '',
+    buyer_portal_locale: props.account.buyer_portal_locale ?? 'en',
 });
 
 const submit = () => {
@@ -74,6 +76,20 @@ const submit = () => {
                     </select>
                     <InputError class="mt-1" :message="form.errors.timezone" />
                 </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Buyer portal language</h4>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Default language for all buyer portal users on this platform. Override per buyer when purchasers operate in different countries.
+                    </p>
+                    <select v-model="form.buyer_portal_locale" class="form-select mt-3 max-w-md">
+                        <option v-for="(label, code) in buyerPortalLanguages" :key="code" :value="code">
+                            {{ label }}
+                        </option>
+                    </select>
+                    <InputError class="mt-1" :message="form.errors.buyer_portal_locale" />
+                </div>
+
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                     <label class="flex items-start gap-3">
                         <input v-model="form.require_buyer_prepay" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />

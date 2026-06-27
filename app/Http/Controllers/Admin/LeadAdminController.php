@@ -43,6 +43,7 @@ class LeadAdminController extends Controller
                 'status',
                 'campaign_id',
                 'account_id',
+                'sold_to_buyer_id',
                 'search',
                 'from_date',
                 'to_date',
@@ -70,6 +71,7 @@ class LeadAdminController extends Controller
             'buyerFeedback.buyer',
             'supplier',
             'source',
+            'subSupplier',
             'deliveryLogs' => fn ($q) => $q
                 ->with(['delivery:id,name,method,tier,campaign_id', 'buyer:id,name'])
                 ->orderBy('created_at'),
@@ -234,6 +236,10 @@ class LeadAdminController extends Controller
 
         if ($request->filled('campaign_id')) {
             $query->where('campaign_id', $request->campaign_id);
+        }
+
+        if ($request->filled('sold_to_buyer_id')) {
+            $query->where('sold_to_buyer_id', (int) $request->sold_to_buyer_id);
         }
 
         if ($request->filled('account_id')) {

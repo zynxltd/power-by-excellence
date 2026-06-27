@@ -16,6 +16,7 @@ class AutoResponder extends Model
         'name',
         'channel',
         'trigger_event',
+        'delay_minutes',
         'status',
         'config',
     ];

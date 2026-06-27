@@ -9,6 +9,8 @@ import TextInput from '@/Components/TextInput.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import HorizontalSwipeScroll from '@/Components/UI/HorizontalSwipeScroll.vue';
+import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
+import SequenceBuilder from '@/Components/Automation/SequenceBuilder.vue';
 import { Head, router, useForm, Link, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
@@ -48,13 +50,6 @@ const page = usePage();
 const tabFromUrl = new URLSearchParams(page.url.split('?')[1] ?? '').get('tab');
 const activeTab = ref(tabs.some((t) => t.key === tabFromUrl) ? tabFromUrl : 'routing');
 
-const sequenceForm = useForm({
-    name: '',
-    campaign_id: '',
-    trigger_event: 'on_lead_received',
-    steps: [{ delay_minutes: 0, channel: 'email', config: { subject: 'Thanks for your enquiry', body: 'Hi {{firstname}}, we received your request.', to_field: 'email' } }],
-});
-
 const bulkForm = useForm({
     name: '',
     campaign_id: '',
@@ -75,66 +70,6 @@ const alertForm = useForm({
     config: { email: '', phone: '', webhook_url: '', slack_webhook: '', provider: '', cooldown_minutes: 60 },
 });
 
-const triggerLabels = {
-    on_lead_received: 'Lead received',
-    on_lead_sold: 'Lead sold',
-    on_lead_unsold: 'Lead unsold',
-};
-
-const channelIcons = { email: '✉️', sms: '💬' };
-
-const mergeTags = ['{{firstname}}', '{{lastname}}', '{{email}}', '{{phone1}}', '{{zipcode}}'];
-
-const ensureStepConfig = (step) => {
-    if (!step.config) step.config = {};
-    if (step.channel === 'email') {
-        step.config.subject ??= 'Thanks for your enquiry';
-        step.config.body ??= 'Hi {{firstname}}, we received your request.';
-        step.config.to_field ??= 'email';
-    } else {
-        step.config.body ??= 'Hi {{firstname}}, thanks for your enquiry.';
-        step.config.to_field ??= 'phone1';
-    }
-};
-
-const addStep = () => {
-    const step = { delay_minutes: 60, channel: 'email', config: {} };
-    ensureStepConfig(step);
-    sequenceForm.steps.push(step);
-};
-
-const insertMergeTag = (step, field, tag) => {
-    ensureStepConfig(step);
-    step.config[field] = (step.config[field] ?? '') + tag;
-};
-
-const totalDelay = (steps) => steps.reduce((sum, s) => sum + (Number(s.delay_minutes) || 0), 0);
-
-const formatDelay = (minutes) => {
-    if (!minutes) return 'Immediately';
-    if (minutes < 60) return `${minutes}m`;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m ? `${h}h ${m}m` : `${h}h`;
-};
-
-const removeStep = (index) => {
-    if (sequenceForm.steps.length > 1) {
-        sequenceForm.steps.splice(index, 1);
-    }
-};
-
-const submitSequence = () => {
-    sequenceForm.steps.forEach(ensureStepConfig);
-    sequenceForm.post(route('automation.sequences.store'), {
-        onSuccess: () => {
-            sequenceForm.reset();
-            sequenceForm.steps = [{ delay_minutes: 0, channel: 'email', config: {} }];
-            ensureStepConfig(sequenceForm.steps[0]);
-        },
-    });
-};
-
 const submitBulk = () => {
     bulkForm.post(route('automation.bulk-sms.store'), {
         onSuccess: () => bulkForm.reset(),
@@ -145,12 +80,6 @@ const submitAlert = () => {
     alertForm.post(route('automation.alerts.store'), {
         onSuccess: () => alertForm.reset(),
     });
-};
-
-const destroySequence = (id) => {
-    if (confirm('Delete this automation sequence?')) {
-        router.delete(route('automation.sequences.destroy', id));
-    }
 };
 
 const destroyAlert = (id) => {
@@ -177,6 +106,8 @@ const sendBulk = (id) => {
                 <AppButton :href="route('features.auto-responders')" variant="secondary">SMS &amp; email responders</AppButton>
             </template>
         </PageHeader>
+
+        <TenantContextBanner />
 
         <div class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800">
             <button
@@ -264,144 +195,8 @@ const sendBulk = (id) => {
         </div>
 
         <!-- Sequences -->
-        <div v-show="activeTab === 'sequences'" class="space-y-6">
-            <div class="grid gap-6 xl:grid-cols-5">
-                <Panel title="Create Sequence" class="xl:col-span-3">
-                    <form class="space-y-5" @submit.prevent="submitSequence">
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel value="Name" />
-                                <TextInput v-model="sequenceForm.name" class="mt-1 block w-full" required placeholder="e.g. Welcome + follow-up" />
-                                <InputError class="mt-1" :message="sequenceForm.errors.name" />
-                            </div>
-                            <div>
-                                <InputLabel value="Trigger" />
-                                <select v-model="sequenceForm.trigger_event" class="form-select mt-1 w-full">
-                                    <option value="on_lead_received">On lead received</option>
-                                    <option value="on_lead_sold">On lead sold</option>
-                                    <option value="on_lead_unsold">On lead unsold</option>
-                                </select>
-                                <p class="mt-1 text-xs text-slate-500">{{ triggerLabels[sequenceForm.trigger_event] }} - steps run in order with delays between each.</p>
-                            </div>
-                        </div>
-                        <div>
-                            <InputLabel value="Campaign (optional)" />
-                            <select v-model="sequenceForm.campaign_id" class="form-select mt-1 w-full">
-                                <option value="">All campaigns</option>
-                                <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
-                            </select>
-                        </div>
-
-                        <div class="rounded-xl border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-900 dark:bg-violet-950/20">
-                            <p class="text-xs font-semibold uppercase text-violet-700 dark:text-violet-300">Merge tags</p>
-                            <div class="mt-2 flex flex-wrap gap-1">
-                                <span v-for="tag in mergeTags" :key="tag" class="rounded bg-white px-2 py-0.5 font-mono text-xs text-violet-800 dark:bg-slate-900 dark:text-violet-300">{{ tag }}</span>
-                            </div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between">
-                                <InputLabel value="Sequence flow" />
-                                <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-400" @click="addStep">+ Add step</button>
-                            </div>
-
-                            <div class="relative space-y-0">
-                                <div
-                                    v-for="(step, i) in sequenceForm.steps"
-                                    :key="i"
-                                    class="relative"
-                                >
-                                    <div v-if="i > 0" class="ml-6 flex h-8 items-center border-l-2 border-dashed border-indigo-300 pl-4 text-xs text-slate-500 dark:border-indigo-700">
-                                        Wait {{ formatDelay(step.delay_minutes) }}
-                                    </div>
-                                    <div class="rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900" :class="step.channel === 'email' ? 'border-l-4 border-l-indigo-500' : 'border-l-4 border-l-emerald-500'">
-                                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2">
-                                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">{{ i + 1 }}</span>
-                                                <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ channelIcons[step.channel] }} {{ step.channel === 'email' ? 'Email' : 'SMS' }}</span>
-                                                <span v-if="i === 0 && !step.delay_minutes" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Instant</span>
-                                            </div>
-                                            <button v-if="sequenceForm.steps.length > 1" type="button" class="text-xs text-rose-600" @click="removeStep(i)">Remove</button>
-                                        </div>
-                                        <div class="grid gap-3 sm:grid-cols-2">
-                                            <div>
-                                                <label class="mb-1 block text-xs text-slate-500">Delay after {{ i === 0 ? 'trigger' : 'previous step' }} (minutes)</label>
-                                                <input v-model.number="step.delay_minutes" type="number" min="0" class="form-input w-full" />
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-xs text-slate-500">Channel</label>
-                                                <select v-model="step.channel" class="form-select w-full" @change="ensureStepConfig(step)">
-                                                    <option value="email">Email</option>
-                                                    <option value="sms">SMS</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div v-if="step.channel === 'email'" class="mt-3 space-y-2">
-                                            <div>
-                                                <label class="mb-1 block text-xs text-slate-500">Subject</label>
-                                                <input v-model="step.config.subject" type="text" class="form-input w-full" @focus="ensureStepConfig(step)" />
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-xs text-slate-500">Body</label>
-                                                <textarea v-model="step.config.body" rows="3" class="form-input w-full font-mono text-sm" @focus="ensureStepConfig(step)" />
-                                                <div class="mt-1 flex flex-wrap gap-1">
-                                                    <button v-for="tag in mergeTags" :key="tag" type="button" class="rounded border px-1.5 py-0.5 text-[10px] text-indigo-600" @click="insertMergeTag(step, 'body', tag)">{{ tag }}</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div v-else class="mt-3 space-y-2">
-                                            <div>
-                                                <label class="mb-1 block text-xs text-slate-500">SMS message</label>
-                                                <textarea v-model="step.config.body" rows="3" class="form-input w-full font-mono text-sm" maxlength="320" @focus="ensureStepConfig(step)" />
-                                                <div class="mt-1 flex flex-wrap gap-1">
-                                                    <button v-for="tag in mergeTags" :key="tag" type="button" class="rounded border px-1.5 py-0.5 text-[10px] text-indigo-600" @click="insertMergeTag(step, 'body', tag)">{{ tag }}</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="text-xs text-slate-500">Total sequence span: ~{{ formatDelay(totalDelay(sequenceForm.steps)) }} from trigger to final step.</p>
-                        </div>
-
-                        <AppButton type="submit" :disabled="sequenceForm.processing">Create Sequence</AppButton>
-                    </form>
-                </Panel>
-
-                <Panel title="Active Sequences" class="xl:col-span-2">
-                    <div v-if="!sequences?.length" class="py-8 text-center text-sm text-slate-500">No sequences configured.</div>
-                    <div
-                        v-for="seq in sequences"
-                        :key="seq.id"
-                        class="mb-4 rounded-xl border border-slate-200 p-4 last:mb-0 dark:border-slate-700"
-                    >
-                        <div class="flex flex-col gap-3">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="font-semibold text-slate-900 dark:text-white">{{ seq.name }}</p>
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ triggerLabels[seq.trigger_event] ?? seq.trigger_event }}
-                                        <span v-if="seq.campaign"> · {{ seq.campaign.name }}</span>
-                                    </p>
-                                </div>
-                                <div class="flex shrink-0 items-center gap-2">
-                                    <StatusBadge :status="seq.status ?? 'active'" />
-                                    <AppButton variant="danger" @click="destroySequence(seq.id)">Delete</AppButton>
-                                </div>
-                            </div>
-                            <ol class="space-y-2 border-l-2 border-indigo-200 pl-4 dark:border-indigo-800">
-                                <li v-for="(step, si) in seq.steps" :key="si" class="text-xs text-slate-600 dark:text-slate-400">
-                                    <span class="font-semibold text-slate-800 dark:text-slate-200">Step {{ si + 1 }}</span>
-                                    - {{ channelIcons[step.channel] }} {{ step.channel }}
-                                    <span v-if="step.delay_minutes"> after {{ formatDelay(step.delay_minutes) }}</span>
-                                    <span v-else-if="si === 0"> immediately</span>
-                                    <p v-if="step.config?.subject" class="truncate text-slate-500">Subject: {{ step.config.subject }}</p>
-                                </li>
-                            </ol>
-                        </div>
-                    </div>
-                </Panel>
-            </div>
+        <div v-show="activeTab === 'sequences'">
+            <SequenceBuilder :sequences="sequences" :campaigns="campaigns" :providers="providers" />
         </div>
 
         <!-- Bulk messaging -->

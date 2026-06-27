@@ -10,6 +10,7 @@ use App\Services\Billing\FraudProtectionService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Platform\PlatformStatusService;
 use App\Support\Admin\TenantHub;
+use App\Support\BuyerPortal\BuyerPortalLocale;
 use App\Support\Money;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
@@ -85,6 +86,7 @@ class HandleInertiaRequests extends Middleware
                     : null,
             ],
             'platform' => fn () => $this->platformContext($request),
+            'buyerPortal' => fn () => $this->buyerPortalContext($request),
             'tenantHub' => fn () => TenantHub::forAccount(
                 $this->resolveAccount($request),
                 $this->resolveCampaignId($request),
@@ -130,6 +132,23 @@ class HandleInertiaRequests extends Middleware
             'locale' => Money::localeFor($currency),
             'liveStatsInterval' => config('platform.live_stats_interval', 15),
         ];
+    }
+
+    /**
+     * @return array{locale: string, strings: array<string, mixed>, languages: array<string, string>}|null
+     */
+    protected function buyerPortalContext(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user?->isBuyerPortal()) {
+            return null;
+        }
+
+        $user->loadMissing('buyer');
+        $account = $this->resolveAccount($request) ?? $user->buyer?->account;
+
+        return BuyerPortalLocale::inertiaPayload($account, $user->buyer);
     }
 
     protected function marketingSignInUrl(Request $request): string

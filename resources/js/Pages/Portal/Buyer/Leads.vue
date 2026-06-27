@@ -13,6 +13,7 @@ import Pagination from '@/Components/UI/Pagination.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import BuyerAccountPanel from '@/Components/Portal/BuyerAccountPanel.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
+import { useBuyerPortalI18n } from '@/Composables/useBuyerPortalI18n';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
@@ -30,6 +31,7 @@ const props = defineProps({
 });
 
 const page = usePage();
+const { t } = useBuyerPortalI18n();
 const localFilters = ref({ ...props.filters });
 const applyFilters = () => router.get(route('portal.buyer.leads'), localFilters.value, { preserveState: true, replace: true });
 const clearFilters = () => { localFilters.value = {}; applyFilters(); };
@@ -289,11 +291,11 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="My Leads" />
+    <Head :title="t('leads.title')" />
     <AuthenticatedLayout>
-        <PageHeader title="My Leads" description="Search inventory, report conversions, and request returns from the table or quick actions below.">
+        <PageHeader :title="t('leads.title')" :description="t('leads.description')">
             <template #actions>
-                <AppButton :href="route('portal.buyer.leads.download', localFilters)" variant="secondary" external>Export CSV</AppButton>
+                <AppButton :href="route('portal.buyer.leads.download', localFilters)" variant="secondary" external>{{ t('common.export_csv') }}</AppButton>
             </template>
         </PageHeader>
 

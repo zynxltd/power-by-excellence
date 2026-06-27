@@ -303,6 +303,93 @@ class ImportsFunctionalityTest extends TestCase
             ->count());
     }
 
+    public function test_suppression_import_accepts_pre_hashed_values(): void
+    {
+        $campaign = $this->importCampaign();
+        $digest = hash('sha256', 'prehashed.'.uniqid().'@example.com');
+        $csv = "hash\n{$digest}\n";
+        $file = UploadedFile::fake()->createWithContent('prehashed.csv', $csv);
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->post(route('imports.store'), [
+                'type' => 'suppression',
+                'campaign_id' => $campaign->id,
+                'field' => 'email',
+                'file' => $file,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('suppression_hashes', [
+            'account_id' => $campaign->account_id,
+            'field_type' => 'email',
+            'hash' => $digest,
+        ]);
+    }
+
+    public function test_suppression_import_supports_headerless_single_column_csv(): void
+    {
+        $campaign = $this->importCampaign();
+        $email = 'headerless.'.uniqid().'@example.com';
+        $csv = "{$email}\n";
+        $file = UploadedFile::fake()->createWithContent('headerless.csv', $csv);
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->post(route('imports.store'), [
+                'type' => 'suppression',
+                'campaign_id' => $campaign->id,
+                'field' => 'email',
+                'file' => $file,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('suppression_hashes', [
+            'account_id' => $campaign->account_id,
+            'field_type' => 'email',
+            'hash' => hash('sha256', strtolower($email)),
+        ]);
+    }
+
+    public function test_suppression_import_normalises_phone_formats(): void
+    {
+        $campaign = $this->importCampaign();
+        $csv = "phone1\n07700900444\n";
+        $file = UploadedFile::fake()->createWithContent('phones.csv', $csv);
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->post(route('imports.store'), [
+                'type' => 'suppression',
+                'campaign_id' => $campaign->id,
+                'field' => 'phone1',
+                'file' => $file,
+            ])
+            ->assertRedirect();
+
+        $lead = Lead::create([
+            'account_id' => $this->ukAccount->id,
+            'campaign_id' => $campaign->id,
+            'status' => LeadStatus::Pending,
+            'field_data' => [
+                'firstname' => 'Phone',
+                'lastname' => 'Blocked',
+                'email' => 'phone.'.uniqid().'@example.com',
+                'phone1' => '+44 7700 900444',
+                'zipcode' => 'SW1A 1AA',
+            ],
+            'received_at' => now(),
+        ]);
+
+        app(LeadPipeline::class)->process($lead->fresh());
+
+        $lead->refresh();
+        $this->assertSame(LeadStatus::Rejected, $lead->status);
+        $this->assertStringContainsString('Suppressed', $lead->reject_reason);
+    }
+
     public function test_empty_csv_completes_with_zero_rows(): void
     {
         $campaign = $this->importCampaign();

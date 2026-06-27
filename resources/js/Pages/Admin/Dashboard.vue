@@ -37,7 +37,7 @@ const props = defineProps({
 
 
 const chartDaysLocal = ref(props.chartDays);
-const { formatMoney, formatMoneyMulti } = useMoneyFormat(props.currency);
+const { formatMoney, averageMoney } = useMoneyFormat(props.currency);
 const { stats: liveStats } = useLiveStats();
 const isNavigating = inject('isNavigating', ref(false));
 
@@ -75,9 +75,9 @@ const statLinks = computed(() => {
     { label: 'Unsold Today', value: stats.value.unsold_today, href: route('leads.index', { status: 'unsold' }), accent: 'amber' },
     {
         label: showMultiCurrencyRevenue.value ? 'Revenue today' : 'Revenue Today',
-        title: showMultiCurrencyRevenue.value ? 'Shown per currency - campaigns may use different markets' : undefined,
+        title: showMultiCurrencyRevenue.value ? 'Average revenue across currencies in this view' : undefined,
         value: showMultiCurrencyRevenue.value
-            ? formatMoneyMulti(revenueByCurrency.value, { decimals: 2 })
+            ? averageMoney(revenueByCurrency.value, { decimals: 2 })
             : formatMoney(stats.value.revenue_today ?? 0),
         href: route('reports.index', { days: 1 }),
         accent: 'cyan',
@@ -100,7 +100,7 @@ const switchToTenant = (accountId) => {
             <div class="min-w-0">
                 <h1 class="text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-white">Platform Overview</h1>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin - all partner platforms' }}
+                    {{ $page.props.auth.account ? `Managing ${$page.props.auth.account.display_name}` : 'Super admin — provision and monitor self-serviced partner platforms' }}
                 </p>
             </div>
             <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">

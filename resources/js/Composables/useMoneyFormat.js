@@ -54,9 +54,19 @@ export function useMoneyFormat(overrideCurrency = null) {
         }).format(Number(amount ?? 0));
     };
 
-    const formatMoneyMulti = (rows, options = {}) => formatMoneyMultiRows(rows, formatMoney, options);
+    const formatMoneyMulti = (rows, options = {}) => formatMoneyMultiRows(rows, formatMoney, {
+        currency: currency.value,
+        ...options,
+    });
 
-    return { currency, locale, formatMoney, formatNumber, formatMoneyMulti };
+    const averageMoney = (rows, options = {}) => averageMoneyFromRows(rows, formatMoney, {
+        currency: currency.value,
+        ...options,
+    });
+
+    const averagePct = (rows, field) => averagePctFromRows(rows, field);
+
+    return { currency, locale, formatMoney, formatNumber, formatMoneyMulti, averageMoney, averagePct };
 }
 
 export function formatMoneyMultiRows(rows, formatMoney, options = {}) {
@@ -64,14 +74,49 @@ export function formatMoneyMultiRows(rows, formatMoney, options = {}) {
         return '-';
     }
 
-    const { decimals = 0, field = 'revenue' } = options;
+    const { decimals = 0, field = 'revenue', currency = 'GBP' } = options;
 
     if (rows.length === 1) {
-        return formatMoney(rows[0][field], { decimals, currency: rows[0].currency });
+        return formatMoney(rows[0][field], { decimals, currency: rows[0].currency ?? currency });
     }
 
-    return rows
-        .filter((row) => Number(row[field] ?? 0) !== 0)
-        .map((row) => formatMoney(row[field], { decimals, currency: row.currency }))
-        .join(' · ') || '-';
+    return averageMoneyFromRows(rows, formatMoney, { decimals, field, currency });
+}
+
+export function averageMoneyFromRows(rows, formatMoney, options = {}) {
+    const { decimals = 2, field = 'revenue', currency = 'GBP' } = options;
+
+    if (!rows?.length) {
+        return '-';
+    }
+
+    const values = rows
+        .map((row) => Number(row[field] ?? 0))
+        .filter((value) => value !== 0);
+
+    if (!values.length) {
+        return formatMoney(0, { decimals, currency });
+    }
+
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+    return formatMoney(average, { decimals, currency });
+}
+
+export function averagePctFromRows(rows, field) {
+    if (!rows?.length) {
+        return '-';
+    }
+
+    const average = rows.reduce((sum, row) => sum + Number(row[field] ?? 0), 0) / rows.length;
+
+    return `${Math.round(average * 10) / 10}%`;
+}
+
+export function averageFieldFromRows(rows, field) {
+    if (!rows?.length) {
+        return 0;
+    }
+
+    return rows.reduce((sum, row) => sum + Number(row[field] ?? 0), 0) / rows.length;
 }

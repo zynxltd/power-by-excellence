@@ -71,11 +71,15 @@ Suppression prevents specific contacts from entering your system - opt-outs, lit
 
 ### How hashing works
 
-1. You upload a single-column CSV of raw values (emails, phone numbers).
-2. The platform normalises each value (lowercase email, strip phone formatting).
-3. A one-way hash is stored in `suppression_hashes` - raw values are not retained.
-4. At validation time, incoming lead field values are hashed and compared.
+1. Upload a single-column CSV of raw values (emails, phone numbers) **or pre-computed SHA-256 digests** (64-character hex).
+2. Raw values are normalised before hashing:
+   - **Email:** trimmed and lowercased (`user@Example.COM` → `user@example.com`)
+   - **Phone:** non-digits stripped; UK local numbers starting with `0` are converted to country code `44`
+3. A one-way **SHA-256** digest is stored in `suppression_hashes` - raw values are not retained.
+4. At validation time, incoming lead field values are normalised and hashed with the same rules, then compared.
 5. Matches reject with a clear suppression reason in the lead record.
+
+**Pre-hashed uploads:** Buyers can hash CRM data locally and upload digests only—raw PII never enters the platform. Use the same normalisation rules above before hashing, or upload raw values and let the platform hash them over TLS.
 
 **Important:** hashing is one-way. You cannot export or recover raw suppressed values from stored hashes. Keep your source opt-out files archived separately.
 

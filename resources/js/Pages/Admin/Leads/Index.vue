@@ -217,68 +217,70 @@ watch(() => props.filters, (f) => { localFilters.value = { ...f }; });
         </Panel>
 
         <Panel title="Filters" class="mb-6">
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Search UUID</label>
-                    <input v-model="localFilters.search" type="text" class="form-input" placeholder="UUID or queue ID" @keyup.enter="applyFilters" />
+            <div class="overflow-x-auto pb-1">
+                <div class="flex min-w-max items-end gap-3">
+                    <div class="w-40 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Search UUID</label>
+                        <input v-model="localFilters.search" type="text" class="form-input" placeholder="UUID or queue ID" @keyup.enter="applyFilters" />
+                    </div>
+                    <div class="w-32 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Status</label>
+                        <select v-model="localFilters.status" class="form-select">
+                            <option value="">All statuses</option>
+                            <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+                        </select>
+                    </div>
+                    <div class="w-36 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Campaign</label>
+                        <select v-model="localFilters.campaign_id" class="form-select">
+                            <option value="">All campaigns</option>
+                            <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                    </div>
+                    <div class="w-24 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Min quality</label>
+                        <input v-model="localFilters.quality_min" type="number" min="0" max="100" class="form-input" placeholder="60" />
+                    </div>
+                    <div class="w-24 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Max quality</label>
+                        <input v-model="localFilters.quality_max" type="number" min="0" max="100" class="form-input" placeholder="79" />
+                    </div>
+                    <div class="w-32 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Validation</label>
+                        <select v-model="localFilters.validation" class="form-select">
+                            <option value="">Any</option>
+                            <option v-for="(label, key) in validationLabels" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                    </div>
+                    <div class="w-32 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Redirect</label>
+                        <select v-model="localFilters.redirect" class="form-select">
+                            <option value="">Any</option>
+                            <option v-for="(label, key) in redirectLabels" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                    </div>
+                    <div class="w-36 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">Buyer feedback</label>
+                        <select v-model="localFilters.buyer_feedback" class="form-select">
+                            <option value="">Any</option>
+                            <option value="invalid">Invalid / bad lead</option>
+                            <option value="converted">Converted</option>
+                            <option value="any">Any feedback recorded</option>
+                        </select>
+                    </div>
+                    <div class="w-36 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">From</label>
+                        <input v-model="localFilters.from_date" type="date" class="form-input" />
+                    </div>
+                    <div class="w-36 shrink-0">
+                        <label class="mb-1 block text-xs font-semibold text-slate-500">To</label>
+                        <input v-model="localFilters.to_date" type="date" class="form-input" />
+                    </div>
+                    <div class="flex shrink-0 gap-2 pb-0.5">
+                        <AppButton @click="applyFilters">Apply filters</AppButton>
+                        <AppButton variant="secondary" @click="clearFilters">Clear</AppButton>
+                    </div>
                 </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Status</label>
-                    <select v-model="localFilters.status" class="form-select">
-                        <option value="">All statuses</option>
-                        <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Campaign</label>
-                    <select v-model="localFilters.campaign_id" class="form-select">
-                        <option value="">All campaigns</option>
-                        <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Min quality</label>
-                    <input v-model="localFilters.quality_min" type="number" min="0" max="100" class="form-input" placeholder="e.g. 60" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Max quality</label>
-                    <input v-model="localFilters.quality_max" type="number" min="0" max="100" class="form-input" placeholder="e.g. 79" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Validation</label>
-                    <select v-model="localFilters.validation" class="form-select">
-                        <option value="">Any</option>
-                        <option v-for="(label, key) in validationLabels" :key="key" :value="key">{{ label }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Redirect</label>
-                    <select v-model="localFilters.redirect" class="form-select">
-                        <option value="">Any</option>
-                        <option v-for="(label, key) in redirectLabels" :key="key" :value="key">{{ label }}</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">Buyer feedback</label>
-                    <select v-model="localFilters.buyer_feedback" class="form-select">
-                        <option value="">Any</option>
-                        <option value="invalid">Invalid / bad lead</option>
-                        <option value="converted">Converted</option>
-                        <option value="any">Any feedback recorded</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">From</label>
-                    <input v-model="localFilters.from_date" type="date" class="form-input" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-500">To</label>
-                    <input v-model="localFilters.to_date" type="date" class="form-input" />
-                </div>
-            </div>
-            <div class="mt-4 flex gap-3">
-                <AppButton @click="applyFilters">Apply filters</AppButton>
-                <AppButton variant="secondary" @click="clearFilters">Clear</AppButton>
             </div>
         </Panel>
 

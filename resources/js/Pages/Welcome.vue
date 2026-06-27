@@ -118,7 +118,7 @@ const features = [
     {
         icon: 'building',
         title: 'Multi-Tenancy',
-        desc: 'Super-admins host isolated partner platforms - each with its own subdomain, buyers, suppliers, and financials. UK, US, and other markets run as campaigns within a platform.',
+        desc: 'Super-admins provision isolated partner platforms - each self-serviced by its tenant admin on a dedicated subdomain with own buyers, suppliers, and financials. UK, US, and other markets run as campaigns within a platform.',
         color: 'from-violet-500/20 via-indigo-500/25 to-cyan-500/15 text-violet-600 marketing-dark:text-violet-400',
     },
     {
@@ -203,7 +203,7 @@ const testimonials = [
         metric: '3 tools replaced',
     },
     {
-        quote: 'Super-admin tenancy keeps partner platforms isolated - no data bleed between brands. We run UK and US on the same platform as separate campaigns, each with its own buyers and currency. Audit logs are a lifesaver.',
+        quote: 'Super-admin tenancy keeps partner platforms isolated and self-serviced - each partner runs their own buyers and billing on their subdomain. We only step in for provisioning and network monitoring. UK and US run as campaigns within one platform, each with its own currency. Audit logs are a lifesaver.',
         name: 'Priya Nair',
         role: 'Platform Operations',
         company: 'Northstar Leads',
@@ -223,7 +223,7 @@ const integrations = [
 const comparisonRows = [
     { feature: 'Real-time ping-post auctions', pbe: true, legacy: false },
     { feature: 'Visual ping-tree builder', pbe: true, legacy: false },
-    { feature: 'Multi-tenant partner platforms', pbe: true, legacy: false },
+    { feature: 'Self-serviced partner platforms', pbe: true, legacy: false },
     { feature: 'Buyer & supplier self-service portals', pbe: true, legacy: false },
     { feature: 'Full delivery & API audit logs', pbe: true, legacy: false },
     { feature: 'Per-tier eligibility filters', pbe: true, legacy: 'Manual' },
@@ -232,6 +232,11 @@ const comparisonRows = [
 ];
 
 const securityFeatures = [
+    {
+        title: 'Hashed data (SHA-256)',
+        desc: "Import your buyers' existing database in a secure hashed format to automatically block duplicate leads. Values are normalised and compared as one-way SHA-256 hashes at validation—raw suppression data is never stored.",
+        icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
+    },
     {
         title: 'Dedicated subdomain',
         desc: 'Your partner platform runs on its own branded subdomain with scoped data, API keys, and financials.',
@@ -267,7 +272,7 @@ const faqs = [
     },
     {
         q: 'How are partner platforms and markets organised?',
-        a: 'Each partner platform is fully isolated with its own buyers, suppliers, and billing. Within one platform, run UK, US, and other markets as separate campaigns with their own currency and ping trees.',
+        a: 'Each partner platform is fully isolated and self-serviced - tenant admins manage campaigns, buyers, suppliers, branding, and billing on their subdomain without super-admin involvement. Super admins provision platforms and monitor network health. Within one platform, run UK, US, and other markets as separate campaigns with their own currency and ping trees.',
     },
     {
         q: 'What delivery methods are supported?',
@@ -840,7 +845,7 @@ const toggleFaq = (index) => {
                         <p class="brand-kicker text-violet-600 marketing-dark:text-violet-400">Enterprise-ready</p>
                         <h2 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white">Security &amp; compliance built in</h2>
                         <p class="mt-4 text-lg text-slate-600 marketing-dark:text-slate-400">
-                            Scoped API keys, comprehensive audit logs, two-factor auth, and billing enforcement - designed for agencies managing high-volume lead networks.
+                            SHA-256 suppression lists, scoped API keys, comprehensive audit logs, two-factor auth, and billing enforcement - designed for agencies managing high-volume lead networks.
                         </p>
                         <Link
                             :href="route('status.index')"
@@ -1106,7 +1111,7 @@ const toggleFaq = (index) => {
             <div class="relative mx-auto max-w-4xl px-6 text-center">
                 <h2 class="text-4xl font-bold tracking-tight text-slate-900 marketing-dark:text-white md:text-5xl">Multi-tenant partner platforms</h2>
                 <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 marketing-dark:text-slate-400">
-                    Super-admins host multiple isolated partner businesses from one account - each on its own subdomain with separate buyers, suppliers, and financials. UK, US, and other geographies are handled with campaigns inside a platform, not as separate tenants.
+                    Super-admins provision and monitor multiple isolated partner businesses from one account. Each platform is fully self-serviced by its tenant admin on a dedicated subdomain - campaigns, buyers, suppliers, branding, and billing stay with the partner. UK, US, and other geographies are handled with campaigns inside a platform, not as separate tenants.
                 </p>
                 <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <a href="#demo" class="brand-btn-primary px-8 py-4 text-base">Book a Demo</a>

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Mail\PortalCredentialsMail;
 use App\Services\Integrations\BuyerWebhookSync;
 use App\Support\Admin\ResolvesAdminAccount;
+use App\Support\BuyerPortal\BuyerPortalLocale;
 use App\Support\Tenancy\AccountContext;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Support\Facades\Mail;
@@ -151,6 +152,8 @@ class BuyerController extends Controller
             'portalUser' => null,
             'currencies' => $this->currencies(),
             'defaultCurrency' => AccountContext::get()?->default_currency ?? 'GBP',
+            'buyerPortalLanguages' => BuyerPortalLocale::options(),
+            'defaultBuyerPortalLocale' => AccountContext::get()?->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
         ]);
     }
 
@@ -198,6 +201,8 @@ class BuyerController extends Controller
             'portalUser' => $portalUser,
             'currencies' => $this->currencies(),
             'defaultCurrency' => $buyer->account?->default_currency ?? 'GBP',
+            'buyerPortalLanguages' => BuyerPortalLocale::options(),
+            'defaultBuyerPortalLocale' => $buyer->account?->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
         ]);
     }
 
@@ -280,6 +285,7 @@ class BuyerController extends Controller
             'settings.notify_on_sale' => 'nullable|boolean',
             'settings.geo_countries' => 'nullable|array',
             'settings.geo_countries.*' => 'string|size:2',
+            'settings.portal_locale' => 'nullable|string|max:5',
             'portal_email' => 'nullable|email|max:255',
             'portal_password' => 'nullable|string|min:8|max:255',
             'portal_name' => 'nullable|string|max:255',
@@ -300,6 +306,10 @@ class BuyerController extends Controller
         $validated['caps'] = array_filter($validated['caps'] ?? [], fn ($v) => $v !== null && $v !== '');
         $validated['schedule'] = $validated['schedule'] ?? null;
         $validated['settings'] = array_filter($validated['settings'] ?? [], fn ($v) => $v !== null && $v !== '');
+
+        if (isset($validated['settings']['portal_locale']) && ! BuyerPortalLocale::isValid($validated['settings']['portal_locale'])) {
+            unset($validated['settings']['portal_locale']);
+        }
 
         return $validated;
     }

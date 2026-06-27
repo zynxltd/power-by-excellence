@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class DedupeService
 {
+    public function __construct(
+        protected FieldHashService $fieldHasher,
+    ) {}
+
     public function isDuplicate(Lead $lead, Campaign $campaign): ?string
     {
         $config = $campaign->dedupe_config ?? [];
@@ -23,7 +27,10 @@ class DedupeService
                 continue;
             }
 
-            $hash = hash('sha256', strtolower(trim((string) $value)));
+            $hash = $this->fieldHasher->resolveHash($field, (string) $value);
+            if ($hash === null) {
+                continue;
+            }
 
             $exists = DedupeIndex::query()
                 ->where('account_id', $lead->account_id)
@@ -59,11 +66,16 @@ class DedupeService
                 continue;
             }
 
+            $hash = $this->fieldHasher->resolveHash($field, (string) $value);
+            if ($hash === null) {
+                continue;
+            }
+
             DedupeIndex::create([
                 'account_id' => $lead->account_id,
                 'campaign_id' => $campaign->id,
                 'field_key' => $field,
-                'field_value_hash' => hash('sha256', strtolower(trim((string) $value))),
+                'field_value_hash' => $hash,
                 'lead_id' => $lead->id,
                 'expires_at' => $rejectDays > 0 ? now()->addDays($rejectDays) : null,
             ]);
@@ -80,7 +92,10 @@ class DedupeService
                 continue;
             }
 
-            $hash = hash('sha256', strtolower(trim((string) $value)));
+            $hash = $this->fieldHasher->resolveHash($field, (string) $value);
+            if ($hash === null) {
+                continue;
+            }
 
             $suppressed = DB::table('suppression_hashes')
                 ->where('account_id', $lead->account_id)

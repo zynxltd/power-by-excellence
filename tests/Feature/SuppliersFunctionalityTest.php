@@ -360,7 +360,7 @@ class SuppliersFunctionalityTest extends TestCase
     {
         $campaign = Campaign::where('account_id', $this->ukAccount->id)->first();
         $supplier = Supplier::where('account_id', $this->ukAccount->id)->first();
-        $source = $supplier->sources()->orderBy('id')->first();
+        $source = $supplier->sources()->orderBy('sid')->first();
 
         $form = \App\Models\HostedForm::create([
             'account_id' => $this->ukAccount->id,

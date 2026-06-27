@@ -86,6 +86,11 @@ class Lead extends Model
         return $this->belongsTo(Source::class);
     }
 
+    public function subSupplier(): BelongsTo
+    {
+        return $this->belongsTo(SubSupplier::class, 'sub_supplier_id');
+    }
+
     public function soldToBuyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'sold_to_buyer_id');

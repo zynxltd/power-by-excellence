@@ -6,6 +6,8 @@ class TagInterpolator
 {
     public function interpolate(string $template, array $fields, array $pingResponse = []): string
     {
+        $template = preg_replace('/\{\{([a-zA-Z0-9_.]+)\}\}/', '[$1]', $template);
+
         $result = preg_replace_callback('/\[([a-zA-Z0-9_.]+)\]/', function ($matches) use ($fields) {
             $key = $matches[1];
             $value = data_get($fields, $key, '');

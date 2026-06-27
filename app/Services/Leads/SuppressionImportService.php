@@ -8,16 +8,31 @@ use Illuminate\Support\Facades\DB;
 
 class SuppressionImportService
 {
+    /**
+     * @var list<string>
+     */
+    protected const HEADER_NAMES = ['email', 'phone', 'phone1', 'hash', 'value'];
+
+    public function __construct(
+        protected FieldHashService $fieldHasher,
+    ) {}
+
     public function import(Campaign $campaign, UploadedFile $file, string $field = 'email'): int
     {
         $handle = fopen($file->getRealPath(), 'r');
-        $header = $this->normalizeHeaders(fgetcsv($handle) ?: []);
+        $firstRow = $this->normalizeRow(fgetcsv($handle) ?: []);
         $count = 0;
 
-        if ($header === []) {
+        if ($firstRow === []) {
             fclose($handle);
 
             return 0;
+        }
+
+        $hasHeader = $this->rowIsHeader($firstRow);
+
+        if (! $hasHeader) {
+            $count += $this->storeValue($campaign, $field, $firstRow[0] ?? null);
         }
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -25,27 +40,20 @@ class SuppressionImportService
                 continue;
             }
 
-            $data = $this->combineRow($header, $row);
-            if ($data === null) {
-                continue;
+            $row = $this->normalizeRow($row);
+
+            if ($hasHeader) {
+                $data = $this->combineRow($firstRow, $row);
+                if ($data === null) {
+                    continue;
+                }
+
+                $value = $data[$field] ?? $data[array_key_first($data)] ?? null;
+            } else {
+                $value = $row[0] ?? null;
             }
 
-            $value = $data[$field] ?? $data[array_key_first($data)] ?? null;
-            if (blank($value)) {
-                continue;
-            }
-
-            $hash = hash('sha256', strtolower(trim((string) $value)));
-
-            DB::table('suppression_hashes')->updateOrInsert(
-                [
-                    'account_id' => $campaign->account_id,
-                    'field_type' => $field,
-                    'hash' => $hash,
-                ],
-                ['buyer_id' => null, 'created_at' => now(), 'updated_at' => now()]
-            );
-            $count++;
+            $count += $this->storeValue($campaign, $field, $value);
         }
 
         fclose($handle);
@@ -54,17 +62,40 @@ class SuppressionImportService
             'suppression.imported',
             'campaign',
             $campaign->id,
-            ['field' => $field, 'count' => $count]
+            ['field' => $field, 'count' => $count, 'algorithm' => FieldHashService::ALGORITHM]
         );
 
         return $count;
+    }
+
+    protected function storeValue(Campaign $campaign, string $field, mixed $value): int
+    {
+        if (blank($value)) {
+            return 0;
+        }
+
+        $hash = $this->fieldHasher->resolveHash($field, (string) $value);
+        if ($hash === null) {
+            return 0;
+        }
+
+        DB::table('suppression_hashes')->updateOrInsert(
+            [
+                'account_id' => $campaign->account_id,
+                'field_type' => $field,
+                'hash' => $hash,
+            ],
+            ['buyer_id' => null, 'created_at' => now(), 'updated_at' => now()]
+        );
+
+        return 1;
     }
 
     /**
      * @param  list<string|null>|false  $headers
      * @return list<string>
      */
-    protected function normalizeHeaders(array|false $headers): array
+    protected function normalizeRow(array|false $headers): array
     {
         if ($headers === false || $headers === []) {
             return [];
@@ -103,5 +134,21 @@ class SuppressionImportService
     protected function isBlankRow(array $data): bool
     {
         return collect($data)->every(fn ($value) => blank($value));
+    }
+
+    /**
+     * @param  list<string>  $row
+     */
+    protected function rowIsHeader(array $row): bool
+    {
+        if ($this->isBlankRow($row)) {
+            return false;
+        }
+
+        if (count($row) !== 1) {
+            return true;
+        }
+
+        return in_array(strtolower($row[0]), self::HEADER_NAMES, true);
     }
 }

@@ -12,7 +12,7 @@ return [
 
 PowerByExcellence gives you a **white-label lead distribution platform** on your own subdomain (e.g. `excellence-uk.powerbyexcellence.test`). You operate campaigns, buyers, suppliers, routing, billing, and reporting - independent of other partners on the network.
 
-Unlike a shared SaaS login, each partner platform is a **fully isolated tenant**. Your buyers, suppliers, leads, financials, and branding live inside your account boundary. Super-admin network tools run only on the central marketing domain - your day-to-day work happens entirely on your tenant URL.
+Unlike a shared SaaS login, each partner platform is a **fully isolated, self-serviced tenant**. Your buyers, suppliers, leads, financials, and branding live inside your account boundary — you configure and operate everything on your subdomain without waiting on the platform operator. Super-admin network tools run only on the central marketing domain for provisioning and cross-tenant monitoring; your day-to-day work happens entirely on your tenant URL.
 
 ### What you can do on day one
 

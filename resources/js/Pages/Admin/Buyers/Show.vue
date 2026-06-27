@@ -29,10 +29,34 @@ const props = defineProps({
 const { formatMoney } = useMoneyFormat(props.currency);
 
 const buyerStatStrip = computed(() => [
-    { label: 'Credit', value: formatMoney(props.buyer.credit_balance), accent: 'emerald' },
-    { label: 'Leads', value: props.buyer.leads_count, accent: 'indigo' },
-    { label: 'Feedback', value: props.activityStats?.feedback_total ?? 0, accent: 'violet' },
-    { label: 'Pending returns', value: props.activityStats?.pending_returns ?? 0, accent: (props.activityStats?.pending_returns ?? 0) > 0 ? 'amber' : 'slate' },
+    {
+        label: 'Credit',
+        value: formatMoney(props.buyer.credit_balance),
+        accent: 'emerald',
+        href: route('billing.show', props.buyer.id),
+        title: 'Open billing ledger',
+    },
+    {
+        label: 'Leads',
+        value: props.buyer.leads_count,
+        accent: 'indigo',
+        href: route('leads.index', { status: 'sold', sold_to_buyer_id: props.buyer.id }),
+        title: 'View all leads sold to this buyer',
+    },
+    {
+        label: 'Feedback',
+        value: props.activityStats?.feedback_total ?? 0,
+        accent: 'violet',
+        href: route('buyer-feedback.index', { buyer_id: props.buyer.id }),
+        title: 'Drill into buyer feedback report',
+    },
+    {
+        label: 'Pending returns',
+        value: props.activityStats?.pending_returns ?? 0,
+        accent: (props.activityStats?.pending_returns ?? 0) > 0 ? 'amber' : 'slate',
+        href: `${route('buyers.show', props.buyer.id)}#buyer-returns`,
+        title: 'Jump to pending return requests',
+    },
 ]);
 
 const feedbackStatusLabel = (row) => {
