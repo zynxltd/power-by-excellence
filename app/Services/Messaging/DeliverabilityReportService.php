@@ -46,7 +46,11 @@ class DeliverabilityReportService
             'open_rate' => $totalSent > 0 ? round(($opens / $totalSent) * 100, 2) : 0,
             'click_rate' => $totalSent > 0 ? round(($clicks / $totalSent) * 100, 2) : 0,
             'bounce_rate' => $totalSent > 0 ? round(($bounces / $totalSent) * 100, 2) : 0,
+            'complaint_rate' => $totalSent > 0 ? round(($complaints / $totalSent) * 100, 2) : 0,
+            'delivery_rate' => $totalSent > 0 ? round(($delivered / $totalSent) * 100, 2) : 0,
+            'click_to_open_rate' => $opens > 0 ? round(($clicks / $opens) * 100, 2) : 0,
             'by_provider' => $byProvider,
+            'period_days' => $days,
         ];
     }
 

@@ -25,11 +25,20 @@ class EDeliveryController extends Controller
     {
         $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
         $reports = app(DeliverabilityReportService::class);
+        $campaignStats = $reports->campaignStats($accountId);
+        $campaignLookup = BulkSmsCampaign::query()
+            ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
+            ->get(['id', 'name', 'channel', 'status'])
+            ->keyBy('id');
 
         return Inertia::render('Admin/EDelivery/Index', [
             'summary' => $reports->summary($accountId),
             'hourlyOpens' => $reports->hourlyOpens($accountId),
-            'campaignStats' => $reports->campaignStats($accountId),
+            'campaignStats' => $campaignStats->map(fn (array $row) => array_merge($row, [
+                'name' => $campaignLookup->get($row['bulk_sms_campaign_id'])?->name ?? 'Campaign #'.$row['bulk_sms_campaign_id'],
+                'channel' => $campaignLookup->get($row['bulk_sms_campaign_id'])?->channel ?? 'email',
+                'status' => $campaignLookup->get($row['bulk_sms_campaign_id'])?->status,
+            ]))->values(),
             'segments' => Segment::orderBy('name')->get(),
             'templates' => MessageTemplate::orderBy('name')->get(),
             'sendingProfiles' => SendingProfile::orderBy('name')->get(),
