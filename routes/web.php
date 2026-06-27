@@ -59,6 +59,7 @@ use App\Http\Controllers\HelpController;
 use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserSupportTicketController;
 use App\Http\Controllers\PlatformEntryController;
+use App\Http\Controllers\Portal\BuyerCallPortalController;
 use App\Http\Controllers\Portal\BuyerPortalController;
 use App\Http\Controllers\Portal\BuyerStripeCheckoutController;
 use App\Http\Controllers\Portal\PortalBillingLockController;
@@ -156,6 +157,7 @@ Route::prefix('webhooks/twilio/voice/{accountSlug}')->group(function () {
     Route::post('/', [\App\Http\Controllers\Webhooks\TwilioVoiceWebhookController::class, 'inbound']);
     Route::post('/gather', [\App\Http\Controllers\Webhooks\TwilioVoiceWebhookController::class, 'gather']);
     Route::post('/status', [\App\Http\Controllers\Webhooks\TwilioVoiceWebhookController::class, 'status']);
+    Route::post('/recording', [\App\Http\Controllers\Webhooks\TwilioVoiceWebhookController::class, 'recording']);
 });
 
 Route::get('/sdk/pbe-calls.js', function () {
@@ -460,6 +462,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/webhooks/{webhook}/submit', [BuyerPortalController::class, 'submitWebhook'])->name('webhooks.submit');
         Route::delete('/webhooks/{webhook}', [BuyerPortalController::class, 'destroyWebhook'])->name('webhooks.destroy');
         Route::post('/webhooks/{webhook}/request-deletion', [BuyerPortalController::class, 'requestWebhookDeletion'])->name('webhooks.request-deletion');
+        Route::get('/calls', [BuyerCallPortalController::class, 'index'])->name('calls');
+        Route::get('/calls/{call:uuid}', [BuyerCallPortalController::class, 'show'])->name('calls.show');
+        Route::get('/calls-export', [BuyerCallPortalController::class, 'export'])->name('calls.export');
     });
 
 Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':supplier'])
