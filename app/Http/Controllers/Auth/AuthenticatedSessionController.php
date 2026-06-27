@@ -38,9 +38,18 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = $request->user();
+
+        if ($user->two_factor_enabled) {
+            $request->session()->put('login.id', $user->id);
+            $request->session()->put('login.remember', $request->boolean('remember'));
+            Auth::guard('web')->logout();
+
+            return redirect()->route('two-factor.login');
+        }
+
         $request->session()->regenerate();
 
-        $user = $request->user();
         app(AccessLogService::class)->record($user, 'login', $request);
 
         $redirect = match ($user->role) {

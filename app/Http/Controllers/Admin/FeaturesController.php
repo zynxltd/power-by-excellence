@@ -9,6 +9,9 @@ use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Models\DistributionConfig;
 use App\Models\LeadImport;
+use App\Models\TrackingClick;
+use App\Models\TrackingConversion;
+use App\Models\TrackingLink;
 use App\Models\Webhook;
 use App\Services\Delivery\DeliveryAnalyticsService;
 use Illuminate\Http\Request;
@@ -28,6 +31,9 @@ class FeaturesController extends Controller
                 'api_keys' => ApiKey::where('is_active', true)->count(),
                 'imports' => LeadImport::count(),
                 'auto_responders' => AutoResponder::where('status', 'active')->count(),
+                'tracking_links' => TrackingLink::count(),
+                'clicks_today' => TrackingClick::where('clicked_at', '>=', today())->count(),
+                'conversions_pending' => TrackingConversion::where('status', TrackingConversion::STATUS_PENDING)->count(),
                 ...$analytics->platformSummary(),
             ],
         ]);

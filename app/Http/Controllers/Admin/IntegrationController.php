@@ -33,6 +33,14 @@ class IntegrationController extends Controller
             : ['entitled' => false, 'can_validate' => false];
 
         $leadSources = $settings['lead_sources'] ?? [];
+        $messaging = $settings['messaging'] ?? [];
+        $messagingResolver = app(\App\Services\Messaging\MessagingCredentialsResolver::class);
+        $emailProvider = $messaging['email_provider'] ?? config('messaging.email_provider', 'smtp');
+        $smsProvider = $messaging['sms_provider'] ?? config('messaging.sms_provider', 'log');
+        $messagingConnected = $account && (
+            $messagingResolver->isProviderLive($account, $emailProvider, 'email')
+            || $messagingResolver->isProviderLive($account, $smsProvider, 'sms')
+        );
         $validation = $settings['validation_integration'] ?? [];
         $validationProvider = $validation['provider'] ?? config('validation.driver', 'demo');
         $hasIpqsKey = filled(app(\App\Services\Validation\ValidationProviderResolver::class)->ipqsConfig($account)['api_key'] ?? null);
@@ -73,6 +81,15 @@ class IntegrationController extends Controller
                 'icon' => 'validation',
             ],
             [
+                'id' => 'messaging',
+                'name' => 'Email & SMS Providers',
+                'category' => 'E-Delivery',
+                'description' => 'Connect SendGrid, Mailgun, Postmark, Resend, Twilio, or Vonage for remarketing and auto-responders.',
+                'status' => $messagingConnected ? 'connected' : 'available',
+                'route' => 'integrations.messaging',
+                'icon' => 'email',
+            ],
+            [
                 'id' => 'facebook',
                 'name' => 'Facebook Lead Ads',
                 'category' => 'Lead Sources',
@@ -103,6 +120,15 @@ class IntegrationController extends Controller
                 'icon' => 'tiktok',
             ],
             [
+                'id' => 'stripe',
+                'name' => 'Stripe Checkout',
+                'category' => 'Payments',
+                'description' => 'Let buyers top up credit via Stripe Checkout on the buyer portal.',
+                'status' => ($settings['stripe']['enabled'] ?? false) ? 'connected' : 'available',
+                'route' => 'integrations.stripe',
+                'icon' => 'stripe',
+            ],
+            [
                 'id' => 'hosted_forms',
                 'name' => 'Form Builder',
                 'category' => 'Lead Sources',
@@ -110,6 +136,15 @@ class IntegrationController extends Controller
                 'status' => 'available',
                 'route' => 'forms.index',
                 'icon' => 'form',
+            ],
+            [
+                'id' => 'click_track',
+                'name' => 'Click Track (Lynx)',
+                'category' => 'Attribution',
+                'description' => 'Affiliate tracking links, click logs, conversion approval, and performance reports.',
+                'status' => ($account && app(\App\Services\ClickTrack\ClickTrackEntitlementService::class)->isEntitled($account)) ? 'connected' : 'upgrade',
+                'route' => 'click-track.dashboard',
+                'icon' => 'validation',
             ],
             [
                 'id' => 'zapier',

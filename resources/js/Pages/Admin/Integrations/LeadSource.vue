@@ -6,7 +6,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -14,17 +14,43 @@ const props = defineProps({
     meta: Object,
     config: Object,
     campaigns: Array,
+    campaignFields: Array,
     webhookUrl: String,
     ingestUrl: String,
 });
 
 const copied = ref('');
 
+const mappingToRows = (mapping) => {
+    if (!mapping || typeof mapping !== 'object') {
+        return [{ source: '', target: '' }];
+    }
+
+    if (Array.isArray(mapping)) {
+        return mapping.length
+            ? mapping.map((row) => ({ source: row.source ?? '', target: row.target ?? '' }))
+            : [{ source: '', target: '' }];
+    }
+
+    const rows = Object.entries(mapping).map(([source, target]) => ({ source, target }));
+
+    return rows.length ? rows : [{ source: '', target: '' }];
+};
+
+const mappingToObject = (rows) => rows.reduce((acc, row) => {
+    if (row.source && row.target) {
+        acc[row.source] = row.target;
+    }
+
+    return acc;
+}, {});
+
 const form = useForm({
     enabled: props.config?.enabled ?? false,
     verify_token: props.config?.verify_token ?? '',
     page_access_token: props.config?.page_access_token ?? '',
     campaign_id: props.config?.campaign_id ?? '',
+    field_mapping: mappingToRows(props.config?.field_mapping),
 });
 
 watch(
@@ -35,11 +61,45 @@ watch(
             verify_token: config?.verify_token ?? '',
             page_access_token: config?.page_access_token ?? '',
             campaign_id: config?.campaign_id ?? '',
+            field_mapping: mappingToRows(config?.field_mapping),
         });
         form.reset();
     },
     { deep: true },
 );
+
+watch(
+    () => form.campaign_id,
+    (campaignId, previousId) => {
+        if (campaignId && campaignId !== previousId) {
+            router.get(route('integrations.lead-source', props.provider), { campaign_id: campaignId }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        }
+    },
+);
+
+const campaignFieldOptions = computed(() => props.campaignFields ?? []);
+const mappedRowCount = computed(() => form.field_mapping.filter((row) => row.source && row.target).length);
+
+const addMappingRow = () => form.field_mapping.push({ source: '', target: '' });
+const removeMappingRow = (index) => {
+    if (form.field_mapping.length > 1) {
+        form.field_mapping.splice(index, 1);
+    }
+};
+
+const applySuggestedMappings = () => {
+    const suggestions = props.meta?.suggested_field_mappings ?? {};
+    const rows = Object.entries(suggestions).map(([source, target]) => ({ source, target }));
+    form.field_mapping = rows.length ? rows : [{ source: '', target: '' }];
+};
+
+const clearMappings = () => {
+    form.field_mapping = [{ source: '', target: '' }];
+};
 
 const isConfigured = computed(() => {
     if (!form.enabled || !form.campaign_id) {
@@ -63,7 +123,12 @@ const copyText = async (key, value) => {
     setTimeout(() => { copied.value = ''; }, 2000);
 };
 
-const submit = () => form.put(route('integrations.lead-source.update', props.provider));
+const submit = () => {
+    form.transform((data) => ({
+        ...data,
+        field_mapping: mappingToObject(data.field_mapping),
+    })).put(route('integrations.lead-source.update', props.provider));
+};
 </script>
 
 <template>
@@ -145,6 +210,73 @@ const submit = () => form.put(route('integrations.lead-source.update', props.pro
                         <p class="mt-1 text-xs text-slate-500">{{ meta.page_access_token_help }}</p>
                         <InputError class="mt-1" :message="form.errors.page_access_token" />
                     </div>
+
+                    <div v-if="form.campaign_id">
+                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <InputLabel value="Field mapping" />
+                                <p class="text-xs text-slate-500">
+                                    {{ mappedRowCount }} mapped field{{ mappedRowCount === 1 ? '' : 's' }}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button
+                                    v-if="meta.suggested_field_mappings && Object.keys(meta.suggested_field_mappings).length"
+                                    type="button"
+                                    class="text-xs font-medium text-slate-600 hover:underline dark:text-slate-400"
+                                    @click="applySuggestedMappings"
+                                >
+                                    Apply suggestions
+                                </button>
+                                <button
+                                    v-if="mappedRowCount > 0"
+                                    type="button"
+                                    class="text-xs font-medium text-slate-600 hover:underline dark:text-slate-400"
+                                    @click="clearMappings"
+                                >
+                                    Clear
+                                </button>
+                                <button type="button" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400" @click="addMappingRow">
+                                    + Add row
+                                </button>
+                            </div>
+                        </div>
+                        <p class="mb-3 text-xs text-slate-500">
+                            Map {{ meta.name }} field names (left) to your campaign fields (right). Unmapped source fields pass through when names already match.
+                        </p>
+                        <InputError class="mb-2" :message="form.errors.field_mapping" />
+                        <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div class="grid grid-cols-[1fr_1fr_auto] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/50">
+                                <span>Source field</span>
+                                <span>Campaign field</span>
+                                <span class="sr-only">Actions</span>
+                            </div>
+                            <div class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <div
+                                    v-for="(row, index) in form.field_mapping"
+                                    :key="index"
+                                    class="grid gap-2 px-3 py-2 sm:grid-cols-[1fr_1fr_auto]"
+                                >
+                                    <input v-model="row.source" type="text" class="form-input font-mono text-sm" placeholder="e.g. email_address" />
+                                    <select v-model="row.target" class="form-select">
+                                        <option value="">Select campaign field</option>
+                                        <option v-for="field in campaignFieldOptions" :key="field.id ?? field.name" :value="field.name">
+                                            {{ field.label ?? field.name }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        v-if="form.field_mapping.length > 1"
+                                        type="button"
+                                        class="self-center text-xs text-rose-600 hover:underline"
+                                        @click="removeMappingRow(index)"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <AppButton type="submit" :disabled="form.processing">Save settings</AppButton>
                 </form>
             </Panel>

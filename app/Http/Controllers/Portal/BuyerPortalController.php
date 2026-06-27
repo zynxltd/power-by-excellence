@@ -311,6 +311,11 @@ class BuyerPortalController extends Controller
             'account' => $this->portal->accountSummary($buyer),
             'stats' => $this->portal->dashboardStats($buyer),
             'requirePrepay' => (bool) ($account?->settings['require_buyer_prepay'] ?? false),
+            'stripeEnabled' => app(\App\Services\Billing\StripeCheckoutService::class)->buyerSelfServeEnabled($account),
+            'stripeTopUp' => [
+                'min' => app(\App\Services\Billing\StripeCheckoutService::class)->minimumTopUp($account),
+                'presets' => app(\App\Services\Billing\StripeCheckoutService::class)->presetAmounts($account),
+            ],
             'currency' => $buyer->resolvedCurrency(),
             'transactions' => $buyer->transactions()->orderByDesc('created_at')->paginate(25),
         ]);

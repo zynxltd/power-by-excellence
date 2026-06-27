@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendBulkCampaignJob;
 use App\Models\AutomationSequence;
 use App\Models\AutomationSequenceStep;
 use App\Models\BulkSmsCampaign;
@@ -11,7 +12,9 @@ use App\Models\Delivery;
 use App\Models\DistributionConfig;
 use App\Models\EventAlert;
 use App\Models\EventAlertFire;
-use App\Services\Automation\BulkSmsService;
+use App\Models\Segment;
+use App\Models\SendingProfile;
+use App\Models\MessageTemplate;
 use App\Services\Alerts\EventAlertService;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +30,9 @@ class AutomationController extends Controller
         return Inertia::render('Admin/Automation/Index', [
             'sequences' => AutomationSequence::with('steps')->with('campaign:id,name')->orderBy('name')->get(),
             'bulkCampaigns' => BulkSmsCampaign::with('campaign:id,name')->orderByDesc('created_at')->limit(20)->get(),
+            'segments' => Segment::orderBy('name')->get(['id', 'name']),
+            'sendingProfiles' => SendingProfile::orderBy('name')->get(['id', 'name']),
+            'templates' => MessageTemplate::orderBy('name')->get(['id', 'name', 'channel']),
             'eventAlerts' => EventAlert::orderBy('name')->get(),
             'campaigns' => Campaign::orderBy('name')->get(['id', 'name', 'reference', 'use_advanced_distribution']),
             'routingOverview' => $this->routingOverview(),
@@ -162,7 +168,17 @@ class AutomationController extends Controller
             'channel' => 'nullable|in:sms,email',
             'subject' => 'nullable|string|max:255',
             'provider' => 'nullable|string|max:64',
-            'message' => 'required|string|max:1600',
+            'message' => 'required|string|max:16000',
+            'html_body' => 'nullable|string',
+            'segment_id' => 'nullable|exists:segments,id',
+            'sending_profile_id' => 'nullable|exists:sending_profiles,id',
+            'throttle_per_minute' => 'nullable|integer|min:1|max:1000',
+            'ab_test' => 'nullable|array',
+            'ab_test.split_percent' => 'nullable|integer|min:5|max:50',
+            'ab_test.wait_minutes' => 'nullable|integer|min:5|max:1440',
+            'ab_test.winner_metric' => 'nullable|in:open,click',
+            'ab_test.variant_a' => 'nullable|array',
+            'ab_test.variant_b' => 'nullable|array',
             'filter' => 'nullable|array',
             'filter.has_email' => 'nullable|boolean',
             'filter.has_phone' => 'nullable|boolean',
@@ -176,11 +192,12 @@ class AutomationController extends Controller
         }
 
         $campaign = BulkSmsCampaign::create(array_merge($validated, [
+            'account_id' => $this->resolveAutomationAccountId($validated['campaign_id'] ?? null),
             'status' => ! empty($validated['scheduled_at']) ? 'scheduled' : 'draft',
         ]));
 
         if (empty($validated['scheduled_at'])) {
-            app(BulkSmsService::class)->send($campaign);
+            SendBulkCampaignJob::dispatch($campaign->id);
         }
 
         return back()->with('success', 'Bulk campaign created.');
@@ -188,7 +205,7 @@ class AutomationController extends Controller
 
     public function sendBulkSms(BulkSmsCampaign $bulkSms): RedirectResponse
     {
-        app(BulkSmsService::class)->send($bulkSms);
+        SendBulkCampaignJob::dispatch($bulkSms->id);
 
         return back()->with('success', 'Bulk SMS sent.');
     }

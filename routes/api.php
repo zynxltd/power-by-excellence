@@ -35,6 +35,25 @@ Route::prefix('v1')->middleware([LogApiRequest::class])->group(function () {
     Route::middleware([AuthenticateApiKey::class.':reports.read'])->group(function () {
         Route::get('/reports/leads', [ReportController::class, 'leads']);
         Route::get('/reports/revenue', [ReportController::class, 'revenue']);
+        Route::get('/reports/calls', [\App\Http\Controllers\Api\CallReportController::class, 'index']);
+    });
+
+    Route::middleware([AuthenticateApiKey::class.':leads.read'])->group(function () {
+        Route::get('/calls/{uuid}', [\App\Http\Controllers\Api\CallDispositionController::class, 'show']);
+        Route::post('/calls/{uuid}/disposition', [\App\Http\Controllers\Api\CallDispositionController::class, 'store']);
+    });
+
+    Route::get('/dni/resolve', [\App\Http\Controllers\Api\CallDniController::class, 'resolve']);
+
+    Route::match(['get', 'post'], '/mock/call-buyers/{tier}/ping', [\App\Http\Controllers\Api\MockCallBuyerApiController::class, 'ping'])->whereNumber('tier');
+
+    Route::middleware([AuthenticateApiKey::class.':clicks.read'])->group(function () {
+        Route::get('/click-track/summary', [\App\Http\Controllers\Api\ClickTrackReportController::class, 'summary']);
+        Route::get('/click-track/performance', [\App\Http\Controllers\Api\ClickTrackReportController::class, 'performance']);
+    });
+
+    Route::middleware([AuthenticateApiKey::class.':conversions.manage'])->group(function () {
+        Route::post('/conversions', [\App\Http\Controllers\Api\ClickTrackConversionController::class, 'store']);
     });
 
     Route::middleware([AuthenticateApiKey::class.':platform.read'])->group(function () {

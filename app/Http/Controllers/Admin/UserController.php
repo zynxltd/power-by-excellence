@@ -153,6 +153,25 @@ class UserController extends Controller
         return back()->with('success', 'User created.'.($request->boolean('send_credentials') ? ' Credentials emailed.' : ''));
     }
 
+    public function edit(User $user): Response
+    {
+        return Inertia::render('Admin/Users/Edit', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->value,
+                'buyer_id' => $user->buyer_id,
+                'supplier_id' => $user->supplier_id,
+                'allowed_modules' => $user->allowed_modules ?? \App\Support\AdminModules::defaultsForStaff(),
+                'is_suspended' => $user->is_suspended,
+            ],
+            'buyers' => Buyer::orderBy('name')->get(['id', 'name', 'reference']),
+            'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
+            'modules' => \App\Support\AdminModules::all(),
+        ]);
+    }
+
     public function update(Request $request, User $user): RedirectResponse
     {
         $accountId = $request->attributes->get('account')?->id
@@ -185,7 +204,7 @@ class UserController extends Controller
             'allowed_modules' => $validated['role'] === UserRole::Staff->value
                 ? ($validated['allowed_modules'] ?? \App\Support\AdminModules::defaultsForStaff())
                 : null,
-            ...($validated['password'] ? ['password' => $validated['password']] : []),
+            ...(($validated['password'] ?? null) ? ['password' => $validated['password']] : []),
         ]);
 
         return back()->with('success', 'User updated.');

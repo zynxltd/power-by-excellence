@@ -527,7 +527,8 @@ const roleLabel = (role) => ({
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex flex-wrap justify-end gap-1">
-                                <AppButton variant="ghost" @click="startEdit(u)">Edit</AppButton>
+                                <AppButton variant="ghost" :href="route('users.edit', u.id)">Edit page</AppButton>
+                                <AppButton variant="ghost" @click="startEdit(u)">Quick edit</AppButton>
                                 <AppButton v-if="!isCurrentUser(u)" variant="ghost" @click="emailCredentials(u.id)">Email login</AppButton>
                                 <AppButton
                                     v-if="!u.is_suspended && !isCurrentUser(u)"

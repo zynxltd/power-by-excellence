@@ -22,6 +22,7 @@ class Lead extends Model
         'supplier_id',
         'source_id',
         'sub_supplier_id',
+        'tracking_click_id',
         'sold_to_buyer_id',
         'winning_delivery_id',
         'redirect_url',
@@ -91,6 +92,11 @@ class Lead extends Model
         return $this->belongsTo(SubSupplier::class, 'sub_supplier_id');
     }
 
+    public function trackingClick(): BelongsTo
+    {
+        return $this->belongsTo(TrackingClick::class);
+    }
+
     public function soldToBuyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'sold_to_buyer_id');
@@ -114,6 +120,11 @@ class Lead extends Model
     public function buyerFeedback(): HasMany
     {
         return $this->hasMany(BuyerFeedback::class);
+    }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(LeadTag::class);
     }
 
     public function getField(string $key, mixed $default = null): mixed

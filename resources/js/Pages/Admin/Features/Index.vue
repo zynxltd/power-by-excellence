@@ -54,6 +54,15 @@ const features = [
         statKeys: ['deliveries', 'deliveries_active', 'logs_today', 'success_today'],
     },
     {
+        key: 'click-track',
+        title: 'Click Track',
+        description: 'Affiliate tracking links, clicks, conversions, and Lynx-style reports.',
+        route: 'click-track.dashboard',
+        icon: 'M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122',
+        accent: 'sky',
+        statKeys: ['tracking_links', 'clicks_today', 'conversions_pending'],
+    },
+    {
         key: 'reports',
         title: 'Reports',
         description: 'Revenue, conversion, buyer/supplier performance, and delivery analytics.',
@@ -71,6 +80,7 @@ const accentClasses = {
     violet: 'border-violet-200 hover:border-violet-400 dark:border-violet-800 dark:hover:border-violet-600',
     amber: 'border-amber-200 hover:border-amber-400 dark:border-amber-800 dark:hover:border-amber-600',
     rose: 'border-rose-200 hover:border-rose-400 dark:border-rose-800 dark:hover:border-rose-600',
+    sky: 'border-sky-200 hover:border-sky-400 dark:border-sky-800 dark:hover:border-sky-600',
 };
 
 const iconClasses = {
@@ -80,6 +90,7 @@ const iconClasses = {
     violet: 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400',
     amber: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
     rose: 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400',
+    sky: 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400',
 };
 
 const statLabel = (key) => ({
@@ -88,6 +99,9 @@ const statLabel = (key) => ({
     webhooks: 'Webhooks',
     imports: 'Imports',
     auto_responders: 'Active responders',
+    tracking_links: 'Tracking links',
+    clicks_today: 'Clicks today',
+    conversions_pending: 'Pending conversions',
     ping_trees: 'Ping trees',
     deliveries: 'Deliveries',
     deliveries_active: 'Active deliveries',

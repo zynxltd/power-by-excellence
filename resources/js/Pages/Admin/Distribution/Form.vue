@@ -10,6 +10,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import ContextHelpLink from '@/Components/UI/ContextHelpLink.vue';
 import PingTreeBuilder from '@/Components/UI/PingTreeBuilder.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { fieldOptionsFromCampaign } from '@/utils/campaignFields';
@@ -173,6 +174,10 @@ const submit = () => {
                 </button>
             </template>
         </PageHeader>
+
+        <div class="mb-4 flex justify-end">
+            <ContextHelpLink slug="ping-tree-routing" label="Ping tree help" />
+        </div>
 
         <div
             v-if="isLocked"

@@ -15,7 +15,7 @@ import TextInput from '@/Components/TextInput.vue';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     delivery: Object,
@@ -44,6 +44,8 @@ const steps = [
 const { currentStep, goStep, stepStatus } = useFormSteps(steps, {
     isEdit: !!props.delivery,
 });
+
+const quickSetup = ref(!props.delivery);
 
 const defaultConfig = () => ({
     url: '',
@@ -246,6 +248,51 @@ const submit = () => {
             current="deliveries"
             class="mb-6"
         />
+
+        <Panel v-if="!delivery" class="mb-6">
+            <label class="flex items-center gap-3">
+                <input v-model="quickSetup" type="checkbox" class="rounded border-slate-300" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Quick setup — buyer, method, URL, and price only</span>
+            </label>
+        </Panel>
+
+        <Panel v-if="quickSetup && !delivery" title="Quick delivery setup" class="mb-6">
+            <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submit">
+                <div>
+                    <InputLabel value="Campaign" />
+                    <select v-model="form.campaign_id" class="form-select mt-1 w-full" required>
+                        <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <InputLabel value="Buyer" />
+                    <select v-model="form.buyer_id" class="form-select mt-1 w-full" required>
+                        <option value="">Select buyer</option>
+                        <option v-for="b in buyers" :key="b.id" :value="b.id">{{ b.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <InputLabel value="Method" />
+                    <select v-model="form.method" class="form-select mt-1 w-full">
+                        <option v-for="m in methods" :key="m" :value="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div>
+                    <InputLabel value="Price" />
+                    <input v-model="form.revenue_amount" type="number" step="0.01" min="0" class="form-input mt-1 w-full" />
+                </div>
+                <div class="md:col-span-2">
+                    <InputLabel value="Endpoint URL" />
+                    <input v-model="form.config.url" type="url" class="form-input mt-1 w-full font-mono text-sm" placeholder="https://buyer.example.com/leads" />
+                </div>
+                <div class="md:col-span-2 flex gap-2">
+                    <PrimaryButton :disabled="form.processing">Create delivery</PrimaryButton>
+                    <AppButton type="button" variant="secondary" @click="quickSetup = false">Full setup</AppButton>
+                </div>
+            </form>
+        </Panel>
+
+        <template v-if="!quickSetup || delivery">
 
         <Panel v-if="campaignContext" title="Where this delivery fits" class="mb-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -623,5 +670,6 @@ const submit = () => {
                 </Panel>
             </form>
         </FormSetupLayout>
+        </template>
     </AuthenticatedLayout>
 </template>

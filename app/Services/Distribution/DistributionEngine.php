@@ -419,6 +419,11 @@ class DistributionEngine
         app(WebhookDispatcher::class)->dispatch($lead->account()->first(), 'lead.sold', $lead);
         app(\App\Services\Postbacks\PostbackDispatcher::class)->dispatch($lead->fresh(), 'lead.sold');
 
+        $account = $lead->account()->first();
+        if ($account && app(\App\Services\ClickTrack\ClickTrackEntitlementService::class)->isEntitled($account)) {
+            app(\App\Services\ClickTrack\ConversionTrackingService::class)->fromLeadSold($lead->fresh());
+        }
+
         return new DistributionResult(true, $revenue, $buyerId);
     }
 

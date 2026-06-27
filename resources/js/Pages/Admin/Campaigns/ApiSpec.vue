@@ -5,6 +5,7 @@ import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
+import ContextHelpLink from '@/Components/UI/ContextHelpLink.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -220,16 +221,17 @@ const save = () => {
             </template>
         </PageHeader>
 
-        <div class="mb-4 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+        <div class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
             <Link :href="route('campaigns.index')" class="hover:text-indigo-600">Campaigns</Link>
             <span>/</span>
             <Link :href="route('campaigns.show', campaign.id)" class="hover:text-indigo-600">{{ campaign.name }}</Link>
             <span>/</span>
             <span class="font-medium text-slate-800 dark:text-slate-200">API Spec</span>
             <span v-if="isLocked" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Locked</span>
-            <span v-if="campaignAccount" class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+            <span v-if="campaignAccount" class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
                 {{ campaignAccount.name }}
             </span>
+            <ContextHelpLink slug="lead-ingest" label="Lead ingest help" class="ml-auto" />
         </div>
 
         <CampaignWorkflowNav

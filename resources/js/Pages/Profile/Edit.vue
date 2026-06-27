@@ -16,6 +16,8 @@ defineProps({
     accentOptions: Array,
     twoFactorEnabled: Boolean,
     recoveryCodes: Array,
+    twoFactorQr: { type: String, default: null },
+    twoFactorSecret: { type: String, default: null },
 });
 </script>
 
@@ -38,7 +40,12 @@ defineProps({
                 <UpdatePasswordForm class="max-w-xl" />
             </Panel>
             <Panel>
-                <TwoFactorForm :two-factor-enabled="twoFactorEnabled" :recovery-codes="recoveryCodes" />
+                <TwoFactorForm
+                    :two-factor-enabled="twoFactorEnabled"
+                    :recovery-codes="recoveryCodes"
+                    :two-factor-qr="twoFactorQr"
+                    :two-factor-secret="twoFactorSecret"
+                />
             </Panel>
         </div>
     </AuthenticatedLayout>

@@ -127,9 +127,23 @@ class ProfileFunctionalityTest extends TestCase
 
     public function test_two_factor_can_be_enabled_and_disabled(): void
     {
-        $this->ukHost()
+        $google2fa = new \PragmaRX\Google2FA\Google2FA;
+
+        $enable = $this->ukHost()
             ->actingAs($this->ukAdmin)
             ->post(route('profile.two-factor.enable'), ['password' => 'password'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Scan the QR code and enter a code to confirm.');
+
+        $pendingSecret = session('two_factor.pending_secret');
+        $this->assertNotNull($pendingSecret);
+
+        $this->ukHost()
+            ->actingAs($this->ukAdmin)
+            ->post(route('profile.two-factor.confirm'), [
+                'password' => 'password',
+                'code' => $google2fa->getCurrentOtp($pendingSecret),
+            ])
             ->assertRedirect()
             ->assertSessionHas('success', 'Two-factor authentication enabled.')
             ->assertSessionHas('recovery_codes');
@@ -141,6 +155,7 @@ class ProfileFunctionalityTest extends TestCase
 
         $this->ukHost()
             ->actingAs($user)
+            ->withSession(['two_factor_verified' => $user->id])
             ->post(route('profile.two-factor.disable'), ['password' => 'password'])
             ->assertRedirect()
             ->assertSessionHas('success', 'Two-factor authentication disabled.');

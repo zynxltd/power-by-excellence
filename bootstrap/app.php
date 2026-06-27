@@ -59,6 +59,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
             'hosted-form.embed' => \App\Http\Middleware\HostedFormEmbedHeaders::class,
             'signup.complete' => \App\Http\Middleware\EnsureSignupComplete::class,
+            'two-factor.verified' => \App\Http\Middleware\EnsureTwoFactorVerified::class,
+            'product.enabled' => \App\Http\Middleware\EnsureProductEnabled::class,
         ]);
 
         $middleware->priority([
@@ -131,6 +133,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('platform:status-snapshot')->everyFifteenMinutes();
         $schedule->command('platform:status-snapshot --persist')->dailyAt('06:00');
         $schedule->command('platform:sync-alerts')->everyFiveMinutes();
+        $schedule->command('exports:process')->everyMinute()->withoutOverlapping();
+        $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
 
         if (class_exists(\Laravel\Horizon\Horizon::class)) {
             $schedule->command('horizon:snapshot')->everyFiveMinutes();

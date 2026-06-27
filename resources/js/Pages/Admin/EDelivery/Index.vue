@@ -1,0 +1,419 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/UI/PageHeader.vue';
+import Panel from '@/Components/UI/Panel.vue';
+import AppButton from '@/Components/UI/AppButton.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
+import BarChart from '@/Components/UI/BarChart.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import StatusBadge from '@/Components/UI/StatusBadge.vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const props = defineProps({
+    summary: Object,
+    hourlyOpens: Array,
+    campaignStats: Array,
+    segments: Array,
+    templates: Array,
+    sendingProfiles: Array,
+    recentCampaigns: Array,
+    throttle: Object,
+    providers: Object,
+});
+
+const periodDays = computed(() => props.summary?.period_days ?? 30);
+
+const statStrip = computed(() => [
+    { label: `Sent (${periodDays.value}d)`, value: props.summary?.total_sent ?? 0 },
+    { label: 'Delivered', value: props.summary?.delivered ?? 0, accent: 'cyan' },
+    { label: 'Open rate', value: `${props.summary?.open_rate ?? 0}%`, accent: 'emerald' },
+    { label: 'Click rate', value: `${props.summary?.click_rate ?? 0}%`, accent: 'indigo' },
+    { label: 'Bounce rate', value: `${props.summary?.bounce_rate ?? 0}%`, accent: 'rose' },
+    { label: 'Complaints', value: props.summary?.complaints ?? 0, accent: 'amber' },
+]);
+
+const hasSendData = computed(() => (props.summary?.total_sent ?? 0) > 0);
+
+const healthStatus = computed(() => {
+    const bounce = props.summary?.bounce_rate ?? 0;
+    const complaints = props.summary?.complaint_rate ?? 0;
+
+    if (bounce >= 5 || complaints >= 0.1) {
+        return { label: 'Needs attention', tone: 'rose', hint: 'Bounce or complaint rates are elevated — review ESP reputation and list hygiene.' };
+    }
+    if (bounce >= 2 || complaints >= 0.05) {
+        return { label: 'Monitor', tone: 'amber', hint: 'Rates are acceptable but trending warrants a watch on throttling and suppression.' };
+    }
+    if (!hasSendData.value) {
+        return { label: 'No data yet', tone: 'slate', hint: 'Send a bulk campaign or auto-responder to populate deliverability metrics.' };
+    }
+
+    return { label: 'Healthy', tone: 'emerald', hint: 'Deliverability metrics are within normal ranges for the last 30 days.' };
+});
+
+const engagementMetrics = computed(() => [
+    { key: 'opens', label: 'Opens', count: props.summary?.opens ?? 0, rate: props.summary?.open_rate ?? 0, color: '#10b981' },
+    { key: 'clicks', label: 'Clicks', count: props.summary?.clicks ?? 0, rate: props.summary?.click_rate ?? 0, color: '#6366f1' },
+    { key: 'delivered', label: 'Delivered (ESP)', count: props.summary?.delivered ?? 0, rate: props.summary?.delivery_rate ?? 0, color: '#06b6d4' },
+    { key: 'bounces', label: 'Bounces', count: props.summary?.bounces ?? 0, rate: props.summary?.bounce_rate ?? 0, color: '#f43f5e' },
+    { key: 'complaints', label: 'Complaints', count: props.summary?.complaints ?? 0, rate: props.summary?.complaint_rate ?? 0, color: '#f59e0b' },
+]);
+
+const hourlyChart = computed(() => {
+    const opensByHour = Object.fromEntries((props.hourlyOpens ?? []).map((row) => [row.hour, row.opens]));
+    const labels = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
+    const data = labels.map((_, hour) => opensByHour[hour] ?? 0);
+
+    return { labels, data };
+});
+
+const peakHour = computed(() => {
+    const rows = props.hourlyOpens ?? [];
+    if (!rows.length) {
+        return null;
+    }
+
+    const peak = [...rows].sort((a, b) => b.opens - a.opens)[0];
+
+    return {
+        hour: `${String(peak.hour).padStart(2, '0')}:00`,
+        opens: peak.opens,
+    };
+});
+
+const providerChart = computed(() => {
+    const entries = Object.entries(props.summary?.by_provider ?? {});
+
+    return {
+        labels: entries.map(([provider]) => provider),
+        data: entries.map(([, count]) => count),
+    };
+});
+
+const topCampaigns = computed(() => {
+    const stats = [...(props.campaignStats ?? [])].sort((a, b) => b.sent - a.sent);
+
+    return stats.slice(0, 8);
+});
+
+const throttleAlert = computed(() => {
+    const t = props.throttle ?? {};
+
+    if (t.paused) {
+        return {
+            tone: 'rose',
+            title: 'Sending paused',
+            message: `Bounce rate exceeded ${t.bounce_threshold_pct}% in the last ${t.window_minutes} minutes. Bulk sends pause for ${t.pause_minutes} minutes automatically.`,
+        };
+    }
+
+    if ((t.recent_bounces ?? 0) > 0 && (t.bounce_rate_recent ?? 0) >= t.bounce_threshold_pct * 0.7) {
+        return {
+            tone: 'amber',
+            title: 'Approaching throttle limit',
+            message: `Recent bounce rate is ${t.bounce_rate_recent}% (limit ${t.bounce_threshold_pct}%). Reduce send volume or clean your list.`,
+        };
+    }
+
+    if ((t.queued_campaigns ?? 0) > 0) {
+        return {
+            tone: 'indigo',
+            title: 'Queue active',
+            message: `${t.queued_campaigns} campaign(s) scheduled or sending · default cap ${t.default_rate_per_minute}/min per campaign.`,
+        };
+    }
+
+    return null;
+});
+
+const throttleToneClass = (tone) => ({
+    rose: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
+    amber: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
+    indigo: 'border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200',
+}[tone] ?? '');
+
+const segmentForm = useForm({ name: '', rules: { has_email: true } });
+const templateForm = useForm({ name: '', channel: 'email', subject: '', body: '', html_body: '' });
+const profileForm = useForm({ name: '', provider: 'smtp', domain_match: '', from_name: '', from_email: '', is_default: false });
+
+const submitSegment = () => segmentForm.post(route('e-delivery.segments.store'), { preserveScroll: true, onSuccess: () => segmentForm.reset() });
+const submitTemplate = () => templateForm.post(route('e-delivery.templates.store'), { preserveScroll: true, onSuccess: () => templateForm.reset() });
+const submitProfile = () => profileForm.post(route('e-delivery.sending-profiles.store'), { preserveScroll: true, onSuccess: () => profileForm.reset() });
+
+const healthBadgeClass = (tone) => ({
+    emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    rose: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
+    slate: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+}[tone] ?? 'bg-slate-100 text-slate-700');
+</script>
+
+<template>
+    <Head title="E-Delivery" />
+    <AuthenticatedLayout>
+        <PageHeader
+            title="E-Delivery"
+            description="Email & SMS marketing — deliverability, segments, templates, and multi-channel campaigns."
+        >
+            <template #actions>
+                <AppButton :href="route('integrations.messaging')" variant="secondary">ESP settings</AppButton>
+                <AppButton :href="route('automation.index', { tab: 'bulk-sms' })">Bulk campaigns</AppButton>
+                <AppButton :href="route('features.auto-responders')" variant="secondary">Auto-responders</AppButton>
+            </template>
+        </PageHeader>
+
+        <section class="mb-6">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Deliverability</h2>
+                    <p class="text-xs text-slate-500">Last {{ periodDays }} days · opens, clicks, bounces, and ESP feedback</p>
+                </div>
+                <span
+                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                    :class="healthBadgeClass(healthStatus.tone)"
+                >
+                    {{ healthStatus.label }}
+                </span>
+            </div>
+
+            <CompactStatStrip :items="statStrip" :columns="6" class="mb-4" />
+
+            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">{{ healthStatus.hint }}</p>
+
+            <div
+                v-if="throttleAlert"
+                class="mb-4 rounded-xl border px-4 py-3 text-sm"
+                :class="throttleToneClass(throttleAlert.tone)"
+            >
+                <p class="font-semibold">{{ throttleAlert.title }}</p>
+                <p class="mt-1 opacity-90">{{ throttleAlert.message }}</p>
+            </div>
+
+            <Panel title="Send throttling & queue" class="mb-6">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                        <p class="mt-1 text-lg font-semibold" :class="throttle?.paused ? 'text-rose-600' : 'text-emerald-600'">
+                            {{ throttle?.paused ? 'Paused' : 'Active' }}
+                        </p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Send rate cap</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
+                            {{ throttle?.active_rate_per_minute ?? throttle?.default_rate_per_minute }}/min
+                        </p>
+                        <p class="text-xs text-slate-500">~{{ throttle?.chunk_delay_seconds }}s delay per 10 sends</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Queued campaigns</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ throttle?.queued_campaigns ?? 0 }}</p>
+                        <p v-if="(throttle?.pending_sends ?? 0) > 0" class="text-xs text-slate-500">{{ throttle.pending_sends }} pending sends</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Recent bounces</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums" :class="(throttle?.bounce_rate_recent ?? 0) >= (throttle?.bounce_threshold_pct ?? 15) ? 'text-rose-600' : 'text-slate-900 dark:text-white'">
+                            {{ throttle?.bounce_rate_recent ?? 0 }}%
+                        </p>
+                        <p class="text-xs text-slate-500">{{ throttle?.recent_bounces ?? 0 }} / {{ throttle?.recent_sent ?? 0 }} sends ({{ throttle?.window_minutes }}m)</p>
+                    </div>
+                </div>
+                <ul v-if="throttle?.queued_campaign_list?.length" class="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm dark:border-slate-800">
+                    <li
+                        v-for="c in throttle.queued_campaign_list"
+                        :key="c.id"
+                        class="flex flex-wrap items-center justify-between gap-2"
+                    >
+                        <span class="font-medium">{{ c.name }}</span>
+                        <span class="text-xs text-slate-500">
+                            {{ c.status }}
+                            <span v-if="c.throttle_per_minute"> · {{ c.throttle_per_minute }}/min</span>
+                        </span>
+                    </li>
+                </ul>
+            </Panel>
+
+            <div class="grid gap-6 lg:grid-cols-3">
+                <Panel title="Engagement breakdown" class="lg:col-span-1">
+                    <ul v-if="hasSendData" class="space-y-4">
+                        <li v-for="metric in engagementMetrics" :key="metric.key">
+                            <div class="mb-1 flex items-center justify-between text-sm">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">{{ metric.label }}</span>
+                                <span class="tabular-nums text-slate-500">
+                                    {{ metric.count.toLocaleString() }}
+                                    <span class="text-slate-400">({{ metric.rate }}%)</span>
+                                </span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                <div
+                                    class="h-full rounded-full transition-all"
+                                    :style="{ width: `${Math.min(100, metric.rate)}%`, backgroundColor: metric.color }"
+                                />
+                            </div>
+                        </li>
+                    </ul>
+                    <p v-else class="py-6 text-center text-sm text-slate-500">
+                        No sends in this period. Launch a bulk campaign to see engagement metrics.
+                    </p>
+                    <p v-if="hasSendData && (summary?.click_to_open_rate ?? 0) > 0" class="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800">
+                        Click-to-open rate:
+                        <span class="font-semibold text-slate-700 dark:text-slate-300">{{ summary.click_to_open_rate }}%</span>
+                    </p>
+                </Panel>
+
+                <Panel title="Hourly opens" class="lg:col-span-2">
+                    <BarChart
+                        v-if="hasSendData && hourlyChart.data.some((v) => v > 0)"
+                        :labels="hourlyChart.labels"
+                        :datasets="[{ label: 'Opens', data: hourlyChart.data, color: '#6366f1', colorTo: '#818cf8' }]"
+                        :height="220"
+                        :show-legend="false"
+                    />
+                    <p v-else class="py-10 text-center text-sm text-slate-500">Open events will appear here once recipients engage with your emails.</p>
+                    <p v-if="peakHour" class="mt-3 text-xs text-slate-500">
+                        Peak window:
+                        <span class="font-semibold text-slate-700 dark:text-slate-300">{{ peakHour.hour }}</span>
+                        ({{ peakHour.opens }} opens) — schedule campaigns near this hour for better inbox placement.
+                    </p>
+                </Panel>
+            </div>
+
+            <div class="mt-6 grid gap-6 lg:grid-cols-2">
+                <Panel title="Volume by ESP">
+                    <BarChart
+                        v-if="providerChart.labels.length"
+                        :labels="providerChart.labels"
+                        :datasets="[{ label: 'Sends', data: providerChart.data, color: '#0ea5e9', colorTo: '#38bdf8' }]"
+                        :height="200"
+                        :show-legend="false"
+                    />
+                    <p v-else class="py-8 text-center text-sm text-slate-500">Provider split appears after your first tracked sends.</p>
+                </Panel>
+
+                <Panel title="Campaign performance">
+                    <div v-if="topCampaigns.length" class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                    <th class="pb-2 pr-3">Campaign</th>
+                                    <th class="pb-2 pr-3 text-right">Sent</th>
+                                    <th class="pb-2 pr-3 text-right">Opens</th>
+                                    <th class="pb-2 pr-3 text-right">Clicks</th>
+                                    <th class="pb-2 text-right">Open %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="row in topCampaigns"
+                                    :key="row.bulk_sms_campaign_id"
+                                    class="border-t border-slate-100 dark:border-slate-800"
+                                >
+                                    <td class="py-2.5 pr-3">
+                                        <p class="font-medium text-slate-900 dark:text-white">{{ row.name }}</p>
+                                        <p class="text-xs capitalize text-slate-500">{{ row.channel ?? 'email' }}</p>
+                                    </td>
+                                    <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.sent }}</td>
+                                    <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.opens }}</td>
+                                    <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.clicks ?? 0 }}</td>
+                                    <td class="py-2.5 text-right">
+                                        <span
+                                            class="inline-flex min-w-[3rem] justify-end rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
+                                            :class="row.open_rate >= 20 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : row.open_rate >= 10 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'"
+                                        >
+                                            {{ row.open_rate }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p v-else class="py-8 text-center text-sm text-slate-500">Bulk campaign stats appear after sends are logged.</p>
+                </Panel>
+            </div>
+        </section>
+
+        <section class="mt-8">
+            <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Lists & sending</h2>
+            <div class="grid gap-6 lg:grid-cols-3">
+                <Panel title="Segments">
+                    <ul class="mb-4 space-y-1 text-sm">
+                        <li v-for="s in segments" :key="s.id" class="flex items-center justify-between">
+                            <span>{{ s.name }}</span>
+                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.segments.destroy', s.id))">Remove</button>
+                        </li>
+                        <li v-if="!segments?.length" class="text-slate-500">No segments yet.</li>
+                    </ul>
+                    <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitSegment">
+                        <InputLabel value="New segment" />
+                        <TextInput v-model="segmentForm.name" class="w-full" placeholder="Engaged — opened 7d" required />
+                        <AppButton type="submit" size="sm" :disabled="segmentForm.processing">Add</AppButton>
+                    </form>
+                </Panel>
+
+                <Panel title="Templates">
+                    <ul class="mb-4 space-y-1 text-sm">
+                        <li v-for="t in templates" :key="t.id" class="flex items-center justify-between">
+                            <span>{{ t.name }} <span class="text-slate-400">({{ t.channel }})</span></span>
+                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.templates.destroy', t.id))">Remove</button>
+                        </li>
+                        <li v-if="!templates?.length" class="text-slate-500">No templates yet.</li>
+                    </ul>
+                    <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitTemplate">
+                        <TextInput v-model="templateForm.name" class="w-full" placeholder="Template name" required />
+                        <TextInput v-model="templateForm.subject" class="w-full" placeholder="Subject" />
+                        <textarea v-model="templateForm.body" rows="2" class="form-input w-full" placeholder="Plain text body" />
+                        <AppButton type="submit" size="sm" :disabled="templateForm.processing">Save template</AppButton>
+                    </form>
+                </Panel>
+
+                <Panel title="Sending profiles">
+                    <ul class="mb-4 space-y-1 text-sm">
+                        <li v-for="p in sendingProfiles" :key="p.id" class="flex items-center justify-between">
+                            <span>{{ p.name }} <span v-if="p.is_default" class="text-emerald-600">default</span></span>
+                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.sending-profiles.destroy', p.id))">Remove</button>
+                        </li>
+                        <li v-if="!sendingProfiles?.length" class="text-slate-500">No sending profiles yet.</li>
+                    </ul>
+                    <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitProfile">
+                        <TextInput v-model="profileForm.name" class="w-full" placeholder="Profile name" required />
+                        <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Domain match e.g. gmail.com" />
+                        <TextInput v-model="profileForm.from_email" class="w-full" placeholder="From email" />
+                        <AppButton type="submit" size="sm" :disabled="profileForm.processing">Add profile</AppButton>
+                    </form>
+                </Panel>
+            </div>
+        </section>
+
+        <Panel title="Recent campaigns" class="mt-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+                            <th class="pb-2 pr-4">Name</th>
+                            <th class="pb-2 pr-4">Channel</th>
+                            <th class="pb-2 pr-4">Status</th>
+                            <th class="pb-2 pr-4 text-right">Sent</th>
+                            <th class="pb-2 text-right">Failed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="c in recentCampaigns" :key="c.id" class="border-t border-slate-100 dark:border-slate-800">
+                            <td class="py-2 pr-4 font-medium">{{ c.name }}</td>
+                            <td class="py-2 pr-4 capitalize">{{ c.channel ?? 'sms' }}</td>
+                            <td class="py-2 pr-4"><StatusBadge :status="c.status ?? 'draft'" /></td>
+                            <td class="py-2 pr-4 text-right tabular-nums">{{ c.sent_count ?? 0 }}</td>
+                            <td class="py-2 text-right tabular-nums text-rose-600">{{ c.failed_count ?? 0 }}</td>
+                        </tr>
+                        <tr v-if="!recentCampaigns?.length">
+                            <td colspan="5" class="py-6 text-center text-slate-500">No campaigns yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-3 text-sm text-slate-500">
+                <Link :href="route('automation.index', { tab: 'bulk-sms' })" class="text-indigo-600 hover:underline">Manage bulk campaigns →</Link>
+            </p>
+        </Panel>
+    </AuthenticatedLayout>
+</template>

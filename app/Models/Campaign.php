@@ -13,6 +13,8 @@ class Campaign extends Model
     protected $fillable = [
         'account_id',
         'type',
+        'channel',
+        'call_settings',
         'pipeline_profile',
         'name',
         'logo_path',
@@ -51,6 +53,8 @@ class Campaign extends Model
             'use_advanced_distribution' => 'boolean',
             'multi_geo' => 'boolean',
             'geo_countries' => 'array',
+            'call_settings' => 'array',
+            'channel' => \App\Enums\CampaignChannel::class,
         ];
     }
 
@@ -87,5 +91,25 @@ class Campaign extends Model
     public function isSuppression(): bool
     {
         return $this->type === 'suppression';
+    }
+
+    public function isCallCampaign(): bool
+    {
+        return in_array($this->channel ?? 'lead', ['call', 'hybrid'], true);
+    }
+
+    public function trackingNumbers(): HasMany
+    {
+        return $this->hasMany(TrackingNumber::class);
+    }
+
+    public function ivrFlows(): HasMany
+    {
+        return $this->hasMany(IvrFlow::class);
+    }
+
+    public function callSessions(): HasMany
+    {
+        return $this->hasMany(CallSession::class);
     }
 }

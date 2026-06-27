@@ -38,6 +38,8 @@ class SupplierPostbackService
             'lead.funded',
             'lead.returned',
             'delivery.success',
+            'conversion.approved',
+            'conversion.rejected',
         ];
     }
 

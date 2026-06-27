@@ -27,6 +27,7 @@ const form = useForm({
     billing_alert_emails: props.account.billing_alert_emails ?? '',
     default_low_credit_alert: props.account.default_low_credit_alert ?? '',
     buyer_portal_locale: props.account.buyer_portal_locale ?? 'en',
+    custom_portal_domain: props.account.custom_portal_domain ?? '',
 });
 
 const submit = () => {
@@ -88,6 +89,15 @@ const submit = () => {
                         </option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.buyer_portal_locale" />
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Custom portal domain</h4>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Optional branded hostname for buyer and supplier portals (e.g. <code class="text-xs">leads.yourbrand.com</code>). DNS must point to this platform before go-live.
+                    </p>
+                    <TextInput v-model="form.custom_portal_domain" class="mt-3 max-w-md font-mono text-sm" placeholder="leads.example.com" />
+                    <InputError class="mt-1" :message="form.errors.custom_portal_domain" />
                 </div>
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">

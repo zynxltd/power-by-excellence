@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Logic DNI Demo</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+        .pbe-calls-loading { opacity: 0.5; }
+        a[data-pbe-call-number] { font-size: 1.5rem; font-weight: 700; color: #4338ca; }
+    </style>
+</head>
+<body>
+    <h1>Call Logic DNI demo</h1>
+    <p>This page demonstrates dynamic number insertion via <code>pbe-calls.js</code>.</p>
+    <p>Call us: <a href="#" data-pbe-call-number>Loading…</a></p>
+    <p>Or dial: <span data-pbe-call-number>Loading…</span></p>
+
+    <script>
+        window.PbeCallsConfig = {
+            accountSlug: 'excellence-uk',
+            fallbackNumber: '+44 20 0000 0000',
+        };
+    </script>
+    <script src="/sdk/pbe-calls.js"></script>
+</body>
+</html>

@@ -53,6 +53,11 @@ class BuyerConversionService
         $this->postbackDispatcher->dispatch($lead->fresh(), $event);
         $this->fireBuyerWebhook($buyer, $lead->fresh(), $event, $normalized, $converted, $notes);
 
+        $lead->loadMissing('account');
+        if ($lead->account && app(\App\Services\ClickTrack\ClickTrackEntitlementService::class)->isEntitled($lead->account)) {
+            app(\App\Services\ClickTrack\ConversionTrackingService::class)->fromBuyerFeedback($lead->fresh(), $event);
+        }
+
         return [
             'event' => $event,
             'status' => $normalized,

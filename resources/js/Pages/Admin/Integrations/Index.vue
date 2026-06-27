@@ -12,6 +12,8 @@ const props = defineProps({
     stats: Object,
 });
 
+const integrations = computed(() => props.integrations ?? []);
+
 const statusStyles = {
     connected: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
     available: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',

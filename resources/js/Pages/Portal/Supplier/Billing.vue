@@ -38,7 +38,11 @@ const { formatMoney } = useMoneyFormat(props.currency);
         <PageHeader
             title="Payouts & Revenue"
             description="Track your lead payouts, sold volume, and revenue earned on the platform."
-        />
+        >
+            <template #actions>
+                <AppButton :href="route('portal.supplier.payouts.download', localFilters)" variant="secondary" external>Export payouts</AppButton>
+            </template>
+        </PageHeader>
 
         <CompactStatStrip
             :items="[
