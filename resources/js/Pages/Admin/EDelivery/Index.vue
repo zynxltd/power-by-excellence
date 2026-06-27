@@ -19,6 +19,7 @@ const props = defineProps({
     templates: Array,
     sendingProfiles: Array,
     recentCampaigns: Array,
+    throttle: Object,
     providers: Object,
 });
 
@@ -97,6 +98,42 @@ const topCampaigns = computed(() => {
     return stats.slice(0, 8);
 });
 
+const throttleAlert = computed(() => {
+    const t = props.throttle ?? {};
+
+    if (t.paused) {
+        return {
+            tone: 'rose',
+            title: 'Sending paused',
+            message: `Bounce rate exceeded ${t.bounce_threshold_pct}% in the last ${t.window_minutes} minutes. Bulk sends pause for ${t.pause_minutes} minutes automatically.`,
+        };
+    }
+
+    if ((t.recent_bounces ?? 0) > 0 && (t.bounce_rate_recent ?? 0) >= t.bounce_threshold_pct * 0.7) {
+        return {
+            tone: 'amber',
+            title: 'Approaching throttle limit',
+            message: `Recent bounce rate is ${t.bounce_rate_recent}% (limit ${t.bounce_threshold_pct}%). Reduce send volume or clean your list.`,
+        };
+    }
+
+    if ((t.queued_campaigns ?? 0) > 0) {
+        return {
+            tone: 'indigo',
+            title: 'Queue active',
+            message: `${t.queued_campaigns} campaign(s) scheduled or sending · default cap ${t.default_rate_per_minute}/min per campaign.`,
+        };
+    }
+
+    return null;
+});
+
+const throttleToneClass = (tone) => ({
+    rose: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
+    amber: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
+    indigo: 'border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200',
+}[tone] ?? '');
+
 const segmentForm = useForm({ name: '', rules: { has_email: true } });
 const templateForm = useForm({ name: '', channel: 'email', subject: '', body: '', html_body: '' });
 const profileForm = useForm({ name: '', provider: 'smtp', domain_match: '', from_name: '', from_email: '', is_default: false });
@@ -144,6 +181,58 @@ const healthBadgeClass = (tone) => ({
             <CompactStatStrip :items="statStrip" :columns="6" class="mb-4" />
 
             <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">{{ healthStatus.hint }}</p>
+
+            <div
+                v-if="throttleAlert"
+                class="mb-4 rounded-xl border px-4 py-3 text-sm"
+                :class="throttleToneClass(throttleAlert.tone)"
+            >
+                <p class="font-semibold">{{ throttleAlert.title }}</p>
+                <p class="mt-1 opacity-90">{{ throttleAlert.message }}</p>
+            </div>
+
+            <Panel title="Send throttling & queue" class="mb-6">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                        <p class="mt-1 text-lg font-semibold" :class="throttle?.paused ? 'text-rose-600' : 'text-emerald-600'">
+                            {{ throttle?.paused ? 'Paused' : 'Active' }}
+                        </p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Send rate cap</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
+                            {{ throttle?.active_rate_per_minute ?? throttle?.default_rate_per_minute }}/min
+                        </p>
+                        <p class="text-xs text-slate-500">~{{ throttle?.chunk_delay_seconds }}s delay per 10 sends</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Queued campaigns</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ throttle?.queued_campaigns ?? 0 }}</p>
+                        <p v-if="(throttle?.pending_sends ?? 0) > 0" class="text-xs text-slate-500">{{ throttle.pending_sends }} pending sends</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Recent bounces</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums" :class="(throttle?.bounce_rate_recent ?? 0) >= (throttle?.bounce_threshold_pct ?? 15) ? 'text-rose-600' : 'text-slate-900 dark:text-white'">
+                            {{ throttle?.bounce_rate_recent ?? 0 }}%
+                        </p>
+                        <p class="text-xs text-slate-500">{{ throttle?.recent_bounces ?? 0 }} / {{ throttle?.recent_sent ?? 0 }} sends ({{ throttle?.window_minutes }}m)</p>
+                    </div>
+                </div>
+                <ul v-if="throttle?.queued_campaign_list?.length" class="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm dark:border-slate-800">
+                    <li
+                        v-for="c in throttle.queued_campaign_list"
+                        :key="c.id"
+                        class="flex flex-wrap items-center justify-between gap-2"
+                    >
+                        <span class="font-medium">{{ c.name }}</span>
+                        <span class="text-xs text-slate-500">
+                            {{ c.status }}
+                            <span v-if="c.throttle_per_minute"> · {{ c.throttle_per_minute }}/min</span>
+                        </span>
+                    </li>
+                </ul>
+            </Panel>
 
             <div class="grid gap-6 lg:grid-cols-3">
                 <Panel title="Engagement breakdown" class="lg:col-span-1">
@@ -202,7 +291,7 @@ const healthBadgeClass = (tone) => ({
                     <p v-else class="py-8 text-center text-sm text-slate-500">Provider split appears after your first tracked sends.</p>
                 </Panel>
 
-                <Panel title="Campaign open rates">
+                <Panel title="Campaign performance">
                     <div v-if="topCampaigns.length" class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead>
@@ -210,6 +299,7 @@ const healthBadgeClass = (tone) => ({
                                     <th class="pb-2 pr-3">Campaign</th>
                                     <th class="pb-2 pr-3 text-right">Sent</th>
                                     <th class="pb-2 pr-3 text-right">Opens</th>
+                                    <th class="pb-2 pr-3 text-right">Clicks</th>
                                     <th class="pb-2 text-right">Open %</th>
                                 </tr>
                             </thead>
@@ -225,6 +315,7 @@ const healthBadgeClass = (tone) => ({
                                     </td>
                                     <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.sent }}</td>
                                     <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.opens }}</td>
+                                    <td class="py-2.5 pr-3 text-right tabular-nums">{{ row.clicks ?? 0 }}</td>
                                     <td class="py-2.5 text-right">
                                         <span
                                             class="inline-flex min-w-[3rem] justify-end rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"

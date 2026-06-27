@@ -10,6 +10,7 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\ThrottleGovernor;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,7 @@ class EDeliveryController extends Controller
             'templates' => MessageTemplate::orderBy('name')->get(),
             'sendingProfiles' => SendingProfile::orderBy('name')->get(),
             'recentCampaigns' => BulkSmsCampaign::with('campaign:id,name')->orderByDesc('created_at')->limit(10)->get(),
+            'throttle' => app(ThrottleGovernor::class)->status($accountId),
             'providers' => [
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
                 'sms' => ['log', 'twilio', 'vonage'],

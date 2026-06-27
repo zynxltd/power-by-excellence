@@ -26,6 +26,11 @@ class DeliverabilityReportService
             ->groupBy('provider')
             ->pluck('total', 'provider');
 
+        $byChannel = (clone $sends)
+            ->select('channel', DB::raw('count(*) as total'))
+            ->groupBy('channel')
+            ->pluck('total', 'channel');
+
         $events = MessageEvent::withoutGlobalScopes()
             ->where('account_id', $accountId)
             ->where('occurred_at', '>=', $since);
@@ -50,6 +55,7 @@ class DeliverabilityReportService
             'delivery_rate' => $totalSent > 0 ? round(($delivered / $totalSent) * 100, 2) : 0,
             'click_to_open_rate' => $opens > 0 ? round(($clicks / $opens) * 100, 2) : 0,
             'by_provider' => $byProvider,
+            'by_channel' => $byChannel,
             'period_days' => $days,
         ];
     }
@@ -92,11 +98,21 @@ class DeliverabilityReportService
                     ->whereHas('messageSend', fn ($q) => $q->where('bulk_sms_campaign_id', $row->bulk_sms_campaign_id))
                     ->count();
 
+                $clicks = MessageEvent::withoutGlobalScopes()
+                    ->where('account_id', $accountId)
+                    ->where('type', 'click')
+                    ->whereHas('messageSend', fn ($q) => $q->where('bulk_sms_campaign_id', $row->bulk_sms_campaign_id))
+                    ->count();
+
+                $sent = (int) $row->sent;
+
                 return [
                     'bulk_sms_campaign_id' => $row->bulk_sms_campaign_id,
-                    'sent' => (int) $row->sent,
+                    'sent' => $sent,
                     'opens' => $opens,
-                    'open_rate' => $row->sent > 0 ? round(($opens / $row->sent) * 100, 2) : 0,
+                    'clicks' => $clicks,
+                    'open_rate' => $sent > 0 ? round(($opens / $sent) * 100, 2) : 0,
+                    'click_rate' => $sent > 0 ? round(($clicks / $sent) * 100, 2) : 0,
                 ];
             });
     }

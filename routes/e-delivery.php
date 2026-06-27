@@ -32,6 +32,10 @@ Route::post('/webhooks/esp/postmark', [EspWebhookController::class, 'postmark'])
 
 function registerEDeliveryAdminRoutes(): void
 {
+    if (Route::has('e-delivery.index')) {
+        return;
+    }
+
     Route::get('e-delivery', [EDeliveryController::class, 'index'])->name('e-delivery.index');
     Route::post('e-delivery/segments', [EDeliveryController::class, 'storeSegment'])->name('e-delivery.segments.store');
     Route::delete('e-delivery/segments/{segment}', [EDeliveryController::class, 'destroySegment'])->name('e-delivery.segments.destroy');
