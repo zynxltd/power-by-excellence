@@ -203,7 +203,14 @@ const sendBulk = (id) => {
 
         <!-- Sequences -->
         <div v-show="activeTab === 'sequences'">
-            <SequenceBuilder :sequences="sequences" :campaigns="campaigns" :providers="providers" />
+            <SequenceBuilder
+                :sequences="sequences"
+                :campaigns="campaigns"
+                :segments="segments"
+                :templates="templates"
+                :sending-profiles="sendingProfiles"
+                :providers="providers"
+            />
         </div>
 
         <!-- Bulk messaging -->

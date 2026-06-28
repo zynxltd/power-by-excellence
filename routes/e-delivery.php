@@ -13,8 +13,10 @@
  *
  * Schedule in bootstrap/app.php:
  *   $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
+ *   $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
  */
 
+use App\Http\Controllers\Admin\AutomationController;
 use App\Http\Controllers\Admin\EDeliveryController;
 use App\Http\Controllers\Admin\MessagingIntegrationController;
 use App\Http\Controllers\EspWebhookController;
@@ -30,8 +32,20 @@ Route::post('/webhooks/esp/sendgrid', [EspWebhookController::class, 'sendgrid'])
 Route::post('/webhooks/esp/mailgun', [EspWebhookController::class, 'mailgun'])->name('webhooks.esp.mailgun');
 Route::post('/webhooks/esp/postmark', [EspWebhookController::class, 'postmark'])->name('webhooks.esp.postmark');
 
+function registerEDeliveryJourneyRoutes(): void
+{
+    if (Route::has('e-delivery.journeys.process')) {
+        return;
+    }
+
+    Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])
+        ->name('e-delivery.journeys.process');
+}
+
 function registerEDeliveryAdminRoutes(): void
 {
+    registerEDeliveryJourneyRoutes();
+
     if (Route::has('e-delivery.index')) {
         return;
     }

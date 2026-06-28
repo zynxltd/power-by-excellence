@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\AutomationSequence;
+use App\Models\AutomationSequenceEnrollment;
+use App\Models\AutomationSequenceStep;
 use App\Models\BulkSmsCampaign;
 use App\Models\Lead;
 use App\Models\MessageSend;
@@ -9,6 +12,7 @@ use App\Models\MessageTemplate;
 use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Models\User;
+use App\Services\Automation\AutomationSequenceService;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\MarketingSuppressionService;
 use App\Services\Messaging\MessageSendService;
@@ -344,5 +348,183 @@ class EDeliveryTest extends TestCase
                 'body' => 'Hi Sam',
                 'html_body' => '<strong>Sam</strong>',
             ]);
+    }
+
+    public function test_segment_entry_enrolls_lead_and_sends_first_template_step(): void
+    {
+        $account = $this->admin->resolveAccount();
+        $lead = Lead::first();
+        $lead->update([
+            'field_data' => array_merge($lead->field_data ?? [], [
+                'firstname' => 'Taylor',
+                'email' => 'taylor@example.com',
+            ]),
+        ]);
+
+        $segment = Segment::create([
+            'account_id' => $account->id,
+            'name' => 'Engaged leads',
+            'rules' => ['tags' => ['engaged']],
+        ]);
+
+        $template = MessageTemplate::create([
+            'account_id' => $account->id,
+            'name' => 'Drip welcome',
+            'channel' => 'email',
+            'subject' => 'Hi {{first_name}}',
+            'body' => 'Hello {{first_name}}, welcome to the journey.',
+        ]);
+
+        $sequence = AutomationSequence::create([
+            'account_id' => $account->id,
+            'segment_id' => $segment->id,
+            'name' => 'Engaged drip',
+            'trigger_event' => 'on_segment_entry',
+            'status' => 'active',
+        ]);
+
+        AutomationSequenceStep::create([
+            'automation_sequence_id' => $sequence->id,
+            'sort_order' => 0,
+            'action' => 'send_template',
+            'delay_minutes' => 0,
+            'channel' => 'email',
+            'config' => [
+                'message_template_id' => $template->id,
+                'to_field' => 'email',
+            ],
+        ]);
+
+        app(SegmentService::class)->tagLead($lead, 'engaged');
+
+        $this->assertDatabaseHas('automation_sequence_enrollments', [
+            'lead_id' => $lead->id,
+            'automation_sequence_id' => $sequence->id,
+            'status' => 'completed',
+        ]);
+
+        $this->assertDatabaseHas('message_sends', [
+            'lead_id' => $lead->id,
+            'subject' => 'Hi Taylor',
+            'body' => 'Hello Taylor, welcome to the journey.',
+        ]);
+    }
+
+    public function test_wait_step_schedules_next_sequence_send(): void
+    {
+        $account = $this->admin->resolveAccount();
+        $lead = Lead::first();
+        $lead->update([
+            'field_data' => array_merge($lead->field_data ?? [], [
+                'firstname' => 'Casey',
+                'email' => 'casey@example.com',
+            ]),
+        ]);
+
+        $template = MessageTemplate::create([
+            'account_id' => $account->id,
+            'name' => 'Follow-up',
+            'channel' => 'email',
+            'subject' => 'Checking in {{first_name}}',
+            'body' => 'Hi {{first_name}}, following up.',
+        ]);
+
+        $sequence = AutomationSequence::create([
+            'account_id' => $account->id,
+            'name' => 'Wait then send',
+            'trigger_event' => 'on_lead_received',
+            'status' => 'active',
+        ]);
+
+        AutomationSequenceStep::create([
+            'automation_sequence_id' => $sequence->id,
+            'sort_order' => 0,
+            'action' => 'wait',
+            'delay_minutes' => 0,
+            'channel' => 'email',
+            'config' => [],
+        ]);
+
+        AutomationSequenceStep::create([
+            'automation_sequence_id' => $sequence->id,
+            'sort_order' => 1,
+            'action' => 'send_template',
+            'delay_minutes' => 60,
+            'channel' => 'email',
+            'config' => [
+                'message_template_id' => $template->id,
+                'to_field' => 'email',
+            ],
+        ]);
+
+        app(AutomationSequenceService::class)->enrollLead($lead, $sequence->fresh('steps'));
+
+        $enrollment = AutomationSequenceEnrollment::where('lead_id', $lead->id)->first();
+        $this->assertSame(1, (int) $enrollment->current_step_order);
+        $this->assertTrue($enrollment->next_run_at->isFuture());
+
+        $this->assertDatabaseMissing('message_sends', [
+            'lead_id' => $lead->id,
+            'subject' => 'Checking in Casey',
+        ]);
+
+        $this->travel(61)->minutes();
+        $this->artisan('automation:process-sequences')->assertSuccessful();
+
+        $this->assertDatabaseHas('message_sends', [
+            'lead_id' => $lead->id,
+            'subject' => 'Checking in Casey',
+        ]);
+
+        $enrollment->refresh();
+        $this->assertSame('completed', $enrollment->status);
+    }
+
+    public function test_drip_email_step_merges_template_from_lead_data(): void
+    {
+        $account = $this->admin->resolveAccount();
+        $lead = Lead::first();
+        $lead->update([
+            'field_data' => array_merge($lead->field_data ?? [], [
+                'firstname' => 'Jordan',
+                'lastname' => 'Lee',
+                'email' => 'jordan@example.com',
+            ]),
+        ]);
+
+        $template = MessageTemplate::create([
+            'account_id' => $account->id,
+            'name' => 'Personalized drip',
+            'channel' => 'email',
+            'subject' => 'For {{first_name}} {{last_name}}',
+            'body' => 'Dear {{first_name}}, we saved your spot.',
+        ]);
+
+        $sequence = AutomationSequence::create([
+            'account_id' => $account->id,
+            'name' => 'Lead received drip',
+            'trigger_event' => 'on_lead_received',
+            'status' => 'active',
+        ]);
+
+        AutomationSequenceStep::create([
+            'automation_sequence_id' => $sequence->id,
+            'sort_order' => 0,
+            'action' => 'send_template',
+            'delay_minutes' => 0,
+            'channel' => 'email',
+            'config' => [
+                'message_template_id' => $template->id,
+                'to_field' => 'email',
+            ],
+        ]);
+
+        app(AutomationSequenceService::class)->dispatchForLead($lead, 'on_lead_received');
+
+        $this->assertDatabaseHas('message_sends', [
+            'lead_id' => $lead->id,
+            'subject' => 'For Jordan Lee',
+            'body' => 'Dear Jordan, we saved your spot.',
+        ]);
     }
 }
