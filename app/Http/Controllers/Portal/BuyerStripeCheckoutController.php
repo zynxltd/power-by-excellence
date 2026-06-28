@@ -38,6 +38,66 @@ class BuyerStripeCheckoutController extends Controller
         return redirect()->away($session->url);
     }
 
+    public function subscribe(Request $request, StripeCheckoutService $stripe): RedirectResponse
+    {
+        $buyer = $request->user()->buyer;
+        abort_unless($buyer, 403);
+
+        $validated = $request->validate([
+            'price_id' => 'required|string|max:255',
+        ]);
+
+        abort_unless($stripe->subscriptionsEnabled($buyer->account), 422, 'Buyer subscriptions are disabled.');
+
+        if ($error = $stripe->validateSubscriptionPriceId($buyer->account, $validated['price_id'])) {
+            return back()->withErrors(['price_id' => $error]);
+        }
+
+        try {
+            $session = $stripe->createSubscriptionCheckoutSession(
+                $buyer,
+                $request->user(),
+                $validated['price_id'],
+            );
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return back()->withErrors(['price_id' => $e->getMessage()]);
+        }
+
+        return redirect()->away($session->url);
+    }
+
+    public function cancelSubscription(Request $request, StripeCheckoutService $stripe): RedirectResponse
+    {
+        $buyer = $request->user()->buyer;
+        abort_unless($buyer, 403);
+
+        abort_unless($stripe->subscriptionsEnabled($buyer->account), 422, 'Buyer subscriptions are disabled.');
+
+        try {
+            $stripe->cancelSubscription($buyer);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['subscription' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Subscription will cancel at the end of the billing period.');
+    }
+
+    public function reactivateSubscription(Request $request, StripeCheckoutService $stripe): RedirectResponse
+    {
+        $buyer = $request->user()->buyer;
+        abort_unless($buyer, 403);
+
+        abort_unless($stripe->subscriptionsEnabled($buyer->account), 422, 'Buyer subscriptions are disabled.');
+
+        try {
+            $stripe->reactivateSubscription($buyer);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['subscription' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Subscription reactivated.');
+    }
+
     public function success(Request $request, StripeCheckoutService $stripe): Response|RedirectResponse
     {
         $buyer = $request->user()->buyer;
@@ -51,11 +111,11 @@ class BuyerStripeCheckoutController extends Controller
 
             try {
                 $session = Session::retrieve($sessionId);
-                if (($session->payment_status ?? null) === 'paid') {
+                if (($session->payment_status ?? null) === 'paid' || ($session->mode ?? null) === 'subscription') {
                     $stripe->handleWebhookCompleted($session);
                 }
             } catch (\Throwable) {
-                // Webhook may have already credited the account.
+                // Webhook may have already processed the session.
             }
         }
 
