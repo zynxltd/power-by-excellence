@@ -17,6 +17,7 @@ class MessageSendService
         protected MarketingSuppressionService $suppression,
         protected EmailTrackingService $tracking,
         protected ThrottleGovernor $throttle,
+        protected TemplateRenderService $templateRender,
     ) {}
 
     /**
@@ -59,6 +60,24 @@ class MessageSendService
             return false;
         }
 
+        $subject = $payload['subject'] ?? null;
+        $body = $payload['body'];
+        $htmlBody = $payload['html_body'] ?? null;
+
+        if (! empty($payload['lead_id'])) {
+            $lead = Lead::find($payload['lead_id']);
+            if ($lead) {
+                $rendered = $this->templateRender->renderParts([
+                    'subject' => $subject,
+                    'body' => $body,
+                    'html_body' => $htmlBody,
+                ], $lead);
+                $subject = $rendered['subject'] ?? $subject;
+                $body = $rendered['body'] ?? $body;
+                $htmlBody = $rendered['html_body'] ?? $htmlBody;
+            }
+        }
+
         $account = Account::find($accountId);
         $profile = $this->credentials->resolveSendingProfile(
             $accountId,
@@ -81,8 +100,8 @@ class MessageSendService
             'source_type' => $payload['source_type'] ?? null,
             'source_id' => $payload['source_id'] ?? null,
             'recipient' => $recipient,
-            'subject' => $payload['subject'] ?? null,
-            'body' => $payload['body'],
+            'subject' => $subject,
+            'body' => $body,
             'ab_variant' => $payload['ab_variant'] ?? null,
             'status' => 'pending',
         ]);
@@ -97,18 +116,17 @@ class MessageSendService
         $ok = false;
 
         if ($channel === 'email') {
-            $htmlBody = $payload['html_body'] ?? null;
             $track = $payload['track'] ?? true;
 
-            if ($track && ($htmlBody || filled($payload['body']))) {
-                $html = $this->tracking->buildHtmlEmail($payload['body'], $htmlBody, $send);
+            if ($track && ($htmlBody || filled($body))) {
+                $html = $this->tracking->buildHtmlEmail($body, $htmlBody, $send);
                 $options['html'] = $html;
             }
 
             $ok = $this->messaging->sendEmail(
                 $recipient,
-                $payload['subject'] ?? 'Message',
-                $payload['body'],
+                $subject ?? 'Message',
+                $body,
                 $options,
             );
         } else {

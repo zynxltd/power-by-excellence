@@ -13,6 +13,7 @@ use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\MarketingSuppressionService;
 use App\Services\Messaging\MessageSendService;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\ThrottleGovernor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +44,16 @@ class EDeliveryTest extends TestCase
         }
 
         \registerEDeliveryAdminRoutes();
+
+        if (! Route::has('e-delivery.templates.preview')) {
+            Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])
+                ->name('e-delivery.templates.preview');
+        }
+
+        if (! Route::has('e-delivery.templates.update')) {
+            Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])
+                ->name('e-delivery.templates.update');
+        }
     }
 
     public function test_scheduled_bulk_campaign_is_processed_by_command(): void
@@ -271,5 +282,67 @@ class EDeliveryTest extends TestCase
 
         $stats = app(DeliverabilityReportService::class)->campaignStats($account->id);
         $this->assertTrue($stats->contains(fn (array $row) => $row['bulk_sms_campaign_id'] === $campaign->id));
+    }
+
+    public function test_template_render_service_merges_tags_with_aliases(): void
+    {
+        $rendered = app(TemplateRenderService::class)->renderParts([
+            'subject' => 'Hello {{first_name}}',
+            'body' => 'Dear {{last_name}}, welcome.',
+            'html_body' => '<p>Hi {{first_name}} {{last_name}}</p>',
+        ], null, ['first_name' => 'Jamie', 'last_name' => 'Lee']);
+
+        $this->assertSame('Hello Jamie', $rendered['subject']);
+        $this->assertSame('Dear Lee, welcome.', $rendered['body']);
+        $this->assertSame('<p>Hi Jamie Lee</p>', $rendered['html_body']);
+    }
+
+    public function test_message_send_merges_template_tags_from_lead(): void
+    {
+        $account = $this->admin->resolveAccount();
+        $lead = Lead::first();
+        $lead->update([
+            'field_data' => array_merge($lead->field_data ?? [], [
+                'firstname' => 'Jordan',
+                'lastname' => 'Smith',
+                'email' => 'jordan@example.com',
+            ]),
+        ]);
+
+        $sent = app(MessageSendService::class)->send([
+            'account_id' => $account->id,
+            'lead_id' => $lead->id,
+            'channel' => 'email',
+            'recipient' => 'jordan@example.com',
+            'subject' => 'Hi {{first_name}}',
+            'body' => 'Hello {{first_name}} {{last_name}}',
+            'html_body' => '<p>Hello {{first_name}}</p>',
+            'provider' => 'log',
+            'track' => false,
+        ]);
+
+        $this->assertTrue($sent);
+        $this->assertDatabaseHas('message_sends', [
+            'lead_id' => $lead->id,
+            'subject' => 'Hi Jordan',
+            'body' => 'Hello Jordan Smith',
+        ]);
+    }
+
+    public function test_template_preview_endpoint_returns_rendered_html(): void
+    {
+        $this->actingAs($this->admin)
+            ->postJson('/e-delivery/templates/preview', [
+                'subject' => 'Offer for {{first_name}}',
+                'body' => 'Hi {{first_name}}',
+                'html_body' => '<strong>{{first_name}}</strong>',
+                'preview_data' => ['first_name' => 'Sam'],
+            ])
+            ->assertOk()
+            ->assertJson([
+                'subject' => 'Offer for Sam',
+                'body' => 'Hi Sam',
+                'html_body' => '<strong>Sam</strong>',
+            ]);
     }
 }

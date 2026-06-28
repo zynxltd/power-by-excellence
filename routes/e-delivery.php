@@ -40,6 +40,8 @@ function registerEDeliveryAdminRoutes(): void
     Route::post('e-delivery/segments', [EDeliveryController::class, 'storeSegment'])->name('e-delivery.segments.store');
     Route::delete('e-delivery/segments/{segment}', [EDeliveryController::class, 'destroySegment'])->name('e-delivery.segments.destroy');
     Route::post('e-delivery/templates', [EDeliveryController::class, 'storeTemplate'])->name('e-delivery.templates.store');
+    Route::post('e-delivery/templates/preview', [EDeliveryController::class, 'previewTemplate'])->name('e-delivery.templates.preview');
+    Route::put('e-delivery/templates/{template}', [EDeliveryController::class, 'updateTemplate'])->name('e-delivery.templates.update');
     Route::delete('e-delivery/templates/{template}', [EDeliveryController::class, 'destroyTemplate'])->name('e-delivery.templates.destroy');
     Route::post('e-delivery/sending-profiles', [EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
     Route::delete('e-delivery/sending-profiles/{profile}', [EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');

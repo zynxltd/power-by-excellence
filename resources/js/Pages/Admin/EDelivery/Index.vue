@@ -9,7 +9,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     summary: Object,
@@ -21,6 +21,8 @@ const props = defineProps({
     recentCampaigns: Array,
     throttle: Object,
     providers: Object,
+    mergeTags: Array,
+    defaultPreviewData: Object,
 });
 
 const periodDays = computed(() => props.summary?.period_days ?? 30);
@@ -135,11 +137,68 @@ const throttleToneClass = (tone) => ({
 }[tone] ?? '');
 
 const segmentForm = useForm({ name: '', rules: { has_email: true } });
-const templateForm = useForm({ name: '', channel: 'email', subject: '', body: '', html_body: '' });
+const editingTemplateId = ref(null);
+const templateForm = useForm({
+    name: '',
+    channel: 'email',
+    subject: '',
+    body: '',
+    html_body: '',
+    preview_data: { ...(props.defaultPreviewData ?? {}) },
+});
 const profileForm = useForm({ name: '', provider: 'smtp', domain_match: '', from_name: '', from_email: '', is_default: false });
 
+const renderMergeTags = (text, data) => {
+    if (!text) {
+        return '';
+    }
+
+    return text.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key) => data?.[key] ?? '');
+};
+
+const templatePreview = computed(() => {
+    const data = templateForm.preview_data ?? props.defaultPreviewData ?? {};
+
+    return {
+        subject: renderMergeTags(templateForm.subject, data),
+        body: renderMergeTags(templateForm.body, data),
+        html: renderMergeTags(templateForm.html_body, data),
+    };
+});
+
+const editTemplate = (template) => {
+    editingTemplateId.value = template.id;
+    templateForm.name = template.name;
+    templateForm.channel = template.channel ?? 'email';
+    templateForm.subject = template.subject ?? '';
+    templateForm.body = template.body ?? '';
+    templateForm.html_body = template.html_body ?? '';
+    templateForm.preview_data = { ...(props.defaultPreviewData ?? {}), ...(template.preview_data ?? {}) };
+};
+
+const resetTemplateForm = () => {
+    editingTemplateId.value = null;
+    templateForm.reset();
+    templateForm.channel = 'email';
+    templateForm.preview_data = { ...(props.defaultPreviewData ?? {}) };
+};
+
+const insertMergeTag = (tag) => {
+    templateForm.html_body = `${templateForm.html_body ?? ''}{{${tag}}}`;
+};
+
+const mergeTagLabel = (tag) => `{{${tag}}}`;
+
 const submitSegment = () => segmentForm.post(route('e-delivery.segments.store'), { preserveScroll: true, onSuccess: () => segmentForm.reset() });
-const submitTemplate = () => templateForm.post(route('e-delivery.templates.store'), { preserveScroll: true, onSuccess: () => templateForm.reset() });
+const submitTemplate = () => {
+    const options = { preserveScroll: true, onSuccess: () => resetTemplateForm() };
+
+    if (editingTemplateId.value) {
+        templateForm.put(route('e-delivery.templates.update', editingTemplateId.value), options);
+    } else {
+        templateForm.post(route('e-delivery.templates.store'), options);
+    }
+};
 const submitProfile = () => profileForm.post(route('e-delivery.sending-profiles.store'), { preserveScroll: true, onSuccess: () => profileForm.reset() });
 
 const healthBadgeClass = (tone) => ({
@@ -351,19 +410,68 @@ const healthBadgeClass = (tone) => ({
                     </form>
                 </Panel>
 
-                <Panel title="Templates">
+                <Panel title="Templates" class="lg:col-span-2">
                     <ul class="mb-4 space-y-1 text-sm">
-                        <li v-for="t in templates" :key="t.id" class="flex items-center justify-between">
-                            <span>{{ t.name }} <span class="text-slate-400">({{ t.channel }})</span></span>
-                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.templates.destroy', t.id))">Remove</button>
+                        <li v-for="t in templates" :key="t.id" class="flex items-center justify-between gap-2">
+                            <button type="button" class="text-left hover:text-indigo-600" @click="editTemplate(t)">
+                                {{ t.name }} <span class="text-slate-400">({{ t.channel }})</span>
+                            </button>
+                            <button type="button" class="shrink-0 text-xs text-rose-600" @click="router.delete(route('e-delivery.templates.destroy', t.id))">Remove</button>
                         </li>
                         <li v-if="!templates?.length" class="text-slate-500">No templates yet.</li>
                     </ul>
-                    <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitTemplate">
+
+                    <form class="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitTemplate">
+                        <div class="flex items-center justify-between gap-2">
+                            <InputLabel :value="editingTemplateId ? 'Edit template' : 'New template'" />
+                            <button v-if="editingTemplateId" type="button" class="text-xs text-slate-500 hover:text-slate-700" @click="resetTemplateForm">Cancel edit</button>
+                        </div>
                         <TextInput v-model="templateForm.name" class="w-full" placeholder="Template name" required />
-                        <TextInput v-model="templateForm.subject" class="w-full" placeholder="Subject" />
-                        <textarea v-model="templateForm.body" rows="2" class="form-input w-full" placeholder="Plain text body" />
-                        <AppButton type="submit" size="sm" :disabled="templateForm.processing">Save template</AppButton>
+                        <TextInput v-model="templateForm.subject" class="w-full" placeholder="Subject — Hello {{first_name}}" />
+                        <textarea v-model="templateForm.body" rows="2" class="form-input w-full" placeholder="Plain text — Hi {{first_name}}, …" />
+
+                        <div>
+                            <InputLabel value="HTML body" />
+                            <textarea v-model="templateForm.html_body" rows="6" class="form-input mt-1 w-full font-mono text-sm" placeholder="<p>Hi {{first_name}},</p>" />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Merge tags" />
+                            <div class="mt-1 flex flex-wrap gap-2">
+                                <button
+                                    v-for="tag in mergeTags"
+                                    :key="tag.tag"
+                                    type="button"
+                                    class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                    @click="insertMergeTag(tag.tag)"
+                                >
+                                    {{ mergeTagLabel(tag.tag) }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
+                                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ templatePreview.subject || '—' }}</p>
+                                <pre class="mt-2 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300">{{ templatePreview.body }}</pre>
+                            </div>
+                            <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                                <p class="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">HTML preview</p>
+                                <iframe
+                                    v-if="templatePreview.html"
+                                    class="h-48 w-full border-0 bg-white"
+                                    sandbox=""
+                                    :srcdoc="templatePreview.html"
+                                    title="Template HTML preview"
+                                />
+                                <p v-else class="p-3 text-xs text-slate-500">Add HTML to see a rendered preview.</p>
+                            </div>
+                        </div>
+
+                        <AppButton type="submit" size="sm" :disabled="templateForm.processing">
+                            {{ editingTemplateId ? 'Update template' : 'Save template' }}
+                        </AppButton>
                     </form>
                 </Panel>
 

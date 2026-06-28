@@ -10,11 +10,13 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\ThrottleGovernor;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,6 +51,8 @@ class EDeliveryController extends Controller
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
                 'sms' => ['log', 'twilio', 'vonage'],
             ],
+            'mergeTags' => TemplateRenderService::availableTags(),
+            'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
         ]);
     }
 
@@ -83,15 +87,49 @@ class EDeliveryController extends Controller
 
     public function storeTemplate(Request $request): RedirectResponse
     {
-        MessageTemplate::create($request->validate([
+        MessageTemplate::create($this->validatedTemplate($request));
+
+        return back()->with('success', 'Template saved.');
+    }
+
+    public function updateTemplate(Request $request, MessageTemplate $template): RedirectResponse
+    {
+        $template->update($this->validatedTemplate($request));
+
+        return back()->with('success', 'Template updated.');
+    }
+
+    public function previewTemplate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'subject' => 'nullable|string|max:255',
+            'body' => 'nullable|string',
+            'html_body' => 'nullable|string',
+            'preview_data' => 'nullable|array',
+        ]);
+
+        $rendered = app(TemplateRenderService::class)->renderParts(
+            $validated,
+            null,
+            $validated['preview_data'] ?? null,
+        );
+
+        return response()->json($rendered);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedTemplate(Request $request): array
+    {
+        return $request->validate([
             'name' => 'required|string|max:255',
             'channel' => 'nullable|in:email,sms',
             'subject' => 'nullable|string|max:255',
             'body' => 'nullable|string',
             'html_body' => 'nullable|string',
-        ]));
-
-        return back()->with('success', 'Template saved.');
+            'preview_data' => 'nullable|array',
+        ]);
     }
 
     public function destroyTemplate(MessageTemplate $template): RedirectResponse
