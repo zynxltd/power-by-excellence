@@ -34,12 +34,20 @@ Route::post('/webhooks/esp/postmark', [EspWebhookController::class, 'postmark'])
 
 function registerEDeliveryJourneyRoutes(): void
 {
-    if (Route::has('e-delivery.journeys.process')) {
-        return;
+    if (! Route::has('e-delivery.journeys.process')) {
+        Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])
+            ->name('e-delivery.journeys.process');
     }
 
-    Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])
-        ->name('e-delivery.journeys.process');
+    if (! Route::has('e-delivery.throttle.pause')) {
+        Route::post('e-delivery/throttle/pause', [EDeliveryController::class, 'pauseSending'])
+            ->name('e-delivery.throttle.pause');
+    }
+
+    if (! Route::has('e-delivery.throttle.resume')) {
+        Route::post('e-delivery/throttle/resume', [EDeliveryController::class, 'resumeSending'])
+            ->name('e-delivery.throttle.resume');
+    }
 }
 
 function registerEDeliveryAdminRoutes(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\BulkSmsCampaign;
 use App\Models\Lead;
 use App\Models\MessageTemplate;
@@ -26,8 +27,10 @@ class EDeliveryController extends Controller
 
     public function index(Request $request): Response
     {
-        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+        $accountId = $account->id;
         $reports = app(DeliverabilityReportService::class);
+        $opsCenter = $reports->opsCenter($accountId, $account);
         $campaignStats = $reports->campaignStats($accountId);
         $campaignLookup = BulkSmsCampaign::query()
             ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
@@ -35,7 +38,12 @@ class EDeliveryController extends Controller
             ->keyBy('id');
 
         return Inertia::render('Admin/EDelivery/Index', [
-            'summary' => $reports->summary($accountId),
+            'summary' => $opsCenter['summary_30d'],
+            'summary7d' => $opsCenter['summary_7d'],
+            'summary30d' => $opsCenter['summary_30d'],
+            'suppressionCount' => $opsCenter['suppression_count'],
+            'deliverabilityAlerts' => $opsCenter['alerts'],
+            'alertThresholds' => $reports->thresholds($account),
             'hourlyOpens' => $reports->hourlyOpens($accountId),
             'campaignStats' => $campaignStats->map(fn (array $row) => array_merge($row, [
                 'name' => $campaignLookup->get($row['bulk_sms_campaign_id'])?->name ?? 'Campaign #'.$row['bulk_sms_campaign_id'],
@@ -54,6 +62,22 @@ class EDeliveryController extends Controller
             'mergeTags' => TemplateRenderService::availableTags(),
             'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
         ]);
+    }
+
+    public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $throttle->pauseSending($accountId);
+
+        return back()->with('success', 'Marketing sends paused for this platform.');
+    }
+
+    public function resumeSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $throttle->resumeSending($accountId);
+
+        return back()->with('success', 'Marketing sends resumed.');
     }
 
     public function storeSegment(Request $request): RedirectResponse

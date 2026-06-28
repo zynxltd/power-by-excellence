@@ -58,6 +58,16 @@ class EDeliveryTest extends TestCase
             Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])
                 ->name('e-delivery.templates.update');
         }
+
+        if (! Route::has('e-delivery.throttle.pause')) {
+            Route::post('e-delivery/throttle/pause', [\App\Http\Controllers\Admin\EDeliveryController::class, 'pauseSending'])
+                ->name('e-delivery.throttle.pause');
+        }
+
+        if (! Route::has('e-delivery.throttle.resume')) {
+            Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])
+                ->name('e-delivery.throttle.resume');
+        }
     }
 
     public function test_scheduled_bulk_campaign_is_processed_by_command(): void
@@ -200,9 +210,17 @@ class EDeliveryTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/EDelivery/Index')
                 ->has('summary')
+                ->has('summary7d')
+                ->has('summary30d')
+                ->has('suppressionCount')
+                ->has('deliverabilityAlerts')
                 ->has('hourlyOpens')
                 ->has('campaignStats')
                 ->has('throttle')
+                ->where('summary7d.period_days', 7)
+                ->where('summary30d.period_days', 30)
+                ->has('summary7d.bounce_rate')
+                ->has('summary30d.complaint_rate')
             );
     }
 
@@ -525,6 +543,87 @@ class EDeliveryTest extends TestCase
             'lead_id' => $lead->id,
             'subject' => 'For Jordan Lee',
             'body' => 'Dear Jordan, we saved your spot.',
+        ]);
+    }
+
+    public function test_sendgrid_bounce_webhook_creates_suppression_and_event(): void
+    {
+        $account = $this->admin->resolveAccount();
+
+        $send = MessageSend::create([
+            'account_id' => $account->id,
+            'channel' => 'email',
+            'recipient' => 'bounced@example.com',
+            'subject' => 'Hello',
+            'body' => 'Body',
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        $this->postJson('/webhooks/esp/sendgrid', [
+            [
+                'email' => 'bounced@example.com',
+                'event' => 'bounce',
+                'reason' => '550 mailbox unavailable',
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('message_events', [
+            'message_send_id' => $send->id,
+            'type' => 'bounce',
+        ]);
+
+        $this->assertTrue(
+            app(MarketingSuppressionService::class)->isSuppressed($account->id, 'email', 'bounced@example.com')
+        );
+    }
+
+    public function test_ops_center_includes_multi_period_bounce_and_complaint_rates(): void
+    {
+        $account = $this->admin->resolveAccount();
+
+        $send = MessageSend::create([
+            'account_id' => $account->id,
+            'channel' => 'email',
+            'recipient' => 'ops@example.com',
+            'subject' => 'Hi',
+            'body' => 'Body',
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        app(MessageSendService::class)->recordEvent($send, 'bounce');
+        app(MessageSendService::class)->recordEvent($send, 'complaint');
+
+        $ops = app(DeliverabilityReportService::class)->opsCenter($account->id, $account);
+
+        $this->assertSame(7, $ops['summary_7d']['period_days']);
+        $this->assertSame(30, $ops['summary_30d']['period_days']);
+        $this->assertGreaterThanOrEqual(1, $ops['summary_7d']['bounces']);
+        $this->assertGreaterThanOrEqual(1, $ops['summary_30d']['complaints']);
+        $this->assertArrayHasKey('bounce_rate', $ops['summary_7d']);
+        $this->assertArrayHasKey('complaint_rate', $ops['summary_30d']);
+    }
+
+    public function test_manual_throttle_pause_blocks_message_send_service(): void
+    {
+        $account = $this->admin->resolveAccount();
+        app(ThrottleGovernor::class)->pauseSending($account->id);
+
+        $sent = app(MessageSendService::class)->send([
+            'account_id' => $account->id,
+            'channel' => 'email',
+            'recipient' => 'blocked@example.com',
+            'subject' => 'Test',
+            'body' => 'Should not send',
+            'provider' => 'log',
+            'track' => false,
+        ]);
+
+        $this->assertFalse($sent);
+        $this->assertDatabaseMissing('message_sends', [
+            'account_id' => $account->id,
+            'recipient' => 'blocked@example.com',
         ]);
     }
 }

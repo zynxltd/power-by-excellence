@@ -17,8 +17,14 @@ class ThrottleGovernor
 
     public const DEFAULT_SEND_RATE_PER_MINUTE = 100;
 
+    public const MANUAL_PAUSE_TTL_MINUTES = 525600;
+
     public function allowSend(int $accountId): bool
     {
+        if ($this->isManuallyPaused($accountId)) {
+            return false;
+        }
+
         if ($this->bounceRateExceeded($accountId)) {
             return false;
         }
@@ -26,9 +32,34 @@ class ThrottleGovernor
         return true;
     }
 
+    public function pauseSending(int $accountId, ?int $minutes = null): void
+    {
+        Cache::put(
+            $this->manualCacheKey($accountId),
+            true,
+            now()->addMinutes($minutes ?? self::MANUAL_PAUSE_TTL_MINUTES),
+        );
+    }
+
+    public function resumeSending(int $accountId): void
+    {
+        Cache::forget($this->manualCacheKey($accountId));
+        Cache::forget($this->autoCacheKey($accountId));
+    }
+
+    public function isManuallyPaused(int $accountId): bool
+    {
+        return Cache::get($this->manualCacheKey($accountId)) === true;
+    }
+
+    public function isAutoPaused(int $accountId): bool
+    {
+        return Cache::get($this->autoCacheKey($accountId)) === 'paused';
+    }
+
     public function bounceRateExceeded(int $accountId, int $windowMinutes = self::BOUNCE_WINDOW_MINUTES, float $threshold = self::BOUNCE_THRESHOLD): bool
     {
-        $cacheKey = $this->cacheKey($accountId);
+        $cacheKey = $this->autoCacheKey($accountId);
 
         if (Cache::get($cacheKey) === 'paused') {
             return true;
@@ -69,7 +100,9 @@ class ThrottleGovernor
     public function status(int $accountId): array
     {
         $since = now()->subMinutes(self::BOUNCE_WINDOW_MINUTES);
-        $paused = Cache::get($this->cacheKey($accountId)) === 'paused';
+        $manualPaused = $this->isManuallyPaused($accountId);
+        $autoPaused = $this->isAutoPaused($accountId);
+        $paused = $manualPaused || $autoPaused;
 
         $recentSent = MessageSend::withoutGlobalScopes()
             ->where('account_id', $accountId)
@@ -99,6 +132,9 @@ class ThrottleGovernor
 
         return [
             'paused' => $paused,
+            'manual_paused' => $manualPaused,
+            'auto_paused' => $autoPaused,
+            'paused_reason' => $manualPaused ? 'manual' : ($autoPaused ? 'bounce_rate' : null),
             'bounce_rate_recent' => $bounceRate,
             'bounce_threshold_pct' => self::BOUNCE_THRESHOLD * 100,
             'window_minutes' => self::BOUNCE_WINDOW_MINUTES,
@@ -106,6 +142,7 @@ class ThrottleGovernor
             'recent_sent' => $recentSent,
             'recent_bounces' => $recentBounces,
             'queued_campaigns' => $queuedCampaigns->count(),
+            'queue_depth' => $queuedCampaigns->count() + $pendingSends,
             'queued_campaign_list' => $queuedCampaigns->map(fn (BulkSmsCampaign $c) => [
                 'id' => $c->id,
                 'name' => $c->name,
@@ -127,8 +164,13 @@ class ThrottleGovernor
         return (int) max(1, ceil(60 / max($rate, 1)));
     }
 
-    protected function cacheKey(int $accountId): string
+    protected function autoCacheKey(int $accountId): string
     {
         return "messaging.throttle.{$accountId}";
+    }
+
+    protected function manualCacheKey(int $accountId): string
+    {
+        return "messaging.throttle.manual.{$accountId}";
     }
 }

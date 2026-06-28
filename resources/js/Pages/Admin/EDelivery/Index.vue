@@ -13,6 +13,11 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
     summary: Object,
+    summary7d: Object,
+    summary30d: Object,
+    suppressionCount: { type: Number, default: 0 },
+    deliverabilityAlerts: { type: Array, default: () => [] },
+    alertThresholds: Object,
     hourlyOpens: Array,
     campaignStats: Array,
     segments: Array,
@@ -25,42 +30,75 @@ const props = defineProps({
     defaultPreviewData: Object,
 });
 
-const periodDays = computed(() => props.summary?.period_days ?? 30);
+const metricsPeriod = ref('30d');
 
-const statStrip = computed(() => [
-    { label: `Sent (${periodDays.value}d)`, value: props.summary?.total_sent ?? 0 },
-    { label: 'Delivered', value: props.summary?.delivered ?? 0, accent: 'cyan' },
-    { label: 'Open rate', value: `${props.summary?.open_rate ?? 0}%`, accent: 'emerald' },
-    { label: 'Click rate', value: `${props.summary?.click_rate ?? 0}%`, accent: 'indigo' },
-    { label: 'Bounce rate', value: `${props.summary?.bounce_rate ?? 0}%`, accent: 'rose' },
-    { label: 'Complaints', value: props.summary?.complaints ?? 0, accent: 'amber' },
+const activeSummary = computed(() => (metricsPeriod.value === '7d' ? props.summary7d : props.summary30d) ?? props.summary ?? {});
+
+const periodDays = computed(() => activeSummary.value?.period_days ?? (metricsPeriod.value === '7d' ? 7 : 30));
+
+const periodComparison = computed(() => [
+    {
+        label: 'Bounce rate',
+        short7: `${props.summary7d?.bounce_rate ?? 0}%`,
+        short30: `${props.summary30d?.bounce_rate ?? 0}%`,
+        count7: props.summary7d?.bounces ?? 0,
+        count30: props.summary30d?.bounces ?? 0,
+    },
+    {
+        label: 'Complaint rate',
+        short7: `${props.summary7d?.complaint_rate ?? 0}%`,
+        short30: `${props.summary30d?.complaint_rate ?? 0}%`,
+        count7: props.summary7d?.complaints ?? 0,
+        count30: props.summary30d?.complaints ?? 0,
+    },
+    {
+        label: 'Open rate',
+        short7: `${props.summary7d?.open_rate ?? 0}%`,
+        short30: `${props.summary30d?.open_rate ?? 0}%`,
+        count7: props.summary7d?.opens ?? 0,
+        count30: props.summary30d?.opens ?? 0,
+    },
 ]);
 
-const hasSendData = computed(() => (props.summary?.total_sent ?? 0) > 0);
+const statStrip = computed(() => [
+    { label: `Sent (${periodDays.value}d)`, value: activeSummary.value?.total_sent ?? 0 },
+    { label: 'Bounce rate', value: `${activeSummary.value?.bounce_rate ?? 0}%`, accent: 'rose' },
+    { label: 'Complaint rate', value: `${activeSummary.value?.complaint_rate ?? 0}%`, accent: 'amber' },
+    { label: 'Open rate', value: `${activeSummary.value?.open_rate ?? 0}%`, accent: 'emerald' },
+    { label: 'Suppressions', value: (props.suppressionCount ?? 0).toLocaleString(), accent: 'slate' },
+    { label: 'Queue depth', value: props.throttle?.queue_depth ?? props.throttle?.queued_campaigns ?? 0, accent: 'indigo' },
+]);
+
+const hasSendData = computed(() => (activeSummary.value?.total_sent ?? 0) > 0);
 
 const healthStatus = computed(() => {
-    const bounce = props.summary?.bounce_rate ?? 0;
-    const complaints = props.summary?.complaint_rate ?? 0;
+    const bounce = activeSummary.value?.bounce_rate ?? 0;
+    const complaints = activeSummary.value?.complaint_rate ?? 0;
+    const bounceThreshold = props.alertThresholds?.bounce_rate_alert_pct ?? 5;
+    const complaintThreshold = props.alertThresholds?.complaint_rate_alert_pct ?? 0.1;
 
-    if (bounce >= 5 || complaints >= 0.1) {
-        return { label: 'Needs attention', tone: 'rose', hint: 'Bounce or complaint rates are elevated — review ESP reputation and list hygiene.' };
+    if ((props.deliverabilityAlerts ?? []).some((a) => a.level === 'critical')) {
+        return { label: 'Critical', tone: 'rose', hint: 'Complaint rates exceeded configured thresholds — pause sends and review list hygiene.' };
     }
-    if (bounce >= 2 || complaints >= 0.05) {
+    if (bounce >= bounceThreshold || complaints >= complaintThreshold) {
+        return { label: 'Needs attention', tone: 'rose', hint: 'Bounce or complaint rates are elevated — review ESP reputation and suppression list.' };
+    }
+    if (bounce >= bounceThreshold * 0.5 || complaints >= complaintThreshold * 0.5) {
         return { label: 'Monitor', tone: 'amber', hint: 'Rates are acceptable but trending warrants a watch on throttling and suppression.' };
     }
     if (!hasSendData.value) {
         return { label: 'No data yet', tone: 'slate', hint: 'Send a bulk campaign or auto-responder to populate deliverability metrics.' };
     }
 
-    return { label: 'Healthy', tone: 'emerald', hint: 'Deliverability metrics are within normal ranges for the last 30 days.' };
+    return { label: 'Healthy', tone: 'emerald', hint: 'Deliverability metrics are within normal ranges for the selected period.' };
 });
 
 const engagementMetrics = computed(() => [
-    { key: 'opens', label: 'Opens', count: props.summary?.opens ?? 0, rate: props.summary?.open_rate ?? 0, color: '#10b981' },
-    { key: 'clicks', label: 'Clicks', count: props.summary?.clicks ?? 0, rate: props.summary?.click_rate ?? 0, color: '#6366f1' },
-    { key: 'delivered', label: 'Delivered (ESP)', count: props.summary?.delivered ?? 0, rate: props.summary?.delivery_rate ?? 0, color: '#06b6d4' },
-    { key: 'bounces', label: 'Bounces', count: props.summary?.bounces ?? 0, rate: props.summary?.bounce_rate ?? 0, color: '#f43f5e' },
-    { key: 'complaints', label: 'Complaints', count: props.summary?.complaints ?? 0, rate: props.summary?.complaint_rate ?? 0, color: '#f59e0b' },
+    { key: 'opens', label: 'Opens', count: activeSummary.value?.opens ?? 0, rate: activeSummary.value?.open_rate ?? 0, color: '#10b981' },
+    { key: 'clicks', label: 'Clicks', count: activeSummary.value?.clicks ?? 0, rate: activeSummary.value?.click_rate ?? 0, color: '#6366f1' },
+    { key: 'delivered', label: 'Delivered (ESP)', count: activeSummary.value?.delivered ?? 0, rate: activeSummary.value?.delivery_rate ?? 0, color: '#06b6d4' },
+    { key: 'bounces', label: 'Bounces', count: activeSummary.value?.bounces ?? 0, rate: activeSummary.value?.bounce_rate ?? 0, color: '#f43f5e' },
+    { key: 'complaints', label: 'Complaints', count: activeSummary.value?.complaints ?? 0, rate: activeSummary.value?.complaint_rate ?? 0, color: '#f59e0b' },
 ]);
 
 const hourlyChart = computed(() => {
@@ -102,6 +140,14 @@ const topCampaigns = computed(() => {
 
 const throttleAlert = computed(() => {
     const t = props.throttle ?? {};
+
+    if (t.paused && t.manual_paused) {
+        return {
+            tone: 'rose',
+            title: 'Sending paused manually',
+            message: 'Marketing sends are paused for this platform. Resume when you are ready to send again.',
+        };
+    }
 
     if (t.paused) {
         return {
@@ -201,6 +247,14 @@ const submitTemplate = () => {
 };
 const submitProfile = () => profileForm.post(route('e-delivery.sending-profiles.store'), { preserveScroll: true, onSuccess: () => profileForm.reset() });
 
+const pauseSending = () => router.post(route('e-delivery.throttle.pause'), {}, { preserveScroll: true });
+const resumeSending = () => router.post(route('e-delivery.throttle.resume'), {}, { preserveScroll: true });
+
+const alertToneClass = (level) => ({
+    critical: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
+    warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
+}[level] ?? 'border-slate-200 bg-slate-50 text-slate-800');
+
 const healthBadgeClass = (tone) => ({
     emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
     amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
@@ -226,20 +280,50 @@ const healthBadgeClass = (tone) => ({
         <section class="mb-6">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Deliverability</h2>
-                    <p class="text-xs text-slate-500">Last {{ periodDays }} days · opens, clicks, bounces, and ESP feedback</p>
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">Deliverability ops center</h2>
+                    <p class="text-xs text-slate-500">ESP feedback, suppressions, throttling, and send queue health</p>
                 </div>
-                <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
-                    :class="healthBadgeClass(healthStatus.tone)"
-                >
-                    {{ healthStatus.label }}
-                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="inline-flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+                        <button
+                            type="button"
+                            :class="['rounded-md px-3 py-1 text-xs font-semibold transition', metricsPeriod === '7d' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                            @click="metricsPeriod = '7d'"
+                        >
+                            7 days
+                        </button>
+                        <button
+                            type="button"
+                            :class="['rounded-md px-3 py-1 text-xs font-semibold transition', metricsPeriod === '30d' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                            @click="metricsPeriod = '30d'"
+                        >
+                            30 days
+                        </button>
+                    </div>
+                    <span
+                        class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                        :class="healthBadgeClass(healthStatus.tone)"
+                    >
+                        {{ healthStatus.label }}
+                    </span>
+                </div>
             </div>
 
             <CompactStatStrip :items="statStrip" :columns="6" class="mb-4" />
 
             <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">{{ healthStatus.hint }}</p>
+
+            <div v-if="deliverabilityAlerts?.length" class="mb-4 space-y-2">
+                <div
+                    v-for="(alert, index) in deliverabilityAlerts"
+                    :key="`${alert.metric}-${index}`"
+                    class="rounded-xl border px-4 py-3 text-sm"
+                    :class="alertToneClass(alert.level)"
+                >
+                    <p class="font-semibold capitalize">{{ alert.level }} — {{ alert.metric.replace(/_/g, ' ') }}</p>
+                    <p class="mt-1 opacity-90">{{ alert.message }}</p>
+                </div>
+            </div>
 
             <div
                 v-if="throttleAlert"
@@ -251,7 +335,17 @@ const healthBadgeClass = (tone) => ({
             </div>
 
             <Panel title="Send throttling & queue" class="mb-6">
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        {{ throttle?.paused ? 'Sending is paused' : 'Sending is active' }}
+                        <span v-if="throttle?.paused_reason" class="text-xs text-slate-500">({{ throttle.paused_reason === 'manual' ? 'manual' : 'auto bounce guard' }})</span>
+                    </p>
+                    <div class="flex gap-2">
+                        <AppButton v-if="!throttle?.paused" type="button" variant="secondary" size="sm" @click="pauseSending">Pause sending</AppButton>
+                        <AppButton v-else type="button" size="sm" @click="resumeSending">Resume sending</AppButton>
+                    </div>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                         <p class="text-xs uppercase tracking-wide text-slate-500">Status</p>
                         <p class="mt-1 text-lg font-semibold" :class="throttle?.paused ? 'text-rose-600' : 'text-emerald-600'">
@@ -266,9 +360,14 @@ const healthBadgeClass = (tone) => ({
                         <p class="text-xs text-slate-500">~{{ throttle?.chunk_delay_seconds }}s delay per 10 sends</p>
                     </div>
                     <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                        <p class="text-xs uppercase tracking-wide text-slate-500">Queued campaigns</p>
-                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ throttle?.queued_campaigns ?? 0 }}</p>
-                        <p v-if="(throttle?.pending_sends ?? 0) > 0" class="text-xs text-slate-500">{{ throttle.pending_sends }} pending sends</p>
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Queue depth</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ throttle?.queue_depth ?? 0 }}</p>
+                        <p class="text-xs text-slate-500">{{ throttle?.queued_campaigns ?? 0 }} campaigns · {{ throttle?.pending_sends ?? 0 }} pending</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Suppressions</p>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ (suppressionCount ?? 0).toLocaleString() }}</p>
+                        <p class="text-xs text-slate-500">Opt-outs & ESP blocks</p>
                     </div>
                     <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                         <p class="text-xs uppercase tracking-wide text-slate-500">Recent bounces</p>
@@ -293,6 +392,30 @@ const healthBadgeClass = (tone) => ({
                 </ul>
             </Panel>
 
+            <Panel title="7d vs 30d comparison" class="mb-6">
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <div
+                        v-for="row in periodComparison"
+                        :key="row.label"
+                        class="rounded-lg border border-slate-200 p-4 dark:border-slate-700"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ row.label }}</p>
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-xs text-slate-500">7 days</p>
+                                <p class="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ row.short7 }}</p>
+                                <p class="text-xs text-slate-400">{{ row.count7 }} events</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500">30 days</p>
+                                <p class="text-lg font-semibold tabular-nums text-slate-900 dark:text-white">{{ row.short30 }}</p>
+                                <p class="text-xs text-slate-400">{{ row.count30 }} events</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Panel>
+
             <div class="grid gap-6 lg:grid-cols-3">
                 <Panel title="Engagement breakdown" class="lg:col-span-1">
                     <ul v-if="hasSendData" class="space-y-4">
@@ -315,9 +438,9 @@ const healthBadgeClass = (tone) => ({
                     <p v-else class="py-6 text-center text-sm text-slate-500">
                         No sends in this period. Launch a bulk campaign to see engagement metrics.
                     </p>
-                    <p v-if="hasSendData && (summary?.click_to_open_rate ?? 0) > 0" class="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800">
+                    <p v-if="hasSendData && (activeSummary?.click_to_open_rate ?? 0) > 0" class="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800">
                         Click-to-open rate:
-                        <span class="font-semibold text-slate-700 dark:text-slate-300">{{ summary.click_to_open_rate }}%</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-300">{{ activeSummary.click_to_open_rate }}%</span>
                     </p>
                 </Panel>
 
