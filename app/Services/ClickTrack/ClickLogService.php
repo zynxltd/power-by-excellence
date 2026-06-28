@@ -16,6 +16,8 @@ class ClickLogService
     public function __construct(
         protected ClickTrackEntitlementService $entitlement,
         protected ClickCapService $caps,
+        protected ClickFraudService $fraud,
+        protected ClickTrackCapAlertService $capAlerts,
     ) {}
 
     /**
@@ -66,11 +68,16 @@ class ClickLogService
             abort(403, 'Click Track is not enabled for this platform.');
         }
 
-        if ($this->caps->linkCapReached($link)) {
+        $subs = $this->subsFromRequest($request, $link);
+
+        if ($duplicate = $this->fraud->findDuplicateClick($link, $request, $subs)) {
+            return $duplicate;
+        }
+
+        if ($this->caps->linkHardCapReached($link) || $this->caps->accountHardCapReached($link->account)) {
             abort(429, 'Offer cap reached for this tracking link.');
         }
 
-        $subs = $this->subsFromRequest($request, $link);
         $ip = $request->ip();
         $windowHours = (int) config('click_track.unique_click_window_hours', 24);
 
@@ -97,6 +104,7 @@ class ClickLogService
         ]);
 
         $this->incrementUsage($link->account);
+        $this->capAlerts->evaluateAfterClick($link);
 
         return $click;
     }

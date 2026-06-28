@@ -51,7 +51,7 @@ class ClickTrackPendingQueueService
             ->get();
 
         return $links->map(fn (TrackingLink $link) => $this->caps->usageForLink($link))
-            ->filter(fn (array $u) => $u['click_cap_reached'] || $u['conversion_cap_reached'])
+            ->filter(fn (array $u) => $u['click_soft_cap_reached'] || $u['click_cap_reached'] || $u['conversion_soft_cap_reached'] || $u['conversion_cap_reached'])
             ->take($limit)->values()->all();
     }
 

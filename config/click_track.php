@@ -60,6 +60,13 @@ return [
 
     'unique_click_window_hours' => 24,
 
+    'cap_soft_limit_pct' => 80,
+
+    'fraud' => [
+        'block_duplicates' => true,
+        'duplicate_window_minutes' => 60,
+    ],
+
     'goal_options' => [
         'lead',
         'sale',

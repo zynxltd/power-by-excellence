@@ -3,20 +3,23 @@
 namespace App\Http\Controllers\ClickTrack;
 
 use App\Http\Controllers\Controller;
+use App\Services\ClickTrack\SupplierClickPayoutExportService;
 use App\Services\ClickTrack\SupplierClickStatsService;
 use App\Services\Suppliers\SupplierPortalService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
 
 class SupplierClickPortalController extends Controller
 {
     public function __construct(
         protected SupplierPortalService $portal,
         protected SupplierClickStatsService $stats,
+        protected SupplierClickPayoutExportService $export,
     ) {}
 
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): InertiaResponse
     {
         $supplier = $request->user()->supplier;
         abort_unless($supplier, 403);
@@ -28,5 +31,13 @@ class SupplierClickPortalController extends Controller
             'stats' => $this->stats->forSupplier($supplier),
             'currency' => $account?->default_currency ?? 'GBP',
         ]);
+    }
+
+    public function export(Request $request): Response
+    {
+        $supplier = $request->user()->supplier;
+        abort_unless($supplier, 403);
+
+        return $this->export->download($supplier, $request);
     }
 }
