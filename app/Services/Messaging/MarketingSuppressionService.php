@@ -149,39 +149,30 @@ class MarketingSuppressionService
 
     protected function importMappedRow(int $accountId, array $data): array
     {
-        $imported = 0;
-        $skipped = 0;
-
         if (! empty($data['email'])) {
-            [$added, $missed] = $this->storeOptOut($accountId, 'email', (string) $data['email']);
-            $imported += $added;
-            $skipped += $missed;
+            return $this->storeOptOut($accountId, 'email', (string) $data['email']);
         }
 
         if (! empty($data['phone1'])) {
-            [$added, $missed] = $this->storeOptOut($accountId, 'phone1', (string) $data['phone1']);
-            $imported += $added;
-            $skipped += $missed;
+            return $this->storeOptOut($accountId, 'phone1', (string) $data['phone1']);
         }
 
         if (! empty($data['phone'])) {
-            [$added, $missed] = $this->storeOptOut($accountId, 'phone1', (string) $data['phone']);
-            $imported += $added;
-            $skipped += $missed;
+            return $this->storeOptOut($accountId, 'phone1', (string) $data['phone']);
         }
 
-        if ($imported === 0 && $skipped === 0 && ! empty($data['value']) && ! empty($data['field_type'])) {
+        if (! empty($data['value']) && ! empty($data['field_type'])) {
             return $this->storeOptOut($accountId, (string) $data['field_type'], (string) $data['value']);
         }
 
-        if ($imported === 0 && $skipped === 0 && ! empty($data['value'])) {
+        if (! empty($data['value'])) {
             $value = (string) $data['value'];
             $fieldType = str_contains($value, '@') ? 'email' : 'phone1';
 
             return $this->storeOptOut($accountId, $fieldType, $value);
         }
 
-        return [$imported, $skipped];
+        return [0, 1];
     }
 
     /**
