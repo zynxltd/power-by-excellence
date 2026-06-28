@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\PlatformFeatureParity\PortalDomain;
+use App\PlatformFeatureParity\PortalDomainVerification;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\BuyerPortal\BuyerPortalLocale;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +15,10 @@ use Inertia\Response;
 class AccountSettingsController extends Controller
 {
     use ResolvesAdminAccount;
+
+    public function __construct(
+        protected PortalDomainVerification $portalDomainVerification,
+    ) {}
 
     public function edit(Request $request): Response
     {
@@ -30,6 +36,7 @@ class AccountSettingsController extends Controller
                     'custom_portal_domain' => $account->settings['custom_portal_domain'] ?? '',
                 ]
             ),
+            'portalDomain' => $this->portalDomainVerification->statusForAccount($account),
             'timezones' => timezone_identifiers_list(),
             'currencies' => $this->currencies(),
             'countries' => $this->countries(),
@@ -55,6 +62,7 @@ class AccountSettingsController extends Controller
         ], $this->messages());
 
         $settings = $account->settings ?? [];
+        $previousCustomDomain = PortalDomain::customHost($account);
         $settings['require_buyer_prepay'] = $validated['require_buyer_prepay'] ?? false;
         $settings['supplier_iframe_embed'] = $validated['supplier_iframe_embed'] ?? false;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
@@ -66,6 +74,15 @@ class AccountSettingsController extends Controller
             ? strtolower(trim((string) $validated['custom_portal_domain']))
             : null;
 
+        $nextCustomDomain = PortalDomain::normalize($settings['custom_portal_domain'] ?? null);
+
+        if ($previousCustomDomain !== $nextCustomDomain) {
+            unset(
+                $settings['custom_portal_domain_verified_at'],
+                $settings['custom_portal_domain_verification_token'],
+            );
+        }
+
         $account->update([
             'name' => $validated['name'],
             'timezone' => $validated['timezone'],
@@ -75,6 +92,18 @@ class AccountSettingsController extends Controller
         ]);
 
         return back()->with('success', 'Platform settings updated.');
+    }
+
+    public function verifyPortalDomain(Request $request): RedirectResponse
+    {
+        $account = $this->resolveAdminAccount($request);
+        $result = $this->portalDomainVerification->verify($account);
+
+        if ($result['verified']) {
+            return back()->with('success', $result['message']);
+        }
+
+        return back()->with('error', $result['message']);
     }
 
     protected function messages(): array

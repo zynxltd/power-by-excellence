@@ -6,11 +6,14 @@ import FormErrorSummary from '@/Components/UI/FormErrorSummary.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     account: Object,
+    portalDomain: Object,
     timezones: Array,
     currencies: Array,
     countries: Object,
@@ -34,6 +37,22 @@ const submit = () => {
     form.default_country = String(form.default_country).toUpperCase();
     form.default_currency = String(form.default_currency).toUpperCase();
     form.put(route('settings.update'));
+};
+
+const portalDomainStatus = computed(() => {
+    if (!form.custom_portal_domain) {
+        return { label: 'Not configured', class: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
+    }
+
+    if (props.portalDomain?.verified) {
+        return { label: 'Verified', class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400' };
+    }
+
+    return { label: 'Pending DNS', class: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400' };
+});
+
+const verifyPortalDomain = () => {
+    router.post(route('settings.portal-domain.verify'));
 };
 </script>
 
@@ -92,12 +111,34 @@ const submit = () => {
                 </div>
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Custom portal domain</h4>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Custom portal domain</h4>
+                        <span
+                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            :class="portalDomainStatus.class"
+                        >
+                            {{ portalDomainStatus.label }}
+                        </span>
+                    </div>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Optional branded hostname for buyer and supplier portals (e.g. <code class="text-xs">leads.yourbrand.com</code>). DNS must point to this platform before go-live.
+                        Optional branded hostname for buyer and supplier portals (e.g. <code class="text-xs">leads.yourbrand.com</code>). DNS must point to this platform before the domain goes live.
                     </p>
                     <TextInput v-model="form.custom_portal_domain" class="mt-3 max-w-md font-mono text-sm" placeholder="leads.example.com" />
                     <InputError class="mt-1" :message="form.errors.custom_portal_domain" />
+
+                    <div v-if="form.custom_portal_domain" class="mt-4 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
+                        <p class="font-semibold text-slate-900 dark:text-white">DNS setup</p>
+                        <div v-if="portalDomain?.cname_target" class="font-mono text-xs">
+                            <p><span class="font-semibold">CNAME</span> {{ form.custom_portal_domain }} → {{ portalDomain.cname_target }}</p>
+                        </div>
+                        <div v-if="portalDomain?.txt_host && portalDomain?.txt_value" class="font-mono text-xs">
+                            <p class="mt-2"><span class="font-semibold">TXT</span> {{ portalDomain.txt_host }} → {{ portalDomain.txt_value }}</p>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Add either record, save your domain, then click verify. Unverified domains keep using your default tenant hostname.
+                        </p>
+                        <SecondaryButton type="button" @click="verifyPortalDomain">Verify DNS</SecondaryButton>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">

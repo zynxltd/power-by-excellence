@@ -29,4 +29,16 @@ return [
         explode(',', env('APP_CENTRAL_HOSTS', 'powerbyexcellence.test,localhost,127.0.0.1'))
     ))),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Portal custom domain CNAME target
+    |--------------------------------------------------------------------------
+    |
+    | Verified custom portal domains must CNAME to this host. Defaults to each
+    | tenant slug subdomain when unset (e.g. excellence-uk.powerbyexcellence.test).
+    |
+    */
+
+    'portal_cname_target' => env('APP_PORTAL_CNAME_TARGET'),
+
 ];
