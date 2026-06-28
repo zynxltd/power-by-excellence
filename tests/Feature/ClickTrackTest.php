@@ -25,6 +25,7 @@ use App\Services\ClickTrack\SupplierClickStatsService;
 use App\Services\Leads\LeadIngestService;
 use App\Support\ClickTrack\ClickTrackRouteRegistrar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ClickTrackTest extends TestCase
@@ -408,6 +409,8 @@ class ClickTrackTest extends TestCase
 
     public function test_event_alert_fires_when_click_track_usage_crosses_soft_threshold(): void
     {
+        Http::fake(['https://example.com/alerts' => Http::response([], 200)]);
+
         EventAlert::create([
             'account_id' => $this->account->id,
             'name' => 'Click cap warning',
