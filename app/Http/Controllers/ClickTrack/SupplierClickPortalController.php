@@ -16,7 +16,7 @@ class SupplierClickPortalController extends Controller
     public function __construct(
         protected SupplierPortalService $portal,
         protected SupplierClickStatsService $stats,
-        protected SupplierClickPayoutExportService $export,
+        protected SupplierClickPayoutExportService $payoutExporter,
     ) {}
 
     public function __invoke(Request $request): InertiaResponse
@@ -38,6 +38,6 @@ class SupplierClickPortalController extends Controller
         $supplier = $request->user()->supplier;
         abort_unless($supplier, 403);
 
-        return $this->export->download($supplier, $request);
+        return $this->payoutExporter->download($supplier, $request);
     }
 }
