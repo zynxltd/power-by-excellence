@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
 use App\Support\Campaign\CampaignFieldCatalog;
@@ -67,7 +68,7 @@ class DeliveryController extends Controller
                 ),
                 'verticals' => VerticalCatalog::options(),
                 'buyers' => \App\Models\Buyer::orderBy('name')->get(['id', 'name', 'reference', 'email']),
-                'methods' => collect(['direct_post', 'ping_post', 'email_ping_post', 'store_lead', 'email', 'sms']),
+                'methods' => collect(DeliveryMethod::cases())->map(fn (DeliveryMethod $method) => $method->value),
                 'statuses' => ['active', 'inactive', 'saved'],
             ],
             'view' => $view,
@@ -297,6 +298,42 @@ class DeliveryController extends Controller
                 'when' => 'Urgent buyer notifications. Requires SMS provider in production.',
                 'icon' => 'sms',
             ],
+            'ping_only' => [
+                'title' => 'Ping Only',
+                'summary' => 'HTTP ping for bid acceptance without a follow-up post.',
+                'when' => 'Auction tiers or buyers who pull accepted leads from a queue.',
+                'icon' => 'ping',
+            ],
+            'two_step_auth' => [
+                'title' => '2-Step Auth',
+                'summary' => 'Ping for an auth token, then post full lead with token in header or body.',
+                'when' => 'Buyer API requires token exchange before accepting PII.',
+                'icon' => 'auth',
+            ],
+            'campaign_transfer' => [
+                'title' => 'Campaign Transfer',
+                'summary' => 'Re-route the lead into another campaign for redistribution.',
+                'when' => 'Cross-sell flows or fallback campaigns when primary buyers reject.',
+                'icon' => 'transfer',
+            ],
+            'call_ping_post' => [
+                'title' => 'Call Ping-Post',
+                'summary' => 'Ping buyer call buyer API, then hand off to telephony transfer.',
+                'when' => 'Pay-per-call buyers with HTTP availability ping before transfer.',
+                'icon' => 'call',
+            ],
+            'call_direct_transfer' => [
+                'title' => 'Call Direct Transfer',
+                'summary' => 'Transfer inbound call directly to buyer destination number.',
+                'when' => 'Fixed-rate call buyers without a ping step.',
+                'icon' => 'call',
+            ],
+            'call_warm_transfer' => [
+                'title' => 'Call Warm Transfer',
+                'summary' => 'Optional ping plus whisper URL before connecting caller to buyer.',
+                'when' => 'Buyers who need agent briefing before taking the call.',
+                'icon' => 'call',
+            ],
         ];
     }
 
@@ -331,7 +368,7 @@ class DeliveryController extends Controller
                 Rule::exists('buyers', 'id')->when($accountId, fn ($rule) => $rule->where('account_id', $accountId)),
             ],
             'name' => 'required|string|max:255',
-            'method' => 'required|in:direct_post,ping_post,email_ping_post,store_lead,email,sms',
+            'method' => ['required', Rule::enum(DeliveryMethod::class)],
             'trigger_type' => 'in:on_lead_arrival,manual_via_api',
             'status' => 'in:active,inactive,saved',
             'priority' => 'integer|min:0',
@@ -402,7 +439,112 @@ class DeliveryController extends Controller
             }
         }
 
+        $this->validateMethodConfig($validated);
+
+        if (($validated['method'] ?? '') === DeliveryMethod::TwoStepAuth->value && filled($validated['config']['auth_url'] ?? null)) {
+            $validated['config']['post_url'] = $validated['config']['auth_url'];
+        }
+
         return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    protected function validateMethodConfig(array $validated): void
+    {
+        $method = DeliveryMethod::from($validated['method']);
+        $config = $validated['config'] ?? [];
+        $errors = [];
+
+        switch ($method) {
+            case DeliveryMethod::DirectPost:
+                if (blank($config['url'] ?? null)) {
+                    $errors['config.url'] = 'Post URL is required for direct post deliveries.';
+                }
+                break;
+            case DeliveryMethod::PingPost:
+                $this->requireConfigKeys($config, ['ping_url', 'post_url'], $errors);
+                break;
+            case DeliveryMethod::PingOnly:
+                if (blank($config['ping_url'] ?? null)) {
+                    $errors['config.ping_url'] = 'Ping URL is required.';
+                }
+                break;
+            case DeliveryMethod::TwoStepAuth:
+                if (blank($config['ping_url'] ?? null)) {
+                    $errors['config.ping_url'] = 'Ping URL is required.';
+                }
+                if (blank($config['post_url'] ?? $config['auth_url'] ?? null)) {
+                    $errors['config.post_url'] = 'Auth post URL is required.';
+                }
+                break;
+            case DeliveryMethod::CampaignTransfer:
+                if (blank($config['campaign_id'] ?? null)) {
+                    $errors['config.campaign_id'] = 'Target campaign is required.';
+                } else {
+                    $this->validateTransferCampaign($validated, $config, $errors);
+                }
+                break;
+            case DeliveryMethod::CallPingPost:
+                if (blank($config['ping_url'] ?? null)) {
+                    $errors['config.ping_url'] = 'Call ping URL is required.';
+                }
+                break;
+            case DeliveryMethod::CallDirectTransfer:
+            case DeliveryMethod::CallWarmTransfer:
+                if (blank($config['destination_phone'] ?? $config['transfer_number'] ?? null)) {
+                    $errors['config.destination_phone'] = 'Destination phone is required for call transfers.';
+                }
+                break;
+            case DeliveryMethod::Sms:
+                if (blank($config['to'] ?? null) && blank($validated['buyer_id'] ?? null)) {
+                    $errors['config.to'] = 'SMS recipient or buyer is required.';
+                }
+                break;
+            default:
+                break;
+        }
+
+        if ($errors !== []) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @param  list<string>  $keys
+     * @param  array<string, string>  $errors
+     */
+    protected function requireConfigKeys(array $config, array $keys, array &$errors): void
+    {
+        foreach ($keys as $key) {
+            if (blank($config[$key] ?? null)) {
+                $errors["config.{$key}"] = ucfirst(str_replace('_', ' ', $key)).' is required.';
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $config
+     * @param  array<string, string>  $errors
+     */
+    protected function validateTransferCampaign(array $validated, array $config, array &$errors): void
+    {
+        $accountId = AccountContext::id();
+        $targetId = (int) ($config['campaign_id'] ?? 0);
+        $source = Campaign::withoutGlobalScopes()->find($validated['campaign_id'] ?? 0);
+
+        if (! $source || ($accountId && $source->account_id !== $accountId)) {
+            return;
+        }
+
+        $target = Campaign::withoutGlobalScopes()->find($targetId);
+
+        if (! $target || $target->account_id !== $source->account_id) {
+            $errors['config.campaign_id'] = 'Target campaign must belong to the same platform.';
+        }
     }
 
     protected function tierForDelivery(?\App\Models\DistributionConfig $config, int $deliveryId): ?int
