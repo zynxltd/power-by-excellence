@@ -13,6 +13,8 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Models\User;
 use App\Services\Automation\AutomationSequenceService;
+use App\Services\Messaging\AbTestService;
+use App\Services\Messaging\BulkCampaignSender;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\MarketingSuppressionService;
 use App\Services\Messaging\MessageSendService;
@@ -20,6 +22,7 @@ use App\Services\Messaging\SegmentService;
 use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\ThrottleGovernor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -40,14 +43,8 @@ class EDeliveryTest extends TestCase
 
     protected function registerEDeliveryRoutes(): void
     {
-        if (! function_exists('registerEDeliveryAdminRoutes')) {
-            require base_path('routes/e-delivery.php');
-        } else {
-            Route::get('/messaging/open/{token}', [\App\Http\Controllers\MessageTrackingController::class, 'open'])->name('messaging.track.open');
-            Route::get('/messaging/click/{token}', [\App\Http\Controllers\MessageTrackingController::class, 'click'])->name('messaging.track.click');
-        }
-
-        \registerEDeliveryAdminRoutes();
+        require_once base_path('routes/e-delivery.php');
+        registerEDeliveryJourneyRoutes();
 
         if (! Route::has('e-delivery.templates.preview')) {
             Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])
@@ -68,6 +65,40 @@ class EDeliveryTest extends TestCase
             Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])
                 ->name('e-delivery.throttle.resume');
         }
+    }
+
+    /**
+     * @return array{segment: Segment, leads: \Illuminate\Support\Collection<int, Lead>}
+     */
+    protected function bulkTestSegment(int $leadCount = 1): array
+    {
+        $account = $this->admin->resolveAccount();
+        $tag = 'e12-bulk-'.uniqid();
+
+        $segment = Segment::create([
+            'account_id' => $account->id,
+            'name' => 'E12 bulk test',
+            'rules' => ['tags' => [$tag]],
+        ]);
+
+        $leads = Lead::query()
+            ->where('account_id', $account->id)
+            ->limit($leadCount)
+            ->get();
+
+        foreach ($leads as $index => $lead) {
+            $lead->update([
+                'field_data' => array_merge($lead->field_data ?? [], [
+                    'firstname' => 'Bulk',
+                    'lastname' => "Lead{$index}",
+                    'email' => "bulk{$index}@e12.test",
+                    'phone1' => '+4477009001'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                ]),
+            ]);
+            app(SegmentService::class)->tagLead($lead->fresh(), $tag);
+        }
+
+        return ['segment' => $segment, 'leads' => $leads->fresh()];
     }
 
     public function test_scheduled_bulk_campaign_is_processed_by_command(): void
@@ -625,5 +656,177 @@ class EDeliveryTest extends TestCase
             'account_id' => $account->id,
             'recipient' => 'blocked@example.com',
         ]);
+    }
+
+    public function test_bulk_email_campaign_sends_email_only(): void
+    {
+        $account = $this->admin->resolveAccount();
+        ['segment' => $segment, 'leads' => $leads] = $this->bulkTestSegment(1);
+        $lead = $leads->first();
+
+        $campaign = BulkSmsCampaign::create([
+            'account_id' => $account->id,
+            'segment_id' => $segment->id,
+            'name' => 'Email-only blast',
+            'channel' => 'email',
+            'subject' => 'Hello email',
+            'message' => 'Email body for bulk',
+            'html_body' => '<p>Email HTML</p>',
+            'provider' => 'log',
+            'status' => 'draft',
+        ]);
+
+        app(BulkCampaignSender::class)->send($campaign);
+
+        $campaign->refresh();
+        $this->assertSame('completed', $campaign->status);
+        $this->assertSame(1, $campaign->sent_count);
+
+        $this->assertDatabaseHas('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'lead_id' => $lead->id,
+            'channel' => 'email',
+            'recipient' => 'bulk0@e12.test',
+        ]);
+        $this->assertDatabaseMissing('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'channel' => 'sms',
+        ]);
+    }
+
+    public function test_bulk_sms_campaign_sends_sms_only(): void
+    {
+        $account = $this->admin->resolveAccount();
+        ['segment' => $segment, 'leads' => $leads] = $this->bulkTestSegment(1);
+        $lead = $leads->first();
+
+        $campaign = BulkSmsCampaign::create([
+            'account_id' => $account->id,
+            'segment_id' => $segment->id,
+            'name' => 'SMS-only blast',
+            'channel' => 'sms',
+            'message' => 'SMS body for bulk',
+            'provider' => 'log',
+            'status' => 'draft',
+        ]);
+
+        app(BulkCampaignSender::class)->send($campaign);
+
+        $campaign->refresh();
+        $this->assertSame('completed', $campaign->status);
+        $this->assertSame(1, $campaign->sent_count);
+
+        $this->assertDatabaseHas('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'lead_id' => $lead->id,
+            'channel' => 'sms',
+            'recipient' => '+447700900100',
+        ]);
+        $this->assertDatabaseMissing('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'channel' => 'email',
+        ]);
+    }
+
+    public function test_bulk_both_channels_sends_email_and_sms(): void
+    {
+        $account = $this->admin->resolveAccount();
+        ['segment' => $segment, 'leads' => $leads] = $this->bulkTestSegment(1);
+        $lead = $leads->first();
+
+        $campaign = BulkSmsCampaign::create([
+            'account_id' => $account->id,
+            'segment_id' => $segment->id,
+            'name' => 'Multi-channel blast',
+            'channel' => 'both',
+            'subject' => 'Hello both',
+            'message' => 'Shared body',
+            'provider' => 'log',
+            'status' => 'draft',
+        ]);
+
+        app(BulkCampaignSender::class)->send($campaign);
+
+        $campaign->refresh();
+        $this->assertSame('completed', $campaign->status);
+        $this->assertSame(2, $campaign->sent_count);
+
+        $this->assertDatabaseHas('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'lead_id' => $lead->id,
+            'channel' => 'email',
+        ]);
+        $this->assertDatabaseHas('message_sends', [
+            'bulk_sms_campaign_id' => $campaign->id,
+            'lead_id' => $lead->id,
+            'channel' => 'sms',
+        ]);
+    }
+
+    public function test_bulk_ab_test_splits_variants(): void
+    {
+        Queue::fake([\App\Jobs\EvaluateAbTestWinnerJob::class]);
+
+        $account = $this->admin->resolveAccount();
+        ['segment' => $segment] = $this->bulkTestSegment(4);
+
+        $campaign = BulkSmsCampaign::create([
+            'account_id' => $account->id,
+            'segment_id' => $segment->id,
+            'name' => 'A/B email test',
+            'channel' => 'email',
+            'subject' => 'Default subject',
+            'message' => 'Default body',
+            'provider' => 'log',
+            'status' => 'draft',
+            'ab_test' => [
+                'status' => 'pending',
+                'split_percent' => 50,
+                'wait_minutes' => 60,
+                'winner_metric' => 'open',
+                'variant_a' => ['subject' => 'Subject A', 'body' => 'Body A'],
+                'variant_b' => ['subject' => 'Subject B', 'body' => 'Body B'],
+            ],
+        ]);
+
+        app(BulkCampaignSender::class)->send($campaign);
+
+        $campaign->refresh();
+        $this->assertSame('sending', $campaign->status);
+        $this->assertSame('evaluating', $campaign->ab_test['status']);
+
+        $variantA = MessageSend::where('bulk_sms_campaign_id', $campaign->id)->where('ab_variant', 'A')->count();
+        $variantB = MessageSend::where('bulk_sms_campaign_id', $campaign->id)->where('ab_variant', 'B')->count();
+
+        $this->assertGreaterThanOrEqual(1, $variantA);
+        $this->assertGreaterThanOrEqual(1, $variantB);
+        $this->assertSame($variantA + $variantB, MessageSend::where('bulk_sms_campaign_id', $campaign->id)->count());
+
+        $this->assertFalse(app(AbTestService::class)->shouldRunAbTest($campaign->fresh()));
+    }
+
+    public function test_bulk_campaign_store_dispatches_send_job(): void
+    {
+        Queue::fake();
+        $account = $this->admin->resolveAccount();
+        ['segment' => $segment] = $this->bulkTestSegment(1);
+
+        $this->actingAs($this->admin)
+            ->post('/e-delivery/bulk-campaigns', [
+                'name' => 'Queued email blast',
+                'channel' => 'email',
+                'subject' => 'Hi there',
+                'message' => 'Bulk via hub',
+                'segment_id' => $segment->id,
+                'provider' => 'log',
+            ])
+            ->assertRedirect();
+
+        $campaign = BulkSmsCampaign::where('name', 'Queued email blast')->first();
+        $this->assertNotNull($campaign);
+        $this->assertSame('email', $campaign->channel);
+        $this->assertSame('draft', $campaign->status);
+
+        Queue::assertPushed(\App\Jobs\SendBulkCampaignJob::class, fn ($job) => $job->campaignId === $campaign->id);
     }
 }

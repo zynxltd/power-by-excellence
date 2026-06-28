@@ -6,6 +6,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import BarChart from '@/Components/UI/BarChart.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
 import TextInput from '@/Components/TextInput.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
@@ -194,6 +195,76 @@ const templateForm = useForm({
 });
 const profileForm = useForm({ name: '', provider: 'smtp', domain_match: '', from_name: '', from_email: '', is_default: false });
 
+const bulkForm = useForm({
+    name: '',
+    channel: 'email',
+    campaign_id: '',
+    message_template_id: '',
+    subject: '',
+    message: '',
+    html_body: '',
+    segment_id: '',
+    sending_profile_id: '',
+    provider: '',
+    throttle_per_minute: 100,
+    scheduled_at: '',
+    ab_enabled: false,
+    ab_test: {
+        split_percent: 20,
+        wait_minutes: 60,
+        winner_metric: 'open',
+        variant_a: { subject: '', body: '', html_body: '' },
+        variant_b: { subject: '', body: '', html_body: '' },
+    },
+});
+
+const emailTemplates = computed(() => (props.templates ?? []).filter((t) => t.channel === 'email'));
+const smsTemplates = computed(() => (props.templates ?? []).filter((t) => t.channel === 'sms'));
+const templatesForBulkChannel = computed(() => {
+    if (bulkForm.channel === 'sms') return smsTemplates.value;
+    if (bulkForm.channel === 'email') return emailTemplates.value;
+
+    return props.templates ?? [];
+});
+
+const bulkUsesEmail = computed(() => bulkForm.channel === 'email' || bulkForm.channel === 'both');
+const bulkUsesSms = computed(() => bulkForm.channel === 'sms' || bulkForm.channel === 'both');
+
+const applyBulkTemplate = () => {
+    const template = (props.templates ?? []).find((t) => t.id === Number(bulkForm.message_template_id));
+    if (!template) return;
+
+    if (template.channel === 'email' || bulkUsesEmail.value) {
+        bulkForm.subject = template.subject ?? bulkForm.subject;
+        bulkForm.html_body = template.html_body ?? bulkForm.html_body;
+    }
+    bulkForm.message = template.body ?? bulkForm.message;
+};
+
+const submitBulkCampaign = () => {
+    const payload = {
+        ...bulkForm.data(),
+        ab_test: bulkForm.ab_enabled ? bulkForm.ab_test : null,
+    };
+
+    bulkForm.transform(() => payload).post(route('e-delivery.bulk-campaigns.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            bulkForm.reset();
+            bulkForm.channel = 'email';
+            bulkForm.throttle_per_minute = 100;
+            bulkForm.ab_enabled = false;
+        },
+        onFinish: () => bulkForm.transform((data) => data),
+    });
+};
+
+const sendBulkCampaignNow = (id) => {
+    if (confirm('Send this bulk campaign now?')) {
+        router.post(route('e-delivery.bulk-campaigns.send', id), {}, { preserveScroll: true });
+    }
+};
+
 const renderMergeTags = (text, data) => {
     if (!text) {
         return '';
@@ -272,7 +343,6 @@ const healthBadgeClass = (tone) => ({
         >
             <template #actions>
                 <AppButton :href="route('integrations.messaging')" variant="secondary">ESP settings</AppButton>
-                <AppButton :href="route('automation.index', { tab: 'bulk-sms' })">Bulk campaigns</AppButton>
                 <AppButton :href="route('features.auto-responders')" variant="secondary">Auto-responders</AppButton>
             </template>
         </PageHeader>
@@ -616,35 +686,158 @@ const healthBadgeClass = (tone) => ({
             </div>
         </section>
 
-        <Panel title="Recent campaigns" class="mt-6">
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
-                            <th class="pb-2 pr-4">Name</th>
-                            <th class="pb-2 pr-4">Channel</th>
-                            <th class="pb-2 pr-4">Status</th>
-                            <th class="pb-2 pr-4 text-right">Sent</th>
-                            <th class="pb-2 text-right">Failed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="c in recentCampaigns" :key="c.id" class="border-t border-slate-100 dark:border-slate-800">
-                            <td class="py-2 pr-4 font-medium">{{ c.name }}</td>
-                            <td class="py-2 pr-4 capitalize">{{ c.channel ?? 'sms' }}</td>
-                            <td class="py-2 pr-4"><StatusBadge :status="c.status ?? 'draft'" /></td>
-                            <td class="py-2 pr-4 text-right tabular-nums">{{ c.sent_count ?? 0 }}</td>
-                            <td class="py-2 text-right tabular-nums text-rose-600">{{ c.failed_count ?? 0 }}</td>
-                        </tr>
-                        <tr v-if="!recentCampaigns?.length">
-                            <td colspan="5" class="py-6 text-center text-slate-500">No campaigns yet.</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <section class="mt-8">
+            <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Multi-channel bulk campaigns</h2>
+            <div class="grid gap-6 lg:grid-cols-2">
+                <Panel title="Create bulk campaign">
+                    <form class="space-y-4" @submit.prevent="submitBulkCampaign">
+                        <div>
+                            <InputLabel value="Name" />
+                            <TextInput v-model="bulkForm.name" class="mt-1 w-full" required />
+                            <InputError class="mt-1" :message="bulkForm.errors.name" />
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel value="Channel" />
+                                <select v-model="bulkForm.channel" class="form-select mt-1 w-full">
+                                    <option value="email">Email</option>
+                                    <option value="sms">SMS</option>
+                                    <option value="both">Email + SMS</option>
+                                </select>
+                            </div>
+                            <div>
+                                <InputLabel value="Provider" />
+                                <select v-model="bulkForm.provider" class="form-select mt-1 w-full">
+                                    <option value="">Platform default</option>
+                                    <option v-for="p in (providers?.[bulkUsesEmail ? 'email' : 'sms'] ?? [])" :key="p" :value="p">{{ p }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <InputLabel value="Message template (optional)" />
+                            <select v-model="bulkForm.message_template_id" class="form-select mt-1 w-full" @change="applyBulkTemplate">
+                                <option value="">Custom content</option>
+                                <option v-for="t in templatesForBulkChannel" :key="t.id" :value="t.id">{{ t.name }} ({{ t.channel }})</option>
+                            </select>
+                        </div>
+                        <div v-if="bulkUsesEmail">
+                            <InputLabel value="Email subject" />
+                            <TextInput v-model="bulkForm.subject" class="mt-1 w-full" />
+                        </div>
+                        <div>
+                            <InputLabel :value="bulkUsesSms && !bulkUsesEmail ? 'SMS message' : 'Message body'" />
+                            <textarea v-model="bulkForm.message" rows="4" class="form-input mt-1 w-full" required maxlength="16000" />
+                            <InputError class="mt-1" :message="bulkForm.errors.message" />
+                        </div>
+                        <div v-if="bulkUsesEmail">
+                            <InputLabel value="HTML body (optional)" />
+                            <textarea v-model="bulkForm.html_body" rows="3" class="form-input mt-1 w-full font-mono text-xs" />
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel value="Segment" />
+                                <select v-model="bulkForm.segment_id" class="form-select mt-1 w-full">
+                                    <option value="">All leads</option>
+                                    <option v-for="s in segments" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                </select>
+                            </div>
+                            <div v-if="bulkUsesEmail">
+                                <InputLabel value="Sending profile" />
+                                <select v-model="bulkForm.sending_profile_id" class="form-select mt-1 w-full">
+                                    <option value="">Default</option>
+                                    <option v-for="p in sendingProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel value="Throttle (per minute)" />
+                                <TextInput v-model="bulkForm.throttle_per_minute" type="number" min="1" class="mt-1 w-full" />
+                            </div>
+                            <div>
+                                <InputLabel value="Schedule (optional)" />
+                                <input v-model="bulkForm.scheduled_at" type="datetime-local" class="form-input mt-1 w-full" />
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-900 dark:bg-violet-950/20">
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                <input v-model="bulkForm.ab_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                                Enable A/B test
+                            </label>
+                            <div v-if="bulkForm.ab_enabled" class="mt-3 space-y-3 text-sm">
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="text-xs text-slate-500">Sample %</label>
+                                        <input v-model.number="bulkForm.ab_test.split_percent" type="number" min="5" max="50" class="form-input mt-1 w-full" />
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-slate-500">Wait before winner (min)</label>
+                                        <input v-model.number="bulkForm.ab_test.wait_minutes" type="number" min="5" class="form-input mt-1 w-full" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-500">Winner metric</label>
+                                    <select v-model="bulkForm.ab_test.winner_metric" class="form-select mt-1 w-full">
+                                        <option value="open">Open rate</option>
+                                        <option value="click">Click rate</option>
+                                    </select>
+                                </div>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <p class="mb-1 text-xs font-semibold text-slate-600">Variant A</p>
+                                        <input v-if="bulkUsesEmail" v-model="bulkForm.ab_test.variant_a.subject" type="text" class="form-input mb-2 w-full text-xs" placeholder="Subject A" />
+                                        <textarea v-model="bulkForm.ab_test.variant_a.body" rows="2" class="form-input w-full text-xs" placeholder="Body A" />
+                                    </div>
+                                    <div>
+                                        <p class="mb-1 text-xs font-semibold text-slate-600">Variant B</p>
+                                        <input v-if="bulkUsesEmail" v-model="bulkForm.ab_test.variant_b.subject" type="text" class="form-input mb-2 w-full text-xs" placeholder="Subject B" />
+                                        <textarea v-model="bulkForm.ab_test.variant_b.body" rows="2" class="form-input w-full text-xs" placeholder="Body B" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <AppButton type="submit" :disabled="bulkForm.processing" :loading="bulkForm.processing">Create campaign</AppButton>
+                    </form>
+                </Panel>
+
+                <Panel title="Recent bulk campaigns">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                    <th class="pb-2 pr-4">Name</th>
+                                    <th class="pb-2 pr-4">Channel</th>
+                                    <th class="pb-2 pr-4">Status</th>
+                                    <th class="pb-2 pr-4 text-right">Sent</th>
+                                    <th class="pb-2 text-right">Failed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="c in recentCampaigns" :key="c.id" class="border-t border-slate-100 dark:border-slate-800">
+                                    <td class="py-2 pr-4">
+                                        <p class="font-medium">{{ c.name }}</p>
+                                        <button
+                                            v-if="['draft', 'scheduled'].includes(c.status)"
+                                            type="button"
+                                            class="mt-1 text-xs text-indigo-600 hover:underline"
+                                            @click="sendBulkCampaignNow(c.id)"
+                                        >
+                                            Send now
+                                        </button>
+                                    </td>
+                                    <td class="py-2 pr-4 capitalize">{{ c.channel ?? 'sms' }}</td>
+                                    <td class="py-2 pr-4"><StatusBadge :status="c.status ?? 'draft'" /></td>
+                                    <td class="py-2 pr-4 text-right tabular-nums">{{ c.sent_count ?? 0 }}</td>
+                                    <td class="py-2 text-right tabular-nums text-rose-600">{{ c.failed_count ?? 0 }}</td>
+                                </tr>
+                                <tr v-if="!recentCampaigns?.length">
+                                    <td colspan="5" class="py-6 text-center text-slate-500">No campaigns yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </Panel>
             </div>
-            <p class="mt-3 text-sm text-slate-500">
-                <Link :href="route('automation.index', { tab: 'bulk-sms' })" class="text-indigo-600 hover:underline">Manage bulk campaigns →</Link>
-            </p>
-        </Panel>
+        </section>
     </AuthenticatedLayout>
 </template>

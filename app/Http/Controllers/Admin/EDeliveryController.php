@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Jobs\SendBulkCampaignJob;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\BulkSmsCampaign;
@@ -18,6 +19,7 @@ use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -78,6 +80,99 @@ class EDeliveryController extends Controller
         $throttle->resumeSending($accountId);
 
         return back()->with('success', 'Marketing sends resumed.');
+    }
+
+    public function storeBulkCampaign(Request $request): RedirectResponse
+    {
+        $validated = $this->validatedBulkCampaign($request);
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+
+        $this->applyMessageTemplate($validated, $accountId);
+
+        $campaign = BulkSmsCampaign::create(array_merge($validated, [
+            'account_id' => $accountId,
+            'status' => ! empty($validated['scheduled_at']) ? 'scheduled' : 'draft',
+        ]));
+
+        if (empty($validated['scheduled_at'])) {
+            SendBulkCampaignJob::dispatch($campaign->id);
+        }
+
+        return back()->with('success', 'Bulk campaign created.');
+    }
+
+    public function sendBulkCampaign(BulkSmsCampaign $bulkSms): RedirectResponse
+    {
+        SendBulkCampaignJob::dispatch($bulkSms->id);
+
+        return back()->with('success', 'Bulk campaign queued for sending.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedBulkCampaign(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'campaign_id' => 'nullable|exists:campaigns,id',
+            'channel' => 'nullable|in:sms,email,both',
+            'subject' => 'nullable|string|max:255',
+            'provider' => 'nullable|string|max:64',
+            'message' => 'required|string|max:16000',
+            'html_body' => 'nullable|string',
+            'message_template_id' => 'nullable|exists:message_templates,id',
+            'segment_id' => 'nullable|exists:segments,id',
+            'sending_profile_id' => 'nullable|exists:sending_profiles,id',
+            'throttle_per_minute' => 'nullable|integer|min:1|max:1000',
+            'ab_test' => 'nullable|array',
+            'ab_test.split_percent' => 'nullable|integer|min:5|max:50',
+            'ab_test.wait_minutes' => 'nullable|integer|min:5|max:1440',
+            'ab_test.winner_metric' => 'nullable|in:open,click',
+            'ab_test.variant_a' => 'nullable|array',
+            'ab_test.variant_b' => 'nullable|array',
+            'filter' => 'nullable|array',
+            'filter.has_email' => 'nullable|boolean',
+            'filter.has_phone' => 'nullable|boolean',
+            'scheduled_at' => 'nullable|date',
+        ]);
+
+        $validated['channel'] = $validated['channel'] ?? BulkSmsCampaign::CHANNEL_SMS;
+
+        if (in_array($validated['channel'], [BulkSmsCampaign::CHANNEL_EMAIL, BulkSmsCampaign::CHANNEL_BOTH], true)
+            && empty($validated['subject'])) {
+            $validated['subject'] = $validated['name'];
+        }
+
+        unset($validated['message_template_id']);
+
+        return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    protected function applyMessageTemplate(array &$validated, int $accountId): void
+    {
+        $templateId = request()->input('message_template_id');
+
+        if (! $templateId) {
+            return;
+        }
+
+        $template = MessageTemplate::query()
+            ->where('account_id', $accountId)
+            ->find($templateId);
+
+        if (! $template) {
+            throw ValidationException::withMessages([
+                'message_template_id' => 'Template not found for this platform.',
+            ]);
+        }
+
+        $validated['subject'] = $validated['subject'] ?? $template->subject;
+        $validated['message'] = $template->body ?? $validated['message'];
+        $validated['html_body'] = $validated['html_body'] ?? $template->html_body;
     }
 
     public function storeSegment(Request $request): RedirectResponse

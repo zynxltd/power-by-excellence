@@ -48,6 +48,16 @@ function registerEDeliveryJourneyRoutes(): void
         Route::post('e-delivery/throttle/resume', [EDeliveryController::class, 'resumeSending'])
             ->name('e-delivery.throttle.resume');
     }
+
+    if (! Route::has('e-delivery.bulk-campaigns.store')) {
+        Route::post('e-delivery/bulk-campaigns', [EDeliveryController::class, 'storeBulkCampaign'])
+            ->name('e-delivery.bulk-campaigns.store');
+    }
+
+    if (! Route::has('e-delivery.bulk-campaigns.send')) {
+        Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [EDeliveryController::class, 'sendBulkCampaign'])
+            ->name('e-delivery.bulk-campaigns.send');
+    }
 }
 
 function registerEDeliveryAdminRoutes(): void
