@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RunScheduledExportJob;
 use App\Models\Buyer;
 use App\Models\ScheduledExport;
+use App\Services\Exports\ScheduledExportFormData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,38 +26,24 @@ class ScheduledExportController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'buyer_id' => 'nullable|exists:buyers,id',
-            'format' => 'nullable|string|in:csv',
-            'delivery_method' => 'required|string|in:email,ftp',
-            'cron' => 'nullable|string|max:64',
-            'config' => 'nullable|array',
-            'status' => 'nullable|string|in:active,paused',
-        ]);
+        $validated = $request->validate(ScheduledExportFormData::rules($request));
 
-        ScheduledExport::create(array_merge($validated, [
-            'format' => $validated['format'] ?? 'csv',
-            'cron' => $validated['cron'] ?? '0 8 * * *',
-            'status' => $validated['status'] ?? 'active',
-        ]));
+        ScheduledExport::create(ScheduledExportFormData::toAttributes($validated));
 
         return back()->with('success', 'Scheduled export created.');
     }
 
     public function update(Request $request, ScheduledExport $scheduledExport): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'buyer_id' => 'nullable|exists:buyers,id',
-            'format' => 'nullable|string|in:csv',
-            'delivery_method' => 'required|string|in:email,ftp',
-            'cron' => 'nullable|string|max:64',
-            'config' => 'nullable|array',
-            'status' => 'nullable|string|in:active,paused',
-        ]);
+        $validated = $request->validate(ScheduledExportFormData::rules($request));
 
-        $scheduledExport->update($validated);
+        $attributes = ScheduledExportFormData::toAttributes($validated);
+
+        if (! filled($validated['remote_credentials'] ?? null)) {
+            unset($attributes['remote_credentials']);
+        }
+
+        $scheduledExport->update($attributes);
 
         return back()->with('success', 'Scheduled export updated.');
     }
