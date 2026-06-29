@@ -31,6 +31,9 @@ const form = useForm({
     default_low_credit_alert: props.account.default_low_credit_alert ?? '',
     buyer_portal_locale: props.account.buyer_portal_locale ?? 'en',
     custom_portal_domain: props.account.custom_portal_domain ?? '',
+    require_2fa_for_staff: props.account.require_2fa_for_staff ?? false,
+    require_2fa_for_portal: props.account.require_2fa_for_portal ?? false,
+    two_factor_grace_days: props.account.two_factor_grace_days ?? 7,
 });
 
 const submit = () => {
@@ -190,6 +193,44 @@ const verifyPortalDomain = () => {
                             <InputLabel value="Default low-credit threshold" />
                             <TextInput v-model="form.default_low_credit_alert" type="number" step="0.01" min="0" class="mt-1" />
                             <p class="mt-1 text-xs text-slate-500">Used when a buyer has no per-buyer threshold set.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Two-factor authentication policy</h4>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Require users to enroll in 2FA before accessing admin or portal areas. A grace period gives existing users time to set up after the policy is enabled.
+                    </p>
+
+                    <div class="mt-4 space-y-4">
+                        <label class="flex items-start gap-3">
+                            <input v-model="form.require_2fa_for_staff" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                            <span>
+                                <span class="block text-sm font-medium text-slate-900 dark:text-white">Require 2FA for staff</span>
+                                <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                                    Applies to account admins and staff on this platform. Users without 2FA are redirected to their profile to enroll.
+                                </span>
+                            </span>
+                        </label>
+                        <InputError class="mt-1" :message="form.errors.require_2fa_for_staff" />
+
+                        <label class="flex items-start gap-3">
+                            <input v-model="form.require_2fa_for_portal" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                            <span>
+                                <span class="block text-sm font-medium text-slate-900 dark:text-white">Require 2FA for portal users</span>
+                                <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                                    Applies to buyer and supplier portal logins on this platform.
+                                </span>
+                            </span>
+                        </label>
+                        <InputError class="mt-1" :message="form.errors.require_2fa_for_portal" />
+
+                        <div class="max-w-xs">
+                            <InputLabel value="Grace period (days)" />
+                            <input v-model="form.two_factor_grace_days" type="number" min="0" max="90" step="1" class="form-input mt-1 w-full" />
+                            <p class="mt-1 text-xs text-slate-500">Days after enabling a policy before access is blocked. Set to 0 for immediate enforcement.</p>
+                            <InputError class="mt-1" :message="form.errors.two_factor_grace_days" />
                         </div>
                     </div>
                 </div>

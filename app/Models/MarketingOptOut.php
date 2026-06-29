@@ -10,6 +10,6 @@ class MarketingOptOut extends Model
     use BelongsToAccount;
 
     protected $fillable = [
-        'account_id', 'field_type', 'hash', 'source',
+        'account_id', 'field_type', 'hash', 'label', 'source',
     ];
 }

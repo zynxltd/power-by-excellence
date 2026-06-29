@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\PlatformFeatureParity\PortalDomain;
 use App\PlatformFeatureParity\PortalDomainVerification;
+use App\Services\Security\TwoFactorService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\BuyerPortal\BuyerPortalLocale;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +35,9 @@ class AccountSettingsController extends Controller
                     'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
                     'buyer_portal_locale' => $account->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
                     'custom_portal_domain' => $account->settings['custom_portal_domain'] ?? '',
+                    'require_2fa_for_staff' => $account->settings['require_2fa_for_staff'] ?? false,
+                    'require_2fa_for_portal' => $account->settings['require_2fa_for_portal'] ?? false,
+                    'two_factor_grace_days' => (int) ($account->settings['two_factor_grace_days'] ?? 7),
                 ]
             ),
             'portalDomain' => $this->portalDomainVerification->statusForAccount($account),
@@ -59,6 +63,9 @@ class AccountSettingsController extends Controller
             'default_low_credit_alert' => 'nullable|numeric|min:0',
             'buyer_portal_locale' => 'nullable|string|max:5',
             'custom_portal_domain' => 'nullable|string|max:255',
+            'require_2fa_for_staff' => 'boolean',
+            'require_2fa_for_portal' => 'boolean',
+            'two_factor_grace_days' => 'nullable|integer|min:0|max:90',
         ], $this->messages());
 
         $settings = $account->settings ?? [];
@@ -82,6 +89,8 @@ class AccountSettingsController extends Controller
                 $settings['custom_portal_domain_verification_token'],
             );
         }
+
+        $settings = app(TwoFactorService::class)->mergePolicySettings($settings, $validated);
 
         $account->update([
             'name' => $validated['name'],

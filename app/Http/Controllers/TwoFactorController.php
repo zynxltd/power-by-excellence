@@ -36,14 +36,16 @@ class TwoFactorController extends Controller
         }
 
         $recoveryCodes = $twoFactor->generateRecoveryCodes();
+        $user = $request->user();
 
-        $request->user()->forceFill([
+        $user->forceFill([
             'two_factor_enabled' => true,
             'two_factor_secret' => $secret,
             'two_factor_recovery_codes' => $recoveryCodes,
         ])->save();
 
         $request->session()->forget('two_factor.pending_secret');
+        $request->session()->put('two_factor_verified', $user->id);
 
         return back()->with([
             'success' => 'Two-factor authentication enabled.',
@@ -51,11 +53,18 @@ class TwoFactorController extends Controller
         ]);
     }
 
-    public function disable(Request $request): RedirectResponse
+    public function disable(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
         $request->validate(['password' => ['required', 'current_password']]);
 
         $user = $request->user();
+
+        if ($twoFactor->mustKeepTwoFactor($user)) {
+            return back()->withErrors([
+                'password' => 'Two-factor authentication is required by your platform policy and cannot be disabled.',
+            ]);
+        }
+
         $user->forceFill([
             'two_factor_enabled' => false,
             'two_factor_secret' => null,
