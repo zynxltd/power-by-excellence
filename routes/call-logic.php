@@ -56,6 +56,8 @@ if (! function_exists('callLogicAdminRoutes')) {
                 Route::get('calls', [CallSessionController::class, 'index'])->name('call-logic.calls.index');
                 Route::get('calls/export', [CallSessionController::class, 'export'])->name('call-logic.calls.export');
                 Route::get('calls/{call}', [CallSessionController::class, 'show'])->name('call-logic.calls.show');
+                Route::get('recordings/{recording}/play', [\App\Http\Controllers\Admin\CallRecordingController::class, 'play'])
+                    ->name('call-logic.recordings.play');
                 Route::get('tracking-numbers', [TrackingNumberController::class, 'index'])->name('call-logic.tracking-numbers.index');
                 Route::post('tracking-numbers/search', [TrackingNumberController::class, 'search'])->name('call-logic.tracking-numbers.search');
                 Route::post('tracking-numbers/purchase', [TrackingNumberController::class, 'purchase'])->name('call-logic.tracking-numbers.purchase');

@@ -6,6 +6,7 @@ use App\Enums\CallStatus;
 use App\Enums\DeliveryMethod;
 use App\Models\Account;
 use App\Models\Buyer;
+use App\Models\CallRecording;
 use App\Models\CallSession;
 use App\Models\Campaign;
 use App\Models\Delivery;
@@ -20,6 +21,7 @@ use App\Support\Products\CallLogicProduct;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CallLogicTest extends TestCase
@@ -436,8 +438,13 @@ class CallLogicTest extends TestCase
         $this->assertSame(90, $session->duration_seconds);
     }
 
-    public function test_recording_webhook_attaches_recording_url(): void
+    public function test_recording_webhook_downloads_and_stores_recording(): void
     {
+        Storage::fake('local');
+        Http::fake([
+            'https://api.twilio.com/recording.mp3' => Http::response('fake-audio-bytes', 200, ['Content-Type' => 'audio/mpeg']),
+        ]);
+
         $session = CallSession::create([
             'account_id' => $this->account->id,
             'status' => CallStatus::Completed,
@@ -453,11 +460,42 @@ class CallLogicTest extends TestCase
             'RecordingStatus' => 'completed',
         ])->assertNoContent();
 
-        $this->assertDatabaseHas('call_recordings', [
-            'call_session_id' => $session->id,
-            'provider_recording_sid' => 'RE123',
-            'url' => 'https://api.twilio.com/recording.mp3',
+        $recording = CallRecording::where('provider_recording_sid', 'RE123')->first();
+        $this->assertNotNull($recording);
+        $this->assertNotNull($recording->storage_path);
+        $this->assertSame('stored', $recording->status);
+        $this->assertNotNull($recording->retention_expires_at);
+        Storage::disk('local')->assertExists($recording->storage_path);
+    }
+
+    public function test_recording_play_route_streams_stored_audio(): void
+    {
+        Storage::fake('local');
+        $path = 'call-recordings/'.$this->account->id.'/1/RE_play.mp3';
+        Storage::disk('local')->put($path, 'audio-bytes');
+
+        $session = CallSession::create([
+            'account_id' => $this->account->id,
+            'status' => CallStatus::Completed,
+            'caller_number' => '+447700900123',
+            'provider_call_sid' => 'CA_play_test',
         ]);
+
+        $recording = CallRecording::create([
+            'call_session_id' => $session->id,
+            'provider_recording_sid' => 'RE_play',
+            'storage_path' => $path,
+            'duration_seconds' => 45,
+            'status' => 'stored',
+            'retention_expires_at' => now()->addDays(30),
+        ]);
+
+        $this->assertTrue($recording->hasPlayback());
+
+        $this->actingAs($this->admin)
+            ->get(route('call-logic.recordings.play', $recording))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'audio/mpeg');
     }
 
     public function test_reports_page_loads_analytics(): void

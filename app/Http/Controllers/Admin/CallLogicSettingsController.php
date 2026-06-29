@@ -35,6 +35,7 @@ class CallLogicSettingsController extends Controller
             'enabled' => 'boolean',
             'max_tracking_numbers' => 'nullable|integer|min:1|max:1000',
             'recording_enabled' => 'boolean',
+            'recording_retention_days' => 'nullable|integer|min:1|max:3650',
             'concurrent_call_cap' => 'nullable|integer|min:1|max:10000',
         ]);
 
@@ -51,6 +52,7 @@ class CallLogicSettingsController extends Controller
             array_filter([
                 'max_tracking_numbers' => $validated['max_tracking_numbers'] ?? null,
                 'recording_enabled' => $validated['recording_enabled'] ?? null,
+                'recording_retention_days' => $validated['recording_retention_days'] ?? null,
                 'concurrent_call_cap' => $validated['concurrent_call_cap'] ?? null,
             ], fn ($v) => $v !== null),
         );

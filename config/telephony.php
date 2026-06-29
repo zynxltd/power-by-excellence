@@ -37,4 +37,8 @@ return [
 
     'recording_enabled' => env('CALL_RECORDING_ENABLED', false),
 
+    'recording_disk' => env('CALL_RECORDING_DISK', 'local'),
+
+    'recording_retention_days' => (int) env('CALL_RECORDING_RETENTION_DAYS', 90),
+
 ];
