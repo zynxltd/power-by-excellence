@@ -2,41 +2,37 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\RunSavedReportJob;
 use App\Models\SavedReport;
-use App\Services\Exports\SavedReportRunner;
+use App\Services\Exports\SavedReportSchedule;
 use Illuminate\Console\Command;
 
 class ProcessSavedReportsCommand extends Command
 {
     protected $signature = 'reports:process-scheduled';
 
-    protected $description = 'Run saved reports that have a schedule_cron and are due';
+    protected $description = 'Dispatch saved report export jobs that are due to run';
 
-    public function handle(SavedReportRunner $runner): int
+    public function handle(): int
     {
-        $processed = 0;
+        $dispatched = 0;
 
-        SavedReport::query()
+        SavedReport::withoutGlobalScopes()
             ->where('status', 'active')
             ->whereNotNull('schedule_cron')
             ->whereNotNull('email_recipients')
-            ->each(function (SavedReport $report) use ($runner, &$processed) {
-                if ($this->isDue($report) && $runner->run($report)) {
-                    $processed++;
+            ->orderBy('id')
+            ->each(function (SavedReport $report) use (&$dispatched) {
+                if (! SavedReportSchedule::isDue($report)) {
+                    return;
                 }
+
+                RunSavedReportJob::dispatch($report->id);
+                $dispatched++;
             });
 
-        $this->info("Processed {$processed} saved report(s).");
+        $this->info("Dispatched {$dispatched} saved report job(s).");
 
         return self::SUCCESS;
-    }
-
-    protected function isDue(SavedReport $report): bool
-    {
-        if (! $report->last_run_at) {
-            return true;
-        }
-
-        return $report->last_run_at->lt(now()->subHour());
     }
 }
