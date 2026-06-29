@@ -15,6 +15,7 @@ class ConversionTrackingService
     public function __construct(
         protected PostbackDispatcher $postbacks,
         protected ClickCapService $caps,
+        protected SupplierClickPayoutService $payouts,
     ) {}
 
     public function fromLeadSold(Lead $lead): ?TrackingConversion
@@ -64,6 +65,8 @@ class ConversionTrackingService
             $this->fireApprovedPostback($conversion, $lead);
         }
 
+        $this->payouts->syncFromConversion($conversion);
+
         PlatformLogger::leadEvent($lead, 'conversion.recorded', 'Click Track conversion recorded', [
             'conversion_uuid' => $conversion->conversion_uuid,
             'status' => $conversion->status,
@@ -106,6 +109,8 @@ class ConversionTrackingService
         if ($lead) {
             $this->fireApprovedPostback($conversion->fresh(), $lead);
         }
+
+        $this->payouts->markApproved($conversion->fresh());
 
         return $conversion->fresh();
     }
@@ -171,6 +176,8 @@ class ConversionTrackingService
         if ($status === TrackingConversion::STATUS_APPROVED && $click?->lead) {
             $this->fireApprovedPostback($conversion, $click->lead);
         }
+
+        $this->payouts->syncFromConversion($conversion);
 
         return $conversion;
     }

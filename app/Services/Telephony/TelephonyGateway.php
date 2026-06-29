@@ -7,7 +7,18 @@ interface TelephonyGateway
     public function provider(): string;
 
     /**
-     * @return array{sid: string, phone_number: string}
+     * @return array<int, array{sid: string, phone_number: string, friendly_name: string|null, locality: string|null}>
+     */
+    public function searchAvailableNumbers(string $areaCode, string $country = 'GB'): array;
+
+    /**
+     * @param  array{voice_url?: string, gather_url?: string, status_url?: string, recording_url?: string}  $webhooks
+     * @return array{sid: string, phone_number: string, webhook_status: string}
+     */
+    public function purchaseNumber(string $phoneNumber, array $webhooks = []): array;
+
+    /**
+     * @return array{sid: string, phone_number: string, webhook_status?: string}
      */
     public function provisionNumber(string $areaCode = '020'): array;
 

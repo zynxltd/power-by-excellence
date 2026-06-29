@@ -12,14 +12,35 @@ class LogTelephonyGateway implements TelephonyGateway
         return 'log';
     }
 
-    public function provisionNumber(string $areaCode = '020'): array
+    public function searchAvailableNumbers(string $areaCode, string $country = 'GB'): array
+    {
+        $code = preg_replace('/\D/', '', $areaCode) ?: '20';
+
+        return collect(range(1, 3))->map(fn (int $i) => [
+            'sid' => 'AVAIL'.$code.$i,
+            'phone_number' => '+44'.$code.str_pad((string) $i, 7, '0', STR_PAD_LEFT),
+            'friendly_name' => $code.' line '.$i,
+            'locality' => 'Simulated',
+        ])->all();
+    }
+
+    public function purchaseNumber(string $phoneNumber, array $webhooks = []): array
     {
         $sid = 'LOG'.Str::upper(Str::random(10));
-        $number = '+44'.$areaCode.Str::padLeft((string) random_int(1000000, 9999999), 7, '0');
+        Log::info('telephony.purchase', ['sid' => $sid, 'number' => $phoneNumber, 'webhooks' => array_keys(array_filter($webhooks))]);
 
-        Log::info('telephony.provision', ['sid' => $sid, 'number' => $number]);
+        return [
+            'sid' => $sid,
+            'phone_number' => $phoneNumber,
+            'webhook_status' => ($webhooks['voice_url'] ?? null) ? 'configured' : 'pending',
+        ];
+    }
 
-        return ['sid' => $sid, 'phone_number' => $number];
+    public function provisionNumber(string $areaCode = '020'): array
+    {
+        $available = $this->searchAvailableNumbers($areaCode);
+
+        return $this->purchaseNumber($available[0]['phone_number']);
     }
 
     public function releaseNumber(string $providerSid): void

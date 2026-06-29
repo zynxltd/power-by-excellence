@@ -13,6 +13,8 @@ use App\Models\IvrFlow;
 use App\Models\TrackingNumber;
 use App\Models\User;
 use App\Services\Api\ApiKeyService;
+use App\Services\Telephony\TelephonyWebhookUrls;
+use App\Services\Telephony\TwilioVoiceGateway;
 use App\Support\CallLogic\CallLogicRouteRegistrar;
 use App\Support\Products\CallLogicProduct;
 use App\Support\Tenancy\AccountContext;
@@ -67,7 +69,64 @@ class CallLogicTest extends TestCase
             'campaign_id' => $campaign->id,
             'friendly_name' => 'Main line',
             'status' => 'active',
+            'webhook_status' => 'configured',
         ]);
+    }
+
+    public function test_twilio_search_returns_available_numbers(): void
+    {
+        $this->mockTwilioGateway();
+
+        $this->actingAs($this->admin)
+            ->post(route('call-logic.tracking-numbers.search'), ['area_code' => '020', 'country' => 'GB'])
+            ->assertRedirect()
+            ->assertSessionHas('number_search_results', fn ($results) => count($results) >= 1);
+    }
+
+    public function test_twilio_purchase_creates_number_with_webhooks(): void
+    {
+        $this->mockTwilioGateway(purchase: true);
+        config(['telephony.provider' => 'twilio']);
+        $campaign = $this->createCallCampaign();
+
+        $this->actingAs($this->admin)
+            ->post(route('call-logic.tracking-numbers.purchase'), [
+                'phone_number' => '+442071111111',
+                'campaign_id' => $campaign->id,
+                'friendly_name' => 'Purchased line',
+            ])
+            ->assertRedirect(route('call-logic.tracking-numbers.index'));
+
+        $webhooks = TelephonyWebhookUrls::forAccount($this->account);
+        $this->assertDatabaseHas('tracking_numbers', [
+            'phone_number' => '+442071111111',
+            'provider' => 'twilio',
+            'provider_sid' => 'PNMOCK123',
+            'webhook_status' => 'configured',
+        ]);
+        $number = TrackingNumber::where('phone_number', '+442071111111')->first();
+        $this->assertSame($webhooks['voice_url'], $number->metadata['webhooks']['voice_url'] ?? null);
+    }
+
+    public function test_twilio_release_deactivates_tracking_number(): void
+    {
+        $this->mockTwilioGateway(release: true);
+        $campaign = $this->createCallCampaign();
+        $number = TrackingNumber::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'phone_number' => '+442071111111',
+            'provider' => 'twilio',
+            'provider_sid' => 'PNMOCK123',
+            'webhook_status' => 'configured',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('call-logic.tracking-numbers.destroy', $number))
+            ->assertRedirect();
+
+        $this->assertSame('released', $number->fresh()->status);
     }
 
     public function test_inbound_webhook_creates_call_session(): void
@@ -467,5 +526,26 @@ class CallLogicTest extends TestCase
             'ping_timeout_ms' => 1500,
             'call_settings' => ['routing_mode' => 'waterfall', 'min_duration_seconds' => 30],
         ], $overrides));
+    }
+
+    protected function mockTwilioGateway(bool $purchase = false, bool $release = false): TwilioVoiceGateway
+    {
+        config(['telephony.provider' => 'twilio']);
+        $mock = \Mockery::mock(TwilioVoiceGateway::class);
+        $mock->shouldReceive('provider')->andReturn('twilio');
+        $mock->shouldReceive('searchAvailableNumbers')->andReturn([[
+            'sid' => '+442071111111', 'phone_number' => '+442071111111', 'friendly_name' => 'London', 'locality' => 'London',
+        ]]);
+        if ($purchase) {
+            $mock->shouldReceive('purchaseNumber')->once()->with('+442071111111', \Mockery::on(
+                fn (array $w) => str_contains($w['voice_url'] ?? '', $this->account->slug)
+            ))->andReturn(['sid' => 'PNMOCK123', 'phone_number' => '+442071111111', 'webhook_status' => 'configured']);
+        }
+        if ($release) {
+            $mock->shouldReceive('releaseNumber')->once()->with('PNMOCK123');
+        }
+        $this->instance(TwilioVoiceGateway::class, $mock);
+
+        return $mock;
     }
 }

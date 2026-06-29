@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\ClickTrack\IntegrationManifest;
 use App\ClickTrack\PricingModuleFlags;
 use App\Models\Account;
+use App\Models\EventAlert;
 use App\Models\Buyer;
 use App\Models\Campaign;
 use App\Models\Lead;
@@ -13,14 +14,18 @@ use App\Models\TrackingClick;
 use App\Models\TrackingConversion;
 use App\Models\TrackingLink;
 use App\Models\User;
+use App\Services\ClickTrack\ClickFraudService;
 use App\Services\ClickTrack\ClickCapService;
 use App\Services\ClickTrack\ClickTrackEntitlementService;
 use App\Services\ClickTrack\ClickTrackPendingQueueService;
 use App\Services\ClickTrack\ConversionTrackingService;
+use App\Models\SupplierClickPayout;
+use App\Services\ClickTrack\SupplierClickPayoutService;
 use App\Services\ClickTrack\SupplierClickStatsService;
 use App\Services\Leads\LeadIngestService;
 use App\Support\ClickTrack\ClickTrackRouteRegistrar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ClickTrackTest extends TestCase
@@ -296,5 +301,237 @@ class ClickTrackTest extends TestCase
 
         $this->assertCount(1, $stats['cap_alerts']);
         $this->assertTrue($stats['cap_alerts'][0]['click_cap_reached']);
+    }
+
+    public function test_hard_cap_blocks_redirect(): void
+    {
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Hard cap',
+            'token' => 'hardcaplink123456',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+            'config' => ['cap_daily' => 1],
+        ]);
+
+        TrackingClick::create([
+            'account_id' => $this->account->id,
+            'tracking_link_id' => $link->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'click_uuid' => '55555555-5555-5555-5555-555555555555',
+            'clicked_at' => now(),
+        ]);
+
+        $this->get('/c/'.$link->token.'?sub1=newclick')
+            ->assertStatus(429);
+    }
+
+    public function test_soft_cap_allows_click_but_flags_usage(): void
+    {
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Soft cap',
+            'token' => 'softcaplink123456',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+            'config' => ['cap_daily' => 10],
+        ]);
+
+        for ($i = 0; $i < 8; $i++) {
+            TrackingClick::create([
+                'account_id' => $this->account->id,
+                'tracking_link_id' => $link->id,
+                'campaign_id' => $this->campaign->id,
+                'supplier_id' => $this->supplier->id,
+                'click_uuid' => sprintf('66666666-6666-6666-6666-66666666660%d', $i),
+                'clicked_at' => now(),
+            ]);
+        }
+
+        $usage = app(ClickCapService::class)->usageForLink($link);
+        $this->assertTrue($usage['click_soft_cap_reached']);
+        $this->assertFalse($usage['click_cap_reached']);
+
+        $this->get('/c/'.$link->token.'?sub1=soft9')
+            ->assertRedirect();
+
+        $this->assertSame(9, app(ClickCapService::class)->clicksToday($link));
+    }
+
+    public function test_fraud_duplicate_skips_new_click_log(): void
+    {
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Fraud test',
+            'token' => 'fraudlink12345678',
+            'destination_url' => 'https://example.com/landing',
+            'status' => 'active',
+        ]);
+
+        $first = $this->get('/c/'.$link->token.'?sub1=aff999');
+        $first->assertRedirect();
+        $clickUuid = TrackingClick::where('tracking_link_id', $link->id)->value('click_uuid');
+        $this->assertSame(1, TrackingClick::where('tracking_link_id', $link->id)->count());
+
+        $second = $this->get('/c/'.$link->token.'?sub1=aff999');
+        $second->assertRedirect();
+        $this->assertStringContainsString($clickUuid, $second->headers->get('Location'));
+        $this->assertSame(1, TrackingClick::where('tracking_link_id', $link->id)->count());
+    }
+
+    public function test_hourly_cap_enforcement_blocks_clicks(): void
+    {
+        $settings = $this->account->settings;
+        $settings['click_track']['cap_hourly'] = 2;
+        $this->account->update(['settings' => $settings]);
+
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Hourly cap',
+            'token' => 'hourlycap12345678',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+        ]);
+
+        $this->get('/c/'.$link->token.'?sub1=h1')->assertRedirect();
+        $this->get('/c/'.$link->token.'?sub1=h2')->assertRedirect();
+        $this->get('/c/'.$link->token.'?sub1=h3')->assertStatus(429);
+    }
+
+    public function test_event_alert_fires_when_click_track_usage_crosses_soft_threshold(): void
+    {
+        Http::fake(['https://example.com/alerts' => Http::response([], 200)]);
+
+        EventAlert::create([
+            'account_id' => $this->account->id,
+            'name' => 'Click cap warning',
+            'metric' => 'click_track_usage_pct',
+            'operator' => 'gte',
+            'threshold' => 80,
+            'channel' => 'webhook',
+            'status' => 'active',
+            'config' => ['webhook_url' => 'https://example.com/alerts'],
+        ]);
+
+        $settings = $this->account->settings;
+        $settings['click_track']['clicks_cap'] = 10;
+        $this->account->update(['settings' => $settings]);
+
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Alert link',
+            'token' => 'alertcap123456789',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+            'config' => ['cap_daily' => 10],
+        ]);
+
+        for ($i = 0; $i < 7; $i++) {
+            TrackingClick::create([
+                'account_id' => $this->account->id,
+                'tracking_link_id' => $link->id,
+                'campaign_id' => $this->campaign->id,
+                'supplier_id' => $this->supplier->id,
+                'click_uuid' => sprintf('77777777-7777-7777-7777-77777777770%d', $i),
+                'clicked_at' => now(),
+            ]);
+        }
+
+        $this->get('/c/'.$link->token.'?sub1=trigger8')->assertRedirect();
+
+        $this->assertDatabaseHas('event_alert_fires', [
+            'account_id' => $this->account->id,
+            'metric' => 'click_track_usage_pct',
+        ]);
+    }
+
+    public function test_conversion_approve_creates_supplier_payout_ledger_entry(): void
+    {
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Payout offer',
+            'token' => 'payoutlink1234567',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+            'payout_amount' => 15,
+            'revenue_amount' => 30,
+            'config' => ['revenue_share_pct' => 50],
+        ]);
+
+        $conversion = TrackingConversion::create([
+            'account_id' => $this->account->id,
+            'tracking_link_id' => $link->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'conversion_uuid' => '88888888-8888-8888-8888-888888888888',
+            'goal' => 'lead',
+            'status' => TrackingConversion::STATUS_PENDING,
+            'payout' => 0,
+            'revenue' => 30,
+        ]);
+
+        app(SupplierClickPayoutService::class)->syncFromConversion($conversion);
+        $this->assertDatabaseHas('supplier_click_payouts', [
+            'tracking_conversion_id' => $conversion->id,
+            'status' => SupplierClickPayout::STATUS_PENDING,
+        ]);
+
+        app(\App\Services\ClickTrack\ConversionTrackingService::class)->approve($conversion);
+
+        $this->assertDatabaseHas('supplier_click_payouts', [
+            'tracking_conversion_id' => $conversion->id,
+            'status' => SupplierClickPayout::STATUS_APPROVED,
+        ]);
+
+        $stats = app(SupplierClickStatsService::class)->forSupplier($this->supplier);
+        $this->assertGreaterThan(0, $stats['approved_earnings']);
+    }
+
+    public function test_supplier_can_export_click_payout_csv(): void
+    {
+        $link = TrackingLink::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'name' => 'Export offer',
+            'token' => 'exportlink1234567',
+            'destination_url' => 'https://example.com',
+            'status' => 'active',
+        ]);
+
+        $conversion = TrackingConversion::create([
+            'account_id' => $this->account->id,
+            'tracking_link_id' => $link->id,
+            'campaign_id' => $this->campaign->id,
+            'supplier_id' => $this->supplier->id,
+            'conversion_uuid' => '99999999-9999-9999-9999-999999999999',
+            'goal' => 'lead',
+            'status' => TrackingConversion::STATUS_APPROVED,
+            'payout' => 12.5,
+            'revenue' => 25,
+            'approved_at' => now(),
+        ]);
+
+        app(SupplierClickPayoutService::class)->syncFromConversion($conversion);
+
+        $supplierUser = User::where('email', 'supplier-portal@excellence-uk.test')->firstOrFail();
+
+        $this->actingAs($supplierUser)
+            ->get(route('portal.supplier.clicks.export'))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 }
