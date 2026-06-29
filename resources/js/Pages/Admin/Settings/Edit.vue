@@ -34,6 +34,14 @@ const form = useForm({
     require_2fa_for_staff: props.account.require_2fa_for_staff ?? false,
     require_2fa_for_portal: props.account.require_2fa_for_portal ?? false,
     two_factor_grace_days: props.account.two_factor_grace_days ?? 7,
+    data_retention: {
+        purge_leads: props.account.data_retention?.purge_leads ?? false,
+        leads_retention_days: props.account.data_retention?.leads_retention_days ?? 365,
+        purge_logs: props.account.data_retention?.purge_logs ?? false,
+        logs_retention_days: props.account.data_retention?.logs_retention_days ?? 90,
+        purge_message_events: props.account.data_retention?.purge_message_events ?? false,
+        message_events_retention_days: props.account.data_retention?.message_events_retention_days ?? 90,
+    },
 });
 
 const submit = () => {
@@ -231,6 +239,60 @@ const verifyPortalDomain = () => {
                             <input v-model="form.two_factor_grace_days" type="number" min="0" max="90" step="1" class="form-input mt-1 w-full" />
                             <p class="mt-1 text-xs text-slate-500">Days after enabling a policy before access is blocked. Set to 0 for immediate enforcement.</p>
                             <InputError class="mt-1" :message="form.errors.two_factor_grace_days" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Data retention</h4>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Automated nightly purge anonymizes expired lead PII and deletes old operational logs. Leads with open buyer return disputes are always skipped.
+                    </p>
+
+                    <div class="mt-4 space-y-4">
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-600 dark:bg-slate-900/50">
+                            <label class="flex items-start gap-3">
+                                <input v-model="form.data_retention.purge_leads" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                                <span>
+                                    <span class="block text-sm font-medium text-slate-900 dark:text-white">Anonymize expired leads</span>
+                                    <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Redact PII from leads older than the retention window. Records remain for reporting.</span>
+                                </span>
+                            </label>
+                            <div v-if="form.data_retention.purge_leads" class="mt-3 max-w-xs">
+                                <InputLabel value="Lead retention (days)" />
+                                <input v-model.number="form.data_retention.leads_retention_days" type="number" min="30" max="3650" class="form-input mt-1 w-full" />
+                                <InputError class="mt-1" :message="form.errors['data_retention.leads_retention_days']" />
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-600 dark:bg-slate-900/50">
+                            <label class="flex items-start gap-3">
+                                <input v-model="form.data_retention.purge_logs" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                                <span>
+                                    <span class="block text-sm font-medium text-slate-900 dark:text-white">Trim operational logs</span>
+                                    <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Deletes access, API, audit, delivery, and system error logs past the retention window.</span>
+                                </span>
+                            </label>
+                            <div v-if="form.data_retention.purge_logs" class="mt-3 max-w-xs">
+                                <InputLabel value="Log retention (days)" />
+                                <input v-model.number="form.data_retention.logs_retention_days" type="number" min="7" max="3650" class="form-input mt-1 w-full" />
+                                <InputError class="mt-1" :message="form.errors['data_retention.logs_retention_days']" />
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-600 dark:bg-slate-900/50">
+                            <label class="flex items-start gap-3">
+                                <input v-model="form.data_retention.purge_message_events" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                                <span>
+                                    <span class="block text-sm font-medium text-slate-900 dark:text-white">Trim message events</span>
+                                    <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Deletes email open, click, bounce, and complaint events past the retention window.</span>
+                                </span>
+                            </label>
+                            <div v-if="form.data_retention.purge_message_events" class="mt-3 max-w-xs">
+                                <InputLabel value="Message event retention (days)" />
+                                <input v-model.number="form.data_retention.message_events_retention_days" type="number" min="7" max="3650" class="form-input mt-1 w-full" />
+                                <InputError class="mt-1" :message="form.errors['data_retention.message_events_retention_days']" />
+                            </div>
                         </div>
                     </div>
                 </div>
