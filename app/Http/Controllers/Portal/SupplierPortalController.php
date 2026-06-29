@@ -12,6 +12,7 @@ use App\Services\Forms\HostedFormEmbedService;
 use App\Services\Forms\SupplierHostedFormService;
 use App\Services\Portal\PortalIntegrationsService;
 use App\Services\Postbacks\SupplierPostbackService;
+use App\Services\Suppliers\SupplierCsvImportService;
 use App\Services\Suppliers\SupplierPortalService;
 use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
@@ -342,42 +343,82 @@ class SupplierPortalController extends Controller
     {
         $supplier = $this->resolveSupplier($request);
 
+        $campaigns = Campaign::query()
+            ->where('account_id', $supplier->account_id)
+            ->whereHas('campaignSuppliers', fn ($q) => $q->where('supplier_id', $supplier->id))
+            ->with('fields:id,campaign_id,name,label')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Campaign $campaign) => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'reference' => $campaign->reference,
+                'fields' => $campaign->fields->map(fn ($field) => [
+                    'name' => $field->name,
+                    'label' => $field->label ?? $field->name,
+                ])->values(),
+            ])
+            ->values();
+
         return Inertia::render('Portal/Supplier/ImportLeads', [
             'supplier' => $supplier->only(['id', 'name', 'reference']),
-            'campaigns' => $this->supplierForms->campaignsForSupplier($supplier),
+            'campaigns' => $campaigns,
             'recentImports' => LeadImport::query()
                 ->where('user_id', $request->user()->id)
+                ->with('campaign:id,name,reference')
                 ->orderByDesc('id')
                 ->limit(10)
-                ->get(['id', 'filename', 'status', 'success_rows', 'failed_rows', 'created_at']),
+                ->get(['id', 'filename', 'status', 'success_rows', 'failed_rows', 'errors', 'created_at', 'campaign_id']),
+            'importResult' => session('importResult'),
         ]);
     }
 
-    public function storeImport(Request $request): RedirectResponse
+    public function storeImport(Request $request, SupplierCsvImportService $importService): RedirectResponse
     {
         $supplier = $this->resolveSupplier($request);
 
         $validated = $request->validate([
             'campaign_id' => 'required|integer|exists:campaigns,id',
             'file' => 'required|file|mimes:csv,txt|max:10240',
+            'column_mapping' => 'required|array|min:1',
+            'column_mapping.*' => 'required|string|max:255',
         ]);
 
-        $campaign = Campaign::findOrFail($validated['campaign_id']);
+        $campaign = Campaign::with('fields')->findOrFail($validated['campaign_id']);
         abort_unless(
             $campaign->campaignSuppliers()->where('supplier_id', $supplier->id)->exists(),
             403,
         );
 
-        $import = app(\App\Services\Leads\CsvImportService::class)->import(
+        $import = $importService->import(
             $request->file('file'),
             $campaign,
+            $validated['column_mapping'],
             $request->user()->id,
             $supplier->id,
         );
 
         return redirect()
             ->route('portal.supplier.leads.import')
-            ->with('success', "Import complete: {$import->success_rows} succeeded, {$import->failed_rows} failed.");
+            ->with('success', "Import complete: {$import->success_rows} succeeded, {$import->failed_rows} failed.")
+            ->with('importResult', [
+                'id' => $import->id,
+                'success_rows' => $import->success_rows,
+                'failed_rows' => $import->failed_rows,
+                'errors' => array_slice($import->errors ?? [], 0, 25),
+            ]);
+    }
+
+    public function downloadImportErrors(Request $request, LeadImport $import, SupplierCsvImportService $importService)
+    {
+        $supplier = $this->resolveSupplier($request);
+
+        abort_unless($import->user_id === $request->user()->id, 403);
+        abort_unless($import->account_id === $supplier->account_id, 403);
+
+        $csv = $importService->buildErrorReportCsv($import);
+
+        return CsvExport::download($csv, 'import-errors-'.$import->id.'.csv');
     }
 
     public function downloadPayouts(Request $request, \App\Services\Exports\SupplierPayoutExportService $export)
