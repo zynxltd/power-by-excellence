@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\BrandingController;
 use App\Http\Controllers\Admin\BuyerController;
 use App\Http\Controllers\Admin\BuyerScheduleController;
-use App\Http\Controllers\Admin\CampaignApiSpecController;
+use App\Http\Controllers\Admin\CallRecordingController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeliveryController;
@@ -210,6 +210,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/bulk-campaigns', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeBulkCampaign'])->name('e-delivery.bulk-campaigns.store');
     Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [\App\Http\Controllers\Admin\EDeliveryController::class, 'sendBulkCampaign'])->name('e-delivery.bulk-campaigns.send');
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
+    Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
     Route::delete('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');
     Route::post('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'tagLead'])->name('leads.tags.store');
     Route::delete('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'untagLead'])->name('leads.tags.destroy');
@@ -266,6 +267,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::prefix('call-logic')->name('call-logic.')->middleware('product.enabled:call_logic')->group(function () {
         Route::get('calls', [\App\Http\Controllers\Admin\CallSessionController::class, 'index'])->name('calls.index');
         Route::get('calls/{call}', [\App\Http\Controllers\Admin\CallSessionController::class, 'show'])->name('calls.show');
+        Route::get('recordings/{recording}/play', [CallRecordingController::class, 'play'])->name('recordings.play');
         Route::get('tracking-numbers', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'index'])->name('tracking-numbers.index');
         Route::post('tracking-numbers/search', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'search'])->name('tracking-numbers.search');
         Route::post('tracking-numbers/purchase', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'purchase'])->name('tracking-numbers.purchase');
