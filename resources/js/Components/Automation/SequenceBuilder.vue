@@ -13,6 +13,9 @@ import { MERGE_TAGS, SAMPLE_FIELDS, interpolatePreview, normalizeMergeTags } fro
 const props = defineProps({
     sequences: { type: Array, default: () => [] },
     campaigns: { type: Array, default: () => [] },
+    segments: { type: Array, default: () => [] },
+    templates: { type: Array, default: () => [] },
+    sendingProfiles: { type: Array, default: () => [] },
     providers: { type: Object, default: () => ({ sms: [], email: [] }) },
 });
 
@@ -20,17 +23,23 @@ const editingId = ref(null);
 const expandedId = ref(null);
 const previewStepIndex = ref(0);
 
-const defaultStep = (channel = 'email') => ({
+const defaultStep = (channel = 'email', action = 'send') => ({
     delay_minutes: 0,
+    action,
     channel,
-    config: channel === 'email'
-        ? { subject: 'Thanks for your enquiry', body: 'Hi [firstname],\n\nWe received your request and will follow up shortly.', to_field: 'email', provider: '' }
-        : { body: 'Hi [firstname], thanks for your enquiry. We will be in touch soon.', to_field: 'phone1', provider: '' },
+    config: action === 'wait'
+        ? {}
+        : action === 'send_template'
+            ? { message_template_id: '', to_field: channel === 'email' ? 'email' : 'phone1', provider: '', branch: '' }
+            : channel === 'email'
+                ? { subject: 'Thanks for your enquiry', body: 'Hi [firstname],\n\nWe received your request and will follow up shortly.', to_field: 'email', provider: '', branch: '' }
+                : { body: 'Hi [firstname], thanks for your enquiry. We will be in touch soon.', to_field: 'phone1', provider: '', branch: '' },
 });
 
 const form = useForm({
     name: '',
     campaign_id: '',
+    segment_id: '',
     trigger_event: 'on_lead_received',
     status: 'active',
     steps: [defaultStep()],
@@ -55,6 +64,25 @@ const triggerOptions = [
         description: 'Starts when distribution completes without a sale - recovery outreach.',
         tone: 'amber',
     },
+    {
+        value: 'on_segment_entry',
+        label: 'Segment entry',
+        description: 'Starts when a lead matches a segment (e.g. after tagging).',
+        tone: 'cyan',
+    },
+];
+
+const actionLabels = {
+    send: 'Inline message',
+    send_template: 'Message template',
+    wait: 'Wait only',
+};
+
+const branchOptions = [
+    { value: '', label: 'Always run' },
+    { value: 'opened', label: 'If opened previous email' },
+    { value: 'clicked', label: 'If clicked previous email' },
+    { value: 'not_opened', label: 'If did not open' },
 ];
 
 const presets = [
@@ -106,6 +134,7 @@ const toneClasses = (tone, selected) => {
         indigo: selected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200 dark:border-indigo-500 dark:bg-indigo-950/40 dark:ring-indigo-800' : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700',
         emerald: selected ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 dark:border-emerald-500 dark:bg-emerald-950/40 dark:ring-emerald-800' : 'border-slate-200 hover:border-emerald-300 dark:border-slate-700',
         amber: selected ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200 dark:border-amber-500 dark:bg-amber-950/40 dark:ring-amber-800' : 'border-slate-200 hover:border-amber-300 dark:border-slate-700',
+        cyan: selected ? 'border-cyan-500 bg-cyan-50 ring-2 ring-cyan-200 dark:border-cyan-500 dark:bg-cyan-950/40 dark:ring-cyan-800' : 'border-slate-200 hover:border-cyan-300 dark:border-slate-700',
     };
 
     return map[tone] ?? map.indigo;
@@ -143,26 +172,71 @@ const normalizeFormSteps = () => {
     }));
 };
 
+const templatesForChannel = (channel) => (props.templates ?? []).filter((t) => t.channel === channel);
+
+const stepTitle = (step) => {
+    if (step.action === 'wait') return 'Wait';
+    if (step.action === 'send_template') return `${channelIcons[step.channel] ?? ''} Template ${step.channel === 'sms' ? 'SMS' : 'email'}`;
+
+    return `${channelIcons[step.channel] ?? ''} ${step.channel === 'email' ? 'Email' : 'SMS'}`;
+};
+
+const templateName = (id) => (props.templates ?? []).find((t) => t.id === Number(id))?.name ?? 'Template';
+
 const ensureStepConfig = (step) => {
+    step.action ??= 'send';
+    if (step.action === 'wait') {
+        step.config ??= {};
+
+        return;
+    }
+
     if (!step.config) step.config = {};
+    if (step.action === 'send_template') {
+        step.config.message_template_id ??= '';
+        step.config.to_field ??= step.channel === 'email' ? 'email' : 'phone1';
+        step.config.provider ??= '';
+        step.config.branch ??= '';
+
+        return;
+    }
+
     if (step.channel === 'email') {
         step.config.subject ??= 'Thanks for your enquiry';
         step.config.body ??= 'Hi [firstname], we received your request.';
         step.config.to_field ??= 'email';
         step.config.provider ??= '';
+        step.config.branch ??= '';
     } else {
         step.config.body ??= 'Hi [firstname], thanks for your enquiry.';
         step.config.to_field ??= 'phone1';
         step.config.provider ??= '';
+        step.config.branch ??= '';
     }
 };
 
-const addStep = (channel = 'email') => {
-    const step = defaultStep(channel);
+const setStepAction = (step, action) => {
+    const channel = step.channel ?? 'email';
+    step.action = action;
+    if (action === 'wait') {
+        step.config = {};
+    } else if (action === 'send_template') {
+        step.config = { message_template_id: '', to_field: channel === 'email' ? 'email' : 'phone1', provider: '', branch: '' };
+    } else {
+        step.config = channel === 'email'
+            ? { subject: 'Thanks for your enquiry', body: 'Hi [firstname], we received your request.', to_field: 'email', provider: '', branch: '' }
+            : { body: 'Hi [firstname], thanks for your enquiry.', to_field: 'phone1', provider: '', branch: '' };
+    }
+};
+
+const addStep = (channel = 'email', action = 'send') => {
+    const step = defaultStep(channel, action);
     step.delay_minutes = form.steps.length ? 60 : 0;
     form.steps.push(step);
     previewStepIndex.value = form.steps.length - 1;
 };
+
+const addWaitStep = () => addStep('email', 'wait');
 
 const removeStep = (index) => {
     if (form.steps.length <= 1) return;
@@ -196,6 +270,7 @@ const resetBuilder = () => {
     editingId.value = null;
     form.reset();
     form.trigger_event = 'on_lead_received';
+    form.segment_id = '';
     form.status = 'active';
     form.steps = [defaultStep()];
     previewStepIndex.value = 0;
@@ -205,10 +280,12 @@ const loadSequence = (sequence) => {
     editingId.value = sequence.id;
     form.name = sequence.name;
     form.campaign_id = sequence.campaign_id ?? '';
+    form.segment_id = sequence.segment_id ?? '';
     form.trigger_event = sequence.trigger_event;
     form.status = sequence.status ?? 'active';
     form.steps = (sequence.steps ?? []).map((step) => ({
         delay_minutes: step.delay_minutes ?? 0,
+        action: step.action ?? 'send',
         channel: step.channel,
         config: { ...(step.config ?? {}) },
     }));
@@ -308,7 +385,7 @@ watch(() => form.steps.length, (len) => {
 
                     <div>
                         <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">When should this sequence start?</p>
-                        <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="grid gap-3 sm:grid-cols-2">
                             <button
                                 v-for="trigger in triggerOptions"
                                 :key="trigger.value"
@@ -319,6 +396,14 @@ watch(() => form.steps.length, (len) => {
                                 <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ trigger.label }}</p>
                                 <p class="mt-1 text-[11px] leading-snug text-slate-500">{{ trigger.description }}</p>
                             </button>
+                        </div>
+                        <div v-if="form.trigger_event === 'on_segment_entry'" class="mt-3">
+                            <InputLabel value="Target segment" />
+                            <select v-model="form.segment_id" class="form-select mt-1 w-full" required>
+                                <option value="">Select segment…</option>
+                                <option v-for="segment in segments" :key="segment.id" :value="segment.id">{{ segment.name }}</option>
+                            </select>
+                            <InputError class="mt-1" :message="form.errors.segment_id" />
                         </div>
                     </div>
 
@@ -343,6 +428,8 @@ watch(() => form.steps.length, (len) => {
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400" @click="addStep('email')">+ Email step</button>
                                 <button type="button" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400" @click="addStep('sms')">+ SMS step</button>
+                                <button type="button" class="text-xs font-semibold text-violet-600 dark:text-violet-400" @click="addStep('email', 'send_template')">+ Template step</button>
+                                <button type="button" class="text-xs font-semibold text-slate-600 dark:text-slate-400" @click="addWaitStep">+ Wait step</button>
                             </div>
                         </div>
 
@@ -362,14 +449,17 @@ watch(() => form.steps.length, (len) => {
                                     :class="[
                                         'rounded-2xl border-2 p-4 shadow-sm transition',
                                         previewStepIndex === i ? 'border-indigo-400 ring-2 ring-indigo-200 dark:ring-indigo-800' : 'border-slate-200 dark:border-slate-700',
-                                        step.channel === 'email' ? 'border-l-4 border-l-indigo-500 bg-white dark:bg-slate-900' : 'border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900',
+                                        step.action === 'wait'
+                                            ? 'border-l-4 border-l-slate-400 bg-slate-50 dark:bg-slate-900'
+                                            : step.channel === 'email' ? 'border-l-4 border-l-indigo-500 bg-white dark:bg-slate-900' : 'border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900',
                                     ]"
                                     @click="previewStepIndex = i"
                                 >
                                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">{{ i + 1 }}</span>
-                                            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ channelIcons[step.channel] }} {{ step.channel === 'email' ? 'Email' : 'SMS' }}</span>
+                                            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ stepTitle(step) }}</span>
+                                            <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ actionLabels[step.action ?? 'send'] }}</span>
                                             <span v-if="i === 0 && !step.delay_minutes" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Instant</span>
                                         </div>
                                         <div class="flex items-center gap-1">
@@ -385,30 +475,68 @@ watch(() => form.steps.length, (len) => {
                                             <input v-model.number="step.delay_minutes" type="number" min="0" class="form-input w-full" @focus="previewStepIndex = i" />
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-xs text-slate-500">Channel</label>
-                                            <select v-model="step.channel" class="form-select w-full" @change="ensureStepConfig(step)" @focus="previewStepIndex = i">
-                                                <option value="email">Email</option>
-                                                <option value="sms">SMS</option>
+                                            <label class="mb-1 block text-xs text-slate-500">Step type</label>
+                                            <select v-model="step.action" class="form-select w-full" @change="setStepAction(step, step.action)" @focus="previewStepIndex = i">
+                                                <option value="send">Inline message</option>
+                                                <option value="send_template">Message template</option>
+                                                <option value="wait">Wait only</option>
                                             </select>
                                         </div>
-                                        <div>
-                                            <label class="mb-1 block text-xs text-slate-500">Send to field</label>
-                                            <select v-model="step.config.to_field" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
-                                                <option value="email">email</option>
-                                                <option value="phone1">phone1</option>
-                                                <option value="phone2">phone2</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="mb-1 block text-xs text-slate-500">Provider (optional)</label>
-                                            <select v-model="step.config.provider" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
-                                                <option value="">Platform default</option>
-                                                <option v-for="p in (providers?.[step.channel] ?? [])" :key="p" :value="p">{{ p }}</option>
-                                            </select>
-                                        </div>
+                                        <template v-if="step.action !== 'wait'">
+                                            <div>
+                                                <label class="mb-1 block text-xs text-slate-500">Channel</label>
+                                                <select v-model="step.channel" class="form-select w-full" @change="setStepAction(step, step.action)" @focus="previewStepIndex = i">
+                                                    <option value="email">Email</option>
+                                                    <option value="sms">SMS</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="mb-1 block text-xs text-slate-500">Branch rule</label>
+                                                <select v-model="step.config.branch" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
+                                                    <option v-for="opt in branchOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="mb-1 block text-xs text-slate-500">Send to field</label>
+                                                <select v-model="step.config.to_field" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
+                                                    <option value="email">email</option>
+                                                    <option value="phone1">phone1</option>
+                                                    <option value="phone2">phone2</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="mb-1 block text-xs text-slate-500">Provider (optional)</label>
+                                                <select v-model="step.config.provider" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
+                                                    <option value="">Platform default</option>
+                                                    <option v-for="p in (providers?.[step.channel] ?? [])" :key="p" :value="p">{{ p }}</option>
+                                                </select>
+                                            </div>
+                                            <div v-if="step.action === 'send_template'">
+                                                <label class="mb-1 block text-xs text-slate-500">Message template</label>
+                                                <select v-model="step.config.message_template_id" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
+                                                    <option value="">Select template…</option>
+                                                    <option v-for="tpl in templatesForChannel(step.channel)" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
+                                                </select>
+                                            </div>
+                                            <div v-if="step.action === 'send_template' && sendingProfiles?.length">
+                                                <label class="mb-1 block text-xs text-slate-500">Sending profile</label>
+                                                <select v-model="step.config.sending_profile_id" class="form-select w-full" @focus="ensureStepConfig(step); previewStepIndex = i">
+                                                    <option value="">Default</option>
+                                                    <option v-for="profile in sendingProfiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option>
+                                                </select>
+                                            </div>
+                                        </template>
                                     </div>
 
-                                    <div v-if="step.channel === 'email'" class="mt-3 space-y-2">
+                                    <div v-if="step.action === 'wait'" class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white/60 p-3 text-xs text-slate-500 dark:border-slate-600 dark:bg-slate-900/40">
+                                        This step pauses the journey for the wait duration above, then continues to the next step.
+                                    </div>
+
+                                    <div v-else-if="step.action === 'send_template'" class="mt-3 rounded-lg border border-violet-200 bg-violet-50/50 p-3 text-xs text-violet-800 dark:border-violet-900 dark:bg-violet-950/20 dark:text-violet-200">
+                                        Uses E-Delivery template: <strong>{{ templateName(step.config.message_template_id) }}</strong>
+                                    </div>
+
+                                    <div v-else-if="step.channel === 'email'" class="mt-3 space-y-2">
                                         <div>
                                             <label class="mb-1 block text-xs text-slate-500">Subject</label>
                                             <input v-model="step.config.subject" type="text" class="form-input w-full font-mono text-sm" @focus="ensureStepConfig(step); previewStepIndex = i" />
@@ -418,7 +546,7 @@ watch(() => form.steps.length, (len) => {
                                             <textarea v-model="step.config.body" rows="4" class="form-input w-full font-mono text-sm" @focus="ensureStepConfig(step); previewStepIndex = i" />
                                         </div>
                                     </div>
-                                    <div v-else class="mt-3">
+                                    <div v-else-if="step.action !== 'send_template'" class="mt-3">
                                         <div class="flex items-center justify-between">
                                             <label class="mb-1 block text-xs text-slate-500">SMS message</label>
                                             <span :class="['text-xs font-medium', (step.config.body?.length ?? 0) > 160 ? 'text-amber-600' : 'text-slate-500']">
@@ -478,7 +606,14 @@ watch(() => form.steps.length, (len) => {
                         </p>
                     </div>
 
-                    <div v-if="previewStep?.channel === 'email'" class="p-4">
+                    <div v-if="previewStep?.action === 'wait'" class="p-4 text-sm text-slate-500">
+                        Wait step — no message preview. Journey pauses for {{ formatDelay(previewStep?.delay_minutes ?? 0) }}.
+                    </div>
+                    <div v-else-if="previewStep?.action === 'send_template'" class="p-4 text-sm text-slate-600 dark:text-slate-300">
+                        Template: <strong>{{ templateName(previewStep?.config?.message_template_id) }}</strong>
+                        <p class="mt-2 text-xs text-slate-500">Merge tags render from lead data at send time.</p>
+                    </div>
+                    <div v-else-if="previewStep?.channel === 'email'" class="p-4">
                         <p class="text-xs text-slate-500">To: {{ SAMPLE_FIELDS.email }}</p>
                         <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">{{ previewSubject || 'Subject line…' }}</p>
                         <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ previewBody || 'Message body with sample merge data.' }}</p>
@@ -515,6 +650,7 @@ watch(() => form.steps.length, (len) => {
                                     {{ triggerLabels[seq.trigger_event] ?? seq.trigger_event }}
                                     · {{ seq.steps?.length ?? 0 }} steps
                                     · {{ seq.campaign?.name ?? 'All campaigns' }}
+                                    <span v-if="seq.segment?.name"> · {{ seq.segment.name }}</span>
                                 </p>
                             </div>
                         </button>
@@ -523,7 +659,8 @@ watch(() => form.steps.length, (len) => {
                             <ol class="space-y-2 border-l-2 border-indigo-200 pl-4 dark:border-indigo-800">
                                 <li v-for="(step, si) in seq.steps" :key="si" class="text-xs text-slate-600 dark:text-slate-400">
                                     <span class="font-semibold text-slate-800 dark:text-slate-200">Step {{ si + 1 }}</span>
-                                    - {{ channelIcons[step.channel] }} {{ step.channel }}
+                                    - {{ stepTitle(step) }}
+                                    <span v-if="step.action === 'send_template'"> ({{ templateName(step.config?.message_template_id) }})</span>
                                     <span v-if="step.delay_minutes"> after {{ formatDelay(step.delay_minutes) }}</span>
                                     <span v-else-if="si === 0"> immediately</span>
                                     <span class="text-slate-400"> · T+{{ formatDelay(cumulativeDelay(seq.steps, si)) }}</span>

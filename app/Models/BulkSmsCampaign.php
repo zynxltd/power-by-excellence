@@ -10,6 +10,30 @@ class BulkSmsCampaign extends Model
 {
     use BelongsToAccount;
 
+    public const CHANNEL_SMS = 'sms';
+
+    public const CHANNEL_EMAIL = 'email';
+
+    public const CHANNEL_BOTH = 'both';
+
+    /**
+     * @return array<int, string>
+     */
+    public static function channelOptions(): array
+    {
+        return [self::CHANNEL_SMS, self::CHANNEL_EMAIL, self::CHANNEL_BOTH];
+    }
+
+    public function usesEmail(): bool
+    {
+        return in_array($this->channel, [self::CHANNEL_EMAIL, self::CHANNEL_BOTH], true);
+    }
+
+    public function usesSms(): bool
+    {
+        return in_array($this->channel, [self::CHANNEL_SMS, self::CHANNEL_BOTH], true);
+    }
+
     protected $fillable = [
         'account_id', 'campaign_id', 'name', 'channel', 'subject', 'provider', 'message',
         'html_body', 'filter', 'segment_id', 'sending_profile_id', 'ab_test', 'throttle_per_minute',

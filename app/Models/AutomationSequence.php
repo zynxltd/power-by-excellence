@@ -11,15 +11,25 @@ class AutomationSequence extends Model
 {
     use BelongsToAccount;
 
-    protected $fillable = ['account_id', 'campaign_id', 'name', 'trigger_event', 'status'];
+    protected $fillable = ['account_id', 'campaign_id', 'segment_id', 'name', 'trigger_event', 'status'];
 
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);
     }
 
+    public function segment(): BelongsTo
+    {
+        return $this->belongsTo(Segment::class);
+    }
+
     public function steps(): HasMany
     {
         return $this->hasMany(AutomationSequenceStep::class)->orderBy('sort_order');
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(AutomationSequenceEnrollment::class);
     }
 }

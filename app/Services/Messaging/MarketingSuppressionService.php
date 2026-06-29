@@ -122,6 +122,31 @@ class MarketingSuppressionService
         $this->optOut($account->id, 'email', $email);
     }
 
+    public function countForAccount(int $accountId): int
+    {
+        $optOuts = MarketingOptOut::withoutGlobalScopes()
+            ->where('account_id', $accountId)
+            ->count();
+
+        $hashes = DB::table('suppression_hashes')
+            ->where('account_id', $accountId)
+            ->count();
+
+        return $optOuts + $hashes;
+    }
+
+    public function suppressFromEspEvent(int $accountId, string $recipient, string $eventType): void
+    {
+        $fieldType = str_contains($recipient, '@') ? 'email' : 'phone1';
+        $source = match ($eventType) {
+            'bounce' => 'esp_bounce',
+            'complaint' => 'esp_complaint',
+            default => 'esp',
+        };
+
+        $this->optOut($accountId, $fieldType, $recipient, $source);
+    }
+
     protected function importMappedRow(int $accountId, array $data): array
     {
         $imported = 0;
