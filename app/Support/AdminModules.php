@@ -76,6 +76,8 @@ class AdminModules
             'imports.*' => 'tools',
             'features.*' => 'tools',
             'scheduled-exports.*' => 'tools',
+            'tools.data-export.*' => 'tools',
+            'marketing-opt-outs.*' => 'tools',
             'verify-batches.*' => 'tools',
             'vertical-field-templates.*' => 'tools',
             'buyer-schedule.*' => 'operations',
