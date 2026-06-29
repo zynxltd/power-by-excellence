@@ -306,16 +306,21 @@ class BuyerPortalController extends Controller
         $buyer = $this->resolveBuyer($request);
         $account = $buyer->account;
 
+        $stripe = app(\App\Services\Billing\StripeCheckoutService::class);
+
         return Inertia::render('Portal/Buyer/Billing', [
             'buyer' => $buyer->only(['id', 'name', 'credit_balance', 'status']),
             'account' => $this->portal->accountSummary($buyer),
             'stats' => $this->portal->dashboardStats($buyer),
             'requirePrepay' => (bool) ($account?->settings['require_buyer_prepay'] ?? false),
-            'stripeEnabled' => app(\App\Services\Billing\StripeCheckoutService::class)->buyerSelfServeEnabled($account),
+            'stripeEnabled' => $stripe->buyerSelfServeEnabled($account),
             'stripeTopUp' => [
-                'min' => app(\App\Services\Billing\StripeCheckoutService::class)->minimumTopUp($account),
-                'presets' => app(\App\Services\Billing\StripeCheckoutService::class)->presetAmounts($account),
+                'min' => $stripe->minimumTopUp($account),
+                'presets' => $stripe->presetAmounts($account),
             ],
+            'stripeSubscriptionsEnabled' => $stripe->subscriptionsEnabled($account),
+            'stripeSubscriptionPlans' => $stripe->subscriptionPlans($account),
+            'stripeSubscription' => $stripe->subscriptionStatus($buyer),
             'currency' => $buyer->resolvedCurrency(),
             'transactions' => $buyer->transactions()->orderByDesc('created_at')->paginate(25),
         ]);

@@ -135,6 +135,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('platform:sync-alerts')->everyFiveMinutes();
         $schedule->command('exports:process')->everyMinute()->withoutOverlapping();
         $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
+        $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
 
         if (class_exists(\Laravel\Horizon\Horizon::class)) {
             $schedule->command('horizon:snapshot')->everyFiveMinutes();

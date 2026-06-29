@@ -18,6 +18,18 @@ class BulkCampaignSender
         protected ThrottleGovernor $throttle,
     ) {}
 
+    /**
+     * @return array<int, string>
+     */
+    public function channelsFor(BulkSmsCampaign $campaign): array
+    {
+        return match ($campaign->channel ?? 'sms') {
+            'both' => ['email', 'sms'],
+            'email', 'sms' => [$campaign->channel],
+            default => ['sms'],
+        };
+    }
+
     public function send(BulkSmsCampaign $campaign): BulkSmsCampaign
     {
         $campaign->update(['status' => 'sending']);
@@ -36,7 +48,6 @@ class BulkCampaignSender
 
         $sent = 0;
         $failed = 0;
-        $channel = $campaign->channel ?? 'sms';
         $chunkDelay = $this->throttle->chunkDelay($campaign->account_id, $campaign->throttle_per_minute);
 
         foreach ($leads as $lead) {
@@ -45,8 +56,9 @@ class BulkCampaignSender
                 break;
             }
 
-            $ok = $this->sendToLead($campaign, $lead, $channel);
-            $ok ? $sent++ : $failed++;
+            $result = $this->sendToLead($campaign, $lead);
+            $sent += $result['sent'];
+            $failed += $result['failed'];
 
             if ($chunkDelay > 1 && ($sent + $failed) % 10 === 0) {
                 sleep(min($chunkDelay, 5));
@@ -74,46 +86,13 @@ class BulkCampaignSender
             $query->whereNotIn('id', $excludeLeadIds);
         }
 
-        $channel = $campaign->channel ?? 'sms';
         $sent = (int) $campaign->sent_count;
         $failed = (int) $campaign->failed_count;
 
         foreach ($query->cursor() as $lead) {
-            $fields = $lead->allFields();
-            $recipient = $channel === 'email' ? ($fields['email'] ?? null) : ($fields['phone1'] ?? null);
-
-            if (! $recipient) {
-                $failed++;
-
-                continue;
-            }
-
-            $subject = $this->interpolator->interpolate(
-                $variantConfig['subject'] ?? $campaign->subject ?? $campaign->name,
-                $fields,
-            );
-            $body = $this->interpolator->interpolate($variantConfig['body'] ?? $campaign->message, $fields);
-            $htmlBody = filled($variantConfig['html_body'] ?? null)
-                ? $this->interpolator->interpolate($variantConfig['html_body'], $fields)
-                : ($campaign->html_body ? $this->interpolator->interpolate($campaign->html_body, $fields) : null);
-
-            $ok = $this->sender->send([
-                'account_id' => $campaign->account_id,
-                'lead_id' => $lead->id,
-                'bulk_sms_campaign_id' => $campaign->id,
-                'channel' => $channel,
-                'recipient' => $recipient,
-                'subject' => $subject,
-                'body' => $body,
-                'html_body' => $htmlBody,
-                'provider' => $campaign->provider,
-                'source_type' => BulkSmsCampaign::class,
-                'source_id' => $campaign->id,
-                'ab_variant' => $campaign->ab_test['winner'] ?? null,
-                'sending_profile_id' => $campaign->sending_profile_id,
-            ]);
-
-            $ok ? $sent++ : $failed++;
+            $result = $this->sendToLead($campaign, $lead, $variantConfig, $campaign->ab_test['winner'] ?? null);
+            $sent += $result['sent'];
+            $failed += $result['failed'];
         }
 
         $campaign->update([
@@ -123,8 +102,49 @@ class BulkCampaignSender
         ]);
     }
 
-    protected function sendToLead(BulkSmsCampaign $campaign, Lead $lead, string $channel): bool
+    /**
+     * @param  array<string, mixed>  $variantConfig
+     * @return array{sent: int, failed: int}
+     */
+    public function sendVariantToLead(BulkSmsCampaign $campaign, Lead $lead, string $variant, array $variantConfig): array
     {
+        return $this->sendToLead($campaign, $lead, $variantConfig, $variant);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $variantConfig
+     * @return array{sent: int, failed: int}
+     */
+    public function sendToLead(
+        BulkSmsCampaign $campaign,
+        Lead $lead,
+        ?array $variantConfig = null,
+        ?string $abVariant = null,
+    ): array {
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($this->channelsFor($campaign) as $channel) {
+            if ($this->dispatchChannel($campaign, $lead, $channel, $variantConfig, $abVariant)) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return ['sent' => $sent, 'failed' => $failed];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $variantConfig
+     */
+    protected function dispatchChannel(
+        BulkSmsCampaign $campaign,
+        Lead $lead,
+        string $channel,
+        ?array $variantConfig = null,
+        ?string $abVariant = null,
+    ): bool {
         $fields = $lead->allFields();
         $recipient = $channel === 'email' ? ($fields['email'] ?? null) : ($fields['phone1'] ?? null);
 
@@ -132,11 +152,17 @@ class BulkCampaignSender
             return false;
         }
 
-        $subject = $this->interpolator->interpolate($campaign->subject ?? 'Message from us', $fields);
-        $body = $this->interpolator->interpolate($campaign->message, $fields);
-        $htmlBody = $campaign->html_body
-            ? $this->interpolator->interpolate($campaign->html_body, $fields)
-            : null;
+        $subject = $this->interpolator->interpolate(
+            $variantConfig['subject'] ?? $campaign->subject ?? $campaign->name,
+            $fields,
+        );
+        $body = $this->interpolator->interpolate(
+            $variantConfig['body'] ?? $campaign->message,
+            $fields,
+        );
+        $htmlBody = filled($variantConfig['html_body'] ?? null)
+            ? $this->interpolator->interpolate($variantConfig['html_body'], $fields)
+            : ($campaign->html_body ? $this->interpolator->interpolate($campaign->html_body, $fields) : null);
 
         return $this->sender->send([
             'account_id' => $campaign->account_id,
@@ -144,13 +170,15 @@ class BulkCampaignSender
             'bulk_sms_campaign_id' => $campaign->id,
             'channel' => $channel,
             'recipient' => $recipient,
-            'subject' => $subject,
+            'subject' => $channel === 'email' ? $subject : null,
             'body' => $body,
-            'html_body' => $htmlBody,
+            'html_body' => $channel === 'email' ? $htmlBody : null,
             'provider' => $campaign->provider,
             'source_type' => BulkSmsCampaign::class,
             'source_id' => $campaign->id,
-            'sending_profile_id' => $campaign->sending_profile_id,
+            'ab_variant' => $abVariant,
+            'sending_profile_id' => $channel === 'email' ? $campaign->sending_profile_id : null,
+            'track' => $channel === 'email',
         ]);
     }
 

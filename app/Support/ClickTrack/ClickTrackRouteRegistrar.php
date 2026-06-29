@@ -12,38 +12,46 @@ use Illuminate\Support\Facades\Route;
 
 final class ClickTrackRouteRegistrar
 {
+    private static bool $apiRoutesLoaded = false;
+
     public static function register(): void
     {
         /** @var Router $router */
         $router = app('router');
 
-        if ($router->getRoutes()->getByName('click-track.dashboard')) {
-            return;
+        if (! $router->getRoutes()->getByName('click.redirect')) {
+            require base_path('routes/click-track-public.php');
+            ClickTrackBootstrap::registerListeners();
+        } else {
+            ClickTrackBootstrap::registerListeners();
         }
 
-        require base_path('routes/click-track-public.php');
+        if (! $router->getRoutes()->getByName('click-track.dashboard')) {
+            Route::middleware([
+                'web', 'auth', 'verified', 'signup.complete',
+                SetAccountFromUser::class, EnsureTenantAccess::class,
+                'billing.active', EnsurePortalRole::class.':admin', 'module.access',
+            ])->group(function (): void {
+                require base_path('routes/click-track-admin.php');
+            });
+        }
 
-        ClickTrackBootstrap::registerListeners();
+        if (! $router->getRoutes()->getByName('portal.supplier.clicks.export')) {
+            Route::middleware([
+                'web', 'auth', 'verified', 'signup.complete',
+                SetAccountFromUser::class, EnsureTenantAccess::class,
+                'billing.active', EnsurePortalRole::class.':supplier',
+            ])->prefix('portal/supplier')->name('portal.supplier.')->group(function (): void {
+                require base_path('routes/click-track-supplier.php');
+            });
+        }
 
-        Route::middleware([
-            'web', 'auth', 'verified', 'signup.complete',
-            SetAccountFromUser::class, EnsureTenantAccess::class,
-            'billing.active', EnsurePortalRole::class.':admin', 'module.access',
-        ])->group(function (): void {
-            require base_path('routes/click-track-admin.php');
-        });
-
-        Route::middleware([
-            'web', 'auth', 'verified', 'signup.complete',
-            SetAccountFromUser::class, EnsureTenantAccess::class,
-            'billing.active', EnsurePortalRole::class.':supplier',
-        ])->prefix('portal/supplier')->name('portal.supplier.')->group(function (): void {
-            require base_path('routes/click-track-supplier.php');
-        });
-
-        Route::prefix('api/v1')->middleware([LogApiRequest::class])->group(function (): void {
-            require base_path('routes/click-track-api.php');
-        });
+        if (! self::$apiRoutesLoaded) {
+            Route::prefix('api/v1')->middleware([LogApiRequest::class])->group(function (): void {
+                require base_path('routes/click-track-api.php');
+            });
+            self::$apiRoutesLoaded = true;
+        }
 
         $router->getRoutes()->refreshNameLookups();
     }

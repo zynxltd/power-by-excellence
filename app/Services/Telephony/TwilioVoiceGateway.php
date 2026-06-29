@@ -2,6 +2,7 @@
 
 namespace App\Services\Telephony;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Twilio\Rest\Client;
 use Twilio\Security\RequestValidator;
@@ -10,9 +11,9 @@ class TwilioVoiceGateway implements TelephonyGateway
 {
     protected Client $client;
 
-    public function __construct()
+    public function __construct(?Client $client = null)
     {
-        $this->client = new Client(
+        $this->client = $client ?? new Client(
             config('telephony.twilio.sid'),
             config('telephony.twilio.token'),
         );
@@ -23,24 +24,51 @@ class TwilioVoiceGateway implements TelephonyGateway
         return 'twilio';
     }
 
-    public function provisionNumber(string $areaCode = '020'): array
+    public function searchAvailableNumbers(string $areaCode, string $country = 'GB'): array
     {
-        $numbers = $this->client->availablePhoneNumbers('GB')
+        $results = $this->client->availablePhoneNumbers($country)
             ->local
-            ->read(['contains' => $areaCode], 1);
+            ->read(['contains' => $areaCode], (int) config('telephony.search_limit', 10));
 
-        if (empty($numbers)) {
-            throw new \RuntimeException('No available numbers for area code '.$areaCode);
+        return collect($results)->map(fn ($number) => [
+            'sid' => $number->phoneNumber,
+            'phone_number' => $number->phoneNumber,
+            'friendly_name' => $number->friendlyName ?? null,
+            'locality' => $number->locality ?? null,
+        ])->all();
+    }
+
+    public function purchaseNumber(string $phoneNumber, array $webhooks = []): array
+    {
+        $payload = ['phoneNumber' => $phoneNumber, 'voiceMethod' => 'POST'];
+
+        if ($voiceUrl = $webhooks['voice_url'] ?? null) {
+            $payload['voiceUrl'] = $voiceUrl;
         }
 
-        $incoming = $this->client->incomingPhoneNumbers->create([
-            'phoneNumber' => $numbers[0]->phoneNumber,
-        ]);
+        if ($statusUrl = $webhooks['status_url'] ?? null) {
+            $payload['statusCallback'] = $statusUrl;
+            $payload['statusCallbackMethod'] = 'POST';
+        }
+
+        $incoming = $this->client->incomingPhoneNumbers->create($payload);
 
         return [
             'sid' => $incoming->sid,
             'phone_number' => $incoming->phoneNumber,
+            'webhook_status' => ($webhooks['voice_url'] ?? null) ? 'configured' : 'pending',
         ];
+    }
+
+    public function provisionNumber(string $areaCode = '020'): array
+    {
+        $available = $this->searchAvailableNumbers($areaCode, config('telephony.default_country', 'GB'));
+
+        if ($available === []) {
+            throw new \RuntimeException('No available numbers for area code '.$areaCode);
+        }
+
+        return $this->purchaseNumber($available[0]['phone_number']);
     }
 
     public function releaseNumber(string $providerSid): void

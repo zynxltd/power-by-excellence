@@ -3,6 +3,7 @@
 namespace App\Support\Tenancy;
 
 use App\Models\Account;
+use App\PlatformFeatureParity\PortalDomain;
 use Illuminate\Http\Request;
 
 class TenantResolver
@@ -58,25 +59,25 @@ class TenantResolver
             $subdomain = substr($host, 0, -strlen($suffix));
 
             if ($subdomain !== '') {
-                return Account::query()
+                $account = Account::query()
                     ->where('is_active', true)
                     ->where(function ($q) use ($subdomain, $host) {
                         $q->where('slug', $subdomain)->orWhere('domain', $host);
                     })
                     ->first();
+
+                if ($account) {
+                    return $account;
+                }
             }
         }
 
-        return null;
+        return PortalDomain::resolveAccount($host);
     }
 
     public static function portalHost(Account $account): string
     {
-        if ($account->domain) {
-            return $account->domain;
-        }
-
-        return $account->slug.'.'.self::baseDomain();
+        return PortalDomain::portalHost($account);
     }
 
     public static function portalUrl(Account $account, string $path = '/'): string

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AutomationSequenceStep extends Model
 {
-    protected $fillable = ['automation_sequence_id', 'sort_order', 'delay_minutes', 'channel', 'config'];
+    protected $fillable = ['automation_sequence_id', 'sort_order', 'action', 'delay_minutes', 'channel', 'config'];
 
     protected function casts(): array
     {

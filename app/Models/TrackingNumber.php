@@ -18,6 +18,7 @@ class TrackingNumber extends Model
         'friendly_name',
         'provider',
         'provider_sid',
+        'webhook_status',
         'dni_pool',
         'dni_rules',
         'status',
@@ -45,5 +46,10 @@ class TrackingNumber extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function getTwilioSidAttribute(): ?string
+    {
+        return $this->provider === 'twilio' ? $this->provider_sid : null;
     }
 }

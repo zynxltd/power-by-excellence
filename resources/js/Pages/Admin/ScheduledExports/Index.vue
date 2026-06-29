@@ -11,7 +11,7 @@ import AppButton from '@/Components/UI/AppButton.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     exports: Object,
@@ -27,19 +27,31 @@ const createForm = useForm({
     delivery_method: 'email',
     cron: '0 8 * * *',
     status: 'active',
+    remote_host: '',
+    remote_port: '',
+    remote_path: '/',
+    remote_username: '',
+    remote_credentials: '',
     config: {
         email: '',
-        ftp_host: '',
-        ftp_user: '',
-        ftp_password: '',
-        ftp_path: '/',
     },
 });
 
+const isRemoteDelivery = computed(() => ['ftp', 'sftp'].includes(createForm.delivery_method));
+
+const defaultPort = computed(() => (createForm.delivery_method === 'sftp' ? 22 : 21));
+
 const submitCreate = () => {
-    createForm.post(route('scheduled-exports.store'), {
+    const payload = {
+        ...createForm.data(),
+        remote_port: createForm.remote_port || defaultPort.value,
+    };
+
+    createForm.transform(() => payload).post(route('scheduled-exports.store'), {
         onSuccess: () => {
             createForm.reset();
+            createForm.delivery_method = 'email';
+            createForm.remote_path = '/';
             showCreate.value = false;
         },
     });
@@ -60,6 +72,10 @@ const toggleStatus = (item) => {
         delivery_method: item.delivery_method,
         cron: item.cron,
         config: item.config,
+        remote_host: item.remote_host,
+        remote_port: item.remote_port,
+        remote_path: item.remote_path,
+        remote_username: item.remote_username,
         status: item.status === 'active' ? 'paused' : 'active',
     });
 };
@@ -68,7 +84,7 @@ const toggleStatus = (item) => {
 <template>
     <Head title="Scheduled exports" />
     <AuthenticatedLayout>
-        <PageHeader title="Scheduled exports" description="Automated CSV exports delivered by email or FTP on a cron schedule.">
+        <PageHeader title="Scheduled exports" description="Automated CSV exports delivered by email, FTP, or SFTP on a cron schedule.">
             <template #actions>
                 <AppButton @click="showCreate = !showCreate">{{ showCreate ? 'Cancel' : 'New export' }}</AppButton>
             </template>
@@ -102,6 +118,7 @@ const toggleStatus = (item) => {
                     <select v-model="createForm.delivery_method" class="form-select mt-1 w-full">
                         <option value="email">Email</option>
                         <option value="ftp">FTP</option>
+                        <option value="sftp">SFTP</option>
                     </select>
                 </div>
 
@@ -114,20 +131,24 @@ const toggleStatus = (item) => {
 
                 <template v-else>
                     <div>
-                        <InputLabel value="FTP host" />
-                        <input v-model="createForm.config.ftp_host" type="text" class="form-input mt-1 w-full" required />
+                        <InputLabel :value="`${createForm.delivery_method.toUpperCase()} host`" />
+                        <input v-model="createForm.remote_host" type="text" class="form-input mt-1 w-full font-mono text-sm" required placeholder="ftp.example.com" />
                     </div>
                     <div>
-                        <InputLabel value="FTP username" />
-                        <input v-model="createForm.config.ftp_user" type="text" class="form-input mt-1 w-full" required />
+                        <InputLabel value="Port" />
+                        <input v-model="createForm.remote_port" type="number" class="form-input mt-1 w-full font-mono text-sm" :placeholder="String(defaultPort)" />
                     </div>
                     <div>
-                        <InputLabel value="FTP password" />
-                        <input v-model="createForm.config.ftp_password" type="password" class="form-input mt-1 w-full" required />
+                        <InputLabel value="Username" />
+                        <input v-model="createForm.remote_username" type="text" class="form-input mt-1 w-full" required />
                     </div>
                     <div>
+                        <InputLabel value="Password" />
+                        <input v-model="createForm.remote_credentials" type="password" class="form-input mt-1 w-full" required autocomplete="new-password" />
+                    </div>
+                    <div class="md:col-span-2">
                         <InputLabel value="Remote path" />
-                        <input v-model="createForm.config.ftp_path" type="text" class="form-input mt-1 w-full" placeholder="/exports/" />
+                        <input v-model="createForm.remote_path" type="text" class="form-input mt-1 w-full font-mono text-sm" placeholder="/exports/" />
                     </div>
                 </template>
 
@@ -143,6 +164,7 @@ const toggleStatus = (item) => {
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Buyer</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Method</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Destination</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Cron</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Last run</th>
@@ -151,7 +173,11 @@ const toggleStatus = (item) => {
                 <tr v-for="item in exports.data" :key="item.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ item.name }}</td>
                     <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ item.buyer?.name ?? 'All' }}</td>
-                    <td class="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{{ item.delivery_method }}</td>
+                    <td class="px-6 py-4 uppercase text-slate-600 dark:text-slate-400">{{ item.delivery_method }}</td>
+                    <td class="px-6 py-4 font-mono text-xs text-slate-500">
+                        <span v-if="item.delivery_method === 'email'">{{ item.config?.email_recipients?.[0] ?? '—' }}</span>
+                        <span v-else>{{ item.remote_host ?? item.config?.ftp_host ?? '—' }}</span>
+                    </td>
                     <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ item.cron }}</td>
                     <td class="px-6 py-4"><StatusBadge :status="item.status" /></td>
                     <td class="px-6 py-4"><FormattedDate :value="item.last_run_at" /></td>

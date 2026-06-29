@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MessageSend;
+use App\Services\Messaging\MarketingSuppressionService;
 use App\Services\Messaging\MessageSendService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,6 +62,14 @@ class EspWebhookController extends Controller
 
         if ($send) {
             app(MessageSendService::class)->recordEvent($send, $type, null, $meta);
+
+            if (in_array($type, ['bounce', 'complaint'], true)) {
+                app(MarketingSuppressionService::class)->suppressFromEspEvent(
+                    $send->account_id,
+                    $recipient,
+                    $type,
+                );
+            }
         }
     }
 

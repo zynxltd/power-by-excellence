@@ -15,7 +15,7 @@ use App\Models\EventAlertFire;
 use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Models\MessageTemplate;
-use App\Services\Alerts\EventAlertService;
+use App\Services\Automation\AutomationSequenceService;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class AutomationController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Admin/Automation/Index', [
-            'sequences' => AutomationSequence::with('steps')->with('campaign:id,name')->orderBy('name')->get(),
+            'sequences' => AutomationSequence::with('steps')->with(['campaign:id,name', 'segment:id,name'])->orderBy('name')->get(),
             'bulkCampaigns' => BulkSmsCampaign::with('campaign:id,name')->orderByDesc('created_at')->limit(20)->get(),
             'segments' => Segment::orderBy('name')->get(['id', 'name']),
             'sendingProfiles' => SendingProfile::orderBy('name')->get(['id', 'name']),
@@ -59,19 +59,7 @@ class AutomationController extends Controller
 
     public function storeSequence(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'campaign_id' => 'nullable|exists:campaigns,id',
-            'trigger_event' => 'required|in:on_lead_received,on_lead_sold,on_lead_unsold',
-            'steps' => 'required|array|min:1',
-            'steps.*.delay_minutes' => 'integer|min:0',
-            'steps.*.channel' => 'required|in:email,sms',
-            'steps.*.config' => 'nullable|array',
-            'steps.*.config.subject' => 'nullable|string|max:255',
-            'steps.*.config.body' => 'nullable|string',
-            'steps.*.config.to_field' => 'nullable|string|max:64',
-            'steps.*.config.provider' => 'nullable|string|max:64',
-        ]);
+        $validated = $request->validate($this->sequenceRules());
 
         $accountId = $this->resolveAutomationAccountId($validated['campaign_id'] ?? null);
 
@@ -79,6 +67,7 @@ class AutomationController extends Controller
             'account_id' => $accountId,
             'name' => $validated['name'],
             'campaign_id' => $validated['campaign_id'] ?? null,
+            'segment_id' => $validated['segment_id'] ?? null,
             'trigger_event' => $validated['trigger_event'],
             'status' => 'active',
         ]);
@@ -90,20 +79,7 @@ class AutomationController extends Controller
 
     public function updateSequence(Request $request, AutomationSequence $sequence): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'campaign_id' => 'nullable|exists:campaigns,id',
-            'trigger_event' => 'required|in:on_lead_received,on_lead_sold,on_lead_unsold',
-            'status' => 'nullable|in:active,inactive',
-            'steps' => 'required|array|min:1',
-            'steps.*.delay_minutes' => 'integer|min:0',
-            'steps.*.channel' => 'required|in:email,sms',
-            'steps.*.config' => 'nullable|array',
-            'steps.*.config.subject' => 'nullable|string|max:255',
-            'steps.*.config.body' => 'nullable|string',
-            'steps.*.config.to_field' => 'nullable|string|max:64',
-            'steps.*.config.provider' => 'nullable|string|max:64',
-        ]);
+        $validated = $request->validate($this->sequenceRules());
 
         $accountId = $this->resolveAutomationAccountId($validated['campaign_id'] ?? null, $sequence->account_id);
 
@@ -111,6 +87,7 @@ class AutomationController extends Controller
             'account_id' => $accountId,
             'name' => $validated['name'],
             'campaign_id' => $validated['campaign_id'] ?? null,
+            'segment_id' => $validated['segment_id'] ?? null,
             'trigger_event' => $validated['trigger_event'],
             'status' => $validated['status'] ?? $sequence->status ?? 'active',
         ]);
@@ -121,14 +98,55 @@ class AutomationController extends Controller
         return back()->with('success', 'Automation sequence updated.');
     }
 
+    public function processJourneys(AutomationSequenceService $sequences): RedirectResponse
+    {
+        $count = $sequences->processDueEnrollments();
+
+        return back()->with('success', "Processed {$count} journey enrollment(s).");
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function sequenceRules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'campaign_id' => 'nullable|exists:campaigns,id',
+            'segment_id' => 'nullable|exists:segments,id',
+            'trigger_event' => 'required|in:on_lead_received,on_lead_sold,on_lead_unsold,on_segment_entry',
+            'status' => 'nullable|in:active,inactive',
+            'steps' => 'required|array|min:1',
+            'steps.*.delay_minutes' => 'integer|min:0',
+            'steps.*.action' => 'required|in:send,send_template,wait',
+            'steps.*.channel' => 'nullable|in:email,sms',
+            'steps.*.config' => 'nullable|array',
+            'steps.*.config.subject' => 'nullable|string|max:255',
+            'steps.*.config.body' => 'nullable|string',
+            'steps.*.config.to_field' => 'nullable|string|max:64',
+            'steps.*.config.provider' => 'nullable|string|max:64',
+            'steps.*.config.message_template_id' => 'nullable|integer|exists:message_templates,id',
+            'steps.*.config.sending_profile_id' => 'nullable|integer|exists:sending_profiles,id',
+            'steps.*.config.branch' => 'nullable|in:opened,clicked,not_opened',
+        ];
+    }
+
     protected function syncSequenceSteps(AutomationSequence $sequence, array $steps): void
     {
         foreach ($steps as $i => $step) {
+            $action = $step['action'] ?? 'send';
+            $channel = $step['channel'] ?? ($action === 'wait' ? 'email' : 'email');
+
+            if ($action !== 'wait' && empty($channel)) {
+                $channel = 'email';
+            }
+
             AutomationSequenceStep::create([
                 'automation_sequence_id' => $sequence->id,
                 'sort_order' => $i,
+                'action' => $action,
                 'delay_minutes' => $step['delay_minutes'] ?? 0,
-                'channel' => $step['channel'],
+                'channel' => $channel,
                 'config' => $step['config'] ?? [],
             ]);
         }

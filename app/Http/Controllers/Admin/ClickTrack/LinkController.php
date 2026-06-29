@@ -55,6 +55,7 @@ class LinkController extends Controller
             'status' => 'required|in:active,paused',
             'payout_amount' => 'nullable|numeric|min:0',
             'revenue_amount' => 'nullable|numeric|min:0',
+            'cap_hourly' => 'nullable|integer|min:0',
             'cap_daily' => 'nullable|integer|min:0',
             'cap_monthly' => 'nullable|integer|min:0',
             'conversion_cap_daily' => 'nullable|integer|min:0',
@@ -73,6 +74,7 @@ class LinkController extends Controller
             'payout_amount' => $validated['payout_amount'] ?? null,
             'revenue_amount' => $validated['revenue_amount'] ?? null,
             'config' => array_filter([
+                'cap_hourly' => $validated['cap_hourly'] ?? null,
                 'cap_daily' => $validated['cap_daily'] ?? null,
                 'cap_monthly' => $validated['cap_monthly'] ?? null,
                 'conversion_cap_daily' => $validated['conversion_cap_daily'] ?? null,
@@ -94,6 +96,7 @@ class LinkController extends Controller
             'status' => 'required|in:active,paused',
             'payout_amount' => 'nullable|numeric|min:0',
             'revenue_amount' => 'nullable|numeric|min:0',
+            'cap_hourly' => 'nullable|integer|min:0',
             'cap_daily' => 'nullable|integer|min:0',
             'cap_monthly' => 'nullable|integer|min:0',
             'conversion_cap_daily' => 'nullable|integer|min:0',
@@ -108,6 +111,7 @@ class LinkController extends Controller
             'payout_amount' => $validated['payout_amount'] ?? null,
             'revenue_amount' => $validated['revenue_amount'] ?? null,
             'config' => array_merge($trackingLink->config ?? [], array_filter([
+                'cap_hourly' => $validated['cap_hourly'] ?? null,
                 'cap_daily' => $validated['cap_daily'] ?? null,
                 'cap_monthly' => $validated['cap_monthly'] ?? null,
                 'conversion_cap_daily' => $validated['conversion_cap_daily'] ?? null,

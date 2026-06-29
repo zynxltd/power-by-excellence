@@ -84,6 +84,35 @@ watch(
 const campaignFieldOptions = computed(() => props.campaignFields ?? []);
 const mappedRowCount = computed(() => form.field_mapping.filter((row) => row.source && row.target).length);
 
+const mappedTargets = computed(() => new Set(
+    form.field_mapping.filter((row) => row.target).map((row) => row.target),
+));
+
+const unmappedCampaignFields = computed(() => campaignFieldOptions.value.filter(
+    (field) => !mappedTargets.value.has(field.name),
+));
+
+const addMappingRowForTarget = (fieldName) => {
+    const emptyRow = form.field_mapping.find((row) => !row.source && !row.target);
+    if (emptyRow) {
+        emptyRow.target = fieldName;
+        return;
+    }
+
+    form.field_mapping.push({ source: '', target: fieldName });
+};
+
+const moveMappingRow = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= form.field_mapping.length) {
+        return;
+    }
+
+    const rows = [...form.field_mapping];
+    [rows[index], rows[targetIndex]] = [rows[targetIndex], rows[index]];
+    form.field_mapping = rows;
+};
+
 const addMappingRow = () => form.field_mapping.push({ source: '', target: '' });
 const removeMappingRow = (index) => {
     if (form.field_mapping.length > 1) {
@@ -245,11 +274,32 @@ const submit = () => {
                             Map {{ meta.name }} field names (left) to your campaign fields (right). Unmapped source fields pass through when names already match.
                         </p>
                         <InputError class="mb-2" :message="form.errors.field_mapping" />
+                        <div v-if="campaignFieldOptions.length" class="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                            <p class="mb-2 text-xs font-medium text-slate-600 dark:text-slate-300">Campaign field coverage</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="field in campaignFieldOptions"
+                                    :key="field.id ?? field.name"
+                                    type="button"
+                                    class="rounded-full px-2.5 py-1 text-xs font-medium transition"
+                                    :class="mappedTargets.has(field.name)
+                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                                        : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-indigo-300 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-600'"
+                                    :title="mappedTargets.has(field.name) ? 'Mapped' : 'Click to add mapping row'"
+                                    @click="!mappedTargets.has(field.name) && addMappingRowForTarget(field.name)"
+                                >
+                                    {{ field.label ?? field.name }}
+                                </button>
+                            </div>
+                            <p v-if="unmappedCampaignFields.length" class="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                                {{ unmappedCampaignFields.length }} campaign field{{ unmappedCampaignFields.length === 1 ? '' : 's' }} not mapped yet.
+                            </p>
+                        </div>
                         <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                             <div class="grid grid-cols-[1fr_1fr_auto] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/50">
                                 <span>Source field</span>
                                 <span>Campaign field</span>
-                                <span class="sr-only">Actions</span>
+                                <span class="sr-only">Reorder / remove</span>
                             </div>
                             <div class="divide-y divide-slate-200 dark:divide-slate-700">
                                 <div
@@ -264,14 +314,34 @@ const submit = () => {
                                             {{ field.label ?? field.name }}
                                         </option>
                                     </select>
-                                    <button
-                                        v-if="form.field_mapping.length > 1"
-                                        type="button"
-                                        class="self-center text-xs text-rose-600 hover:underline"
-                                        @click="removeMappingRow(index)"
-                                    >
-                                        Remove
-                                    </button>
+                                    <div class="flex items-center gap-2 self-center">
+                                        <button
+                                            v-if="index > 0"
+                                            type="button"
+                                            class="text-xs text-slate-500 hover:underline"
+                                            title="Move up"
+                                            @click="moveMappingRow(index, -1)"
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            v-if="index < form.field_mapping.length - 1"
+                                            type="button"
+                                            class="text-xs text-slate-500 hover:underline"
+                                            title="Move down"
+                                            @click="moveMappingRow(index, 1)"
+                                        >
+                                            ↓
+                                        </button>
+                                        <button
+                                            v-if="form.field_mapping.length > 1"
+                                            type="button"
+                                            class="text-xs text-rose-600 hover:underline"
+                                            @click="removeMappingRow(index)"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -5,6 +5,7 @@ namespace App\Services\Alerts;
 use App\Models\EventAlert;
 use App\Models\EventAlertFire;
 use App\Models\Lead;
+use App\Services\ClickTrack\ClickCapService;
 use App\Services\Logging\PlatformLogger;
 use App\Services\Messaging\MessagingGateway;
 use App\Services\Platform\ProcessingMetrics;
@@ -45,6 +46,8 @@ class EventAlertService
             'quarantined_count' => (float) Lead::withoutGlobalScopes()->where('account_id', $accountId)->where('status', 'quarantined')->count(),
             'avg_processing_ms_24h' => $this->avgProcessingMs($accountId),
             'caps_near_limit' => $this->capsNearLimit($accountId),
+            'click_track_usage_pct' => $this->clickTrackUsagePct($accountId),
+            'click_track_links_near_cap' => (float) $this->clickTrackLinksNearCap($accountId),
             default => 0,
         };
     }
@@ -107,6 +110,18 @@ class EventAlertService
         }
 
         return (float) $near;
+    }
+
+    protected function clickTrackUsagePct(int $accountId): float
+    {
+        $account = \App\Models\Account::find($accountId);
+
+        return $account ? app(ClickCapService::class)->maxAccountUsagePct($account) : 0.0;
+    }
+
+    protected function clickTrackLinksNearCap(int $accountId): int
+    {
+        return app(ClickCapService::class)->linksNearSoftCap($accountId);
     }
 
     protected function triggered(EventAlert $alert, float $value): bool
@@ -202,6 +217,8 @@ class EventAlertService
             'quarantined_count' => 'Quarantined leads',
             'avg_processing_ms_24h' => 'Avg processing time (24h)',
             'caps_near_limit' => 'Buyers near daily cap',
+            'click_track_usage_pct' => 'Click Track usage %',
+            'click_track_links_near_cap' => 'Click Track links near cap',
         ];
     }
 
@@ -213,7 +230,7 @@ class EventAlertService
     protected function formatMetricValue(string $metric, float $value): string
     {
         return match ($metric) {
-            'reject_rate_24h', 'delivery_success_rate_24h' => round($value, 1).'%',
+            'reject_rate_24h', 'delivery_success_rate_24h', 'click_track_usage_pct' => round($value, 1).'%',
             'avg_processing_ms_24h' => round($value).' ms',
             default => (string) (fmod($value, 1.0) === 0.0 ? (int) $value : round($value, 1)),
         };

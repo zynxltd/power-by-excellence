@@ -85,7 +85,16 @@ class LeadSourceIntegrationController extends Controller
                 ->pluck('name')
                 ->all() ?? [];
 
+            $seenSources = [];
             foreach ($validated['field_mapping'] as $source => $target) {
+                $sourceKey = strtolower((string) $source);
+                if (isset($seenSources[$sourceKey])) {
+                    return back()->withErrors([
+                        'field_mapping' => "Duplicate source field \"{$source}\". Each source field can only be mapped once.",
+                    ]);
+                }
+                $seenSources[$sourceKey] = true;
+
                 if (! in_array($target, $campaignFieldNames, true)) {
                     return back()->withErrors([
                         'field_mapping' => "Campaign field \"{$target}\" does not exist on the selected campaign.",
