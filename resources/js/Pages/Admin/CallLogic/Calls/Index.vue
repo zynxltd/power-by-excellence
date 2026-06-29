@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
+import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
@@ -14,6 +15,7 @@ const props = defineProps({
     campaigns: Array,
     filters: Object,
     statuses: Array,
+    liveCallsCount: { type: Number, default: 0 },
 });
 
 const localFilters = ref({ ...props.filters });
@@ -27,6 +29,11 @@ const applyFilters = () => {
     <Head title="Call Logic - Calls" />
     <AuthenticatedLayout>
         <PageHeader title="Calls" description="Inbound call sessions and routing outcomes." />
+        <CompactStatStrip
+            :items="[{ label: 'Live calls', value: liveCallsCount, accent: 'emerald' }]"
+            :columns="1"
+            class="mb-4"
+        />
         <Panel class="mb-4">
             <div class="flex flex-wrap gap-3">
                 <select v-model="localFilters.status" class="rounded border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-800" @change="applyFilters">
