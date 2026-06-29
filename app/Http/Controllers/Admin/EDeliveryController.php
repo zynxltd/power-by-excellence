@@ -13,6 +13,7 @@ use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
 use App\Services\Messaging\TemplateRenderService;
+use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
@@ -56,7 +57,9 @@ class EDeliveryController extends Controller
             'templates' => MessageTemplate::orderBy('name')->get(),
             'sendingProfiles' => SendingProfile::orderBy('name')->get(),
             'recentCampaigns' => BulkSmsCampaign::with('campaign:id,name')->orderByDesc('created_at')->limit(10)->get(),
-            'throttle' => app(ThrottleGovernor::class)->status($accountId),
+            'throttle' => app(WarmupGovernor::class)->status($accountId),
+            'warmup' => app(WarmupGovernor::class)->accountWarmupOverview($accountId),
+            'reputation' => app(WarmupGovernor::class)->reputationScore($accountId),
             'providers' => [
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
                 'sms' => ['log', 'twilio', 'vonage'],
@@ -268,15 +271,44 @@ class EDeliveryController extends Controller
             'from_email' => 'nullable|email|max:255',
             'reply_to' => 'nullable|email|max:255',
             'is_default' => 'nullable|boolean',
+            'warmup_enabled' => 'nullable|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
         ]);
 
         if (! empty($validated['is_default'])) {
             SendingProfile::query()->update(['is_default' => false]);
         }
 
+        if (! empty($validated['warmup_enabled'])) {
+            $validated['warmup_started_at'] = now();
+        }
+
         SendingProfile::create($validated);
 
         return back()->with('success', 'Sending profile created.');
+    }
+
+    public function updateSendingProfileWarmup(Request $request, SendingProfile $profile): RedirectResponse
+    {
+        $validated = $request->validate([
+            'warmup_enabled' => 'required|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
+        ]);
+
+        $wasEnabled = (bool) $profile->warmup_enabled;
+        $enabling = $validated['warmup_enabled'] && ! $wasEnabled;
+
+        $profile->update(array_merge($validated, $enabling ? ['warmup_started_at' => now()] : []));
+
+        if (! $validated['warmup_enabled']) {
+            $profile->update(['warmup_started_at' => null]);
+        }
+
+        return back()->with('success', $validated['warmup_enabled'] ? 'Domain warmup enabled.' : 'Domain warmup disabled.');
     }
 
     public function destroySendingProfile(SendingProfile $profile): RedirectResponse

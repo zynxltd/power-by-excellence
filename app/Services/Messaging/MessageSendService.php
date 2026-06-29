@@ -54,8 +54,22 @@ class MessageSendService
             return false;
         }
 
-        if (! $this->throttle->allowSend($accountId)) {
-            PlatformLogger::info('Marketing send throttled', ['account_id' => $accountId]);
+        $account = Account::find($accountId);
+        $profile = $this->credentials->resolveSendingProfile(
+            $accountId,
+            $payload['sending_profile_id'] ?? null,
+            $channel === 'email' ? $recipient : null,
+        );
+
+        if ($profile && $this->throttle instanceof WarmupGovernor) {
+            $this->throttle->ensureWarmupStarted($profile);
+        }
+
+        if (! $this->throttle->allowSend($accountId, $profile)) {
+            PlatformLogger::info('Marketing send throttled', [
+                'account_id' => $accountId,
+                'sending_profile_id' => $profile?->id,
+            ]);
 
             return false;
         }
@@ -78,13 +92,6 @@ class MessageSendService
             }
         }
 
-        $account = Account::find($accountId);
-        $profile = $this->credentials->resolveSendingProfile(
-            $accountId,
-            $payload['sending_profile_id'] ?? null,
-            $channel === 'email' ? $recipient : null,
-        );
-
         $resolved = $this->credentials->resolveForAccount(
             $account,
             $payload['provider'] ?? $profile?->provider,
@@ -95,6 +102,7 @@ class MessageSendService
             'account_id' => $accountId,
             'lead_id' => $payload['lead_id'] ?? null,
             'bulk_sms_campaign_id' => $payload['bulk_sms_campaign_id'] ?? null,
+            'sending_profile_id' => $profile?->id,
             'channel' => $channel,
             'provider' => $resolved['provider'],
             'source_type' => $payload['source_type'] ?? null,

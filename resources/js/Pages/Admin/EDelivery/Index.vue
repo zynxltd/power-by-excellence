@@ -26,6 +26,8 @@ const props = defineProps({
     sendingProfiles: Array,
     recentCampaigns: Array,
     throttle: Object,
+    warmup: Object,
+    reputation: Object,
     providers: Object,
     mergeTags: Array,
     defaultPreviewData: Object,
@@ -193,7 +195,57 @@ const templateForm = useForm({
     html_body: '',
     preview_data: { ...(props.defaultPreviewData ?? {}) },
 });
-const profileForm = useForm({ name: '', provider: 'smtp', domain_match: '', from_name: '', from_email: '', is_default: false });
+const profileForm = useForm({
+    name: '',
+    provider: 'smtp',
+    domain_match: '',
+    from_name: '',
+    from_email: '',
+    is_default: false,
+    warmup_enabled: false,
+    warmup_day_one_limit: 50,
+    warmup_target_limit: 1000,
+    warmup_ramp_days: 14,
+});
+
+const warmupForm = useForm({
+    warmup_enabled: false,
+    warmup_day_one_limit: 50,
+    warmup_target_limit: 1000,
+    warmup_ramp_days: 14,
+});
+
+const editingWarmupProfileId = ref(null);
+
+const reputationToneClass = (score) => {
+    if (score == null) return 'text-slate-500';
+    if (score >= 85) return 'text-emerald-600 dark:text-emerald-400';
+    if (score >= 70) return 'text-indigo-600 dark:text-indigo-400';
+    if (score >= 50) return 'text-amber-600 dark:text-amber-400';
+
+    return 'text-rose-600 dark:text-rose-400';
+};
+
+const editWarmupProfile = (profile) => {
+    editingWarmupProfileId.value = profile.id;
+    warmupForm.warmup_enabled = Boolean(profile.warmup_enabled);
+    warmupForm.warmup_day_one_limit = profile.warmup_day_one_limit ?? 50;
+    warmupForm.warmup_target_limit = profile.warmup_target_limit ?? 1000;
+    warmupForm.warmup_ramp_days = profile.warmup_ramp_days ?? 14;
+};
+
+const submitWarmup = () => {
+    if (!editingWarmupProfileId.value) {
+        return;
+    }
+
+    warmupForm.patch(route('e-delivery.sending-profiles.warmup', editingWarmupProfileId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingWarmupProfileId.value = null;
+        },
+    });
+};
 
 const bulkForm = useForm({
     name: '',
@@ -462,6 +514,105 @@ const healthBadgeClass = (tone) => ({
                 </ul>
             </Panel>
 
+            <Panel title="Domain warmup & reputation" class="mb-6">
+                <div class="grid gap-6 lg:grid-cols-3">
+                    <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-1">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reputation score</p>
+                        <p class="mt-2 text-4xl font-bold tabular-nums" :class="reputationToneClass(reputation?.score)">
+                            {{ reputation?.score ?? '—' }}
+                        </p>
+                        <p class="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">{{ reputation?.label ?? 'Awaiting sends' }}</p>
+                        <p class="mt-2 text-xs text-slate-500">Based on {{ reputation?.period_days ?? 30 }}-day bounce, complaint, and open rates.</p>
+                        <dl v-if="reputation?.factors && Object.keys(reputation.factors).length" class="mt-4 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                            <div class="flex justify-between"><dt>Bounce rate</dt><dd class="tabular-nums">{{ reputation.factors.bounce_rate }}%</dd></div>
+                            <div class="flex justify-between"><dt>Complaint rate</dt><dd class="tabular-nums">{{ reputation.factors.complaint_rate }}%</dd></div>
+                            <div class="flex justify-between"><dt>Open rate</dt><dd class="tabular-nums">{{ reputation.factors.open_rate }}%</dd></div>
+                        </dl>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <p v-if="!warmup?.profiles?.length" class="text-sm text-slate-500">Add a sending profile to configure domain warmup.</p>
+                        <div v-else class="space-y-4">
+                            <div
+                                v-for="profile in warmup.profiles"
+                                :key="profile.profile_id"
+                                class="rounded-xl border border-slate-200 p-4 dark:border-slate-700"
+                            >
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p class="font-semibold text-slate-900 dark:text-white">{{ profile.name }}</p>
+                                        <p v-if="profile.domain_match" class="text-xs text-slate-500">{{ profile.domain_match }}</p>
+                                    </div>
+                                    <span
+                                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                                        :class="profile.warmup_enabled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
+                                    >
+                                        {{ profile.warmup_enabled ? 'Warmup active' : 'Warmup off' }}
+                                    </span>
+                                </div>
+
+                                <template v-if="profile.warmup_enabled">
+                                    <div class="mt-4">
+                                        <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
+                                            <span>Day {{ profile.warmup_day }} of {{ profile.ramp_days }}</span>
+                                            <span>{{ profile.sent_today }} / {{ profile.daily_limit }} today</span>
+                                        </div>
+                                        <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                            <div
+                                                class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all"
+                                                :style="{ width: `${Math.min(100, (profile.sent_today / Math.max(profile.daily_limit, 1)) * 100)}%` }"
+                                            />
+                                        </div>
+                                        <p class="mt-2 text-xs text-slate-500">
+                                            Daily cap ramps from {{ profile.day_one_limit }} → {{ profile.target_limit }}
+                                            <span v-if="profile.at_target"> · at target volume</span>
+                                        </p>
+                                    </div>
+                                </template>
+
+                                <button
+                                    type="button"
+                                    class="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                                    @click="editWarmupProfile(profile)"
+                                >
+                                    Configure warmup
+                                </button>
+                            </div>
+                        </div>
+
+                        <form
+                            v-if="editingWarmupProfileId"
+                            class="mt-4 space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-900 dark:bg-indigo-950/20"
+                            @submit.prevent="submitWarmup"
+                        >
+                            <p class="text-sm font-semibold text-slate-900 dark:text-white">Warmup settings</p>
+                            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                <input v-model="warmupForm.warmup_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                                Enable domain warmup scheduler
+                            </label>
+                            <div class="grid gap-3 sm:grid-cols-3">
+                                <div>
+                                    <InputLabel value="Day 1 limit" />
+                                    <TextInput v-model="warmupForm.warmup_day_one_limit" type="number" min="1" class="mt-1 w-full" />
+                                </div>
+                                <div>
+                                    <InputLabel value="Target limit" />
+                                    <TextInput v-model="warmupForm.warmup_target_limit" type="number" min="1" class="mt-1 w-full" />
+                                </div>
+                                <div>
+                                    <InputLabel value="Ramp days" />
+                                    <TextInput v-model="warmupForm.warmup_ramp_days" type="number" min="1" max="90" class="mt-1 w-full" />
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <AppButton type="submit" size="sm" :disabled="warmupForm.processing">Save warmup</AppButton>
+                                <AppButton type="button" size="sm" variant="secondary" @click="editingWarmupProfileId = null">Cancel</AppButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </Panel>
+
             <Panel title="7d vs 30d comparison" class="mb-6">
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div
@@ -680,6 +831,15 @@ const healthBadgeClass = (tone) => ({
                         <TextInput v-model="profileForm.name" class="w-full" placeholder="Profile name" required />
                         <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Domain match e.g. gmail.com" />
                         <TextInput v-model="profileForm.from_email" class="w-full" placeholder="From email" />
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                            <input v-model="profileForm.warmup_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                            Enable warmup on create
+                        </label>
+                        <div v-if="profileForm.warmup_enabled" class="grid gap-2 sm:grid-cols-3">
+                            <TextInput v-model="profileForm.warmup_day_one_limit" type="number" min="1" class="w-full" placeholder="Day 1 limit" />
+                            <TextInput v-model="profileForm.warmup_target_limit" type="number" min="1" class="w-full" placeholder="Target limit" />
+                            <TextInput v-model="profileForm.warmup_ramp_days" type="number" min="1" max="90" class="w-full" placeholder="Ramp days" />
+                        </div>
                         <AppButton type="submit" size="sm" :disabled="profileForm.processing">Add profile</AppButton>
                     </form>
                 </Panel>

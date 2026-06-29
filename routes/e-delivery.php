@@ -64,6 +64,11 @@ function registerEDeliveryAdminRoutes(): void
 {
     registerEDeliveryJourneyRoutes();
 
+    if (! Route::has('e-delivery.sending-profiles.warmup')) {
+        Route::patch('e-delivery/sending-profiles/{profile}/warmup', [EDeliveryController::class, 'updateSendingProfileWarmup'])
+            ->name('e-delivery.sending-profiles.warmup');
+    }
+
     if (Route::has('e-delivery.index')) {
         return;
     }

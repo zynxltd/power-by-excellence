@@ -5,6 +5,7 @@ namespace App\Services\Messaging;
 use App\Models\BulkSmsCampaign;
 use App\Models\Lead;
 use App\Models\Segment;
+use App\Models\SendingProfile;
 use App\Services\Delivery\TagInterpolator;
 use App\Services\Logging\PlatformLogger;
 
@@ -49,9 +50,16 @@ class BulkCampaignSender
         $sent = 0;
         $failed = 0;
         $chunkDelay = $this->throttle->chunkDelay($campaign->account_id, $campaign->throttle_per_minute);
+        $profile = $campaign->sending_profile_id
+            ? SendingProfile::withoutGlobalScopes()->find($campaign->sending_profile_id)
+            : null;
+
+        if ($profile && $this->throttle instanceof WarmupGovernor) {
+            $this->throttle->ensureWarmupStarted($profile);
+        }
 
         foreach ($leads as $lead) {
-            if (! $this->throttle->allowSend($campaign->account_id)) {
+            if (! $this->throttle->allowSend($campaign->account_id, $profile)) {
                 PlatformLogger::info('Bulk campaign paused by throttle', ['campaign_id' => $campaign->id]);
                 break;
             }

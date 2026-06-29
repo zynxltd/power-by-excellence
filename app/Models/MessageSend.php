@@ -13,7 +13,7 @@ class MessageSend extends Model
     use BelongsToAccount;
 
     protected $fillable = [
-        'account_id', 'lead_id', 'bulk_sms_campaign_id', 'token', 'channel', 'provider',
+        'account_id', 'lead_id', 'bulk_sms_campaign_id', 'sending_profile_id', 'token', 'channel', 'provider',
         'source_type', 'source_id', 'recipient', 'subject', 'body', 'ab_variant', 'status', 'sent_at',
     ];
 
@@ -41,6 +41,11 @@ class MessageSend extends Model
     public function bulkCampaign(): BelongsTo
     {
         return $this->belongsTo(BulkSmsCampaign::class, 'bulk_sms_campaign_id');
+    }
+
+    public function sendingProfile(): BelongsTo
+    {
+        return $this->belongsTo(SendingProfile::class);
     }
 
     public function events(): HasMany

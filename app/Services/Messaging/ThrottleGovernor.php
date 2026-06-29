@@ -19,7 +19,7 @@ class ThrottleGovernor
 
     public const MANUAL_PAUSE_TTL_MINUTES = 525600;
 
-    public function allowSend(int $accountId): bool
+    public function allowSend(int $accountId, ?\App\Models\SendingProfile $profile = null): bool
     {
         if ($this->isManuallyPaused($accountId)) {
             return false;
