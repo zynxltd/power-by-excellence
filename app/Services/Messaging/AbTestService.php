@@ -7,10 +7,6 @@ use App\Models\MessageSend;
 
 class AbTestService
 {
-    public function __construct(
-        protected MessageSendService $sender,
-    ) {}
-
     public function shouldRunAbTest(BulkSmsCampaign $campaign): bool
     {
         $config = $campaign->ab_test ?? [];
@@ -104,44 +100,6 @@ class AbTestService
 
     protected function sendVariant(BulkSmsCampaign $campaign, $lead, string $variant, array $variantConfig): void
     {
-        $fields = $lead->allFields();
-        $interpolator = app(\App\Services\Delivery\TagInterpolator::class);
-
-        $channel = $campaign->channel ?? 'sms';
-        $recipient = $channel === 'email'
-            ? ($fields['email'] ?? null)
-            : ($fields['phone1'] ?? null);
-
-        if (! $recipient) {
-            return;
-        }
-
-        $subject = $interpolator->interpolate(
-            $variantConfig['subject'] ?? $campaign->subject ?? $campaign->name,
-            $fields,
-        );
-        $body = $interpolator->interpolate(
-            $variantConfig['body'] ?? $campaign->message,
-            $fields,
-        );
-        $htmlBody = filled($variantConfig['html_body'] ?? null)
-            ? $interpolator->interpolate($variantConfig['html_body'], $fields)
-            : ($campaign->html_body ? $interpolator->interpolate($campaign->html_body, $fields) : null);
-
-        $this->sender->send([
-            'account_id' => $campaign->account_id,
-            'lead_id' => $lead->id,
-            'bulk_sms_campaign_id' => $campaign->id,
-            'channel' => $channel,
-            'recipient' => $recipient,
-            'subject' => $subject,
-            'body' => $body,
-            'html_body' => $htmlBody,
-            'provider' => $campaign->provider,
-            'source_type' => BulkSmsCampaign::class,
-            'source_id' => $campaign->id,
-            'ab_variant' => $variant,
-            'sending_profile_id' => $campaign->sending_profile_id,
-        ]);
+        app(BulkCampaignSender::class)->sendVariantToLead($campaign, $lead, $variant, $variantConfig);
     }
 }

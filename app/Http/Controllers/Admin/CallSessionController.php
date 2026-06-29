@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CallRecording;
 use App\Models\CallSession;
 use App\Models\Campaign;
 use App\Services\Exports\CallExportService;
@@ -53,6 +54,14 @@ class CallSessionController extends Controller
             'recordings',
             'lead',
         ]);
+
+        $call->recordings->each(function (CallRecording $recording): void {
+            $recording->setAttribute('playback_url', $recording->hasPlayback()
+                ? ($recording->storage_path
+                    ? route('call-logic.recordings.play', $recording)
+                    : $recording->url)
+                : null);
+        });
 
         return Inertia::render('Admin/CallLogic/Calls/Show', [
             'call' => $call,

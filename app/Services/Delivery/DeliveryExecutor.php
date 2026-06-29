@@ -22,6 +22,7 @@ class DeliveryExecutor
         protected RuleEngine $ruleEngine,
         protected DeliveryPayloadBuilder $payloadBuilder,
         protected DeliveryResponseMatcher $responseMatcher,
+        protected CallDeliveryHandoff $callDeliveryHandoff,
     ) {}
 
     public function execute(Lead $lead, Delivery $delivery, array $pingFields = []): DeliveryResult
@@ -70,6 +71,7 @@ class DeliveryExecutor
             $result = match ($delivery->method) {
                 DeliveryMethod::DirectPost => $this->directPost($fields, $config, $log, $delivery),
                 DeliveryMethod::PingPost => $this->pingPost($fields, $pingFields ?: $fields, $config, $log, $lead, $delivery),
+                DeliveryMethod::PingOnly => $this->pingOnlyDelivery($lead, $delivery, $pingFields ?: $fields, $log),
                 DeliveryMethod::TwoStepAuth => $this->twoStepAuth($fields, $pingFields ?: $fields, $config, $log, $lead, $delivery),
                 DeliveryMethod::CampaignTransfer => $this->campaignTransfer($lead, $delivery, $config, $log),
                 DeliveryMethod::StoreLead => $this->storeLead($delivery, $log, $fields),
@@ -78,7 +80,7 @@ class DeliveryExecutor
                 DeliveryMethod::Sms => $this->sendSms($fields, $config, $log, $delivery),
                 DeliveryMethod::CallPingPost,
                 DeliveryMethod::CallDirectTransfer,
-                DeliveryMethod::CallWarmTransfer => DeliveryResult::skipped('call_delivery'),
+                DeliveryMethod::CallWarmTransfer => $this->callDeliveryHandoff->execute($lead, $delivery, $log, $pingFields ?: $fields),
                 default => DeliveryResult::failed('Unsupported delivery method'),
             };
 
@@ -196,6 +198,56 @@ class DeliveryExecutor
         return $this->completePingPost($lead, $delivery, $fullFields, $pingFields, $ping->pingBody, $log);
     }
 
+    protected function pingOnlyDelivery(Lead $lead, Delivery $delivery, array $pingFields, DeliveryLog $log): DeliveryResult
+    {
+        $ping = $this->pingOnly($lead, $delivery, $pingFields, (float) ($lead->campaign->floor_price ?? 0), $log);
+
+        if ($ping->skipped) {
+            return DeliveryResult::skipped($ping->skipReason ?? 'ping_rejected');
+        }
+
+        if (! $ping->success) {
+            return DeliveryResult::failed('Ping rejected');
+        }
+
+        $log->update(['status' => 'success', 'revenue' => $ping->revenue]);
+
+        return DeliveryResult::success($ping->revenue);
+    }
+
+    protected function performHttpPing(Lead $lead, Delivery $delivery, array $pingFields, DeliveryLog $log, ?float $floor = null): PingResult
+    {
+        $fields = $lead->allFields();
+        $config = $delivery->config ?? [];
+        $floor ??= (float) ($lead->campaign->floor_price ?? 0);
+
+        $pingUrl = $config['ping_url'] ?? null;
+        if (! $pingUrl) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_ping_url']);
+
+            return PingResult::failed($log);
+        }
+
+        $pingPayload = $this->payloadBuilder->buildPingPayload($config, $pingFields, $floor, $lead);
+
+        $log->update(['ping_request' => ['url' => $pingUrl, 'body' => $pingPayload]]);
+
+        $pingResponse = Http::timeout($config['ping_timeout'] ?? config('performance.ping_timeout_seconds', 2))->post($pingUrl, $pingPayload);
+        $pingBody = $pingResponse->json() ?? ['raw' => $pingResponse->body()];
+        $log->update(['ping_response' => $pingBody, 'http_status' => $pingResponse->status()]);
+
+        if (! $this->responseMatcher->matchesPingSuccess($config, $pingBody, $floor)) {
+            $log->update(['status' => 'skipped', 'skipped_reason' => 'ping_rejected']);
+
+            return PingResult::skipped('ping_rejected', $log);
+        }
+
+        $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields, [], $pingBody);
+        $log->update(['status' => 'ping_ok', 'revenue' => $revenue]);
+
+        return PingResult::success($revenue, $pingBody, $log);
+    }
+
     public function pingOnly(Lead $lead, Delivery $delivery, array $pingFields, ?float $floor = null, ?DeliveryLog $existingLog = null): PingResult
     {
         $fields = $lead->allFields();
@@ -245,38 +297,14 @@ class DeliveryExecutor
             return PingResult::success($revenue, ['Cost' => $revenue, 'Success' => true], $log);
         }
 
-        if ($delivery->method !== DeliveryMethod::PingPost) {
-            $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
-            $log->update(['status' => 'ping_ok', 'revenue' => $revenue, 'ping_response' => ['mode' => 'fixed_bid', 'Cost' => $revenue]]);
-
-            return PingResult::success($revenue, ['Cost' => $revenue, 'Success' => true], $log);
+        if ($delivery->method->usesHttpPing()) {
+            return $this->performHttpPing($lead, $delivery, $pingFields, $log, $floor);
         }
 
-        $pingUrl = $config['ping_url'] ?? null;
-        if (! $pingUrl) {
-            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_ping_url']);
+        $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields);
+        $log->update(['status' => 'ping_ok', 'revenue' => $revenue, 'ping_response' => ['mode' => 'fixed_bid', 'Cost' => $revenue]]);
 
-            return PingResult::failed($log);
-        }
-
-        $pingPayload = $this->payloadBuilder->buildPingPayload($config, $pingFields, $floor, $lead);
-
-        $log->update(['ping_request' => ['url' => $pingUrl, 'body' => $pingPayload]]);
-
-        $pingResponse = Http::timeout($config['ping_timeout'] ?? config('performance.ping_timeout_seconds', 2))->post($pingUrl, $pingPayload);
-        $pingBody = $pingResponse->json() ?? ['raw' => $pingResponse->body()];
-        $log->update(['ping_response' => $pingBody, 'http_status' => $pingResponse->status()]);
-
-        if (! $this->responseMatcher->matchesPingSuccess($config, $pingBody, $floor)) {
-            $log->update(['status' => 'skipped', 'skipped_reason' => 'ping_rejected']);
-
-            return PingResult::skipped('ping_rejected', $log);
-        }
-
-        $revenue = app(\App\Services\Billing\RevenueCalculator::class)->calculate($delivery, $fields, [], $pingBody);
-        $log->update(['status' => 'ping_ok', 'revenue' => $revenue]);
-
-        return PingResult::success($revenue, $pingBody, $log);
+        return PingResult::success($revenue, ['Cost' => $revenue, 'Success' => true], $log);
     }
 
     /**
@@ -323,7 +351,7 @@ class DeliveryExecutor
             return null;
         }
 
-        if ($delivery->method !== DeliveryMethod::PingPost) {
+        if (! in_array($delivery->method, [DeliveryMethod::PingPost, DeliveryMethod::PingOnly, DeliveryMethod::TwoStepAuth], true)) {
             return null;
         }
 
@@ -533,7 +561,7 @@ class DeliveryExecutor
 
     protected function twoStepAuth(array $fullFields, array $pingFields, array $config, DeliveryLog $log, Lead $lead, Delivery $delivery): DeliveryResult
     {
-        $ping = $this->pingOnly($lead, $delivery, $pingFields, (float) ($lead->campaign->floor_price ?? 0), $log);
+        $ping = $this->performHttpPing($lead, $delivery, $pingFields, $log, (float) ($lead->campaign->floor_price ?? 0));
 
         if ($ping->skipped) {
             return DeliveryResult::skipped($ping->skipReason ?? 'ping_rejected');
@@ -543,31 +571,49 @@ class DeliveryExecutor
             return DeliveryResult::failed('Ping rejected');
         }
 
-        $otpUrl = $config['otp_url'] ?? $config['post_url'] ?? null;
-        if (! $otpUrl) {
-            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_otp_url']);
+        $tokenField = $config['auth_token_field'] ?? 'Token';
+        $token = data_get($ping->pingBody, $tokenField);
 
-            return DeliveryResult::failed('OTP URL not configured');
+        if (blank($token)) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_auth_token']);
+
+            return DeliveryResult::failed('Auth token missing from ping response');
         }
 
-        $otpPayload = $this->payloadBuilder->buildPostPayload($config, $fullFields, $ping->pingBody, $lead);
-        $otpField = $config['otp_field'] ?? 'otp';
-        $otpPayload[$otpField] = $config['otp_value'] ?? $otpPayload[$otpField] ?? '';
+        $postUrl = $config['post_url'] ?? $config['auth_url'] ?? null;
+        if (! $postUrl) {
+            $log->update(['status' => 'failed', 'skipped_reason' => 'missing_post_url']);
 
-        $log->update(['post_request' => ['url' => $otpUrl, 'body' => $otpPayload]]);
-
-        $otpResponse = Http::timeout($config['timeout'] ?? config('performance.post_timeout_seconds', 3))
-            ->post($otpUrl, $otpPayload);
-        $otpBody = $otpResponse->json() ?? ['raw' => $otpResponse->body()];
-        $log->update(['post_response' => $otpBody, 'http_status' => $otpResponse->status()]);
-
-        if ($this->responseMatcher->matchesPostSuccess($config, $otpResponse->status(), $otpBody)) {
-            $revenue = $this->resolveRevenue($config, $otpBody, $ping->pingBody, $delivery, $fullFields);
-
-            return DeliveryResult::success($revenue, $otpResponse->status());
+            return DeliveryResult::failed('Auth post URL not configured');
         }
 
-        return DeliveryResult::failed('OTP post rejected', $otpResponse->status());
+        $postPayload = $this->payloadBuilder->buildPostPayload($config, $fullFields, $ping->pingBody, $lead);
+        $authBodyField = $config['auth_body_field'] ?? null;
+        if (filled($authBodyField)) {
+            $postPayload[$authBodyField] = $token;
+        }
+
+        $headers = $config['headers'] ?? [];
+        $authHeader = $config['auth_header'] ?? null;
+        if (filled($authHeader)) {
+            $headers[$authHeader] = ($config['auth_header_prefix'] ?? '').$token;
+        }
+
+        $log->update(['post_request' => ['url' => $postUrl, 'body' => $postPayload, 'headers' => array_keys($headers)]]);
+
+        $postResponse = Http::timeout($config['timeout'] ?? config('performance.post_timeout_seconds', 3))
+            ->withHeaders($headers)
+            ->post($postUrl, $postPayload);
+        $postBody = $postResponse->json() ?? ['raw' => $postResponse->body()];
+        $log->update(['post_response' => $postBody, 'http_status' => $postResponse->status()]);
+
+        if ($this->responseMatcher->matchesPostSuccess($config, $postResponse->status(), $postBody)) {
+            $revenue = $this->resolveRevenue($config, $postBody, $ping->pingBody, $delivery, $fullFields);
+
+            return DeliveryResult::success($revenue, $postResponse->status());
+        }
+
+        return DeliveryResult::failed('Auth post rejected', $postResponse->status());
     }
 
     protected function campaignTransfer(Lead $lead, Delivery $delivery, array $config, DeliveryLog $log): DeliveryResult

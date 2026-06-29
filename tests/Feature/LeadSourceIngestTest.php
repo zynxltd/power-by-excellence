@@ -143,4 +143,26 @@ class LeadSourceIngestTest extends TestCase
             'email' => 'disabled@example.com',
         ])->assertStatus(403);
     }
+
+    public function test_admin_update_rejects_duplicate_source_mapping_keys(): void
+    {
+        $this->seed(\Database\Seeders\PlatformSeeder::class);
+        $this->withoutVite();
+
+        $admin = \App\Models\User::where('email', 'uk@powerbyexcellence.test')->first();
+        $campaign = Campaign::where('account_id', $admin->account_id)->first();
+
+        $this->withServerVariables(['HTTP_HOST' => 'excellence-uk.powerbyexcellence.test'])
+            ->actingAs($admin)
+            ->from(route('integrations.lead-source', 'google'))
+            ->put(route('integrations.lead-source.update', 'google'), [
+                'enabled' => true,
+                'campaign_id' => $campaign->id,
+                'field_mapping' => [
+                    ['source' => 'email_address', 'target' => 'email'],
+                    ['source' => 'EMAIL_ADDRESS', 'target' => 'firstname'],
+                ],
+            ])
+            ->assertSessionHasErrors('field_mapping');
+    }
 }

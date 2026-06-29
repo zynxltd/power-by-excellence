@@ -68,6 +68,15 @@ const defaultConfig = () => ({
     response_rules: [{ match_by: 'http_status', value: '200', label: 'success' }],
     redirect_url: '',
     accept_url: '',
+    auth_url: '',
+    auth_token_field: 'Token',
+    auth_header: '',
+    auth_header_prefix: 'Bearer ',
+    auth_body_field: '',
+    campaign_id: '',
+    destination_phone: '',
+    transfer_number: '',
+    whisper_url: '',
     to: '',
     cc: '',
     bcc: '',
@@ -144,6 +153,8 @@ const workflowCampaign = computed(() => {
 const selectedBuyer = computed(() => props.buyers?.find((b) => b.id === form.buyer_id));
 const buyerEmailPreview = computed(() => selectedBuyer.value?.email ?? null);
 const isEmailMethod = computed(() => ['email', 'email_ping_post'].includes(form.method));
+const isHttpPingMethod = computed(() => ['ping_post', 'ping_only', 'two_step_auth', 'call_ping_post'].includes(form.method));
+const isCallMethod = computed(() => ['call_ping_post', 'call_direct_transfer', 'call_warm_transfer'].includes(form.method));
 
 const fillBuyerEmail = () => {
     if (!buyerEmailPreview.value) {
@@ -164,16 +175,39 @@ watch(() => form.buyer_id, () => {
     }
 });
 
-const methods = ['store_lead', 'direct_post', 'ping_post', 'email_ping_post', 'email', 'sms'];
+const methods = [
+    'store_lead',
+    'direct_post',
+    'ping_post',
+    'ping_only',
+    'two_step_auth',
+    'email_ping_post',
+    'email',
+    'sms',
+    'campaign_transfer',
+    'call_ping_post',
+    'call_direct_transfer',
+    'call_warm_transfer',
+];
 
 const configPreview = computed(() => {
-    if (form.method === 'ping_post') {
+    if (form.method === 'ping_post' || form.method === 'ping_only' || form.method === 'two_step_auth') {
         return {
             ping_url: form.config.ping_url,
-            post_url: form.config.post_url,
+            post_url: form.config.post_url || form.config.auth_url,
             revenue_field: form.config.revenue_field,
             redirect_url: form.config.redirect_url,
             accept_url: form.config.accept_url,
+        };
+    }
+    if (form.method === 'campaign_transfer') {
+        return { campaign_id: form.config.campaign_id };
+    }
+    if (isCallMethod.value) {
+        return {
+            ping_url: form.config.ping_url,
+            destination_phone: form.config.destination_phone || form.config.transfer_number,
+            whisper_url: form.config.whisper_url,
         };
     }
     if (form.method === 'direct_post') {
@@ -432,10 +466,19 @@ const submit = () => {
                                     <div><InputLabel value="Timeout (sec)" /><TextInput v-model="form.config.timeout" type="number" class="mt-1 w-full" /></div>
                                 </div>
                             </div>
-                            <div v-else-if="form.method === 'ping_post'" class="space-y-3">
+                            <div v-else-if="form.method === 'ping_post' || form.method === 'ping_only' || form.method === 'two_step_auth'" class="space-y-3">
                                 <div><InputLabel value="Ping URL" /><TextInput v-model="form.config.ping_url" class="mt-1 w-full" /></div>
-                                <div><InputLabel value="Post URL" /><TextInput v-model="form.config.post_url" class="mt-1 w-full" /></div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div v-if="form.method !== 'ping_only'"><InputLabel :value="form.method === 'two_step_auth' ? 'Auth post URL' : 'Post URL'" /><TextInput v-model="form.config[form.method === 'two_step_auth' ? 'auth_url' : 'post_url']" class="mt-1 w-full" /></div>
+                                <div v-if="form.method === 'two_step_auth'" class="grid grid-cols-2 gap-3">
+                                    <div><InputLabel value="Token field (ping response)" /><TextInput v-model="form.config.auth_token_field" class="mt-1 w-full font-mono text-sm" placeholder="Token" /></div>
+                                    <div><InputLabel value="Auth header name" /><TextInput v-model="form.config.auth_header" class="mt-1 w-full font-mono text-sm" placeholder="Authorization" /></div>
+                                    <div><InputLabel value="Header prefix" /><TextInput v-model="form.config.auth_header_prefix" class="mt-1 w-full font-mono text-sm" placeholder="Bearer " /></div>
+                                    <div><InputLabel value="Auth body field" /><TextInput v-model="form.config.auth_body_field" class="mt-1 w-full font-mono text-sm" placeholder="token" /></div>
+                                </div>
+                                <div v-if="form.method === 'ping_only'" class="rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+                                    Ping-only stops after a successful bid — no post step. Useful in auction tiers.
+                                </div>
+                                <div v-if="form.method === 'ping_post'" class="grid grid-cols-2 gap-3">
                                     <div><InputLabel value="Ping timeout" /><TextInput v-model="form.config.ping_timeout" type="number" class="mt-1 w-full" /></div>
                                     <div><InputLabel value="Post timeout" /><TextInput v-model="form.config.timeout" type="number" class="mt-1 w-full" /></div>
                                     <div><InputLabel value="Revenue field" /><TextInput v-model="form.config.revenue_field" class="mt-1 w-full" placeholder="Cost" /></div>
@@ -546,6 +589,34 @@ const submit = () => {
                                         <textarea v-model="form.config.ping_body" rows="4" class="form-input mt-1 w-full font-mono text-sm" />
                                     </div>
                                 </div>
+                            </div>
+                            <div v-else-if="form.method === 'campaign_transfer'" class="space-y-3">
+                                <InputLabel value="Target campaign ID" />
+                                <TextInput v-model="form.config.campaign_id" type="number" class="mt-1 max-w-xs" placeholder="Campaign to re-ingest into" />
+                                <p class="text-sm text-slate-500">Lead is moved to this campaign and re-queued for distribution on the same platform.</p>
+                            </div>
+                            <div v-else-if="isCallMethod" class="space-y-3">
+                                <div v-if="form.method === 'call_ping_post' || form.method === 'call_warm_transfer'">
+                                    <InputLabel value="Buyer ping URL" />
+                                    <TextInput v-model="form.config.ping_url" class="mt-1 w-full" placeholder="https://buyer.example.com/call/ping" />
+                                </div>
+                                <div>
+                                    <InputLabel value="Destination phone (E.164)" />
+                                    <TextInput v-model="form.config.destination_phone" class="mt-1 w-full font-mono text-sm" placeholder="+441234567890" />
+                                </div>
+                                <div v-if="form.method === 'call_warm_transfer'">
+                                    <InputLabel value="Whisper URL (optional)" />
+                                    <TextInput v-model="form.config.whisper_url" class="mt-1 w-full" placeholder="https://buyer.example.com/whisper.mp3" />
+                                </div>
+                                <p class="rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+                                    Call deliveries hand off to telephony when a <code class="text-xs">call_session_uuid</code> is present on the lead; otherwise HTTP ping or queued transfer metadata is recorded.
+                                </p>
+                            </div>
+                            <div v-else-if="form.method === 'sms'" class="space-y-3">
+                                <InputLabel value="SMS recipient" />
+                                <TextInput v-model="form.config.to" class="mt-1 w-full font-mono text-sm" placeholder="+447700900123 or leave blank to use buyer phone" />
+                                <InputLabel value="Message template" />
+                                <textarea v-model="form.config.message" rows="4" class="form-input mt-1 w-full font-mono text-sm" />
                             </div>
                         </div>
                         <div>

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Jobs\SendBulkCampaignJob;
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\BulkSmsCampaign;
 use App\Models\Lead;
 use App\Models\MessageTemplate;
@@ -10,11 +12,15 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\TemplateRenderService;
+use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,8 +30,10 @@ class EDeliveryController extends Controller
 
     public function index(Request $request): Response
     {
-        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+        $accountId = $account->id;
         $reports = app(DeliverabilityReportService::class);
+        $opsCenter = $reports->opsCenter($accountId, $account);
         $campaignStats = $reports->campaignStats($accountId);
         $campaignLookup = BulkSmsCampaign::query()
             ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
@@ -33,7 +41,12 @@ class EDeliveryController extends Controller
             ->keyBy('id');
 
         return Inertia::render('Admin/EDelivery/Index', [
-            'summary' => $reports->summary($accountId),
+            'summary' => $opsCenter['summary_30d'],
+            'summary7d' => $opsCenter['summary_7d'],
+            'summary30d' => $opsCenter['summary_30d'],
+            'suppressionCount' => $opsCenter['suppression_count'],
+            'deliverabilityAlerts' => $opsCenter['alerts'],
+            'alertThresholds' => $reports->thresholds($account),
             'hourlyOpens' => $reports->hourlyOpens($accountId),
             'campaignStats' => $campaignStats->map(fn (array $row) => array_merge($row, [
                 'name' => $campaignLookup->get($row['bulk_sms_campaign_id'])?->name ?? 'Campaign #'.$row['bulk_sms_campaign_id'],
@@ -44,12 +57,125 @@ class EDeliveryController extends Controller
             'templates' => MessageTemplate::orderBy('name')->get(),
             'sendingProfiles' => SendingProfile::orderBy('name')->get(),
             'recentCampaigns' => BulkSmsCampaign::with('campaign:id,name')->orderByDesc('created_at')->limit(10)->get(),
-            'throttle' => app(ThrottleGovernor::class)->status($accountId),
+            'throttle' => app(WarmupGovernor::class)->status($accountId),
+            'warmup' => app(WarmupGovernor::class)->accountWarmupOverview($accountId),
+            'reputation' => app(WarmupGovernor::class)->reputationScore($accountId),
             'providers' => [
                 'email' => ['smtp', 'sendgrid', 'mailgun', 'postmark', 'resend'],
                 'sms' => ['log', 'twilio', 'vonage'],
             ],
+            'mergeTags' => TemplateRenderService::availableTags(),
+            'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
         ]);
+    }
+
+    public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $throttle->pauseSending($accountId);
+
+        return back()->with('success', 'Marketing sends paused for this platform.');
+    }
+
+    public function resumeSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $throttle->resumeSending($accountId);
+
+        return back()->with('success', 'Marketing sends resumed.');
+    }
+
+    public function storeBulkCampaign(Request $request): RedirectResponse
+    {
+        $validated = $this->validatedBulkCampaign($request);
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+
+        $this->applyMessageTemplate($validated, $accountId);
+
+        $campaign = BulkSmsCampaign::create(array_merge($validated, [
+            'account_id' => $accountId,
+            'status' => ! empty($validated['scheduled_at']) ? 'scheduled' : 'draft',
+        ]));
+
+        if (empty($validated['scheduled_at'])) {
+            SendBulkCampaignJob::dispatch($campaign->id);
+        }
+
+        return back()->with('success', 'Bulk campaign created.');
+    }
+
+    public function sendBulkCampaign(BulkSmsCampaign $bulkSms): RedirectResponse
+    {
+        SendBulkCampaignJob::dispatch($bulkSms->id);
+
+        return back()->with('success', 'Bulk campaign queued for sending.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedBulkCampaign(Request $request): array
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'campaign_id' => 'nullable|exists:campaigns,id',
+            'channel' => 'nullable|in:sms,email,both',
+            'subject' => 'nullable|string|max:255',
+            'provider' => 'nullable|string|max:64',
+            'message' => 'required|string|max:16000',
+            'html_body' => 'nullable|string',
+            'message_template_id' => 'nullable|exists:message_templates,id',
+            'segment_id' => 'nullable|exists:segments,id',
+            'sending_profile_id' => 'nullable|exists:sending_profiles,id',
+            'throttle_per_minute' => 'nullable|integer|min:1|max:1000',
+            'ab_test' => 'nullable|array',
+            'ab_test.split_percent' => 'nullable|integer|min:5|max:50',
+            'ab_test.wait_minutes' => 'nullable|integer|min:5|max:1440',
+            'ab_test.winner_metric' => 'nullable|in:open,click',
+            'ab_test.variant_a' => 'nullable|array',
+            'ab_test.variant_b' => 'nullable|array',
+            'filter' => 'nullable|array',
+            'filter.has_email' => 'nullable|boolean',
+            'filter.has_phone' => 'nullable|boolean',
+            'scheduled_at' => 'nullable|date',
+        ]);
+
+        $validated['channel'] = $validated['channel'] ?? BulkSmsCampaign::CHANNEL_SMS;
+
+        if (in_array($validated['channel'], [BulkSmsCampaign::CHANNEL_EMAIL, BulkSmsCampaign::CHANNEL_BOTH], true)
+            && empty($validated['subject'])) {
+            $validated['subject'] = $validated['name'];
+        }
+
+        unset($validated['message_template_id']);
+
+        return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    protected function applyMessageTemplate(array &$validated, int $accountId): void
+    {
+        $templateId = request()->input('message_template_id');
+
+        if (! $templateId) {
+            return;
+        }
+
+        $template = MessageTemplate::query()
+            ->where('account_id', $accountId)
+            ->find($templateId);
+
+        if (! $template) {
+            throw ValidationException::withMessages([
+                'message_template_id' => 'Template not found for this platform.',
+            ]);
+        }
+
+        $validated['subject'] = $validated['subject'] ?? $template->subject;
+        $validated['message'] = $template->body ?? $validated['message'];
+        $validated['html_body'] = $validated['html_body'] ?? $template->html_body;
     }
 
     public function storeSegment(Request $request): RedirectResponse
@@ -83,15 +209,49 @@ class EDeliveryController extends Controller
 
     public function storeTemplate(Request $request): RedirectResponse
     {
-        MessageTemplate::create($request->validate([
+        MessageTemplate::create($this->validatedTemplate($request));
+
+        return back()->with('success', 'Template saved.');
+    }
+
+    public function updateTemplate(Request $request, MessageTemplate $template): RedirectResponse
+    {
+        $template->update($this->validatedTemplate($request));
+
+        return back()->with('success', 'Template updated.');
+    }
+
+    public function previewTemplate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'subject' => 'nullable|string|max:255',
+            'body' => 'nullable|string',
+            'html_body' => 'nullable|string',
+            'preview_data' => 'nullable|array',
+        ]);
+
+        $rendered = app(TemplateRenderService::class)->renderParts(
+            $validated,
+            null,
+            $validated['preview_data'] ?? null,
+        );
+
+        return response()->json($rendered);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedTemplate(Request $request): array
+    {
+        return $request->validate([
             'name' => 'required|string|max:255',
             'channel' => 'nullable|in:email,sms',
             'subject' => 'nullable|string|max:255',
             'body' => 'nullable|string',
             'html_body' => 'nullable|string',
-        ]));
-
-        return back()->with('success', 'Template saved.');
+            'preview_data' => 'nullable|array',
+        ]);
     }
 
     public function destroyTemplate(MessageTemplate $template): RedirectResponse
@@ -111,15 +271,44 @@ class EDeliveryController extends Controller
             'from_email' => 'nullable|email|max:255',
             'reply_to' => 'nullable|email|max:255',
             'is_default' => 'nullable|boolean',
+            'warmup_enabled' => 'nullable|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
         ]);
 
         if (! empty($validated['is_default'])) {
             SendingProfile::query()->update(['is_default' => false]);
         }
 
+        if (! empty($validated['warmup_enabled'])) {
+            $validated['warmup_started_at'] = now();
+        }
+
         SendingProfile::create($validated);
 
         return back()->with('success', 'Sending profile created.');
+    }
+
+    public function updateSendingProfileWarmup(Request $request, SendingProfile $profile): RedirectResponse
+    {
+        $validated = $request->validate([
+            'warmup_enabled' => 'required|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
+        ]);
+
+        $wasEnabled = (bool) $profile->warmup_enabled;
+        $enabling = $validated['warmup_enabled'] && ! $wasEnabled;
+
+        $profile->update(array_merge($validated, $enabling ? ['warmup_started_at' => now()] : []));
+
+        if (! $validated['warmup_enabled']) {
+            $profile->update(['warmup_started_at' => null]);
+        }
+
+        return back()->with('success', $validated['warmup_enabled'] ? 'Domain warmup enabled.' : 'Domain warmup disabled.');
     }
 
     public function destroySendingProfile(SendingProfile $profile): RedirectResponse

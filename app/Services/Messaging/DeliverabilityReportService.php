@@ -2,13 +2,104 @@
 
 namespace App\Services\Messaging;
 
+use App\Models\Account;
 use App\Models\MessageEvent;
 use App\Models\MessageSend;
+use App\Models\MarketingOptOut;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DeliverabilityReportService
 {
+    public const DEFAULT_BOUNCE_ALERT_PCT = 5.0;
+
+    public const DEFAULT_COMPLAINT_ALERT_PCT = 0.1;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function opsCenter(int $accountId, ?Account $account = null): array
+    {
+        $account ??= Account::find($accountId);
+        $summary7 = $this->summary($accountId, 7);
+        $summary30 = $this->summary($accountId, 30);
+
+        return [
+            'summary_7d' => $summary7,
+            'summary_30d' => $summary30,
+            'suppression_count' => app(MarketingSuppressionService::class)->countForAccount($accountId),
+            'alerts' => $this->alerts($accountId, $summary7, $summary30, $account),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function alerts(int $accountId, ?array $summary7 = null, ?array $summary30 = null, ?Account $account = null): array
+    {
+        $summary7 ??= $this->summary($accountId, 7);
+        $summary30 ??= $this->summary($accountId, 30);
+        $account ??= Account::find($accountId);
+        $thresholds = $this->thresholds($account);
+
+        $alerts = [];
+
+        if (($summary7['total_sent'] ?? 0) > 0 && ($summary7['bounce_rate'] ?? 0) >= $thresholds['bounce_rate_alert_pct']) {
+            $alerts[] = [
+                'level' => 'warning',
+                'metric' => 'bounce_rate_7d',
+                'message' => "7-day bounce rate is {$summary7['bounce_rate']}% (threshold {$thresholds['bounce_rate_alert_pct']}%).",
+                'value' => $summary7['bounce_rate'],
+                'threshold' => $thresholds['bounce_rate_alert_pct'],
+            ];
+        }
+
+        if (($summary30['total_sent'] ?? 0) > 0 && ($summary30['bounce_rate'] ?? 0) >= $thresholds['bounce_rate_alert_pct']) {
+            $alerts[] = [
+                'level' => 'warning',
+                'metric' => 'bounce_rate_30d',
+                'message' => "30-day bounce rate is {$summary30['bounce_rate']}% (threshold {$thresholds['bounce_rate_alert_pct']}%).",
+                'value' => $summary30['bounce_rate'],
+                'threshold' => $thresholds['bounce_rate_alert_pct'],
+            ];
+        }
+
+        if (($summary7['total_sent'] ?? 0) > 0 && ($summary7['complaint_rate'] ?? 0) >= $thresholds['complaint_rate_alert_pct']) {
+            $alerts[] = [
+                'level' => 'critical',
+                'metric' => 'complaint_rate_7d',
+                'message' => "7-day complaint rate is {$summary7['complaint_rate']}% (threshold {$thresholds['complaint_rate_alert_pct']}%).",
+                'value' => $summary7['complaint_rate'],
+                'threshold' => $thresholds['complaint_rate_alert_pct'],
+            ];
+        }
+
+        if (($summary30['total_sent'] ?? 0) > 0 && ($summary30['complaint_rate'] ?? 0) >= $thresholds['complaint_rate_alert_pct']) {
+            $alerts[] = [
+                'level' => 'critical',
+                'metric' => 'complaint_rate_30d',
+                'message' => "30-day complaint rate is {$summary30['complaint_rate']}% (threshold {$thresholds['complaint_rate_alert_pct']}%).",
+                'value' => $summary30['complaint_rate'],
+                'threshold' => $thresholds['complaint_rate_alert_pct'],
+            ];
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * @return array{bounce_rate_alert_pct: float, complaint_rate_alert_pct: float}
+     */
+    public function thresholds(?Account $account): array
+    {
+        $deliverability = $account?->settings['messaging']['deliverability'] ?? [];
+
+        return [
+            'bounce_rate_alert_pct' => (float) ($deliverability['bounce_rate_alert_pct'] ?? self::DEFAULT_BOUNCE_ALERT_PCT),
+            'complaint_rate_alert_pct' => (float) ($deliverability['complaint_rate_alert_pct'] ?? self::DEFAULT_COMPLAINT_ALERT_PCT),
+        ];
+    }
+
     /**
      * @return array<string, mixed>
      */

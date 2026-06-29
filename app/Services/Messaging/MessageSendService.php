@@ -17,6 +17,7 @@ class MessageSendService
         protected MarketingSuppressionService $suppression,
         protected EmailTrackingService $tracking,
         protected ThrottleGovernor $throttle,
+        protected TemplateRenderService $templateRender,
     ) {}
 
     /**
@@ -53,18 +54,43 @@ class MessageSendService
             return false;
         }
 
-        if (! $this->throttle->allowSend($accountId)) {
-            PlatformLogger::info('Marketing send throttled', ['account_id' => $accountId]);
-
-            return false;
-        }
-
         $account = Account::find($accountId);
         $profile = $this->credentials->resolveSendingProfile(
             $accountId,
             $payload['sending_profile_id'] ?? null,
             $channel === 'email' ? $recipient : null,
         );
+
+        if ($profile && $this->throttle instanceof WarmupGovernor) {
+            $this->throttle->ensureWarmupStarted($profile);
+        }
+
+        if (! $this->throttle->allowSend($accountId, $profile)) {
+            PlatformLogger::info('Marketing send throttled', [
+                'account_id' => $accountId,
+                'sending_profile_id' => $profile?->id,
+            ]);
+
+            return false;
+        }
+
+        $subject = $payload['subject'] ?? null;
+        $body = $payload['body'];
+        $htmlBody = $payload['html_body'] ?? null;
+
+        if (! empty($payload['lead_id'])) {
+            $lead = Lead::find($payload['lead_id']);
+            if ($lead) {
+                $rendered = $this->templateRender->renderParts([
+                    'subject' => $subject,
+                    'body' => $body,
+                    'html_body' => $htmlBody,
+                ], $lead);
+                $subject = $rendered['subject'] ?? $subject;
+                $body = $rendered['body'] ?? $body;
+                $htmlBody = $rendered['html_body'] ?? $htmlBody;
+            }
+        }
 
         $resolved = $this->credentials->resolveForAccount(
             $account,
@@ -76,13 +102,14 @@ class MessageSendService
             'account_id' => $accountId,
             'lead_id' => $payload['lead_id'] ?? null,
             'bulk_sms_campaign_id' => $payload['bulk_sms_campaign_id'] ?? null,
+            'sending_profile_id' => $profile?->id,
             'channel' => $channel,
             'provider' => $resolved['provider'],
             'source_type' => $payload['source_type'] ?? null,
             'source_id' => $payload['source_id'] ?? null,
             'recipient' => $recipient,
-            'subject' => $payload['subject'] ?? null,
-            'body' => $payload['body'],
+            'subject' => $subject,
+            'body' => $body,
             'ab_variant' => $payload['ab_variant'] ?? null,
             'status' => 'pending',
         ]);
@@ -97,18 +124,17 @@ class MessageSendService
         $ok = false;
 
         if ($channel === 'email') {
-            $htmlBody = $payload['html_body'] ?? null;
             $track = $payload['track'] ?? true;
 
-            if ($track && ($htmlBody || filled($payload['body']))) {
-                $html = $this->tracking->buildHtmlEmail($payload['body'], $htmlBody, $send);
+            if ($track && ($htmlBody || filled($body))) {
+                $html = $this->tracking->buildHtmlEmail($body, $htmlBody, $send);
                 $options['html'] = $html;
             }
 
             $ok = $this->messaging->sendEmail(
                 $recipient,
-                $payload['subject'] ?? 'Message',
-                $payload['body'],
+                $subject ?? 'Message',
+                $body,
                 $options,
             );
         } else {

@@ -17,6 +17,7 @@ const form = useForm({
     enabled: props.enabled,
     max_tracking_numbers: props.settings.max_tracking_numbers,
     recording_enabled: props.settings.recording_enabled,
+    recording_retention_days: props.settings.recording_retention_days ?? 90,
     concurrent_call_cap: props.settings.concurrent_call_cap,
 });
 
@@ -49,6 +50,11 @@ const submit = () => form.put(route('call-logic.settings.update'));
                     <label class="flex items-center gap-2 text-sm">
                         <input v-model="form.recording_enabled" type="checkbox" class="rounded" /> Enable call recording
                     </label>
+                    <div>
+                        <label class="text-sm">Recording retention (days)</label>
+                        <input v-model.number="form.recording_retention_days" type="number" min="1" max="3650" class="mt-1 w-full rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800" />
+                        <p class="mt-1 text-xs text-slate-500">Stored recordings are deleted after this period.</p>
+                    </div>
                 </div>
             </Panel>
 

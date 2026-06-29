@@ -24,6 +24,7 @@ class CallLogicProduct
         $defaults = [
             'max_tracking_numbers' => 50,
             'recording_enabled' => config('telephony.recording_enabled', false),
+            'recording_retention_days' => config('telephony.recording_retention_days', 90),
             'concurrent_call_cap' => 100,
         ];
 

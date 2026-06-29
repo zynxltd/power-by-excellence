@@ -22,9 +22,17 @@ class StripeWebhookController extends Controller
         $type = is_object($event) ? ($event->type ?? null) : ($event['type'] ?? null);
         $data = is_object($event) ? ($event->data->object ?? null) : ($event['data']['object'] ?? null);
 
-        if ($type === 'checkout.session.completed' && $data) {
-            $stripe->handleWebhookCompleted($data);
+        if (! $type || ! $data) {
+            return response('OK', 200);
         }
+
+        match ($type) {
+            'checkout.session.completed' => $stripe->handleWebhookCompleted($data),
+            'invoice.paid' => $stripe->handleInvoicePaid($data),
+            'customer.subscription.updated' => $stripe->handleSubscriptionUpdated($data),
+            'customer.subscription.deleted' => $stripe->handleSubscriptionDeleted($data),
+            default => null,
+        };
 
         return response('OK', 200);
     }

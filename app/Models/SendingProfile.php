@@ -12,6 +12,8 @@ class SendingProfile extends Model
     protected $fillable = [
         'account_id', 'name', 'provider', 'domain_match', 'from_name',
         'from_email', 'reply_to', 'config', 'is_default',
+        'warmup_enabled', 'warmup_started_at', 'warmup_day_one_limit',
+        'warmup_target_limit', 'warmup_ramp_days',
     ];
 
     protected function casts(): array
@@ -19,6 +21,11 @@ class SendingProfile extends Model
         return [
             'config' => 'array',
             'is_default' => 'boolean',
+            'warmup_enabled' => 'boolean',
+            'warmup_started_at' => 'datetime',
+            'warmup_day_one_limit' => 'integer',
+            'warmup_target_limit' => 'integer',
+            'warmup_ramp_days' => 'integer',
         ];
     }
 }

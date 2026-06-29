@@ -13,11 +13,16 @@ class SegmentService
 {
     public function tagLead(Lead $lead, string $tag): LeadTag
     {
-        return LeadTag::firstOrCreate([
+        $leadTag = LeadTag::firstOrCreate([
             'account_id' => $lead->account_id,
             'lead_id' => $lead->id,
             'tag' => strtolower(trim($tag)),
         ]);
+
+        app(\App\Services\Automation\AutomationSequenceService::class)
+            ->dispatchForSegmentEntry($lead->fresh());
+
+        return $leadTag;
     }
 
     public function untagLead(Lead $lead, string $tag): void

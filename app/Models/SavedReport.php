@@ -17,6 +17,8 @@ class SavedReport extends Model
         'schedule_cron',
         'email_recipients',
         'last_run_at',
+        'next_run_at',
+        'last_run_status',
         'status',
     ];
 
@@ -27,6 +29,7 @@ class SavedReport extends Model
             'columns' => 'array',
             'email_recipients' => 'array',
             'last_run_at' => 'datetime',
+            'next_run_at' => 'datetime',
         ];
     }
 }

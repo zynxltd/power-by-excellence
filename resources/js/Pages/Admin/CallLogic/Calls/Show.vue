@@ -59,10 +59,13 @@ defineProps({ call: Object });
             <Panel v-if="call.recordings?.length" title="Recordings" class="lg:col-span-2">
                 <ul class="space-y-3 text-sm">
                     <li v-for="rec in call.recordings" :key="rec.id" class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                        <p class="text-xs text-slate-500">{{ rec.provider_recording_sid || 'Recording' }} · {{ rec.duration_seconds }}s</p>
-                        <audio v-if="rec.url" :src="rec.url" controls preload="none" class="mt-2 w-full max-w-md" />
-                        <p v-else class="mt-1 text-xs text-amber-600">Processing…</p>
-                        <a v-if="rec.url" :href="rec.url" target="_blank" rel="noopener" class="mt-1 inline-block text-xs text-indigo-600 hover:underline">Open recording</a>
+                        <p class="text-xs text-slate-500">
+                            {{ rec.provider_recording_sid || 'Recording' }} · {{ rec.duration_seconds }}s
+                            <span v-if="rec.retention_expires_at"> · expires <FormattedDate :value="rec.retention_expires_at" /></span>
+                        </p>
+                        <audio v-if="rec.playback_url" :src="rec.playback_url" controls preload="none" class="mt-2 w-full max-w-md" />
+                        <p v-else class="mt-1 text-xs text-amber-600">Processing or expired…</p>
+                        <a v-if="rec.playback_url" :href="rec.playback_url" target="_blank" rel="noopener" class="mt-1 inline-block text-xs text-indigo-600 hover:underline">Open recording</a>
                     </li>
                 </ul>
             </Panel>

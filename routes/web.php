@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\BrandingController;
 use App\Http\Controllers\Admin\BuyerController;
 use App\Http\Controllers\Admin\BuyerScheduleController;
-use App\Http\Controllers\Admin\CampaignApiSpecController;
+use App\Http\Controllers\Admin\CallRecordingController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeliveryController;
@@ -53,8 +53,9 @@ use App\Http\Controllers\Admin\LogsHubController;
 use App\Http\Controllers\Admin\SavedReportController;
 use App\Http\Controllers\Admin\VerticalFieldTemplateController;
 use App\Http\Controllers\Admin\VerifyBatchController;
-use App\Http\Controllers\Admin\StripeIntegrationController;
-use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\Admin\MarketingOptOutController;
+use App\Http\Controllers\Admin\TenantDataExportController;
+use App\Http\Controllers\ClickTrack\SupplierClickPortalController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserSupportTicketController;
@@ -200,8 +201,16 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/segments', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSegment'])->name('e-delivery.segments.store');
     Route::delete('e-delivery/segments/{segment}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySegment'])->name('e-delivery.segments.destroy');
     Route::post('e-delivery/templates', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeTemplate'])->name('e-delivery.templates.store');
+    Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])->name('e-delivery.templates.preview');
+    Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])->name('e-delivery.templates.update');
     Route::delete('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroyTemplate'])->name('e-delivery.templates.destroy');
+    Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])->name('e-delivery.journeys.process');
+    Route::post('e-delivery/throttle/pause', [\App\Http\Controllers\Admin\EDeliveryController::class, 'pauseSending'])->name('e-delivery.throttle.pause');
+    Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])->name('e-delivery.throttle.resume');
+    Route::post('e-delivery/bulk-campaigns', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeBulkCampaign'])->name('e-delivery.bulk-campaigns.store');
+    Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [\App\Http\Controllers\Admin\EDeliveryController::class, 'sendBulkCampaign'])->name('e-delivery.bulk-campaigns.send');
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
+    Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
     Route::delete('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');
     Route::post('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'tagLead'])->name('leads.tags.store');
     Route::delete('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'untagLead'])->name('leads.tags.destroy');
@@ -258,7 +267,10 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::prefix('call-logic')->name('call-logic.')->middleware('product.enabled:call_logic')->group(function () {
         Route::get('calls', [\App\Http\Controllers\Admin\CallSessionController::class, 'index'])->name('calls.index');
         Route::get('calls/{call}', [\App\Http\Controllers\Admin\CallSessionController::class, 'show'])->name('calls.show');
+        Route::get('recordings/{recording}/play', [CallRecordingController::class, 'play'])->name('recordings.play');
         Route::get('tracking-numbers', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'index'])->name('tracking-numbers.index');
+        Route::post('tracking-numbers/search', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'search'])->name('tracking-numbers.search');
+        Route::post('tracking-numbers/purchase', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'purchase'])->name('tracking-numbers.purchase');
         Route::post('tracking-numbers', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'store'])->name('tracking-numbers.store');
         Route::delete('tracking-numbers/{trackingNumber}', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'destroy'])->name('tracking-numbers.destroy');
         Route::get('ivr', [\App\Http\Controllers\Admin\IvrFlowController::class, 'index'])->name('ivr.index');
@@ -411,6 +423,14 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
 
     Route::get('settings', [AccountSettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [AccountSettingsController::class, 'update'])->name('settings.update');
+    Route::post('settings/portal-domain/verify', [AccountSettingsController::class, 'verifyPortalDomain'])->name('settings.portal-domain.verify');
+
+    Route::get('tools/data-export', [TenantDataExportController::class, 'index'])->name('tools.data-export.index');
+    Route::post('tools/data-export', [TenantDataExportController::class, 'store'])->name('tools.data-export.store');
+    Route::get('tools/data-export/{tenantDataExport}/download', [TenantDataExportController::class, 'download'])->name('tools.data-export.download');
+
+    Route::get('marketing-opt-outs', [MarketingOptOutController::class, 'index'])->name('marketing-opt-outs.index');
+    Route::post('marketing-opt-outs/import', [MarketingOptOutController::class, 'import'])->name('marketing-opt-outs.import');
 });
 
 Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active'])->group(function () {
@@ -455,6 +475,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
         Route::post('/stripe/checkout', [BuyerStripeCheckoutController::class, 'checkout'])->name('stripe.checkout');
+        Route::post('/stripe/subscribe', [BuyerStripeCheckoutController::class, 'subscribe'])->name('stripe.subscribe');
+        Route::post('/stripe/subscription/cancel', [BuyerStripeCheckoutController::class, 'cancelSubscription'])->name('stripe.subscription.cancel');
+        Route::post('/stripe/subscription/reactivate', [BuyerStripeCheckoutController::class, 'reactivateSubscription'])->name('stripe.subscription.reactivate');
         Route::get('/stripe/success', [BuyerStripeCheckoutController::class, 'success'])->name('stripe.success');
         Route::get('/integrations', [BuyerPortalController::class, 'integrations'])->name('integrations');
         Route::post('/webhooks', [BuyerPortalController::class, 'storeWebhook'])->name('webhooks.store');
@@ -489,7 +512,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::delete('/postbacks/{postback}', [SupplierPortalController::class, 'destroyPostback'])->name('postbacks.destroy');
         Route::post('/postbacks/{postback}/request-deletion', [SupplierPortalController::class, 'requestPostbackDeletion'])->name('postbacks.request-deletion');
         Route::get('/billing', [SupplierPortalController::class, 'billing'])->name('billing');
-        Route::get('/clicks', [SupplierPortalController::class, 'clicks'])->name('clicks');
+        Route::get('/clicks', [SupplierClickPortalController::class, '__invoke'])->name('clicks');
+        Route::get('/clicks/export', [SupplierClickPortalController::class, 'export'])->name('clicks.export');
     });
 
 require __DIR__.'/auth.php';

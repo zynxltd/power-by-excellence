@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\PlatformFeatureParity\PortalDomain;
+use App\PlatformFeatureParity\PortalDomainVerification;
+use App\Services\Compliance\DataRetentionPolicy;
+use App\Services\Security\TwoFactorService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\BuyerPortal\BuyerPortalLocale;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +17,10 @@ use Inertia\Response;
 class AccountSettingsController extends Controller
 {
     use ResolvesAdminAccount;
+
+    public function __construct(
+        protected PortalDomainVerification $portalDomainVerification,
+    ) {}
 
     public function edit(Request $request): Response
     {
@@ -28,8 +36,13 @@ class AccountSettingsController extends Controller
                     'default_low_credit_alert' => $account->settings['default_low_credit_alert'] ?? '',
                     'buyer_portal_locale' => $account->settings['buyer_portal_locale'] ?? BuyerPortalLocale::default(),
                     'custom_portal_domain' => $account->settings['custom_portal_domain'] ?? '',
+                    'require_2fa_for_staff' => $account->settings['require_2fa_for_staff'] ?? false,
+                    'require_2fa_for_portal' => $account->settings['require_2fa_for_portal'] ?? false,
+                    'two_factor_grace_days' => (int) ($account->settings['two_factor_grace_days'] ?? 7),
+                    'data_retention' => DataRetentionPolicy::forInertia($account),
                 ]
             ),
+            'portalDomain' => $this->portalDomainVerification->statusForAccount($account),
             'timezones' => timezone_identifiers_list(),
             'currencies' => $this->currencies(),
             'countries' => $this->countries(),
@@ -52,9 +65,20 @@ class AccountSettingsController extends Controller
             'default_low_credit_alert' => 'nullable|numeric|min:0',
             'buyer_portal_locale' => 'nullable|string|max:5',
             'custom_portal_domain' => 'nullable|string|max:255',
+            'require_2fa_for_staff' => 'boolean',
+            'require_2fa_for_portal' => 'boolean',
+            'two_factor_grace_days' => 'nullable|integer|min:0|max:90',
+            'data_retention' => 'nullable|array',
+            'data_retention.purge_leads' => 'nullable|boolean',
+            'data_retention.leads_retention_days' => 'nullable|integer|min:30|max:3650',
+            'data_retention.purge_logs' => 'nullable|boolean',
+            'data_retention.logs_retention_days' => 'nullable|integer|min:7|max:3650',
+            'data_retention.purge_message_events' => 'nullable|boolean',
+            'data_retention.message_events_retention_days' => 'nullable|integer|min:7|max:3650',
         ], $this->messages());
 
         $settings = $account->settings ?? [];
+        $previousCustomDomain = PortalDomain::customHost($account);
         $settings['require_buyer_prepay'] = $validated['require_buyer_prepay'] ?? false;
         $settings['supplier_iframe_embed'] = $validated['supplier_iframe_embed'] ?? false;
         $settings['billing_alert_emails'] = $validated['billing_alert_emails'] ?? '';
@@ -66,6 +90,23 @@ class AccountSettingsController extends Controller
             ? strtolower(trim((string) $validated['custom_portal_domain']))
             : null;
 
+        $nextCustomDomain = PortalDomain::normalize($settings['custom_portal_domain'] ?? null);
+
+        if ($previousCustomDomain !== $nextCustomDomain) {
+            unset(
+                $settings['custom_portal_domain_verified_at'],
+                $settings['custom_portal_domain_verification_token'],
+            );
+        }
+
+        $settings = app(TwoFactorService::class)->mergePolicySettings($settings, $validated);
+
+        if (array_key_exists('data_retention', $validated)) {
+            $settings[DataRetentionPolicy::SETTINGS_KEY] = DataRetentionPolicy::normalize(
+                $validated['data_retention'] ?? []
+            );
+        }
+
         $account->update([
             'name' => $validated['name'],
             'timezone' => $validated['timezone'],
@@ -75,6 +116,18 @@ class AccountSettingsController extends Controller
         ]);
 
         return back()->with('success', 'Platform settings updated.');
+    }
+
+    public function verifyPortalDomain(Request $request): RedirectResponse
+    {
+        $account = $this->resolveAdminAccount($request);
+        $result = $this->portalDomainVerification->verify($account);
+
+        if ($result['verified']) {
+            return back()->with('success', $result['message']);
+        }
+
+        return back()->with('error', $result['message']);
     }
 
     protected function messages(): array

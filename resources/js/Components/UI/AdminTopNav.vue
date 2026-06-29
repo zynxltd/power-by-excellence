@@ -273,6 +273,8 @@ const mobileSections = computed(() => {
                 { label: 'API Documentation', href: route('api-docs.index') },
                 { label: 'Integrations', href: route('integrations.index') },
                 { label: 'Scheduled exports', href: route('scheduled-exports.index') },
+                { label: 'Export tenant data', href: route('tools.data-export.index') },
+                { label: 'Marketing suppressions', href: route('marketing-opt-outs.index') },
                 { label: 'Verify batches', href: route('verify-batches.index') },
                 { label: 'Field templates', href: route('vertical-field-templates.index') },
                 { label: 'API Keys', href: route('api-keys.index') },
@@ -441,10 +443,12 @@ const mobileSections = computed(() => {
                     <Link :href="route('logs.security')" :class="dropdownLinkClass">Security Logs</Link>
                 </TopNavDropdown>
 
-                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['api-docs.*', 'integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*', 'scheduled-exports.*', 'verify-batches.*', 'vertical-field-templates.*'])">
+                <TopNavDropdown v-if="canAccess('tools')" id="tools" label="Tools" :active="isAdminRoute(['api-docs.*', 'integrations.*', 'api-keys.*', 'webhooks.*', 'postbacks.*', 'imports.*', 'features.*', 'scheduled-exports.*', 'tools.data-export.*', 'marketing-opt-outs.*', 'verify-batches.*', 'vertical-field-templates.*'])">
                     <Link :href="route('api-docs.index')" :class="dropdownLinkClass">API Documentation</Link>
                     <Link :href="route('integrations.index')" :class="dropdownLinkClass">Integrations</Link>
                     <Link :href="route('scheduled-exports.index')" :class="dropdownLinkClass">Scheduled exports</Link>
+                    <Link :href="route('tools.data-export.index')" :class="dropdownLinkClass">Export tenant data</Link>
+                    <Link :href="route('marketing-opt-outs.index')" :class="dropdownLinkClass">Marketing suppressions</Link>
                     <Link :href="route('verify-batches.index')" :class="dropdownLinkClass">Verify batches</Link>
                     <Link :href="route('vertical-field-templates.index')" :class="dropdownLinkClass">Field templates</Link>
                     <Link :href="route('api-keys.index')" :class="dropdownLinkClass">API Keys</Link>
