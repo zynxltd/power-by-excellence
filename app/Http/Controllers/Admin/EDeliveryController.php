@@ -11,6 +11,7 @@ use App\Models\MessageTemplate;
 use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
+use App\Services\Messaging\ListHygieneService;
 use App\Services\Messaging\SegmentService;
 use App\Services\Messaging\SendTimeOptimizer;
 use App\Services\Messaging\SmsShortlinkService;
@@ -73,6 +74,7 @@ class EDeliveryController extends Controller
             'sendTimeSettings' => $sendTimeOptimizer->settings($account),
             'shortlinkSettings' => $shortlinks->settings($account),
             'shortlinkStats' => $shortlinks->stats($accountId),
+            'hygieneSettings' => app(ListHygieneService::class)->settings($account),
         ]);
     }
 
@@ -110,6 +112,39 @@ class EDeliveryController extends Controller
         ]);
 
         return back()->with('success', 'SMS short link settings saved.');
+    }
+
+    public function updateHygieneSettings(Request $request, ListHygieneService $hygiene): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'list_hygiene_enabled' => 'required|boolean',
+            'inactive_days_threshold' => 'required|integer|min:1|max:3650',
+            'hygiene_auto_suppress_bounces' => 'required|boolean',
+        ]);
+
+        $account->update([
+            'settings' => $hygiene->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'List hygiene settings saved.');
+    }
+
+    public function runHygiene(Request $request, ListHygieneService $hygiene): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+        $dryRun = $request->boolean('dry_run');
+        $result = $hygiene->run($account, $dryRun, force: true);
+
+        $prefix = $dryRun ? 'Dry-run: ' : '';
+
+        return back()->with('success', sprintf(
+            '%sTagged %d bounced and %d inactive lead(s).',
+            $prefix,
+            $result['bounces_tagged'],
+            $result['inactive_tagged'],
+        ));
     }
 
     public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse

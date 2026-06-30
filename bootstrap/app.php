@@ -139,6 +139,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
         $schedule->command('reports:process-scheduled')->everyMinute()->withoutOverlapping();
         $schedule->command('messaging:process-scheduled')->everyMinute()->withoutOverlapping();
+        $schedule->command('messaging:list-hygiene')->dailyAt('03:00');
         $schedule->command('data-retention:purge')->dailyAt('02:30')->withoutOverlapping();
 
         if (class_exists(\Laravel\Horizon\Horizon::class)) {
