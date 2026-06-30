@@ -214,6 +214,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/bulk-campaigns', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeBulkCampaign'])->name('e-delivery.bulk-campaigns.store');
     Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [\App\Http\Controllers\Admin\EDeliveryController::class, 'sendBulkCampaign'])->name('e-delivery.bulk-campaigns.send');
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
+    Route::patch('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfile'])->name('e-delivery.sending-profiles.update');
     Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
     Route::patch('e-delivery/send-time-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendTimeSettings'])->name('e-delivery.send-time-settings.update');
     Route::patch('e-delivery/shortlink-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateShortlinkSettings'])->name('e-delivery.shortlink-settings.update');
