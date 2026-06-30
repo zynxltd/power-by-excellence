@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\HostedForm;
 use App\Models\Supplier;
+use App\Services\Compliance\FormConsentPolicy;
 use App\Services\Forms\HostedFormEmbedService;
 use App\Services\Forms\SupplierHostedFormService;
 use App\Support\VerticalCatalog;
@@ -109,8 +110,26 @@ class FormBuilderController extends Controller
         $this->assertFieldsMatchApiSpec($hostedForm->campaign, $validated['config']['steps'] ?? []);
 
         $hostedForm->update($validated);
+        $this->syncCampaignConsentPolicy($hostedForm->campaign, $validated['config']['consent'] ?? []);
 
         return back()->with('success', 'Form saved.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $consent
+     */
+    protected function syncCampaignConsentPolicy(Campaign $campaign, array $consent): void
+    {
+        if ($consent === []) {
+            return;
+        }
+
+        $campaign->update([
+            'validation_config' => array_merge(
+                $campaign->validation_config ?? [],
+                FormConsentPolicy::normalize($consent),
+            ),
+        ]);
     }
 
     public function destroy(HostedForm $hostedForm): RedirectResponse
@@ -180,6 +199,12 @@ class FormBuilderController extends Controller
             'config.steps.*.fields.*.type' => 'required|in:text,email,tel,number,radio,select,checkbox,textarea,date,postcode',
             'config.steps.*.fields.*.required' => 'boolean',
             'config.steps.*.fields.*.options' => 'nullable|array',
+            'config.consent' => 'nullable|array',
+            'config.consent.require_consent' => 'boolean',
+            'config.consent.consent_text' => 'nullable|string|max:5000',
+            'config.consent.lawful_basis' => 'nullable|in:'.implode(',', \App\Enums\LawfulBasis::values()),
+            'config.consent.channel_consent_channels' => 'nullable|array',
+            'config.consent.channel_consent_channels.*' => 'in:email,sms,phone',
         ]);
     }
 

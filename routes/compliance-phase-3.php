@@ -24,6 +24,15 @@
  *
  * Local/dev bypass: config platform.security.admin_ip_allowlist_bypass
  * (defaults true when APP_ENV=local; override with ADMIN_IP_ALLOWLIST_BYPASS).
+ *
+ * F5 — Hosted form GDPR consent: no new HTTP routes (existing forms.show / forms.submit).
+ * Settings keys:
+ *   Campaign validation_config + hosted form config.consent:
+ *     - require_consent (bool)
+ *     - consent_text (string)
+ *     - lawful_basis (consent | legitimate_interest | contract)
+ *     - channel_consent_channels (array: email, sms, phone)
+ * Lead metadata.consent artifact stores accepted snapshot, channel_consent, optin_url, ip, user_agent.
  */
 
 use App\Http\Controllers\Admin\WebhookController;
