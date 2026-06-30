@@ -6,10 +6,12 @@ use App\Enums\RoutingMode;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\DistributionConfig;
+use App\Services\Distribution\DistributionCapUsageService;
 use App\Services\Logging\PlatformLogger;
 use App\Services\Security\AuditLogService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Campaign\CampaignFieldCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -58,7 +60,10 @@ class DistributionController extends Controller
         $campaign->load(['deliveries.buyer']);
         $deliveriesById = $campaign->deliveries->keyBy('id');
 
-        $tiers = collect($distribution->config['groups'] ?? [])->map(function (array $group, int $index) use ($deliveriesById) {
+        $tiers = collect($distribution->config['groups'] ?? [])
+            ->sortBy(fn (array $group, int $index) => $group['sort_order'] ?? $index)
+            ->values()
+            ->map(function (array $group, int $index) use ($deliveriesById) {
             $deliveryIds = $group['delivery_ids'] ?? [];
 
             return [
@@ -90,6 +95,7 @@ class DistributionController extends Controller
             'tiers' => $tiers,
             'campaign' => $campaign->only(['id', 'name', 'reference', 'use_advanced_distribution', 'floor_price']),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
+            'capUsage' => app(DistributionCapUsageService::class)->forDistribution($distribution),
         ]);
     }
 
@@ -125,6 +131,7 @@ class DistributionController extends Controller
             'routingModes' => $this->routingModes(),
             'filterFieldOptions' => CampaignFieldCatalog::forCampaign($campaign),
             'campaignWorkflow' => CampaignWorkflow::forCampaign($campaign, $distribution->id),
+            'capUsage' => app(DistributionCapUsageService::class)->forDistribution($distribution),
         ]);
     }
 
@@ -165,6 +172,15 @@ class DistributionController extends Controller
         );
 
         return redirect()->route('distribution.index')->with('success', 'Configuration removed.');
+    }
+
+    public function capUsage(DistributionConfig $distribution): JsonResponse
+    {
+        $this->resolveCampaign($distribution);
+
+        return response()->json([
+            'cap_usage' => app(DistributionCapUsageService::class)->forDistribution($distribution),
+        ]);
     }
 
     public function toggleLock(Request $request, DistributionConfig $distribution): RedirectResponse
@@ -211,7 +227,7 @@ class DistributionController extends Controller
             'groups.*.rules' => 'nullable|array',
         ]);
 
-        $groups = collect($validated['groups'])->map(function (array $group) {
+        $groups = collect($validated['groups'])->map(function (array $group, int $index) {
             $rules = $group['rules'] ?? null;
             if (is_array($rules) && empty($rules['conditions'])) {
                 $rules = null;
@@ -220,6 +236,7 @@ class DistributionController extends Controller
             return array_filter([
                 'name' => $group['name'],
                 'mode' => $group['mode'],
+                'sort_order' => $index,
                 'floor_price' => $group['floor_price'] ?? null,
                 'redirect_url' => filled($group['redirect_url'] ?? null) ? $group['redirect_url'] : null,
                 'delivery_ids' => $group['delivery_ids'],

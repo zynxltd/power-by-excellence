@@ -1,5 +1,6 @@
 <script setup>
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
+import PingTreeCapBadge from '@/Components/UI/PingTreeCapBadge.vue';
 import EligibilityRulesEditor from '@/Components/UI/EligibilityRulesEditor.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -18,6 +19,7 @@ const props = defineProps({
     filterFieldOptions: { type: Array, default: () => [] },
     campaignName: { type: String, default: '' },
     deliveriesTeleport: { type: String, default: '' },
+    capUsage: { type: Object, default: () => ({}) },
     readonly: { type: Boolean, default: false },
 });
 
@@ -80,6 +82,8 @@ onMounted(() => {
         teleportReady.value = true;
     });
 
+    syncSortOrder();
+
     if (isLargeTree.value) {
         expandedTier.value = -1;
     }
@@ -98,6 +102,14 @@ const deliveriesForTier = (group) =>
     (group.delivery_ids ?? [])
         .map((id) => deliveryMap.value[id])
         .filter(Boolean);
+
+const capUsageForDelivery = (deliveryId) => props.capUsage?.[deliveryId] ?? props.capUsage?.[String(deliveryId)] ?? null;
+
+const syncSortOrder = () => {
+    (groups.value ?? []).forEach((group, index) => {
+        group.sort_order = index;
+    });
+};
 
 const modeClass = (mode) => ROUTING_MODE_STYLES[mode] ?? ROUTING_MODE_STYLES.waterfall;
 
@@ -158,6 +170,7 @@ const moveTier = (fromIndex, toIndex) => {
     const [tier] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, tier);
     groups.value = next;
+    syncSortOrder();
     expandedTier.value = toIndex;
 };
 
@@ -165,11 +178,13 @@ const addTier = () => {
     groups.value.push({
         name: `Tier ${groups.value.length + 1}`,
         mode: 'waterfall',
+        sort_order: groups.value.length,
         floor_price: null,
         redirect_url: null,
         delivery_ids: [],
         rules: { operator: 'and', conditions: [] },
     });
+    syncSortOrder();
     expandedTier.value = groups.value.length - 1;
 };
 
@@ -178,6 +193,7 @@ const removeTier = (index) => {
         return;
     }
     groups.value.splice(index, 1);
+    syncSortOrder();
     if (expandedTier.value === index) {
         expandedTier.value = Math.min(index, groups.value.length - 1);
     } else if (expandedTier.value > index) {
@@ -373,7 +389,10 @@ const dropZoneClass = (target) => [
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ delivery.name }}</p>
                                     <p v-if="delivery.buyer" class="truncate text-xs text-slate-500">{{ delivery.buyer }}</p>
-                                    <DeliveryMethodBadge v-if="delivery.method" :method="delivery.method" />
+                                    <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                        <DeliveryMethodBadge v-if="delivery.method" :method="delivery.method" />
+                                        <PingTreeCapBadge :usage="capUsageForDelivery(delivery.id)" compact />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -549,6 +568,7 @@ const dropZoneClass = (target) => [
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-2">
+                                        <PingTreeCapBadge :usage="capUsageForDelivery(delivery.id)" />
                                         <DeliveryMethodBadge v-if="delivery.method" :method="delivery.method" />
                                         <button
                                             v-if="!readonly"
