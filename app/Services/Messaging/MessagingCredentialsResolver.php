@@ -24,7 +24,7 @@ class MessagingCredentialsResolver
         return [
             'provider' => $provider,
             'from' => $this->resolveFrom($profile, $settings),
-            'reply_to' => $profile?->reply_to ?? ($settings['reply_to'] ?? null),
+            'reply_to' => $this->resolveReplyTo($profile, $settings),
             'credentials' => $this->resolveCredentials($provider, $providerConfig),
         ];
     }
@@ -83,6 +83,24 @@ class MessagingCredentialsResolver
             ->first();
     }
 
+    /**
+     * @return array{spf: string, dkim: string, return_path: string}|array{}
+     */
+    public function dnsHintsForSendingDomain(?string $domain): array
+    {
+        $domain = strtolower(trim((string) $domain));
+
+        if ($domain === '') {
+            return [];
+        }
+
+        return [
+            'spf' => "TXT @{$domain}: v=spf1 include:sendgrid.net ~all (adjust for your ESP)",
+            'dkim' => "CNAME s1._domainkey.{$domain} → your ESP DKIM target (e.g. SendGrid/Mailgun)",
+            'return_path' => "CNAME em.{$domain} or bounce.{$domain} for return-path alignment",
+        ];
+    }
+
     protected function domainMatches(string $domain, string $pattern): bool
     {
         $pattern = strtolower(trim($pattern));
@@ -105,11 +123,14 @@ class MessagingCredentialsResolver
      */
     protected function resolveFrom(?SendingProfile $profile, array $settings): ?string
     {
-        if ($profile?->from_email) {
-            $name = $profile->from_name;
-            $email = $profile->from_email;
+        if ($profile) {
+            $email = $this->resolveProfileFromEmail($profile, $settings);
 
-            return $name ? "{$name} <{$email}>" : $email;
+            if ($email) {
+                $name = $profile->from_name ?? ($settings['from_name'] ?? null);
+
+                return $name ? "{$name} <{$email}>" : $email;
+            }
         }
 
         $fromEmail = $settings['from_email'] ?? null;
@@ -120,6 +141,45 @@ class MessagingCredentialsResolver
         }
 
         return $fromEmail ?? config('mail.from.address');
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    protected function resolveReplyTo(?SendingProfile $profile, array $settings): ?string
+    {
+        if ($profile?->reply_to) {
+            return $profile->reply_to;
+        }
+
+        if ($profile?->sending_domain) {
+            return $this->buildAddressFromSendingDomain($profile, $settings);
+        }
+
+        return $settings['reply_to'] ?? null;
+    }
+
+    protected function resolveProfileFromEmail(SendingProfile $profile, array $settings): ?string
+    {
+        if ($profile->sending_domain) {
+            return $this->buildAddressFromSendingDomain($profile, $settings);
+        }
+
+        return $profile->from_email;
+    }
+
+    protected function buildAddressFromSendingDomain(SendingProfile $profile, array $settings, string $defaultLocal = 'noreply'): string
+    {
+        $domain = strtolower(trim((string) $profile->sending_domain));
+        $local = $defaultLocal;
+
+        if ($profile->from_email && str_contains($profile->from_email, '@')) {
+            $local = strstr($profile->from_email, '@', true) ?: $defaultLocal;
+        } elseif (! empty($settings['from_email']) && str_contains($settings['from_email'], '@')) {
+            $local = strstr($settings['from_email'], '@', true) ?: $defaultLocal;
+        }
+
+        return "{$local}@{$domain}";
     }
 
     /**
