@@ -11,6 +11,10 @@ class Webhook extends Model
 {
     use BelongsToAccount;
 
+    protected $hidden = [
+        'secret',
+    ];
+
     protected $fillable = [
         'account_id',
         'buyer_id',
@@ -34,9 +38,25 @@ class Webhook extends Model
             'events' => 'array',
             'is_active' => 'boolean',
             'config' => 'array',
+            'secret' => 'encrypted',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function signsPayloads(): bool
+    {
+        return (bool) ($this->config['sign_payloads'] ?? false);
+    }
+
+    public function signingSecret(): ?string
+    {
+        return filled($this->secret) ? $this->secret : null;
+    }
+
+    public function hasSigningSecret(): bool
+    {
+        return filled($this->signingSecret());
     }
 
     public function buyer(): BelongsTo
