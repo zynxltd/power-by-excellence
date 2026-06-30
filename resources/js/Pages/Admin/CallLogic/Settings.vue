@@ -20,6 +20,7 @@ const form = useForm({
     recording_retention_days: props.settings.recording_retention_days ?? 90,
     concurrent_call_cap: props.settings.concurrent_call_cap,
     default_per_call_price: props.settings.default_per_call_price ?? 0,
+    call_return_window_days: props.settings.call_return_window_days ?? 7,
 });
 
 const submit = () => form.put(route('call-logic.settings.update'));
@@ -60,6 +61,11 @@ const submit = () => form.put(route('call-logic.settings.update'));
                         <label class="text-sm">Default per-call price fallback</label>
                         <input v-model.number="form.default_per_call_price" type="number" min="0" step="0.01" class="mt-1 w-full rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800" />
                         <p class="mt-1 text-xs text-slate-500">Used when delivery, campaign, and buyer rates are not set.</p>
+                    </div>
+                    <div>
+                        <label class="text-sm">Call return window (days)</label>
+                        <input v-model.number="form.call_return_window_days" type="number" min="1" max="90" class="mt-1 w-full rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800" />
+                        <p class="mt-1 text-xs text-slate-500">Buyers can dispute billed calls within this period.</p>
                     </div>
                 </div>
             </Panel>

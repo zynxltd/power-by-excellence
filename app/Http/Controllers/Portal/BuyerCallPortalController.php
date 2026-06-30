@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\CallSession;
+use App\Services\Calls\CallReturnService;
 use App\Services\Exports\CallExportService;
 use App\Support\CsvExport;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,12 +39,30 @@ class BuyerCallPortalController extends Controller
         $buyer = $this->resolveBuyer($request);
         abort_unless($call->sold_to_buyer_id === $buyer->id, 403);
 
-        $call->load(['campaign', 'events', 'recordings']);
+        $call->load(['campaign', 'events', 'recordings', 'callReturn']);
+
+        $returnService = app(CallReturnService::class);
 
         return Inertia::render('Portal/Buyer/CallShow', [
             'call' => $call,
             'buyer' => $buyer->only(['id', 'name']),
+            'canSubmitReturn' => $returnService->canSubmit($call, $buyer),
+            'returnWindowDays' => $returnService->returnWindowDays($call),
         ]);
+    }
+
+    public function submitReturn(Request $request, CallSession $call, CallReturnService $returns): RedirectResponse
+    {
+        $buyer = $this->resolveBuyer($request);
+        abort_unless($call->sold_to_buyer_id === $buyer->id, 403);
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $returns->submit($call, $buyer, $validated['reason']);
+
+        return back()->with('success', 'Return submitted for review.');
     }
 
     public function export(Request $request, CallExportService $export): HttpResponse

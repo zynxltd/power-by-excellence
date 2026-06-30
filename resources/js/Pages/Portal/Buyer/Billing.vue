@@ -24,6 +24,7 @@ const props = defineProps({
     stripeSubscription: { type: Object, default: null },
     currency: String,
     transactions: Object,
+    pendingCallReturns: { type: Number, default: 0 },
 });
 
 const page = usePage();
@@ -36,6 +37,7 @@ const billingStrip = computed(() => [
     { label: t('billing.balance'), value: formatMoney(props.buyer.credit_balance), accent: props.account?.is_low_credit ? 'rose' : 'emerald' },
     { label: t('billing.spend_30d'), value: formatMoney(props.stats?.spend_30d ?? 0), accent: 'indigo' },
     { label: t('billing.prepay'), value: props.requirePrepay ? t('common.required') : t('common.optional'), accent: 'amber' },
+    ...(props.pendingCallReturns > 0 ? [{ label: 'Pending call returns', value: String(props.pendingCallReturns), accent: 'amber' }] : []),
 ]);
 
 const presetAmounts = computed(() => props.stripeTopUp?.presets ?? [50, 100, 250, 500, 1000]);

@@ -38,6 +38,7 @@ class CallLogicSettingsController extends Controller
             'recording_retention_days' => 'nullable|integer|min:1|max:3650',
             'concurrent_call_cap' => 'nullable|integer|min:1|max:10000',
             'default_per_call_price' => 'nullable|numeric|min:0|max:100000',
+            'call_return_window_days' => 'nullable|integer|min:1|max:90',
         ]);
 
         if ($validated['enabled'] ?? false) {
@@ -56,6 +57,7 @@ class CallLogicSettingsController extends Controller
                 'recording_retention_days' => $validated['recording_retention_days'] ?? null,
                 'concurrent_call_cap' => $validated['concurrent_call_cap'] ?? null,
                 'default_per_call_price' => $validated['default_per_call_price'] ?? null,
+                'call_return_window_days' => $validated['call_return_window_days'] ?? null,
             ], fn ($v) => $v !== null),
         );
         $account->update(['settings' => $settings]);

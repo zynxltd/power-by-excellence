@@ -4,6 +4,7 @@ namespace App\Services\Calls;
 
 use App\Enums\CallEventType;
 use App\Models\Buyer;
+use App\Models\BuyerTransaction;
 use App\Models\CallSession;
 use App\Models\Delivery;
 use App\Services\Billing\BuyerBillingService;
@@ -108,6 +109,50 @@ class CallBillingService
         ]);
 
         return CallBillingResult::billed($transaction);
+    }
+
+    public function refundSoldCall(CallSession $session): ?BuyerTransaction
+    {
+        $session = $session->fresh();
+
+        if ($session->refunded_at !== null) {
+            return null;
+        }
+
+        if ($session->billed_at === null || (float) $session->billed_amount <= 0) {
+            return null;
+        }
+
+        $buyer = $session->soldToBuyer;
+
+        if (! $buyer) {
+            return null;
+        }
+
+        $amount = (float) $session->billed_amount;
+
+        $transaction = $this->buyerBilling->credit(
+            $buyer,
+            $amount,
+            'Call return refund',
+            [
+                'meta' => [
+                    'call_session_id' => $session->id,
+                    'call_session_uuid' => $session->uuid,
+                    'refund_for_transaction_id' => $session->buyer_transaction_id,
+                ],
+            ],
+        );
+
+        $session->update(['refunded_at' => now()]);
+
+        $this->logger->log($session, CallEventType::Completed, 'Call charge refunded to buyer', [
+            'buyer_id' => $buyer->id,
+            'amount' => $amount,
+            'refund_transaction_id' => $transaction->id,
+        ]);
+
+        return $transaction;
     }
 
     public function resolveCallPrice(CallSession $session, ?Delivery $delivery = null): float

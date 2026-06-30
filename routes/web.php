@@ -275,6 +275,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::prefix('call-logic')->name('call-logic.')->middleware('product.enabled:call_logic')->group(function () {
         Route::get('calls', [\App\Http\Controllers\Admin\CallSessionController::class, 'index'])->name('calls.index');
         Route::get('calls/{call}', [\App\Http\Controllers\Admin\CallSessionController::class, 'show'])->name('calls.show');
+        Route::post('calls/{call}/returns/{return}/approve', [\App\Http\Controllers\Admin\CallSessionController::class, 'approveReturn'])->name('calls.returns.approve');
+        Route::post('calls/{call}/returns/{return}/reject', [\App\Http\Controllers\Admin\CallSessionController::class, 'rejectReturn'])->name('calls.returns.reject');
         Route::get('recordings/{recording}/play', [CallRecordingController::class, 'play'])->name('recordings.play');
         Route::get('tracking-numbers', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'index'])->name('tracking-numbers.index');
         Route::post('tracking-numbers/search', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'search'])->name('tracking-numbers.search');
@@ -495,8 +497,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/webhooks/{webhook}/submit', [BuyerPortalController::class, 'submitWebhook'])->name('webhooks.submit');
         Route::delete('/webhooks/{webhook}', [BuyerPortalController::class, 'destroyWebhook'])->name('webhooks.destroy');
         Route::post('/webhooks/{webhook}/request-deletion', [BuyerPortalController::class, 'requestWebhookDeletion'])->name('webhooks.request-deletion');
-        Route::get('/calls', [BuyerCallPortalController::class, 'index'])->name('calls');
+        Route::get('calls', [BuyerCallPortalController::class, 'index'])->name('calls');
         Route::get('/calls/{call:uuid}', [BuyerCallPortalController::class, 'show'])->name('calls.show');
+        Route::post('/calls/{call:uuid}/return', [BuyerCallPortalController::class, 'submitReturn'])->name('calls.return');
         Route::get('/calls-export', [BuyerCallPortalController::class, 'export'])->name('calls.export');
     });
 

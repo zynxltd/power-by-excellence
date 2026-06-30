@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\LeadReturn;
 use App\Models\Webhook;
 use App\Services\Buyers\BuyerPortalService;
+use App\Services\Calls\CallReturnService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Portal\PortalIntegrationsService;
 use App\Services\Webhooks\BuyerWebhookService;
@@ -323,6 +324,7 @@ class BuyerPortalController extends Controller
             'stripeSubscription' => $stripe->subscriptionStatus($buyer),
             'currency' => $buyer->resolvedCurrency(),
             'transactions' => $buyer->transactions()->orderByDesc('created_at')->paginate(25),
+            'pendingCallReturns' => app(CallReturnService::class)->pendingCountForBuyer($buyer->id),
         ]));
     }
 

@@ -34,6 +34,7 @@ class CallSession extends Model
         'billed_at',
         'billed_amount',
         'buyer_transaction_id',
+        'refunded_at',
         'duration_seconds',
         'billable_seconds',
         'min_duration_seconds',
@@ -52,6 +53,7 @@ class CallSession extends Model
             'revenue' => 'decimal:2',
             'billed_amount' => 'decimal:2',
             'billed_at' => 'datetime',
+            'refunded_at' => 'datetime',
             'ivr_data' => 'array',
             'metadata' => 'array',
             'answered_at' => 'datetime',
@@ -122,6 +124,11 @@ class CallSession extends Model
     public function recordings(): HasMany
     {
         return $this->hasMany(CallRecording::class);
+    }
+
+    public function callReturn(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CallReturn::class);
     }
 
     public function callAttributes(): array

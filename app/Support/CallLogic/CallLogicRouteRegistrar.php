@@ -55,6 +55,17 @@ final class CallLogicRouteRegistrar
                     Route::get('recordings/{recording}/play', [CallRecordingController::class, 'play'])->name('call-logic.recordings.play');
                 });
             });
+        } elseif (! $router->getRoutes()->getByName('call-logic.calls.returns.approve')) {
+            require_once base_path('routes/call-logic-phase-3.php');
+            Route::middleware([
+                'web', 'auth', 'verified', 'signup.complete',
+                SetAccountFromUser::class, EnsureTenantAccess::class,
+                'billing.active', EnsurePortalRole::class.':admin', 'module.access',
+            ])->group(function (): void {
+                Route::prefix('call-logic')->name('call-logic.')->middleware('product.enabled:call_logic')->group(function (): void {
+                    registerCallLogicPhase3AdminReturnRoutes();
+                });
+            });
         }
 
         if (! $router->getRoutes()->getByName('portal.buyer.calls')) {
@@ -64,6 +75,15 @@ final class CallLogicRouteRegistrar
                 'billing.active', EnsurePortalRole::class.':buyer',
             ])->prefix('portal/buyer')->group(function (): void {
                 require base_path('routes/call-logic-portal.php');
+            });
+        } elseif (! $router->getRoutes()->getByName('portal.buyer.calls.return')) {
+            require_once base_path('routes/call-logic-phase-3.php');
+            Route::middleware([
+                'web', 'auth', 'verified', 'signup.complete',
+                SetAccountFromUser::class, EnsureTenantAccess::class,
+                'billing.active', EnsurePortalRole::class.':buyer',
+            ])->prefix('portal/buyer')->name('portal.buyer.')->group(function (): void {
+                registerCallLogicPhase3PortalReturnRoutes();
             });
         }
 

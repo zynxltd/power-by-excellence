@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CallRecording;
+use App\Models\CallReturn;
 use App\Models\CallSession;
 use App\Models\Campaign;
+use App\Services\Calls\CallReturnService;
 use App\Services\Calls\LiveCallCounterService;
 use App\Services\Exports\CallExportService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\CsvExport;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -58,6 +61,8 @@ class CallSessionController extends Controller
             'deliveryLogs.buyer',
             'recordings',
             'lead',
+            'callReturn.buyer',
+            'callReturn.refundTransaction',
         ]);
 
         $call->recordings->each(function (CallRecording $recording): void {
@@ -83,5 +88,23 @@ class CallSessionController extends Controller
         }
 
         return CsvExport::download($csv, 'calls-'.now()->format('Y-m-d-His').'.csv');
+    }
+
+    public function approveReturn(CallSession $call, CallReturn $return, CallReturnService $returns): RedirectResponse
+    {
+        abort_unless($return->call_session_id === $call->id, 404);
+
+        $returns->approve($return, request()->user());
+
+        return back()->with('success', 'Call return approved and buyer credited.');
+    }
+
+    public function rejectReturn(CallSession $call, CallReturn $return, CallReturnService $returns): RedirectResponse
+    {
+        abort_unless($return->call_session_id === $call->id, 404);
+
+        $returns->reject($return, request()->user());
+
+        return back()->with('success', 'Call return rejected.');
     }
 }
