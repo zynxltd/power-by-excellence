@@ -39,6 +39,8 @@ const fieldRows = computed(() => {
     return Object.entries(data).map(([key, value]) => ({ key, value }));
 });
 
+const consentArtifact = computed(() => props.lead?.metadata?.consent ?? null);
+
 const processingStatus = computed(() => {
     if (!props.processingMs) return null;
     if (props.processingMs < 200) return { label: 'Fast', class: 'text-emerald-600' };
@@ -346,6 +348,46 @@ const stageLabel = (stage) => {
                         <p class="mt-1 text-sm font-medium text-slate-800 dark:text-slate-200">{{ leadQuality.completeness?.label }}</p>
                         <p v-if="leadQuality.completeness?.missing?.length" class="text-xs text-amber-600">Missing: {{ leadQuality.completeness.missing.join(', ') }}</p>
                     </div>
+                </div>
+            </div>
+            <div v-if="consentArtifact" class="mb-6 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                <p class="text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Consent artifact</p>
+                <p class="mt-2 text-sm text-slate-700 dark:text-slate-300">{{ consentArtifact.consent_text }}</p>
+                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Lawful basis</dt>
+                        <dd class="mt-1 capitalize">{{ (consentArtifact.lawful_basis ?? '-').replace(/_/g, ' ') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Accepted</dt>
+                        <dd class="mt-1">{{ consentArtifact.accepted ? 'Yes' : 'No' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Opt-in URL</dt>
+                        <dd class="mt-1 break-all font-mono text-xs">{{ consentArtifact.optin_url ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">Captured</dt>
+                        <dd class="mt-1"><FormattedDate :value="consentArtifact.captured_at" /></dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">IP address</dt>
+                        <dd class="mt-1 font-mono text-xs">{{ consentArtifact.ip_address ?? lead.ip_address ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase text-slate-500">User agent</dt>
+                        <dd class="mt-1 break-all text-xs text-slate-600 dark:text-slate-400">{{ consentArtifact.user_agent ?? lead.user_agent ?? '-' }}</dd>
+                    </div>
+                </dl>
+                <div v-if="consentArtifact.channel_consent && Object.keys(consentArtifact.channel_consent).length" class="mt-3 flex flex-wrap gap-2">
+                    <span
+                        v-for="(enabled, channel) in consentArtifact.channel_consent"
+                        :key="channel"
+                        class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        :class="enabled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'"
+                    >
+                        {{ channel }}: {{ enabled ? 'yes' : 'no' }}
+                    </span>
                 </div>
             </div>
             <dl class="grid gap-4 sm:grid-cols-2">

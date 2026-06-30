@@ -147,6 +147,11 @@ class CampaignController extends Controller
             'validation_config.require_email' => 'boolean',
             'validation_config.require_phone' => 'boolean',
             'validation_config.block_disposable_email' => 'boolean',
+            'validation_config.require_consent' => 'boolean',
+            'validation_config.consent_text' => 'nullable|string|max:5000',
+            'validation_config.lawful_basis' => 'nullable|in:'.implode(',', \App\Enums\LawfulBasis::values()),
+            'validation_config.channel_consent_channels' => 'nullable|array',
+            'validation_config.channel_consent_channels.*' => 'in:email,sms,phone',
         ]);
 
         $campaign->update([

@@ -4,6 +4,7 @@ namespace App\Services\Leads;
 
 use App\Models\Campaign;
 use App\Models\Lead;
+use App\Services\Compliance\FormConsentPolicy;
 use App\Services\Logging\PlatformLogger;
 
 class LeadValidator
@@ -55,8 +56,19 @@ class LeadValidator
             }
         }
 
-        if (($config['require_consent'] ?? false) && blank($lead->getField('consent_text'))) {
-            return $this->fail($lead, 'Consent text required');
+        if (($config['require_consent'] ?? false)) {
+            $artifact = FormConsentPolicy::artifactForLead($lead);
+            $accepted = (bool) ($artifact['accepted'] ?? false);
+            $hasText = filled($artifact['consent_text'] ?? null) || filled($lead->getField('consent_text'));
+
+            if (! $accepted || ! $hasText) {
+                return $this->fail($lead, 'Consent is required');
+            }
+
+            $basis = (string) ($artifact['lawful_basis'] ?? $config['lawful_basis'] ?? '');
+            if ($basis !== '' && ! in_array($basis, \App\Enums\LawfulBasis::values(), true)) {
+                return $this->fail($lead, 'Invalid lawful basis for consent');
+            }
         }
 
         if (! empty($config['custom_rules'])) {
