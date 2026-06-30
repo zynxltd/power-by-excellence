@@ -40,4 +40,11 @@ return [
         'exception_alert_cooldown_seconds' => (int) env('ADMIN_ALERT_EXCEPTION_COOLDOWN', 300),
     ],
 
+    'security' => [
+        'admin_ip_allowlist_bypass' => (bool) env(
+            'ADMIN_IP_ALLOWLIST_BYPASS',
+            env('APP_ENV') === 'local',
+        ),
+    ],
+
 ];
