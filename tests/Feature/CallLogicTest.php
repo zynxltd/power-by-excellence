@@ -256,12 +256,104 @@ class CallLogicTest extends TestCase
                 'name' => 'Welcome flow',
                 'campaign_id' => $campaign->id,
                 'entry_node' => 'start',
-                'nodes' => ['start' => ['type' => 'route']],
+                'nodes' => [
+                    'start' => ['type' => 'say', 'message' => 'Welcome', 'next' => 'route'],
+                    'route' => ['type' => 'route'],
+                ],
                 'is_active' => true,
             ])
             ->assertRedirect(route('call-logic.ivr.index'));
 
         $this->assertDatabaseHas('ivr_flows', ['name' => 'Welcome flow', 'campaign_id' => $campaign->id]);
+    }
+
+    public function test_ivr_visual_builder_saves_three_step_graph(): void
+    {
+        $campaign = $this->createCallCampaign();
+
+        $nodes = [
+            'welcome' => ['type' => 'say', 'message' => 'Hello', 'next' => 'menu'],
+            'menu' => [
+                'type' => 'gather',
+                'prompt' => 'Press 1 to continue',
+                'store_as' => 'choice',
+                'branches' => ['1' => 'handoff'],
+            ],
+            'handoff' => ['type' => 'redirect', 'next' => 'route'],
+            'route' => ['type' => 'route'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->post(route('call-logic.ivr.store'), [
+                'name' => 'Three step flow',
+                'campaign_id' => $campaign->id,
+                'entry_node' => 'welcome',
+                'nodes' => $nodes,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('call-logic.ivr.index'));
+
+        $flow = IvrFlow::where('name', 'Three step flow')->first();
+        $this->assertNotNull($flow);
+        $this->assertSame('welcome', $flow->entry_node);
+        $this->assertArrayHasKey('handoff', $flow->nodes);
+        $this->assertSame('redirect', $flow->nodes['handoff']['type']);
+    }
+
+    public function test_inbound_ivr_follows_gather_redirect_path(): void
+    {
+        $campaign = $this->createCallCampaign();
+        IvrFlow::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'name' => 'Redirect path',
+            'entry_node' => 'welcome',
+            'nodes' => [
+                'welcome' => ['type' => 'say', 'message' => 'Hello', 'next' => 'menu'],
+                'menu' => [
+                    'type' => 'gather',
+                    'prompt' => 'Press 1 for sales',
+                    'store_as' => 'choice',
+                    'branches' => ['1' => 'handoff'],
+                ],
+                'handoff' => ['type' => 'redirect', 'next' => 'route'],
+                'route' => ['type' => 'route'],
+            ],
+            'is_active' => true,
+        ]);
+
+        $tracking = TrackingNumber::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'phone_number' => '+4420799888777',
+            'provider' => 'log',
+            'provider_sid' => 'LOGIVR1',
+            'status' => 'active',
+            'webhook_status' => 'configured',
+        ]);
+
+        $inbound = $this->post('/webhooks/twilio/voice/'.$this->account->slug, [
+            'CallSid' => 'CA_ivr_inbound',
+            'From' => '+447700900111',
+            'To' => $tracking->phone_number,
+        ]);
+
+        $inbound->assertOk()->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $inbound->assertSee('<Gather', false);
+        $inbound->assertSee('Press 1 for sales', false);
+
+        $session = CallSession::where('provider_call_sid', 'CA_ivr_inbound')->first();
+        $this->assertNotNull($session);
+        $this->assertSame('menu', $session->metadata['ivr_current_node'] ?? null);
+
+        $gather = $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/gather?session='.$session->uuid, [
+            'Digits' => '1',
+        ]);
+
+        $gather->assertOk()->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $session->refresh();
+        $this->assertSame('1', $session->ivr_data['choice'] ?? null);
+        $gather->assertSee('Thank you for calling', false);
     }
 
     public function test_call_analytics_summary(): void
@@ -352,7 +444,10 @@ class CallLogicTest extends TestCase
                 'name' => 'Updated flow',
                 'campaign_id' => $campaign->id,
                 'entry_node' => 'start',
-                'nodes' => ['start' => ['type' => 'gather', 'prompt' => 'Press 1']],
+                'nodes' => [
+                    'start' => ['type' => 'gather', 'prompt' => 'Press 1'],
+                    'route' => ['type' => 'route'],
+                ],
                 'is_active' => true,
             ])
             ->assertRedirect(route('call-logic.ivr.index'));
