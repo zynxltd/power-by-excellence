@@ -6,16 +6,35 @@ use App\Models\Lead;
 use App\Models\TrackingClick;
 use App\Models\TrackingConversion;
 use App\Models\TrackingLink;
+use App\Services\Delivery\TagInterpolator;
 use App\Services\Logging\PlatformLogger;
 use App\Services\Postbacks\PostbackDispatcher;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ConversionTrackingService
 {
+    /**
+     * @var list<string>
+     */
+    public const POSTBACK_MACROS = [
+        'click_id',
+        'sub1',
+        'sub2',
+        'sub3',
+        'sub4',
+        'sub5',
+        'payout',
+        'conversion_value',
+        'lead_uuid',
+    ];
+
     public function __construct(
         protected PostbackDispatcher $postbacks,
         protected ClickCapService $caps,
         protected SupplierClickPayoutService $payouts,
+        protected TagInterpolator $interpolator,
     ) {}
 
     public function fromLeadSold(Lead $lead): ?TrackingConversion
@@ -201,5 +220,94 @@ class ConversionTrackingService
         $lead->update(['metadata' => $metadata]);
 
         $this->postbacks->dispatch($lead->fresh(), 'conversion.approved');
+        $this->fireLinkConversionPostback($conversion->fresh(['trackingLink.supplier', 'trackingClick']), $lead->fresh());
+    }
+
+    public function resolveConversionPostbackUrl(TrackingLink $link): ?string
+    {
+        if (filled($link->conversion_postback_url)) {
+            return $link->conversion_postback_url;
+        }
+
+        $link->loadMissing('supplier');
+
+        return $link->supplier?->affiliate_settings['default_postback_url'] ?? null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function macroFields(TrackingConversion $conversion, ?TrackingClick $click = null, ?Lead $lead = null): array
+    {
+        $click ??= $conversion->trackingClick;
+        $lead ??= $conversion->lead;
+
+        return [
+            'click_id' => (string) ($click?->click_uuid ?? ''),
+            'sub1' => (string) ($click?->sub1 ?? ''),
+            'sub2' => (string) ($click?->sub2 ?? ''),
+            'sub3' => (string) ($click?->sub3 ?? ''),
+            'sub4' => (string) ($click?->sub4 ?? ''),
+            'sub5' => (string) ($click?->sub5 ?? ''),
+            'payout' => (string) $conversion->payout,
+            'conversion_value' => (string) ($conversion->sale_amount ?? $conversion->revenue ?? ''),
+            'lead_uuid' => (string) ($lead?->uuid ?? ''),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function sampleMacroFields(): array
+    {
+        return [
+            'click_id' => '550e8400-e29b-41d4-a716-446655440000',
+            'sub1' => 'aff123',
+            'sub2' => 'campaign-a',
+            'sub3' => 'placement-1',
+            'sub4' => 'creative-b',
+            'sub5' => 'geo-uk',
+            'payout' => '12.50',
+            'conversion_value' => '45.00',
+            'lead_uuid' => '7f3c9a2e-4b1d-4e8a-9c0f-1a2b3c4d5e6f',
+        ];
+    }
+
+    public function expandPostbackUrl(string $template, array $fields): string
+    {
+        return $this->interpolator->interpolate($template, $fields);
+    }
+
+    public function fireLinkConversionPostback(TrackingConversion $conversion, ?Lead $lead = null): void
+    {
+        $link = $conversion->trackingLink;
+        if (! $link) {
+            return;
+        }
+
+        $template = $this->resolveConversionPostbackUrl($link);
+        if (! $template) {
+            return;
+        }
+
+        $lead ??= $conversion->lead;
+        $fields = $this->macroFields($conversion, $conversion->trackingClick, $lead);
+        $url = $this->expandPostbackUrl($template, $fields);
+        $method = strtolower((string) (($link->conversion_postback_macros ?? [])['method'] ?? 'get'));
+
+        try {
+            if ($method === 'post') {
+                Http::timeout(8)->post($url, $fields);
+            } else {
+                Http::timeout(8)->get($url);
+            }
+        } catch (Throwable $e) {
+            PlatformLogger::error('Tracking link conversion postback failed', [
+                'tracking_link_id' => $link->id,
+                'conversion_uuid' => $conversion->conversion_uuid,
+                'url' => $url,
+                'method' => $method,
+            ], $lead, $e);
+        }
     }
 }
