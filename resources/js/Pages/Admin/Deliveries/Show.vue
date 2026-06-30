@@ -24,11 +24,17 @@ const props = defineProps({
     performance: Object,
     campaignWorkflow: { type: Object, default: null },
     initialTab: { type: String, default: 'overview' },
+    sampleFields: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
 const testLeadUuid = computed(() => page.props.flash?.test_lead_uuid ?? null);
 const testLeadId = computed(() => page.props.flash?.test_lead_id ?? null);
+const testResult = computed(() => page.props.flash?.test_result ?? null);
+
+const testMode = ref('accept');
+const customJson = ref('{\n  "Success": true,\n  "Approved": true,\n  "Cost": 25\n}');
+const testRunning = ref(false);
 
 const { formatMoney } = useMoneyFormat(props.delivery?.campaign?.currency);
 
@@ -37,8 +43,9 @@ const expandedLogId = ref(null);
 
 onMounted(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'logs') {
-        activeTab.value = 'logs';
+    const tab = params.get('tab');
+    if (tab === 'logs' || tab === 'test') {
+        activeTab.value = tab;
     }
 });
 
@@ -51,14 +58,60 @@ const healthStyles = {
 
 const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'test', label: 'Test harness' },
     { id: 'logs', label: 'Logs' },
     { id: 'routing', label: 'Routing' },
 ];
 
-const testDelivery = () => {
-    if (confirm('Run a test delivery using the latest lead for this campaign?')) {
-        router.post(route('deliveries.test', props.delivery.id));
+const testModes = [
+    { value: 'accept', label: 'Accept (sold)', description: 'Mock buyer accepts ping and post.' },
+    { value: 'reject', label: 'Reject', description: 'Mock buyer rejects the ping or post.' },
+    { value: 'timeout', label: 'Timeout', description: 'Simulate a connection timeout.' },
+    { value: 'custom', label: 'Custom JSON', description: 'Provide your own mock response body.' },
+];
+
+const runTest = () => {
+    const payload = { mode: testMode.value };
+
+    if (testMode.value === 'custom') {
+        try {
+            payload.custom_response = JSON.parse(customJson.value);
+        } catch {
+            alert('Custom response must be valid JSON.');
+            return;
+        }
     }
+
+    testRunning.value = true;
+    router.post(route('deliveries.test', props.delivery.id), payload, {
+        preserveScroll: true,
+        onFinish: () => {
+            testRunning.value = false;
+        },
+        onSuccess: () => {
+            activeTab.value = 'test';
+        },
+    });
+};
+
+const openTestTab = () => {
+    activeTab.value = 'test';
+};
+
+const samplePayloadPreview = computed(() => {
+    if (testResult.value?.sample_payload) {
+        return testResult.value.sample_payload;
+    }
+
+    return { fields: props.sampleFields };
+});
+
+const outcomeStyles = {
+    sold: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    reject: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    timeout: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
+    failed: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
+    skipped: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
 };
 
 const methodValue = () => props.delivery?.method?.value ?? props.delivery?.method;
@@ -92,7 +145,7 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
                         <span v-if="platformName" class="font-semibold">{{ platformName }} · </span>{{ healthReason }}
                     </p>
                 </div>
-                <AppButton variant="secondary" @click="testDelivery">Test delivery</AppButton>
+                <AppButton variant="secondary" @click="openTestTab">Test delivery</AppButton>
                 <AppButton :href="route('deliveries.edit', delivery.id)">Edit</AppButton>
             </template>
         </PageHeader>
@@ -229,13 +282,125 @@ const logRows = () => props.recentLogs?.data ?? props.recentLogs ?? [];
             </Panel>
         </div>
 
+        <!-- Test harness tab -->
+        <div v-show="activeTab === 'test'" class="space-y-6">
+            <Panel title="Delivery test harness">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Run this delivery against a synthetic test lead with mocked buyer HTTP responses. Test runs are logged with
+                    <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">is_test: true</code>
+                    metadata and do not affect buyer or delivery caps.
+                </p>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div>
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mock response mode</p>
+                        <div class="space-y-2">
+                            <label
+                                v-for="mode in testModes"
+                                :key="mode.value"
+                                class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-indigo-300 dark:border-slate-700 dark:hover:border-indigo-600"
+                                :class="testMode === mode.value ? 'border-indigo-500 bg-indigo-50/50 dark:border-indigo-500 dark:bg-indigo-950/30' : ''"
+                            >
+                                <input
+                                    v-model="testMode"
+                                    type="radio"
+                                    name="test_mode"
+                                    :value="mode.value"
+                                    class="mt-1 text-indigo-600"
+                                />
+                                <span>
+                                    <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ mode.label }}</span>
+                                    <span class="block text-xs text-slate-500">{{ mode.description }}</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div v-if="testMode === 'custom'" class="mt-4">
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Custom response JSON</p>
+                            <textarea
+                                v-model="customJson"
+                                rows="8"
+                                class="w-full rounded-lg border border-slate-300 bg-white font-mono text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                                spellcheck="false"
+                            />
+                        </div>
+
+                        <div class="mt-6">
+                            <AppButton :disabled="testRunning" @click="runTest">
+                                {{ testRunning ? 'Running test…' : 'Run test delivery' }}
+                            </AppButton>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Sample payload preview</p>
+                        <pre class="max-h-72 overflow-auto rounded-lg bg-slate-900 p-4 text-xs text-slate-300">{{ formatJson(samplePayloadPreview) }}</pre>
+                    </div>
+                </div>
+            </Panel>
+
+            <Panel v-if="testResult" title="Last test result">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <span
+                        :class="[
+                            'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide',
+                            outcomeStyles[testResult.outcome] ?? outcomeStyles.skipped,
+                        ]"
+                    >
+                        {{ testResult.outcome }}
+                    </span>
+                    <span class="text-sm text-slate-600 dark:text-slate-400">
+                        Mode: <span class="font-medium capitalize">{{ testResult.mode }}</span>
+                    </span>
+                    <span v-if="testResult.http_status" class="text-sm text-slate-600 dark:text-slate-400">
+                        HTTP {{ testResult.http_status }}
+                    </span>
+                    <span v-if="testResult.revenue" class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        {{ formatMoney(testResult.revenue) }}
+                    </span>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div v-if="testResult.ping_response">
+                        <p class="mb-1 text-xs font-semibold uppercase text-cyan-600 dark:text-cyan-400">Ping response</p>
+                        <pre class="max-h-48 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">{{ formatJson(testResult.ping_response) }}</pre>
+                    </div>
+                    <div v-if="testResult.post_response">
+                        <p class="mb-1 text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-400">Post response</p>
+                        <pre class="max-h-48 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">{{ formatJson(testResult.post_response) }}</pre>
+                    </div>
+                    <div v-if="testResult.body && !testResult.ping_response && !testResult.post_response">
+                        <p class="mb-1 text-xs font-semibold uppercase text-slate-500">Response body</p>
+                        <pre class="max-h-48 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-300">{{ formatJson(testResult.body) }}</pre>
+                    </div>
+                </div>
+
+                <p v-if="testResult.error" class="mt-4 text-sm text-rose-600 dark:text-rose-400">{{ testResult.error }}</p>
+
+                <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">
+                    Synthetic lead
+                    <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">{{ testResult.lead_uuid }}</code>
+                    <Link v-if="testResult.lead_id" :href="route('leads.show', testResult.lead_id)" class="ml-1 font-semibold text-indigo-600 underline dark:text-indigo-400">
+                        View lead →
+                    </Link>
+                    <button
+                        type="button"
+                        class="ml-2 font-semibold text-indigo-600 underline dark:text-indigo-400"
+                        @click="activeTab = 'logs'"
+                    >
+                        View in logs →
+                    </button>
+                </p>
+            </Panel>
+        </div>
+
         <!-- Logs tab -->
         <div v-show="activeTab === 'logs'">
             <div
-                v-if="testLeadUuid"
+                v-if="testLeadUuid && activeTab === 'logs'"
                 class="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100"
             >
-                Test used lead <code class="rounded bg-white/80 px-1 font-mono text-xs dark:bg-slate-900">{{ testLeadUuid }}</code>.
+                Test used synthetic lead <code class="rounded bg-white/80 px-1 font-mono text-xs dark:bg-slate-900">{{ testLeadUuid }}</code>.
                 Expand the newest log row below for ping/post request and response payloads.
                 <Link v-if="testLeadId" :href="route('leads.show', testLeadId)" class="ml-1 font-semibold underline">View lead →</Link>
                 ·
