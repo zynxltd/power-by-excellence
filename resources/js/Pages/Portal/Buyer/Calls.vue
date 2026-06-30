@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -23,7 +23,7 @@ const applyFilters = () => {
 
 <template>
     <Head title="Calls" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <div class="mb-4 flex items-center justify-between">
             <h1 class="text-xl font-semibold text-slate-900 dark:text-white">Your calls</h1>
             <AppButton variant="secondary" :href="route('portal.buyer.calls.export', localFilters)">Export CSV</AppButton>
@@ -63,5 +63,5 @@ const applyFilters = () => {
             </table>
             <Pagination :links="calls.links" class="mt-4" />
         </Panel>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

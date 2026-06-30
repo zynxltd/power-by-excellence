@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -91,7 +91,7 @@ const reactivateSubscription = () => {
 
 <template>
     <Head :title="t('nav.billing')" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader
             :title="t('billing.title')"
             :description="t('billing.description')"
@@ -230,5 +230,5 @@ const reactivateSubscription = () => {
 
             <BuyerAccountPanel :account="account" :currency="currency" />
         </div>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

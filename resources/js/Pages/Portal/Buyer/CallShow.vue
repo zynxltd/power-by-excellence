@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
@@ -11,7 +11,7 @@ defineProps({ call: Object, buyer: Object });
 
 <template>
     <Head :title="`Call ${call.uuid}`" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <div class="mb-4">
             <AppButton variant="secondary" :href="route('portal.buyer.calls')">Back to calls</AppButton>
         </div>
@@ -36,5 +36,5 @@ defineProps({ call: Object, buyer: Object });
                 </li>
             </ul>
         </Panel>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>
