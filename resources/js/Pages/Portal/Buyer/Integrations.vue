@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
@@ -113,7 +113,7 @@ const copyText = async (text, key) => {
 
 <template>
     <Head title="Integrations & API" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader
             title="Integrations & API"
             :description="`Connect webhooks, export data, and integrate with ${partner?.name ?? 'your buyer account'}.`"
@@ -295,5 +295,5 @@ const copyText = async (text, key) => {
             <Link :href="route('portal.buyer.leads')" class="font-semibold text-indigo-600 hover:underline">Report feedback and returns on My Leads</Link>
             without an API key.
         </p>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

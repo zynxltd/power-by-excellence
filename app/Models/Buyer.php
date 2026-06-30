@@ -66,4 +66,18 @@ class Buyer extends Model
     {
         return strtoupper($this->currency ?: $this->account?->default_currency ?: 'GBP');
     }
+
+    /**
+     * @return array{logo_url: ?string, primary_color: ?string, welcome_text: ?string}
+     */
+    public function portalBranding(): array
+    {
+        $settings = $this->settings ?? [];
+
+        return [
+            'logo_url' => filled($settings['portal_logo_url'] ?? null) ? (string) $settings['portal_logo_url'] : null,
+            'primary_color' => filled($settings['portal_primary_color'] ?? null) ? (string) $settings['portal_primary_color'] : null,
+            'welcome_text' => filled($settings['portal_welcome_text'] ?? null) ? (string) $settings['portal_welcome_text'] : null,
+        ];
+    }
 }

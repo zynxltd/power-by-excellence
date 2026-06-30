@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CallRecording;
 use App\Models\CallSession;
 use App\Models\Campaign;
+use App\Services\Calls\LiveCallCounterService;
 use App\Services\Exports\CallExportService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\CsvExport;
@@ -18,8 +19,10 @@ class CallSessionController extends Controller
 {
     use ResolvesAdminAccount;
 
-    public function index(Request $request): Response
+    public function index(Request $request, LiveCallCounterService $liveCalls): Response
     {
+        $account = $this->resolveAdminAccount($request);
+
         $query = CallSession::with(['campaign:id,name,reference', 'soldToBuyer:id,name,reference', 'trackingNumber'])
             ->orderByDesc('created_at');
 
@@ -38,6 +41,7 @@ class CallSessionController extends Controller
                 ->get(['id', 'name', 'reference']),
             'filters' => $request->only(['status', 'campaign_id']),
             'statuses' => collect(\App\Enums\CallStatus::cases())->map->value->all(),
+            'liveCallsCount' => $liveCalls->countForAccount($account->id),
         ]);
     }
 

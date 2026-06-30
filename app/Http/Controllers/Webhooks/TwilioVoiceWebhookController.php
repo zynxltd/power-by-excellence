@@ -11,6 +11,7 @@ use App\Models\TrackingNumber;
 use App\Services\Calls\CallEventLogger;
 use App\Services\Calls\CallRecordingService;
 use App\Services\Calls\CallRouter;
+use App\Services\Calls\LiveCallCounterService;
 use App\Services\Calls\IvrEngine;
 use App\Services\Telephony\TelephonyManager;
 use App\Support\Products\CallLogicProduct;
@@ -106,8 +107,12 @@ class TwilioVoiceWebhookController extends Controller
         return response($twiml, 200)->header('Content-Type', 'text/xml');
     }
 
-    public function status(Request $request, string $accountSlug, CallRouter $router): Response
-    {
+    public function status(
+        Request $request,
+        string $accountSlug,
+        CallRouter $router,
+        LiveCallCounterService $liveCalls,
+    ): Response {
         $account = Account::where('slug', $accountSlug)->firstOrFail();
         AccountContext::set($account);
 
@@ -120,6 +125,14 @@ class TwilioVoiceWebhookController extends Controller
 
         $callStatus = $request->input('CallStatus');
         $duration = (int) $request->input('CallDuration', 0);
+
+        if ($callStatus === 'in-progress') {
+            $liveCalls->markInProgress($account->id, $callSid);
+        }
+
+        if ($callStatus === 'completed') {
+            $liveCalls->markCompleted($account->id, $callSid);
+        }
 
         if (in_array($callStatus, ['completed', 'busy', 'no-answer', 'failed', 'canceled'], true)) {
             $router->recordDisposition($session, [

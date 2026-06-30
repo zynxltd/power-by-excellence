@@ -6,13 +6,19 @@ import DataTable from '@/Components/UI/DataTable.vue';
 import LogFilters from '@/Components/UI/LogFilters.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
+import AppButton from '@/Components/UI/AppButton.vue';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     logs: Object,
     filters: Object,
     actionOptions: Array,
 });
+
+const exportUrl = computed(() => route('logs.access.export', Object.fromEntries(
+    Object.entries(props.filters ?? {}).filter(([, value]) => value !== '' && value != null),
+)));
 </script>
 
 <template>
@@ -21,7 +27,11 @@ defineProps({
         <PageHeader
             title="Access Logs"
             description="Sign-in and sign-out activity for users on this platform."
-        />
+        >
+            <template #actions>
+                <AppButton :href="exportUrl" variant="secondary" size="sm">Export CSV</AppButton>
+            </template>
+        </PageHeader>
 
         <LogFilters
             class="mb-6"

@@ -3,11 +3,21 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
+import LogFilters from '@/Components/UI/LogFilters.vue';
 import Pagination from '@/Components/UI/Pagination.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
+import AppButton from '@/Components/UI/AppButton.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-defineProps({ events: Object });
+const props = defineProps({
+    events: Object,
+    filters: { type: Object, default: () => ({}) },
+});
+
+const exportUrl = computed(() => route('logs.changes.export', Object.fromEntries(
+    Object.entries(props.filters ?? {}).filter(([, value]) => value !== '' && value != null),
+)));
 </script>
 
 <template>
@@ -16,6 +26,21 @@ defineProps({ events: Object });
         <PageHeader
             title="Change Logs"
             description="Lead processing events - status changes, deliveries, and pipeline activity."
+        >
+            <template #actions>
+                <AppButton :href="exportUrl" variant="secondary" size="sm">Export CSV</AppButton>
+            </template>
+        </PageHeader>
+
+        <LogFilters
+            class="mb-6"
+            route-name="logs.changes"
+            :filters="filters"
+            show-days
+            show-date-range
+            show-search
+            search-label="Search"
+            search-placeholder="UUID, event type, message…"
         />
 
         <Panel :padding="false">

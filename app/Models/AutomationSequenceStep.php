@@ -7,7 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AutomationSequenceStep extends Model
 {
+    /** Canvas position (0-based execution order). Alias: {@see getPositionAttribute}. */
     protected $fillable = ['automation_sequence_id', 'sort_order', 'action', 'delay_minutes', 'channel', 'config'];
+
+    public function getPositionAttribute(): int
+    {
+        return (int) $this->sort_order;
+    }
 
     protected function casts(): array
     {

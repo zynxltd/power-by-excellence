@@ -14,12 +14,14 @@ use App\Models\IvrFlow;
 use App\Models\TrackingNumber;
 use App\Models\User;
 use App\Services\Api\ApiKeyService;
+use App\Services\Calls\LiveCallCounterService;
 use App\Services\Telephony\TelephonyWebhookUrls;
 use App\Services\Telephony\TwilioVoiceGateway;
 use App\Support\CallLogic\CallLogicRouteRegistrar;
 use App\Support\Products\CallLogicProduct;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -436,6 +438,67 @@ class CallLogicTest extends TestCase
         $session->refresh();
         $this->assertSame('completed', $session->status->value);
         $this->assertSame(90, $session->duration_seconds);
+    }
+
+    public function test_status_webhook_increments_live_call_counter(): void
+    {
+        Cache::flush();
+        $counter = app(LiveCallCounterService::class);
+
+        CallSession::create([
+            'account_id' => $this->account->id,
+            'status' => CallStatus::Connected,
+            'caller_number' => '+447700900123',
+            'provider_call_sid' => 'CA_live_inc',
+            'min_duration_seconds' => 5,
+        ]);
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_inc',
+            'CallStatus' => 'in-progress',
+        ])->assertNoContent();
+
+        $this->assertSame(1, $counter->countForAccount($this->account->id));
+    }
+
+    public function test_status_webhook_decrements_live_call_counter_on_completed(): void
+    {
+        Cache::flush();
+        $counter = app(LiveCallCounterService::class);
+
+        CallSession::create([
+            'account_id' => $this->account->id,
+            'status' => CallStatus::Connected,
+            'caller_number' => '+447700900123',
+            'provider_call_sid' => 'CA_live_dec',
+            'min_duration_seconds' => 5,
+        ]);
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_dec',
+            'CallStatus' => 'in-progress',
+        ])->assertNoContent();
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_dec',
+            'CallStatus' => 'completed',
+            'CallDuration' => 45,
+        ])->assertNoContent();
+
+        $this->assertSame(0, $counter->countForAccount($this->account->id));
+    }
+
+    public function test_calls_dashboard_shows_live_call_count(): void
+    {
+        Cache::flush();
+        app(LiveCallCounterService::class)->markInProgress($this->account->id, 'CA_dashboard');
+
+        $this->actingAs($this->admin)
+            ->get(route('call-logic.calls.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/CallLogic/Calls/Index')
+                ->where('liveCallsCount', 1));
     }
 
     public function test_recording_webhook_downloads_and_stores_recording(): void

@@ -36,6 +36,10 @@ const securityStatStrip = computed(() => [
     { label: 'Deliv errors', value: props.stats?.delivery_errors_24h ?? 0, accent: 'amber' },
     { label: 'Avg deliv ms', value: props.stats?.avg_delivery_ms ?? 0, accent: 'indigo' },
 ]);
+
+const exportUrl = computed(() => route('logs.security.export', Object.fromEntries(
+    Object.entries({ days: props.days, ...(props.filters ?? {}) }).filter(([, value]) => value !== '' && value != null),
+)));
 </script>
 
 <template>
@@ -44,7 +48,11 @@ const securityStatStrip = computed(() => [
         <PageHeader
             title="Security Logs"
             description="Access activity, audit events, and platform security metrics."
-        />
+        >
+            <template #actions>
+                <AppButton :href="exportUrl" variant="secondary" size="sm">Export CSV</AppButton>
+            </template>
+        </PageHeader>
 
         <CompactStatStrip :items="securityStatStrip" :columns="6" class="mb-6" />
 

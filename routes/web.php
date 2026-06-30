@@ -182,6 +182,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::get('/logs/api', [ApiRequestLogController::class, 'index'])->name('logs.api');
     Route::get('/logs/changes', [ChangeLogController::class, 'index'])->name('logs.changes');
     Route::get('/logs/security', [SecurityLogController::class, 'index'])->name('logs.security');
+    Route::get('/logs/access/export', [AccessLogController::class, 'export'])->name('logs.access.export');
+    Route::get('/logs/changes/export', [ChangeLogController::class, 'export'])->name('logs.changes.export');
+    Route::get('/logs/security/export', [SecurityLogController::class, 'export'])->name('logs.security.export');
 
     Route::get('support/manage', [SupportTicketController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('support.admin.index');
     Route::get('support/manage/{ticket}', [SupportTicketController::class, 'show'])->middleware(['superadmin', 'central.host'])->name('support.admin.show');
@@ -499,6 +502,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::get('/leads/download', [SupplierPortalController::class, 'downloadLeads'])->name('leads.download');
         Route::get('/leads/import', [SupplierPortalController::class, 'importLeads'])->name('leads.import');
         Route::post('/leads/import', [SupplierPortalController::class, 'storeImport'])->name('leads.import.store');
+        Route::get('/leads/import/{import}/errors', [SupplierPortalController::class, 'downloadImportErrors'])->name('leads.import.errors');
         Route::get('/payouts/download', [SupplierPortalController::class, 'downloadPayouts'])->name('payouts.download');
         Route::get('/leads/{uuid}', [SupplierPortalController::class, 'showLead'])->name('leads.show');
         Route::get('/embeds', [SupplierPortalController::class, 'embeds'])->name('embeds');

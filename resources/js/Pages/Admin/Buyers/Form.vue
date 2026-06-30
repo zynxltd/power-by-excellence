@@ -69,6 +69,9 @@ const form = useForm({
         notify_on_sale: props.buyer?.settings?.notify_on_sale ?? false,
         geo_countries: (props.buyer?.settings?.geo_countries ?? []).join(', '),
         portal_locale: props.buyer?.settings?.portal_locale ?? '',
+        portal_logo_url: props.buyer?.settings?.portal_logo_url ?? '',
+        portal_primary_color: props.buyer?.settings?.portal_primary_color ?? '#4f46e5',
+        portal_welcome_text: props.buyer?.settings?.portal_welcome_text ?? '',
     },
     portal_email: props.portalUser?.email ?? '',
     portal_name: props.portalUser?.name ?? '',
@@ -306,6 +309,30 @@ const submit = () => {
                         </select>
                         <p class="mt-1 text-xs text-slate-500">Set when this buyer's team uses a different language than your platform default.</p>
                     </div>
+
+                    <div class="mt-6 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Portal branding</h4>
+                        <p class="mt-1 text-xs text-slate-500">Customise the buyer portal header for this buyer's team.</p>
+                        <div class="mt-4">
+                            <InputLabel value="Portal logo URL" />
+                            <TextInput v-model="form.settings.portal_logo_url" type="url" class="mt-1 w-full font-mono text-sm" placeholder="https://cdn.example.com/buyer-logo.png" />
+                            <InputError class="mt-1" :message="form.errors['settings.portal_logo_url']" />
+                        </div>
+                        <div class="mt-4">
+                            <InputLabel value="Primary colour" />
+                            <div class="mt-1 flex items-center gap-3">
+                                <input v-model="form.settings.portal_primary_color" type="color" class="h-10 w-14 cursor-pointer rounded border border-slate-300 dark:border-slate-600" />
+                                <TextInput v-model="form.settings.portal_primary_color" class="w-32 font-mono text-sm uppercase" maxlength="7" placeholder="#4f46e5" />
+                            </div>
+                            <InputError class="mt-1" :message="form.errors['settings.portal_primary_color']" />
+                        </div>
+                        <div class="mt-4">
+                            <InputLabel value="Welcome message" />
+                            <textarea v-model="form.settings.portal_welcome_text" rows="2" class="form-textarea mt-1 w-full text-sm" placeholder="Welcome back — review your latest leads and billing." />
+                            <InputError class="mt-1" :message="form.errors['settings.portal_welcome_text']" />
+                        </div>
+                    </div>
+
                     <div class="mt-4">
                         <InputLabel :value="`New portal password (${buyer ? 'optional' : 'required if email set'})`" />
                         <TextInput v-model="form.portal_password" type="password" class="mt-1 w-full" />

@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -20,6 +20,7 @@ const props = defineProps({
     recentActivity: Array,
     charts: Object,
     currency: { type: String, default: 'GBP' },
+    portalBranding: { type: Object, default: null },
 });
 
 const { t } = useBuyerPortalI18n();
@@ -51,7 +52,7 @@ const pendingReturnsUrl = computed(() => route('portal.buyer.leads', { return: '
 
 <template>
     <Head :title="t('portal_title')" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout :portal-branding="portalBranding">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-lg font-bold text-slate-900 dark:text-white">{{ t('dashboard.title') }}</h1>
@@ -134,5 +135,5 @@ const pendingReturnsUrl = computed(() => route('portal.buyer.leads', { return: '
                 </Panel>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

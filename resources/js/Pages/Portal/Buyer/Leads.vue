@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -292,7 +292,7 @@ onMounted(() => {
 
 <template>
     <Head :title="t('leads.title')" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader :title="t('leads.title')" :description="t('leads.description')">
             <template #actions>
                 <AppButton :href="route('portal.buyer.leads.download', localFilters)" variant="secondary" external>{{ t('common.export_csv') }}</AppButton>
@@ -676,5 +676,5 @@ onMounted(() => {
                 </Panel>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>
