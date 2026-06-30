@@ -302,6 +302,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::get('vertical-field-templates', [VerticalFieldTemplateController::class, 'index'])->name('vertical-field-templates.index');
     Route::post('vertical-field-templates', [VerticalFieldTemplateController::class, 'store'])->name('vertical-field-templates.store');
     Route::post('vertical-field-templates/{verticalFieldTemplate}/apply', [VerticalFieldTemplateController::class, 'apply'])->name('vertical-field-templates.apply');
+    require __DIR__.'/leadbyte-phase-3.php';
 
     Route::get('verify-batches', [VerifyBatchController::class, 'index'])->name('verify-batches.index');
     Route::post('verify-batches', [VerifyBatchController::class, 'store'])->name('verify-batches.store');
