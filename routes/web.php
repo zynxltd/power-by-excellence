@@ -214,6 +214,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [\App\Http\Controllers\Admin\EDeliveryController::class, 'sendBulkCampaign'])->name('e-delivery.bulk-campaigns.send');
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
     Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
+    Route::patch('e-delivery/send-time-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendTimeSettings'])->name('e-delivery.send-time-settings.update');
     Route::delete('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');
     Route::post('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'tagLead'])->name('leads.tags.store');
     Route::delete('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'untagLead'])->name('leads.tags.destroy');
@@ -375,6 +376,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('webhooks/{webhook}/approve-deletion', [WebhookController::class, 'approveDeletion'])->name('webhooks.approve-deletion');
     Route::post('webhooks/{webhook}/reject-deletion', [WebhookController::class, 'rejectDeletion'])->name('webhooks.reject-deletion');
     Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+    Route::post('webhooks/generate-signing-secret', [WebhookController::class, 'generateSigningSecret'])->name('webhooks.generate-signing-secret');
 
     Route::get('postbacks', [PostbackController::class, 'index'])->name('postbacks.index');
     Route::post('postbacks', [PostbackController::class, 'store'])->name('postbacks.store');
