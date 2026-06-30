@@ -1,18 +1,24 @@
 <?php
 
 /**
- * Compliance Phase 3 — data retention (F1).
+ * Compliance Phase 3 route manifests.
  *
- * HTTP routes: none new. Retention policy is saved via existing platform settings:
+ * F1 — Data retention: no new HTTP routes (settings.edit / settings.update).
+ * Schedule: $schedule->command('data-retention:purge')->dailyAt('02:30')->withoutOverlapping();
  *
- *   GET  settings.edit   → AccountSettingsController@edit
- *   PUT  settings.update → AccountSettingsController@update
- *
- * Integration Lead — schedule in bootstrap/app.php (inside withSchedule):
- *
- *   $schedule->command('data-retention:purge')->dailyAt('02:30')->withoutOverlapping();
- *
- * Manual purge for a single tenant:
- *
- *   php artisan data-retention:purge --account={id}
+ * F3 — Outbound webhook HMAC signing (register inside admin middleware group):
+ *   POST webhooks/generate-signing-secret → webhooks.generate-signing-secret
  */
+
+use App\Http\Controllers\Admin\WebhookController;
+use Illuminate\Support\Facades\Route;
+
+if (! function_exists('registerCompliancePhase3WebhookSigningRoutes')) {
+    function registerCompliancePhase3WebhookSigningRoutes(): void
+    {
+        if (! Route::has('webhooks.generate-signing-secret')) {
+            Route::post('webhooks/generate-signing-secret', [WebhookController::class, 'generateSigningSecret'])
+                ->name('webhooks.generate-signing-secret');
+        }
+    }
+}
