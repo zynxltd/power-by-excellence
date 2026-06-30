@@ -247,6 +247,17 @@ class CallRouter
     {
         $ivrResult = $this->ivrEngine->processStep($session);
 
+        if ($ivrResult['hangup'] ?? false) {
+            return $this->telephony->gateway($session->trackingNumber?->provider)->buildInboundTwiml(
+                new CallTwimlContext(
+                    session: $session,
+                    actionUrl: $webhookBase.'/status',
+                    message: $ivrResult['message'],
+                    hangup: true,
+                ),
+            );
+        }
+
         if ($ivrResult['route']) {
             $routing = $this->route($session);
 
