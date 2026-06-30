@@ -371,6 +371,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('leads/{lead}/quarantine/release', [LeadAdminController::class, 'releaseQuarantine'])->name('leads.quarantine.release');
     Route::post('leads/{lead}/quarantine/reject', [LeadAdminController::class, 'rejectQuarantine'])->name('leads.quarantine.reject');
     Route::post('leads/{lead}/repost', [LeadAdminController::class, 'repost'])->name('leads.repost');
+    require __DIR__.'/compliance-phase-3.php';
+    registerCompliancePhase3LeadErasureRoutes();
 
     Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
     Route::post('imports', [ImportController::class, 'store'])->name('imports.store');

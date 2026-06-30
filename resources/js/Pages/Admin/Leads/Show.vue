@@ -8,7 +8,7 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import LeadQualityBadge from '@/Components/UI/LeadQualityBadge.vue';
 import DeliveryAttemptLog from '@/Components/Delivery/DeliveryAttemptLog.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, nextTick, ref } from 'vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 
@@ -20,10 +20,16 @@ const props = defineProps({
     navigation: Object,
     campaignWorkflow: { type: Object, default: null },
     leadQuality: { type: Object, default: null },
+    erasureBlockedReason: { type: String, default: null },
 });
 
 const activeTab = ref('overview');
 const tabSection = ref(null);
+const showErasureDialog = ref(false);
+
+const erasureForm = useForm({
+    reason: '',
+});
 
 const { formatMoney } = useMoneyFormat();
 
@@ -40,6 +46,22 @@ const fieldRows = computed(() => {
 });
 
 const consentArtifact = computed(() => props.lead?.metadata?.consent ?? null);
+const erasureMeta = computed(() => props.lead?.metadata?.erasure ?? null);
+const isAnonymized = computed(() => !!props.lead?.metadata?.anonymized_at);
+
+const submitErasure = () => {
+    if (!window.confirm('Permanently erase all PII for this lead? This cannot be undone.')) {
+        return;
+    }
+
+    erasureForm.post(route('leads.erasure', props.lead.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showErasureDialog.value = false;
+            erasureForm.reset();
+        },
+    });
+};
 
 const processingStatus = computed(() => {
     if (!props.processingMs) return null;
@@ -98,6 +120,10 @@ const leadStatStrip = computed(() => {
             value: feedback.status,
             accent: invalid ? 'rose' : 'emerald',
         });
+    }
+
+    if (isAnonymized.value) {
+        items.push({ label: 'PII status', value: 'Anonymized', accent: 'slate' });
     }
 
     return items;
@@ -161,8 +187,24 @@ const stageLabel = (stage) => {
                     <AppButton variant="danger" :href="route('leads.quarantine.reject', lead.id)" method="post">Reject</AppButton>
                 </template>
                 <AppButton v-if="['unsold', 'quarantined'].includes(lead.status)" :href="route('leads.repost', lead.id)" method="post" variant="secondary">Repost to ping tree</AppButton>
+                <AppButton v-if="!isAnonymized && !erasureBlockedReason" variant="danger" @click="showErasureDialog = true">Request erasure</AppButton>
             </template>
         </PageHeader>
+
+        <div v-if="showErasureDialog" class="mb-6 rounded-xl border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/20">
+            <p class="text-sm font-semibold text-rose-900 dark:text-rose-200">Request right-to-erasure</p>
+            <p class="mt-1 text-sm text-rose-800 dark:text-rose-300">Permanently redact PII from this lead. Distribution history and non-PII metadata are retained.</p>
+            <label class="mt-4 block text-xs font-semibold uppercase tracking-wider text-slate-500">Reason (required)</label>
+            <textarea v-model="erasureForm.reason" rows="3" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900" placeholder="e.g. Data subject erasure request" />
+            <p v-if="erasureForm.errors.reason" class="mt-1 text-sm text-rose-600">{{ erasureForm.errors.reason }}</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <AppButton variant="danger" :disabled="erasureForm.processing" @click="submitErasure">Confirm erasure</AppButton>
+                <AppButton variant="secondary" @click="showErasureDialog = false">Cancel</AppButton>
+            </div>
+        </div>
+        <div v-else-if="erasureBlockedReason && !isAnonymized" class="mb-6 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+            Erasure blocked: {{ erasureBlockedReason }}
+        </div>
 
         <CampaignWorkflowNav
             v-if="campaignWorkflow"
@@ -307,6 +349,19 @@ const stageLabel = (stage) => {
         </div>
 
         <Panel v-if="activeTab === 'overview'" title="Summary" class="mt-6">
+            <div v-if="erasureMeta || isAnonymized" class="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Erasure</p>
+                    <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" :class="isAnonymized ? 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200' : 'bg-amber-100 text-amber-800'">
+                        {{ isAnonymized ? 'PII anonymized' : 'Pending' }}
+                    </span>
+                </div>
+                <dl v-if="erasureMeta" class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div><dt class="text-xs font-semibold uppercase text-slate-500">Requested</dt><dd class="mt-1"><FormattedDate :value="erasureMeta.requested_at" /></dd></div>
+                    <div><dt class="text-xs font-semibold uppercase text-slate-500">Completed</dt><dd class="mt-1"><FormattedDate :value="erasureMeta.completed_at" /></dd></div>
+                    <div class="sm:col-span-2"><dt class="text-xs font-semibold uppercase text-slate-500">Reason</dt><dd class="mt-1">{{ erasureMeta.reason }}</dd></div>
+                </dl>
+            </div>
             <div v-if="leadQuality" class="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/40">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
