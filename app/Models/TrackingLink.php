@@ -24,12 +24,15 @@ class TrackingLink extends Model
         'payout_amount',
         'revenue_amount',
         'config',
+        'conversion_postback_url',
+        'conversion_postback_macros',
     ];
 
     protected function casts(): array
     {
         return [
             'config' => 'array',
+            'conversion_postback_macros' => 'array',
             'payout_amount' => 'decimal:2',
             'revenue_amount' => 'decimal:2',
         ];

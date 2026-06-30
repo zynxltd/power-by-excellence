@@ -5,7 +5,7 @@ use App\Http\Controllers\Portal\BuyerCallPortalController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Call Logic Phase 3 — F5 buyer call dispute/return workflow.
+ * Call Logic Phase 3 route manifest.
  *
  * Integration Lead: call registerCallLogicPhase3ReturnRoutes() from
  * App\Support\CallLogic\CallLogicRouteRegistrar (portal + admin).
@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
  *   POST call-logic/calls/{call}/returns/{return}/reject   call-logic.calls.returns.reject
  *
  * Setting: settings.call_logic.call_return_window_days (default 7)
+ *
+ * F6 (CT7) conversion postback URL builder — no new routes.
+ * Uses existing PATCH click-track.links.update (routes/click-track-admin.php).
+ * Adds tracking_links.conversion_postback_url + conversion_postback_macros.
  */
 
 if (! function_exists('registerCallLogicPhase3PortalReturnRoutes')) {
