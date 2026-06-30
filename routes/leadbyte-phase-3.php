@@ -1,19 +1,32 @@
 <?php
 
 use App\Http\Controllers\Admin\DistributionController;
+use App\Http\Controllers\Admin\VerticalFieldTemplateController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Leadbyte Phase 3 — F5 ping tree cap usage (route manifest).
+ * Leadbyte Phase 3 route manifest.
  *
  * Wire inside the authenticated admin middleware group in routes/web.php:
  *
  *   require __DIR__.'/leadbyte-phase-3.php';
  *
- * F5 new route:
- *   GET  distribution/{distribution}/cap-usage               distribution.cap-usage
+ * Existing routes (already in web.php — do not duplicate):
+ *   GET  vertical-field-templates                              vertical-field-templates.index
+ *   POST vertical-field-templates                              vertical-field-templates.store
+ *   POST vertical-field-templates/{verticalFieldTemplate}/apply vertical-field-templates.apply
  *
- * Existing distribution resource routes remain in web.php — do not duplicate.
+ * F4 — vertical field template apply wizard:
+ *   GET  vertical-field-templates/apply-wizard                 vertical-field-templates.apply-wizard
+ *   POST vertical-field-templates/{verticalFieldTemplate}/preview vertical-field-templates.preview
+ *
+ * F5 — ping tree live cap usage:
+ *   GET  distribution/{distribution}/cap-usage               distribution.cap-usage
  */
+Route::get('vertical-field-templates/apply-wizard', [VerticalFieldTemplateController::class, 'applyWizard'])
+    ->name('vertical-field-templates.apply-wizard');
+Route::post('vertical-field-templates/{verticalFieldTemplate}/preview', [VerticalFieldTemplateController::class, 'preview'])
+    ->name('vertical-field-templates.preview');
+
 Route::get('distribution/{distribution}/cap-usage', [DistributionController::class, 'capUsage'])
     ->name('distribution.cap-usage');
