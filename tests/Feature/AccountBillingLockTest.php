@@ -99,7 +99,7 @@ class AccountBillingLockTest extends TestCase
 
         $billing = app(BuyerBillingService::class);
         $this->assertFalse($billing->hasCredit($buyer, 10));
-        $this->assertFalse($billing->charge($buyer, 10));
+        $this->assertNull($billing->charge($buyer, 10));
     }
 
     public function test_unlock_restores_dashboard_access(): void

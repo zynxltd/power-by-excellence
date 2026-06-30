@@ -221,7 +221,10 @@ const reactivateSubscription = () => {
                                 {{ formatMoney(row.amount) }}
                             </td>
                             <td class="px-6 py-4 text-slate-900 dark:text-white">{{ formatMoney(row.balance_after) }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.description }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {{ row.description }}
+                                <span v-if="row.meta?.call_session_uuid" class="block text-xs text-slate-400">Call {{ row.meta.call_session_uuid }}</span>
+                            </td>
                         </tr>
                     </DataTable>
                     <Pagination :links="transactions.links" />

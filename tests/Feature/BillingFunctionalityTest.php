@@ -317,7 +317,7 @@ class BillingFunctionalityTest extends TestCase
         ]);
 
         $billing = app(BuyerBillingService::class);
-        $this->assertTrue($billing->charge($buyer, 25, null, 'Lead purchase test'));
+        $this->assertNotNull($billing->charge($buyer, 25, null, 'Lead purchase test'));
 
         $buyer->refresh();
         $this->assertEquals(75, (float) $buyer->credit_balance);
