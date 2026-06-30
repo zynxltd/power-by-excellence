@@ -16,6 +16,7 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Models\MessageTemplate;
 use App\Services\Automation\AutomationSequenceService;
+use App\Services\Alerts\EventAlertService;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -117,6 +118,7 @@ class AutomationController extends Controller
             'trigger_event' => 'required|in:on_lead_received,on_lead_sold,on_lead_unsold,on_segment_entry',
             'status' => 'nullable|in:active,inactive',
             'steps' => 'required|array|min:1',
+            'steps.*.sort_order' => 'nullable|integer|min:0',
             'steps.*.delay_minutes' => 'integer|min:0',
             'steps.*.action' => 'required|in:send,send_template,wait',
             'steps.*.channel' => 'nullable|in:email,sms',
@@ -141,13 +143,19 @@ class AutomationController extends Controller
                 $channel = 'email';
             }
 
+            $config = $step['config'] ?? [];
+            $branch = $config['branch'] ?? null;
+            if ($branch === '') {
+                unset($config['branch']);
+            }
+
             AutomationSequenceStep::create([
                 'automation_sequence_id' => $sequence->id,
-                'sort_order' => $i,
+                'sort_order' => array_key_exists('sort_order', $step) ? (int) $step['sort_order'] : $i,
                 'action' => $action,
                 'delay_minutes' => $step['delay_minutes'] ?? 0,
                 'channel' => $channel,
-                'config' => $step['config'] ?? [],
+                'config' => $config,
             ]);
         }
     }
