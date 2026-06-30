@@ -192,6 +192,7 @@ const submit = () => {
             :description="campaign ? `Editing ${campaign.reference}` : 'Step-by-step setup - identity, pricing, routing, and volume caps.'"
         >
             <template v-if="campaign" #actions>
+                <AppButton :href="route('vertical-field-templates.apply-wizard', { campaign_id: campaign.id })" variant="secondary">Apply field template</AppButton>
                 <AppButton :href="route('campaigns.show', campaign.id)" variant="secondary">View campaign</AppButton>
             </template>
         </PageHeader>
