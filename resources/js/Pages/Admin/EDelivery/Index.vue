@@ -57,6 +57,7 @@ const props = defineProps({
             hygiene_last_run: null,
         }),
     },
+    sendingDomainDnsHints: { type: Object, default: () => ({}) },
 });
 
 const metricsPeriod = ref('30d');
@@ -225,6 +226,7 @@ const profileForm = useForm({
     name: '',
     provider: 'smtp',
     domain_match: '',
+    sending_domain: '',
     from_name: '',
     from_email: '',
     is_default: false,
@@ -232,6 +234,20 @@ const profileForm = useForm({
     warmup_day_one_limit: 50,
     warmup_target_limit: 1000,
     warmup_ramp_days: 14,
+});
+
+const profileDnsHints = computed(() => {
+    const domain = profileForm.sending_domain?.trim().toLowerCase();
+
+    if (! domain) {
+        return null;
+    }
+
+    return {
+        spf: `TXT @${domain}: v=spf1 include:sendgrid.net ~all (adjust for your ESP)`,
+        dkim: `CNAME s1._domainkey.${domain} → your ESP DKIM target (e.g. SendGrid/Mailgun)`,
+        return_path: `CNAME em.${domain} or bounce.${domain} for return-path alignment`,
+    };
 });
 
 const warmupForm = useForm({
@@ -1012,15 +1028,42 @@ const healthBadgeClass = (tone) => ({
 
                 <Panel title="Sending profiles">
                     <ul class="mb-4 space-y-1 text-sm">
-                        <li v-for="p in sendingProfiles" :key="p.id" class="flex items-center justify-between">
-                            <span>{{ p.name }} <span v-if="p.is_default" class="text-emerald-600">default</span></span>
-                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.sending-profiles.destroy', p.id))">Remove</button>
+                        <li v-for="p in sendingProfiles" :key="p.id" class="flex items-center justify-between gap-2">
+                            <span>
+                                {{ p.name }}
+                                <span v-if="p.is_default" class="text-emerald-600">default</span>
+                                <span v-if="p.sending_domain || p.domain_match" class="text-slate-400">
+                                    · {{ p.sending_domain || p.domain_match }}
+                                </span>
+                            </span>
+                            <button type="button" class="shrink-0 text-xs text-rose-600" @click="router.delete(route('e-delivery.sending-profiles.destroy', p.id))">Remove</button>
                         </li>
                         <li v-if="!sendingProfiles?.length" class="text-slate-500">No sending profiles yet.</li>
                     </ul>
                     <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitProfile">
                         <TextInput v-model="profileForm.name" class="w-full" placeholder="Profile name" required />
-                        <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Domain match e.g. gmail.com" />
+                        <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Recipient domain match e.g. gmail.com" />
+                        <div>
+                            <InputLabel value="Sending domain" />
+                            <TextInput v-model="profileForm.sending_domain" class="mt-1 w-full" placeholder="mail.client.com" />
+                            <p class="mt-1 text-xs text-slate-500">
+                                Optional dedicated From/reply-to domain. When set, the local part from From email is used on this hostname.
+                            </p>
+                        </div>
+                        <div
+                            v-if="profileDnsHints"
+                            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                            <p class="mb-2 font-semibold text-slate-700 dark:text-slate-200">DNS records (verify with your ESP)</p>
+                            <ul class="space-y-1 font-mono">
+                                <li>{{ profileDnsHints.spf }}</li>
+                                <li>{{ profileDnsHints.dkim }}</li>
+                                <li>{{ profileDnsHints.return_path }}</li>
+                            </ul>
+                            <p v-if="sendingDomainDnsHints?.spf" class="mt-2 text-slate-500">
+                                Example: {{ sendingDomainDnsHints.spf }}
+                            </p>
+                        </div>
                         <TextInput v-model="profileForm.from_email" class="w-full" placeholder="From email" />
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                             <input v-model="profileForm.warmup_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />

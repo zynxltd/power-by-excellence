@@ -15,6 +15,10 @@
  *   $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
  *   $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
  *   $schedule->command('messaging:process-scheduled')->everyMinute()->withoutOverlapping();
+ *
+ * F6 — dedicated sending domain per profile:
+ *   POST  e-delivery/sending-profiles              → e-delivery.sending-profiles.store
+ *   PATCH e-delivery/sending-profiles/{profile}    → e-delivery.sending-profiles.update
  */
 
 use App\Http\Controllers\Admin\AutomationController;
@@ -89,6 +93,11 @@ function registerEDeliveryAdminRoutes(): void
     if (! Route::has('e-delivery.hygiene.run')) {
         Route::post('e-delivery/hygiene/run', [EDeliveryController::class, 'runHygiene'])
             ->name('e-delivery.hygiene.run');
+    }
+
+    if (! Route::has('e-delivery.sending-profiles.update')) {
+        Route::patch('e-delivery/sending-profiles/{profile}', [EDeliveryController::class, 'updateSendingProfile'])
+            ->name('e-delivery.sending-profiles.update');
     }
 
     if (Route::has('e-delivery.index')) {
