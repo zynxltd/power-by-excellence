@@ -81,6 +81,16 @@ function registerEDeliveryAdminRoutes(): void
             ->name('e-delivery.shortlink-settings.update');
     }
 
+    if (! Route::has('e-delivery.hygiene-settings.update')) {
+        Route::patch('e-delivery/hygiene-settings', [EDeliveryController::class, 'updateHygieneSettings'])
+            ->name('e-delivery.hygiene-settings.update');
+    }
+
+    if (! Route::has('e-delivery.hygiene.run')) {
+        Route::post('e-delivery/hygiene/run', [EDeliveryController::class, 'runHygiene'])
+            ->name('e-delivery.hygiene.run');
+    }
+
     if (Route::has('e-delivery.index')) {
         return;
     }

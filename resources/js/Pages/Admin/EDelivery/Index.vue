@@ -48,6 +48,15 @@ const props = defineProps({
         type: Object,
         default: () => ({ clicks_30d: 0, links_30d: 0, recent_sends: [] }),
     },
+    hygieneSettings: {
+        type: Object,
+        default: () => ({
+            list_hygiene_enabled: false,
+            inactive_days_threshold: 180,
+            hygiene_auto_suppress_bounces: true,
+            hygiene_last_run: null,
+        }),
+    },
 });
 
 const metricsPeriod = ref('30d');
@@ -409,6 +418,20 @@ const saveShortlinkSettings = () => {
     shortlinkForm.patch('/e-delivery/shortlink-settings', { preserveScroll: true });
 };
 
+const hygieneForm = useForm({
+    list_hygiene_enabled: Boolean(props.hygieneSettings?.list_hygiene_enabled ?? false),
+    inactive_days_threshold: Number(props.hygieneSettings?.inactive_days_threshold ?? 180),
+    hygiene_auto_suppress_bounces: Boolean(props.hygieneSettings?.hygiene_auto_suppress_bounces ?? true),
+});
+
+const saveHygieneSettings = () => {
+    hygieneForm.patch('/e-delivery/hygiene-settings', { preserveScroll: true });
+};
+
+const runHygiene = (dryRun = false) => {
+    router.post('/e-delivery/hygiene/run', { dry_run: dryRun }, { preserveScroll: true });
+};
+
 const alertToneClass = (level) => ({
     critical: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
     warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
@@ -626,6 +649,60 @@ const healthBadgeClass = (tone) => ({
                     </table>
                 </div>
                 <p v-else class="mt-4 text-xs text-slate-500">No tracked SMS sends in the last 30 days.</p>
+            </Panel>
+
+            <Panel title="List hygiene" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Scrub hard-bounced leads for suppression and mark contacts with no recent opens or clicks as inactive.
+                </p>
+                <form class="mb-4 space-y-4" @submit.prevent="saveHygieneSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="hygieneForm.list_hygiene_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable automated list hygiene
+                    </label>
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="hygieneForm.hygiene_auto_suppress_bounces" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Auto-tag bounced leads (suppress_marketing + bounced segment)
+                    </label>
+                    <div>
+                        <InputLabel for="inactive_days_threshold" value="Inactive threshold (days without open/click)" />
+                        <TextInput
+                            id="inactive_days_threshold"
+                            v-model.number="hygieneForm.inactive_days_threshold"
+                            type="number"
+                            min="1"
+                            max="3650"
+                            class="mt-1 block w-full max-w-xs"
+                        />
+                        <InputError class="mt-1" :message="hygieneForm.errors.inactive_days_threshold" />
+                    </div>
+                    <AppButton type="submit" size="sm" :disabled="hygieneForm.processing" :loading="hygieneForm.processing">
+                        Save hygiene settings
+                    </AppButton>
+                </form>
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <AppButton size="sm" variant="secondary" @click="runHygiene(true)">
+                        Dry-run hygiene
+                    </AppButton>
+                    <AppButton size="sm" @click="runHygiene(false)">
+                        Run hygiene now
+                    </AppButton>
+                </div>
+                <div v-if="hygieneSettings?.hygiene_last_run" class="grid gap-4 sm:grid-cols-3">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Last run</p>
+                        <p class="mt-1 text-sm font-medium text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.ran_at }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Bounces tagged</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.bounces_tagged ?? 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Inactive tagged</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.inactive_tagged ?? 0 }}</p>
+                    </div>
+                </div>
+                <p v-else class="text-sm text-slate-500">No hygiene run recorded yet.</p>
             </Panel>
 
             <Panel title="Domain warmup & reputation" class="mb-6">
