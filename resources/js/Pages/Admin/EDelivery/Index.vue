@@ -31,6 +31,15 @@ const props = defineProps({
     providers: Object,
     mergeTags: Array,
     defaultPreviewData: Object,
+    sendTimeSettings: {
+        type: Object,
+        default: () => ({
+            send_time_optimization: false,
+            quiet_hours_start: '21:00',
+            quiet_hours_end: '08:00',
+            optimal_send_hour: 9,
+        }),
+    },
 });
 
 const metricsPeriod = ref('30d');
@@ -373,6 +382,17 @@ const submitProfile = () => profileForm.post(route('e-delivery.sending-profiles.
 const pauseSending = () => router.post(route('e-delivery.throttle.pause'), {}, { preserveScroll: true });
 const resumeSending = () => router.post(route('e-delivery.throttle.resume'), {}, { preserveScroll: true });
 
+const sendTimeForm = useForm({
+    send_time_optimization: Boolean(props.sendTimeSettings?.send_time_optimization ?? false),
+    quiet_hours_start: props.sendTimeSettings?.quiet_hours_start ?? '21:00',
+    quiet_hours_end: props.sendTimeSettings?.quiet_hours_end ?? '08:00',
+    optimal_send_hour: props.sendTimeSettings?.optimal_send_hour ?? 9,
+});
+
+const saveSendTimeSettings = () => {
+    sendTimeForm.patch(route('e-delivery.send-time-settings.update'), { preserveScroll: true });
+};
+
 const alertToneClass = (level) => ({
     critical: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
     warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
@@ -512,6 +532,38 @@ const healthBadgeClass = (tone) => ({
                         </span>
                     </li>
                 </ul>
+            </Panel>
+
+            <Panel title="Send-time optimization" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Queue marketing sends outside quiet hours and align delivery to each lead's local morning window (default 9:00).
+                </p>
+                <form class="space-y-4" @submit.prevent="saveSendTimeSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="sendTimeForm.send_time_optimization" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable send-time optimization by lead timezone
+                    </label>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <InputLabel value="Quiet hours start" />
+                            <TextInput v-model="sendTimeForm.quiet_hours_start" type="time" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.quiet_hours_start" />
+                        </div>
+                        <div>
+                            <InputLabel value="Quiet hours end" />
+                            <TextInput v-model="sendTimeForm.quiet_hours_end" type="time" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.quiet_hours_end" />
+                        </div>
+                        <div>
+                            <InputLabel value="Optimal send hour (local)" />
+                            <TextInput v-model.number="sendTimeForm.optimal_send_hour" type="number" min="0" max="23" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.optimal_send_hour" />
+                        </div>
+                    </div>
+                    <AppButton type="submit" size="sm" :disabled="sendTimeForm.processing" :loading="sendTimeForm.processing">
+                        Save send-time settings
+                    </AppButton>
+                </form>
             </Panel>
 
             <Panel title="Domain warmup & reputation" class="mb-6">
