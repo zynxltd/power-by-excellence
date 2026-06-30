@@ -53,4 +53,9 @@ class MessageSend extends Model
     {
         return $this->hasMany(MessageEvent::class);
     }
+
+    public function shortLinks(): HasMany
+    {
+        return $this->hasMany(MessageShortLink::class);
+    }
 }

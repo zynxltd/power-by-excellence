@@ -147,6 +147,7 @@ Route::get('/i/{token}', \App\Http\Controllers\ImpressionPixelController::class)
 Route::get('/god-mode/handoff/{token}', GodModeHandoffController::class)->name('god-mode.handoff');
 Route::get('/messaging/open/{token}', [MessageTrackingController::class, 'open'])->name('messaging.track.open');
 Route::get('/messaging/click/{token}', [MessageTrackingController::class, 'click'])->name('messaging.track.click');
+Route::get('/s/{slug}', [MessageTrackingController::class, 'shortlinkRedirect'])->name('messaging.shortlink.redirect');
 Route::get('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'unsubscribe'])->name('messaging.unsubscribe');
 Route::post('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'confirmUnsubscribe'])->name('messaging.unsubscribe.confirm');
 Route::post('/webhooks/esp/sendgrid', [EspWebhookController::class, 'sendgrid'])->name('webhooks.esp.sendgrid');
@@ -215,6 +216,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
     Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
     Route::patch('e-delivery/send-time-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendTimeSettings'])->name('e-delivery.send-time-settings.update');
+    Route::patch('e-delivery/shortlink-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateShortlinkSettings'])->name('e-delivery.shortlink-settings.update');
     Route::delete('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');
     Route::post('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'tagLead'])->name('leads.tags.store');
     Route::delete('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'untagLead'])->name('leads.tags.destroy');
