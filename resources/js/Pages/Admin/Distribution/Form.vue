@@ -12,6 +12,7 @@ import TextInput from '@/Components/TextInput.vue';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import ContextHelpLink from '@/Components/UI/ContextHelpLink.vue';
 import PingTreeBuilder from '@/Components/UI/PingTreeBuilder.vue';
+import { useDistributionCapUsage } from '@/Composables/useDistributionCapUsage';
 import { useFormSteps } from '@/Composables/useFormSteps';
 import { fieldOptionsFromCampaign } from '@/utils/campaignFields';
 import { pushToast } from '@/Composables/useToast';
@@ -24,6 +25,7 @@ const props = defineProps({
     routingModes: Array,
     filterFieldOptions: { type: Array, default: () => [] },
     campaignWorkflow: { type: Object, default: null },
+    capUsage: { type: Object, default: () => ({}) },
 });
 
 const isLocked = computed(() => Boolean(props.config?.is_locked));
@@ -71,22 +73,32 @@ if (props.config) {
 const defaultGroup = () => ({
     name: 'Tier 1',
     mode: 'waterfall',
+    sort_order: 0,
     floor_price: null,
     redirect_url: null,
     delivery_ids: [],
     rules: { operator: 'and', conditions: [] },
 });
 
-const initialGroups = props.config?.config?.groups?.length
-    ? props.config.config.groups.map((g) => ({
+const sortedConfigGroups = props.config?.config?.groups?.length
+    ? [...props.config.config.groups].sort(
+        (left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0),
+    )
+    : null;
+
+const initialGroups = sortedConfigGroups?.length
+    ? sortedConfigGroups.map((g, index) => ({
         name: g.name,
         mode: g.mode,
+        sort_order: g.sort_order ?? index,
         floor_price: g.floor_price ?? null,
         redirect_url: g.redirect_url ?? null,
         delivery_ids: g.delivery_ids ?? [],
         rules: g.rules ?? { operator: 'and', conditions: [] },
     }))
     : [defaultGroup()];
+
+const { capUsage } = useDistributionCapUsage(props.config?.id ?? null, props.capUsage ?? {});
 
 const form = useForm({
     campaign_id: props.config?.campaign_id ?? new URLSearchParams(window.location.search).get('campaign_id') ?? '',
@@ -269,6 +281,7 @@ const submit = () => {
                             :routing-modes="routingModes"
                             :filter-field-options="tierFilterFieldOptions"
                             :campaign-name="selectedCampaign?.name ?? ''"
+                            :cap-usage="capUsage"
                             :readonly="isLocked"
                             deliveries-teleport="#ping-tree-deliveries-sidebar"
                         />

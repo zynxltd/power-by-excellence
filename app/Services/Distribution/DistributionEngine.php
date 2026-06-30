@@ -399,8 +399,11 @@ class DistributionEngine
         if ($buyerId) {
             $buyer = \App\Models\Buyer::find($buyerId);
             if ($buyer) {
-                $charged = app(\App\Services\Billing\BuyerBillingService::class)->charge($buyer, $revenue, $lead);
-                if (! $charged) {
+                $billing = app(\App\Services\Billing\BuyerBillingService::class);
+                $transaction = $billing->charge($buyer, $revenue, $lead);
+                $requirePrepay = $buyer->account?->settings['require_buyer_prepay'] ?? false;
+
+                if ($requirePrepay && $transaction === null) {
                     PlatformLogger::leadEvent($lead, 'billing.charge_failed', 'Buyer credit debit failed after sale', [
                         'buyer_id' => $buyer->id,
                         'revenue' => $revenue,

@@ -34,6 +34,38 @@ class CapService
         return true;
     }
 
+    /**
+     * @return array{daily: array{used: int, limit: int|null}, hourly: array{used: int, limit: int|null}}
+     */
+    public function usageForEntity(string $entityType, int $entityId, ?array $caps): array
+    {
+        $usage = [];
+
+        foreach (['hourly', 'daily'] as $period) {
+            $limit = isset($caps[$period]) && (int) $caps[$period] > 0
+                ? (int) $caps[$period]
+                : null;
+
+            $used = 0;
+
+            if ($limit !== null) {
+                $used = (int) (CapCounter::query()
+                    ->where('entity_type', $entityType)
+                    ->where('entity_id', $entityId)
+                    ->where('period', $period)
+                    ->where('period_key', $this->periodKey($period))
+                    ->value('count') ?? 0);
+            }
+
+            $usage[$period] = [
+                'used' => $used,
+                'limit' => $limit,
+            ];
+        }
+
+        return $usage;
+    }
+
     public function increment(string $entityType, int $entityId, ?array $caps): void
     {
         if (empty($caps)) {
