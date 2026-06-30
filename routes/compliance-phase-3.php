@@ -33,8 +33,13 @@
  *     - lawful_basis (consent | legitimate_interest | contract)
  *     - channel_consent_channels (array: email, sms, phone)
  * Lead metadata.consent artifact stores accepted snapshot, channel_consent, optin_url, ip, user_agent.
+ *
+ * F6 — Right-to-erasure (register inside admin middleware group):
+ *   registerCompliancePhase3LeadErasureRoutes();
+ *   POST leads/{lead}/erasure → leads.erasure
  */
 
+use App\Http\Controllers\Admin\LeadAdminController;
 use App\Http\Controllers\Admin\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +49,16 @@ if (! function_exists('registerCompliancePhase3WebhookSigningRoutes')) {
         if (! Route::has('webhooks.generate-signing-secret')) {
             Route::post('webhooks/generate-signing-secret', [WebhookController::class, 'generateSigningSecret'])
                 ->name('webhooks.generate-signing-secret');
+        }
+    }
+}
+
+if (! function_exists('registerCompliancePhase3LeadErasureRoutes')) {
+    function registerCompliancePhase3LeadErasureRoutes(): void
+    {
+        if (! Route::has('leads.erasure')) {
+            Route::post('leads/{lead}/erasure', [LeadAdminController::class, 'requestErasure'])
+                ->name('leads.erasure');
         }
     }
 }
