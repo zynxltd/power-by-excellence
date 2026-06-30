@@ -168,7 +168,7 @@ Route::get('/sdk/pbe-calls.js', function () {
     ]);
 })->name('sdk.calls');
 
-Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
+Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, 'admin.ip-allowlist', EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/live-stats', \App\Http\Controllers\Admin\LiveStatsController::class)->name('live-stats');
     Route::get('/command-center', [CommandCenterController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('command-center.index');

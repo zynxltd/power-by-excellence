@@ -11,6 +11,22 @@
  *
  * F3 — Outbound webhook HMAC signing:
  *   registerCompliancePhase3WebhookSigningRoutes();
+ *
+ * F4 — Admin IP allowlist: no new HTTP routes.
+ * Settings keys (account.settings.security):
+ *   - admin_ip_allowlist_enabled (bool)
+ *   - admin_ip_allowlist (array of IPv4 / CIDR strings)
+ *   - admin_geo_block_enabled (bool, reserved)
+ *   - blocked_country_codes (array, reserved)
+ *
+ * Integration Lead — register middleware alias in bootstrap/app.php:
+ *   'admin.ip-allowlist' => \App\Http\Middleware\EnsureAdminIpAllowlist::class,
+ *
+ * Add to the admin middleware group in routes/web.php (after SetAccountFromUser):
+ *   'admin.ip-allowlist',
+ *
+ * Local/dev bypass: config platform.security.admin_ip_allowlist_bypass
+ * (defaults true when APP_ENV=local; override with ADMIN_IP_ALLOWLIST_BYPASS).
  */
 
 use App\Http\Controllers\Admin\AccessLogController;

@@ -61,6 +61,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'signup.complete' => \App\Http\Middleware\EnsureSignupComplete::class,
             'two-factor.verified' => \App\Http\Middleware\EnsureTwoFactorVerified::class,
             'product.enabled' => \App\Http\Middleware\EnsureProductEnabled::class,
+            'admin.ip-allowlist' => \App\Http\Middleware\EnsureAdminIpAllowlist::class,
         ]);
 
         $middleware->priority([
