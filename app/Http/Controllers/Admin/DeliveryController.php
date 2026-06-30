@@ -10,9 +10,11 @@ use App\Support\Delivery\EmailRecipientResolver;
 use App\Models\Campaign;
 use App\Models\Delivery;
 use App\Services\Delivery\DeliveryAnalyticsService;
+use App\Services\Delivery\DeliveryTestHarnessService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Tenancy\AccountContext;
 use App\Support\VerticalCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -144,6 +146,7 @@ class DeliveryController extends Controller
             'pingTreeLinks' => $analytics->pingTreeLinks($delivery),
             'performance' => $performance,
             'campaignWorkflow' => CampaignWorkflow::forCampaign($delivery->campaign),
+            'sampleFields' => app(DeliveryTestHarnessService::class)->sampleFieldsFor($delivery),
         ]);
     }
 
@@ -193,24 +196,34 @@ class DeliveryController extends Controller
         return redirect()->route('deliveries.edit', $copy)->with('success', 'Delivery cloned. Review settings and activate.');
     }
 
-    public function test(Delivery $delivery): RedirectResponse
+    public function test(Request $request, Delivery $delivery, DeliveryTestHarnessService $harness): RedirectResponse|JsonResponse
     {
         $delivery = $this->resolveDelivery($delivery);
-        $lead = $delivery->campaign->leads()->latest()->first();
-        if (! $lead) {
-            return back()->with('error', 'No leads available to test with. Submit a test lead via the API first (use "test": true on the ingest API to avoid live routing).');
-        }
 
-        app(\App\Services\Delivery\DeliveryExecutor::class)->execute($lead, $delivery);
+        $validated = $request->validate([
+            'mode' => 'nullable|string|in:accept,reject,timeout,custom',
+            'custom_response' => 'nullable|array',
+        ]);
+
+        $result = $harness->run(
+            $delivery,
+            $validated['mode'] ?? DeliveryTestHarnessService::MODE_ACCEPT,
+            $validated['custom_response'] ?? null,
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json(['test_result' => $result]);
+        }
 
         return redirect()
             ->route('deliveries.show', [
                 'delivery' => $delivery,
-                'tab' => 'logs',
+                'tab' => 'test',
             ])
-            ->with('success', 'Test delivery executed against the latest campaign lead. Review the ping/post log below - this fires a live request to the buyer endpoint.')
-            ->with('test_lead_uuid', $lead->uuid)
-            ->with('test_lead_id', $lead->id);
+            ->with('success', 'Test delivery completed using a synthetic lead and mock buyer responses.')
+            ->with('test_result', $result)
+            ->with('test_lead_uuid', $result['lead_uuid'])
+            ->with('test_lead_id', $result['lead_id']);
     }
 
     protected function formData(?Delivery $delivery, ?Request $request = null): array

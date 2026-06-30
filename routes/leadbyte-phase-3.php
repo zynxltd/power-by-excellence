@@ -30,3 +30,13 @@ Route::post('vertical-field-templates/{verticalFieldTemplate}/preview', [Vertica
 
 Route::get('distribution/{distribution}/cap-usage', [DistributionController::class, 'capUsage'])
     ->name('distribution.cap-usage');
+
+/**
+ * Leadbyte Phase 3 — F6 delivery test harness.
+ *
+ * Existing route (already in web.php — do not duplicate):
+ *   POST deliveries/{delivery}/test → deliveries.test
+ *
+ * Runs DeliveryTestHarnessService with mock buyer modes: accept | reject | timeout | custom.
+ * Logs test runs in delivery_logs with _meta.is_test = true.
+ */
