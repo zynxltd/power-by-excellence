@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/messaging/open/{token}', [MessageTrackingController::class, 'open'])->name('messaging.track.open');
 Route::get('/messaging/click/{token}', [MessageTrackingController::class, 'click'])->name('messaging.track.click');
+Route::get('/s/{slug}', [MessageTrackingController::class, 'shortlinkRedirect'])->name('messaging.shortlink.redirect');
 Route::get('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'unsubscribe'])->name('messaging.unsubscribe');
 Route::post('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'confirmUnsubscribe'])->name('messaging.unsubscribe.confirm');
 
@@ -73,6 +74,11 @@ function registerEDeliveryAdminRoutes(): void
     if (! Route::has('e-delivery.send-time-settings.update')) {
         Route::patch('e-delivery/send-time-settings', [EDeliveryController::class, 'updateSendTimeSettings'])
             ->name('e-delivery.send-time-settings.update');
+    }
+
+    if (! Route::has('e-delivery.shortlink-settings.update')) {
+        Route::patch('e-delivery/shortlink-settings', [EDeliveryController::class, 'updateShortlinkSettings'])
+            ->name('e-delivery.shortlink-settings.update');
     }
 
     if (Route::has('e-delivery.index')) {

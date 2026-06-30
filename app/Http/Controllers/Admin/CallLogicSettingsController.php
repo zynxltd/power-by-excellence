@@ -37,6 +37,7 @@ class CallLogicSettingsController extends Controller
             'recording_enabled' => 'boolean',
             'recording_retention_days' => 'nullable|integer|min:1|max:3650',
             'concurrent_call_cap' => 'nullable|integer|min:1|max:10000',
+            'default_per_call_price' => 'nullable|numeric|min:0|max:100000',
         ]);
 
         if ($validated['enabled'] ?? false) {
@@ -54,6 +55,7 @@ class CallLogicSettingsController extends Controller
                 'recording_enabled' => $validated['recording_enabled'] ?? null,
                 'recording_retention_days' => $validated['recording_retention_days'] ?? null,
                 'concurrent_call_cap' => $validated['concurrent_call_cap'] ?? null,
+                'default_per_call_price' => $validated['default_per_call_price'] ?? null,
             ], fn ($v) => $v !== null),
         );
         $account->update(['settings' => $settings]);

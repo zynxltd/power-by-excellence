@@ -48,6 +48,7 @@ const campaignStatStrip = computed(() => [
     <AuthenticatedLayout>
         <PageHeader :title="campaign.name" :description="`Reference: ${campaign.reference} · ${campaign.country}/${campaign.currency}`">
             <template #actions>
+                <AppButton :href="route('vertical-field-templates.apply-wizard', { campaign_id: campaign.id })" variant="secondary">Apply field template</AppButton>
                 <AppButton :href="route('leads.index', { campaign_id: campaign.id })" variant="secondary">View leads</AppButton>
                 <AppButton :href="route('campaigns.edit', campaign.id)">Edit campaign</AppButton>
             </template>
@@ -69,7 +70,16 @@ const campaignStatStrip = computed(() => [
 
         <Panel title="Campaign Fields" class="mt-6">
             <template #header>
-                <span class="text-xs text-slate-500">{{ fieldCount }} fields · {{ pingFieldCount }} ping</span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-xs text-slate-500">{{ fieldCount }} fields · {{ pingFieldCount }} ping</span>
+                    <AppButton
+                        :href="route('vertical-field-templates.apply-wizard', { campaign_id: campaign.id })"
+                        variant="secondary"
+                        class="!py-1.5 !text-xs"
+                    >
+                        Apply field template
+                    </AppButton>
+                </div>
             </template>
             <CampaignFieldsPreview :fields="campaign.fields ?? []" :campaign-id="campaign.id" />
         </Panel>

@@ -46,6 +46,7 @@ class CallSessionController extends Controller
         $call->load([
             'campaign',
             'soldToBuyer',
+            'buyerTransaction',
             'trackingNumber',
             'winningDelivery.buyer',
             'events',

@@ -26,6 +26,7 @@ class CallLogicProduct
             'recording_enabled' => config('telephony.recording_enabled', false),
             'recording_retention_days' => config('telephony.recording_retention_days', 90),
             'concurrent_call_cap' => 100,
+            'default_per_call_price' => 0,
         ];
 
         return array_merge($defaults, $account?->settings['call_logic'] ?? []);

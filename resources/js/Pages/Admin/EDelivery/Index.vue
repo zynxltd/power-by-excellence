@@ -40,6 +40,14 @@ const props = defineProps({
             optimal_send_hour: 9,
         }),
     },
+    shortlinkSettings: {
+        type: Object,
+        default: () => ({ sms_shortlinks_enabled: false }),
+    },
+    shortlinkStats: {
+        type: Object,
+        default: () => ({ clicks_30d: 0, links_30d: 0, recent_sends: [] }),
+    },
 });
 
 const metricsPeriod = ref('30d');
@@ -393,6 +401,14 @@ const saveSendTimeSettings = () => {
     sendTimeForm.patch(route('e-delivery.send-time-settings.update'), { preserveScroll: true });
 };
 
+const shortlinkForm = useForm({
+    sms_shortlinks_enabled: Boolean(props.shortlinkSettings?.sms_shortlinks_enabled ?? false),
+});
+
+const saveShortlinkSettings = () => {
+    shortlinkForm.patch('/e-delivery/shortlink-settings', { preserveScroll: true });
+};
+
 const alertToneClass = (level) => ({
     critical: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
     warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
@@ -564,6 +580,52 @@ const healthBadgeClass = (tone) => ({
                         Save send-time settings
                     </AppButton>
                 </form>
+            </Panel>
+
+            <Panel title="SMS short links & click tracking" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    When enabled, http(s) URLs in SMS bodies are rewritten to tracked short links. Clicks log against the parent message send and journey steps.
+                </p>
+                <form class="mb-4 space-y-3" @submit.prevent="saveShortlinkSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="shortlinkForm.sms_shortlinks_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable SMS short links
+                    </label>
+                    <AppButton type="submit" size="sm" :disabled="shortlinkForm.processing" :loading="shortlinkForm.processing">
+                        Save short link settings
+                    </AppButton>
+                </form>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Short link clicks (30d)</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ shortlinkStats?.clicks_30d ?? 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Links created (30d)</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ shortlinkStats?.links_30d ?? 0 }}</p>
+                    </div>
+                </div>
+                <div v-if="shortlinkStats?.recent_sends?.length" class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-700">
+                                <th class="py-2 pr-4">Recipient</th>
+                                <th class="py-2 pr-4">Preview</th>
+                                <th class="py-2 pr-4">Links</th>
+                                <th class="py-2">Clicks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in shortlinkStats.recent_sends" :key="row.id" class="border-b border-slate-100 dark:border-slate-800">
+                                <td class="py-2 pr-4 font-mono text-xs">{{ row.recipient }}</td>
+                                <td class="max-w-xs truncate py-2 pr-4 text-slate-600 dark:text-slate-400">{{ row.body_preview }}</td>
+                                <td class="py-2 pr-4 tabular-nums">{{ row.short_links }}</td>
+                                <td class="py-2 tabular-nums">{{ row.clicks }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p v-else class="mt-4 text-xs text-slate-500">No tracked SMS sends in the last 30 days.</p>
             </Panel>
 
             <Panel title="Domain warmup & reputation" class="mb-6">

@@ -17,16 +17,11 @@ const props = defineProps({
 });
 
 const showCreate = ref(false);
-const applyingId = ref(null);
 
 const createForm = useForm({
-    vertical_id: props.verticals?.[0]?.value ?? '',
+    vertical_id: props.verticals?.[0]?.id ?? '',
     name: '',
     fields: [{ name: 'email', label: 'Email', type: 'email', required: true }],
-});
-
-const applyForm = useForm({
-    campaign_id: '',
 });
 
 const addField = () => {
@@ -47,22 +42,13 @@ const submitCreate = () => {
     });
 };
 
-const startApply = (template) => {
-    applyingId.value = template.id;
-    applyForm.reset();
-};
-
-const submitApply = (templateId) => {
-    applyForm.post(route('vertical-field-templates.apply', templateId), {
-        onSuccess: () => { applyingId.value = null; },
-    });
-};
+const wizardUrl = (template) => route('vertical-field-templates.apply-wizard', { template_id: template.id });
 </script>
 
 <template>
     <Head title="Field templates" />
     <AuthenticatedLayout>
-        <PageHeader title="Vertical field templates" description="Reusable campaign field sets — apply a template to replace fields on a campaign.">
+        <PageHeader title="Vertical field templates" description="Reusable campaign field sets — apply via the wizard with preview and confirmation.">
             <template #actions>
                 <AppButton @click="showCreate = !showCreate">{{ showCreate ? 'Cancel' : 'New template' }}</AppButton>
             </template>
@@ -76,7 +62,7 @@ const submitApply = (templateId) => {
                     <div>
                         <InputLabel value="Vertical" />
                         <select v-model="createForm.vertical_id" class="form-select mt-1 w-full" required>
-                            <option v-for="v in verticals" :key="v.value" :value="v.value">{{ v.label }}</option>
+                            <option v-for="v in verticals" :key="v.id" :value="v.id">{{ v.label }}</option>
                         </select>
                     </div>
                     <div>
@@ -125,24 +111,11 @@ const submitApply = (templateId) => {
                     <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ template.vertical_id }}</td>
                     <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ template.fields?.length ?? 0 }} fields</td>
                     <td class="px-6 py-4 text-right">
-                        <AppButton variant="ghost" @click="startApply(template)">Apply to campaign</AppButton>
+                        <AppButton variant="ghost" :href="wizardUrl(template)">Apply wizard</AppButton>
                     </td>
                 </tr>
             </DataTable>
             <Pagination :links="templates.links" />
-        </Panel>
-
-        <Panel v-if="applyingId" title="Apply template to campaign" class="mt-6">
-            <form class="flex flex-wrap items-end gap-4" @submit.prevent="submitApply(applyingId)">
-                <FormErrorSummary :errors="applyForm.errors" />
-                <div class="min-w-[12rem] flex-1">
-                    <InputLabel value="Campaign ID" />
-                    <input v-model="applyForm.campaign_id" type="number" class="form-input mt-1 w-full" required />
-                    <p class="mt-1 text-xs text-slate-500">Find the campaign ID on the campaigns list. This replaces all existing campaign fields.</p>
-                </div>
-                <PrimaryButton :disabled="applyForm.processing">Apply template</PrimaryButton>
-                <AppButton type="button" variant="secondary" @click="applyingId = null">Cancel</AppButton>
-            </form>
         </Panel>
     </AuthenticatedLayout>
 </template>

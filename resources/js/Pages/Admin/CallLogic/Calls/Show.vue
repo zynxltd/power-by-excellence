@@ -27,6 +27,12 @@ defineProps({ call: Object });
                     <dt class="text-slate-500">Buyer</dt><dd>{{ call.sold_to_buyer?.name || '—' }}</dd>
                     <dt class="text-slate-500">Duration</dt><dd>{{ call.duration_seconds }}s (billable: {{ call.billable_seconds }}s)</dd>
                     <dt class="text-slate-500">Revenue</dt><dd>{{ call.revenue ?? '—' }}</dd>
+                    <dt class="text-slate-500">Billing</dt>
+                    <dd>
+                        <span v-if="call.billed_at" class="text-emerald-600">Billed {{ call.billed_amount }} <span class="text-slate-400">·</span> <FormattedDate :value="call.billed_at" /></span>
+                        <span v-else-if="call.sold_to_buyer_id" class="text-amber-600">Pending / not billed</span>
+                        <span v-else>—</span>
+                    </dd>
                     <dt class="text-slate-500">Disposition</dt><dd>{{ call.disposition || '—' }}</dd>
                     <dt class="text-slate-500">Tracking #</dt><dd>{{ call.tracking_number?.phone_number || '—' }}</dd>
                     <dt class="text-slate-500">Received</dt><dd><FormattedDate :value="call.created_at" /></dd>

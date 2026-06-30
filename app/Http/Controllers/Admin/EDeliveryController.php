@@ -13,6 +13,7 @@ use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
 use App\Services\Messaging\SendTimeOptimizer;
+use App\Services\Messaging\SmsShortlinkService;
 use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
@@ -36,6 +37,7 @@ class EDeliveryController extends Controller
         $reports = app(DeliverabilityReportService::class);
         $opsCenter = $reports->opsCenter($accountId, $account);
         $sendTimeOptimizer = app(SendTimeOptimizer::class);
+        $shortlinks = app(SmsShortlinkService::class);
         $campaignStats = $reports->campaignStats($accountId);
         $campaignLookup = BulkSmsCampaign::query()
             ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
@@ -69,6 +71,8 @@ class EDeliveryController extends Controller
             'mergeTags' => TemplateRenderService::availableTags(),
             'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
             'sendTimeSettings' => $sendTimeOptimizer->settings($account),
+            'shortlinkSettings' => $shortlinks->settings($account),
+            'shortlinkStats' => $shortlinks->stats($accountId),
         ]);
     }
 
@@ -91,6 +95,21 @@ class EDeliveryController extends Controller
         ]);
 
         return back()->with('success', 'Send-time optimization settings saved.');
+    }
+
+    public function updateShortlinkSettings(Request $request, SmsShortlinkService $shortlinks): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'sms_shortlinks_enabled' => 'required|boolean',
+        ]);
+
+        $account->update([
+            'settings' => $shortlinks->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'SMS short link settings saved.');
     }
 
     public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse

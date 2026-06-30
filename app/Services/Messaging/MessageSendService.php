@@ -18,6 +18,7 @@ class MessageSendService
         protected ThrottleGovernor $throttle,
         protected TemplateRenderService $templateRender,
         protected SendTimeOptimizer $sendTimeOptimizer,
+        protected SmsShortlinkService $shortlinks,
     ) {}
 
     /**
@@ -192,7 +193,19 @@ class MessageSendService
                 $options,
             );
         } else {
-            $ok = $this->messaging->sendSms($recipient, $body, $options);
+            $smsBody = $body;
+            $stepId = ($payload['source_type'] ?? '') === 'automation_sequence_step'
+                ? ($payload['source_id'] ?? null)
+                : null;
+
+            if ($account && $channel === 'sms') {
+                $smsBody = $this->shortlinks->rewriteSmsBody($account, $body, $send, $stepId);
+                if ($smsBody !== $body) {
+                    $send->update(['body' => $smsBody]);
+                }
+            }
+
+            $ok = $this->messaging->sendSms($recipient, $smsBody, $options);
         }
 
         $send->update([

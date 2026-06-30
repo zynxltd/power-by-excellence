@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\MessageSend;
+use App\Models\MessageShortLink;
 use App\Services\Messaging\MarketingSuppressionService;
 use App\Services\Messaging\MessageSendService;
+use App\Services\Messaging\SmsShortlinkService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -40,6 +42,19 @@ class MessageTrackingController extends Controller
         }
 
         return redirect()->away(filter_var($url, FILTER_VALIDATE_URL) ? $url : url('/'));
+    }
+
+    public function shortlinkRedirect(string $slug): RedirectResponse
+    {
+        $link = MessageShortLink::withoutGlobalScopes()->where('slug', $slug)->first();
+
+        if (! $link || ! filter_var($link->destination_url, FILTER_VALIDATE_URL)) {
+            abort(404);
+        }
+
+        app(SmsShortlinkService::class)->recordClick($link);
+
+        return redirect()->away($link->destination_url, 302);
     }
 
     public function unsubscribe(string $token): InertiaResponse
