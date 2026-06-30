@@ -14,6 +14,7 @@
  * Schedule in bootstrap/app.php:
  *   $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
  *   $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
+ *   $schedule->command('messaging:process-scheduled')->everyMinute()->withoutOverlapping();
  */
 
 use App\Http\Controllers\Admin\AutomationController;
@@ -67,6 +68,11 @@ function registerEDeliveryAdminRoutes(): void
     if (! Route::has('e-delivery.sending-profiles.warmup')) {
         Route::patch('e-delivery/sending-profiles/{profile}/warmup', [EDeliveryController::class, 'updateSendingProfileWarmup'])
             ->name('e-delivery.sending-profiles.warmup');
+    }
+
+    if (! Route::has('e-delivery.send-time-settings.update')) {
+        Route::patch('e-delivery/send-time-settings', [EDeliveryController::class, 'updateSendTimeSettings'])
+            ->name('e-delivery.send-time-settings.update');
     }
 
     if (Route::has('e-delivery.index')) {

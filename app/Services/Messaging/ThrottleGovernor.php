@@ -125,7 +125,7 @@ class ThrottleGovernor
 
         $pendingSends = MessageSend::withoutGlobalScopes()
             ->where('account_id', $accountId)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'scheduled'])
             ->count();
 
         $activeThrottle = (int) ($queuedCampaigns->max('throttle_per_minute') ?: self::DEFAULT_SEND_RATE_PER_MINUTE);

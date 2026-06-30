@@ -12,6 +12,7 @@ use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\SendTimeOptimizer;
 use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
@@ -34,6 +35,7 @@ class EDeliveryController extends Controller
         $accountId = $account->id;
         $reports = app(DeliverabilityReportService::class);
         $opsCenter = $reports->opsCenter($accountId, $account);
+        $sendTimeOptimizer = app(SendTimeOptimizer::class);
         $campaignStats = $reports->campaignStats($accountId);
         $campaignLookup = BulkSmsCampaign::query()
             ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
@@ -66,7 +68,29 @@ class EDeliveryController extends Controller
             ],
             'mergeTags' => TemplateRenderService::availableTags(),
             'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
+            'sendTimeSettings' => $sendTimeOptimizer->settings($account),
         ]);
+    }
+
+    public function updateSendTimeSettings(Request $request, SendTimeOptimizer $optimizer): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'send_time_optimization' => 'required|boolean',
+            'quiet_hours_start' => 'required|date_format:H:i',
+            'quiet_hours_end' => 'required|date_format:H:i',
+            'optimal_send_hour' => 'required|integer|min:0|max:23',
+        ]);
+
+        $validated['quiet_hours_start'] = substr((string) $validated['quiet_hours_start'], 0, 5);
+        $validated['quiet_hours_end'] = substr((string) $validated['quiet_hours_end'], 0, 5);
+
+        $account->update([
+            'settings' => $optimizer->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'Send-time optimization settings saved.');
     }
 
     public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
