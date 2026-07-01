@@ -28,6 +28,7 @@ class StripeWebhookController extends Controller
 
         match ($type) {
             'checkout.session.completed' => $stripe->handleWebhookCompleted($data),
+            'invoice.finalized' => $stripe->handleInvoiceFinalized($data),
             'invoice.paid' => $stripe->handleInvoicePaid($data),
             'customer.subscription.updated' => $stripe->handleSubscriptionUpdated($data),
             'customer.subscription.deleted' => $stripe->handleSubscriptionDeleted($data),
