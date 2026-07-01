@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\BulkSmsCampaign;
 use App\Models\Lead;
+use App\Models\LibraryMessageTemplate;
 use App\Models\MessageTemplate;
 use App\Models\Segment;
 use App\Models\SendingProfile;
@@ -21,6 +22,7 @@ use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
+use App\Support\VerticalCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -78,6 +80,12 @@ class EDeliveryController extends Controller
             'shortlinkStats' => $shortlinks->stats($accountId),
             'hygieneSettings' => app(ListHygieneService::class)->settings($account),
             'sendingDomainDnsHints' => app(MessagingCredentialsResolver::class)->dnsHintsForSendingDomain('mail.example.com'),
+            'templateLibrary' => LibraryMessageTemplate::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (LibraryMessageTemplate $template) => $this->formatLibraryTemplate($template)),
+            'verticalOptions' => VerticalCatalog::options(),
         ]);
     }
 
@@ -318,6 +326,67 @@ class EDeliveryController extends Controller
         );
 
         return response()->json($rendered);
+    }
+
+    public function templateLibraryIndex(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'vertical_id' => 'nullable|string|max:64',
+            'channel' => 'nullable|in:email,sms',
+        ]);
+
+        $templates = LibraryMessageTemplate::query()
+            ->filtered($validated['vertical_id'] ?? null, $validated['channel'] ?? null)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (LibraryMessageTemplate $template) => $this->formatLibraryTemplate($template));
+
+        return response()->json(['templates' => $templates]);
+    }
+
+    public function importTemplateFromLibrary(Request $request): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+
+        $validated = $request->validate([
+            'library_template_id' => 'required|exists:library_message_templates,id',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        $library = LibraryMessageTemplate::query()->findOrFail($validated['library_template_id']);
+        $library->cloneToAccount($accountId, $validated['name'] ?? null);
+
+        return back()->with('success', 'Template added to your account.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function formatLibraryTemplate(LibraryMessageTemplate $template): array
+    {
+        $preview = app(TemplateRenderService::class)->renderParts(
+            [
+                'subject' => $template->subject,
+                'body' => $template->body,
+                'html_body' => $template->html_body,
+            ],
+            null,
+            $template->preview_data,
+        );
+
+        return [
+            'id' => $template->id,
+            'vertical_id' => $template->vertical_id,
+            'vertical_label' => VerticalCatalog::label($template->vertical_id),
+            'channel' => $template->channel,
+            'name' => $template->name,
+            'subject' => $template->subject,
+            'body' => $template->body,
+            'html_body' => $template->html_body,
+            'preview_data' => $template->preview_data,
+            'preview' => $preview,
+        ];
     }
 
     /**

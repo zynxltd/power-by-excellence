@@ -208,6 +208,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])->name('e-delivery.templates.preview');
     Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])->name('e-delivery.templates.update');
     Route::delete('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroyTemplate'])->name('e-delivery.templates.destroy');
+    Route::get('e-delivery/template-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'templateLibraryIndex'])->name('e-delivery.template-library.index');
+    Route::post('e-delivery/templates/from-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'importTemplateFromLibrary'])->name('e-delivery.templates.from-library');
     Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])->name('e-delivery.journeys.process');
     Route::post('e-delivery/throttle/pause', [\App\Http\Controllers\Admin\EDeliveryController::class, 'pauseSending'])->name('e-delivery.throttle.pause');
     Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])->name('e-delivery.throttle.resume');
@@ -489,6 +491,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/returns/bulk', [BuyerPortalController::class, 'bulkReturn'])->name('returns.bulk');
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
+        registerCompliancePhase3BuyerInvoiceRoutes();
         Route::post('/stripe/checkout', [BuyerStripeCheckoutController::class, 'checkout'])->name('stripe.checkout');
         Route::post('/stripe/subscribe', [BuyerStripeCheckoutController::class, 'subscribe'])->name('stripe.subscribe');
         Route::post('/stripe/subscription/cancel', [BuyerStripeCheckoutController::class, 'cancelSubscription'])->name('stripe.subscription.cancel');

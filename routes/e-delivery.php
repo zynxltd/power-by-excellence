@@ -19,6 +19,10 @@
  * F6 — dedicated sending domain per profile:
  *   POST  e-delivery/sending-profiles              → e-delivery.sending-profiles.store
  *   PATCH e-delivery/sending-profiles/{profile}    → e-delivery.sending-profiles.update
+ *
+ * F7 — premade vertical template library:
+ *   GET  e-delivery/template-library               → e-delivery.template-library.index
+ *   POST e-delivery/templates/from-library         → e-delivery.templates.from-library
  */
 
 use App\Http\Controllers\Admin\AutomationController;
@@ -98,6 +102,16 @@ function registerEDeliveryAdminRoutes(): void
     if (! Route::has('e-delivery.sending-profiles.update')) {
         Route::patch('e-delivery/sending-profiles/{profile}', [EDeliveryController::class, 'updateSendingProfile'])
             ->name('e-delivery.sending-profiles.update');
+    }
+
+    if (! Route::has('e-delivery.template-library.index')) {
+        Route::get('e-delivery/template-library', [EDeliveryController::class, 'templateLibraryIndex'])
+            ->name('e-delivery.template-library.index');
+    }
+
+    if (! Route::has('e-delivery.templates.from-library')) {
+        Route::post('e-delivery/templates/from-library', [EDeliveryController::class, 'importTemplateFromLibrary'])
+            ->name('e-delivery.templates.from-library');
     }
 
     if (Route::has('e-delivery.index')) {

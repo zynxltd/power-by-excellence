@@ -19,6 +19,10 @@
  * F6 — Right-to-erasure:
  *   registerCompliancePhase3LeadErasureRoutes();
  *   POST leads/{lead}/erasure → leads.erasure
+ *
+ * F7 — Stripe buyer invoice PDF email (register inside portal.buyer middleware group):
+ *   registerCompliancePhase3BuyerInvoiceRoutes();
+ *   POST invoices/{invoice}/resend → portal.buyer.invoices.resend
  */
 
 use App\Http\Controllers\Admin\AccessLogController;
