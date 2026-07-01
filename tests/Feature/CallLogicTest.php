@@ -14,12 +14,14 @@ use App\Models\IvrFlow;
 use App\Models\TrackingNumber;
 use App\Models\User;
 use App\Services\Api\ApiKeyService;
+use App\Services\Calls\LiveCallCounterService;
 use App\Services\Telephony\TelephonyWebhookUrls;
 use App\Services\Telephony\TwilioVoiceGateway;
 use App\Support\CallLogic\CallLogicRouteRegistrar;
 use App\Support\Products\CallLogicProduct;
 use App\Support\Tenancy\AccountContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -254,12 +256,104 @@ class CallLogicTest extends TestCase
                 'name' => 'Welcome flow',
                 'campaign_id' => $campaign->id,
                 'entry_node' => 'start',
-                'nodes' => ['start' => ['type' => 'route']],
+                'nodes' => [
+                    'start' => ['type' => 'say', 'message' => 'Welcome', 'next' => 'route'],
+                    'route' => ['type' => 'route'],
+                ],
                 'is_active' => true,
             ])
             ->assertRedirect(route('call-logic.ivr.index'));
 
         $this->assertDatabaseHas('ivr_flows', ['name' => 'Welcome flow', 'campaign_id' => $campaign->id]);
+    }
+
+    public function test_ivr_visual_builder_saves_three_step_graph(): void
+    {
+        $campaign = $this->createCallCampaign();
+
+        $nodes = [
+            'welcome' => ['type' => 'say', 'message' => 'Hello', 'next' => 'menu'],
+            'menu' => [
+                'type' => 'gather',
+                'prompt' => 'Press 1 to continue',
+                'store_as' => 'choice',
+                'branches' => ['1' => 'handoff'],
+            ],
+            'handoff' => ['type' => 'redirect', 'next' => 'route'],
+            'route' => ['type' => 'route'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->post(route('call-logic.ivr.store'), [
+                'name' => 'Three step flow',
+                'campaign_id' => $campaign->id,
+                'entry_node' => 'welcome',
+                'nodes' => $nodes,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('call-logic.ivr.index'));
+
+        $flow = IvrFlow::where('name', 'Three step flow')->first();
+        $this->assertNotNull($flow);
+        $this->assertSame('welcome', $flow->entry_node);
+        $this->assertArrayHasKey('handoff', $flow->nodes);
+        $this->assertSame('redirect', $flow->nodes['handoff']['type']);
+    }
+
+    public function test_inbound_ivr_follows_gather_redirect_path(): void
+    {
+        $campaign = $this->createCallCampaign();
+        IvrFlow::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'name' => 'Redirect path',
+            'entry_node' => 'welcome',
+            'nodes' => [
+                'welcome' => ['type' => 'say', 'message' => 'Hello', 'next' => 'menu'],
+                'menu' => [
+                    'type' => 'gather',
+                    'prompt' => 'Press 1 for sales',
+                    'store_as' => 'choice',
+                    'branches' => ['1' => 'handoff'],
+                ],
+                'handoff' => ['type' => 'redirect', 'next' => 'route'],
+                'route' => ['type' => 'route'],
+            ],
+            'is_active' => true,
+        ]);
+
+        $tracking = TrackingNumber::create([
+            'account_id' => $this->account->id,
+            'campaign_id' => $campaign->id,
+            'phone_number' => '+4420799888777',
+            'provider' => 'log',
+            'provider_sid' => 'LOGIVR1',
+            'status' => 'active',
+            'webhook_status' => 'configured',
+        ]);
+
+        $inbound = $this->post('/webhooks/twilio/voice/'.$this->account->slug, [
+            'CallSid' => 'CA_ivr_inbound',
+            'From' => '+447700900111',
+            'To' => $tracking->phone_number,
+        ]);
+
+        $inbound->assertOk()->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $inbound->assertSee('<Gather', false);
+        $inbound->assertSee('Press 1 for sales', false);
+
+        $session = CallSession::where('provider_call_sid', 'CA_ivr_inbound')->first();
+        $this->assertNotNull($session);
+        $this->assertSame('menu', $session->metadata['ivr_current_node'] ?? null);
+
+        $gather = $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/gather?session='.$session->uuid, [
+            'Digits' => '1',
+        ]);
+
+        $gather->assertOk()->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $session->refresh();
+        $this->assertSame('1', $session->ivr_data['choice'] ?? null);
+        $gather->assertSee('Thank you for calling', false);
     }
 
     public function test_call_analytics_summary(): void
@@ -350,7 +444,10 @@ class CallLogicTest extends TestCase
                 'name' => 'Updated flow',
                 'campaign_id' => $campaign->id,
                 'entry_node' => 'start',
-                'nodes' => ['start' => ['type' => 'gather', 'prompt' => 'Press 1']],
+                'nodes' => [
+                    'start' => ['type' => 'gather', 'prompt' => 'Press 1'],
+                    'route' => ['type' => 'route'],
+                ],
                 'is_active' => true,
             ])
             ->assertRedirect(route('call-logic.ivr.index'));
@@ -436,6 +533,67 @@ class CallLogicTest extends TestCase
         $session->refresh();
         $this->assertSame('completed', $session->status->value);
         $this->assertSame(90, $session->duration_seconds);
+    }
+
+    public function test_status_webhook_increments_live_call_counter(): void
+    {
+        Cache::flush();
+        $counter = app(LiveCallCounterService::class);
+
+        CallSession::create([
+            'account_id' => $this->account->id,
+            'status' => CallStatus::Connected,
+            'caller_number' => '+447700900123',
+            'provider_call_sid' => 'CA_live_inc',
+            'min_duration_seconds' => 5,
+        ]);
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_inc',
+            'CallStatus' => 'in-progress',
+        ])->assertNoContent();
+
+        $this->assertSame(1, $counter->countForAccount($this->account->id));
+    }
+
+    public function test_status_webhook_decrements_live_call_counter_on_completed(): void
+    {
+        Cache::flush();
+        $counter = app(LiveCallCounterService::class);
+
+        CallSession::create([
+            'account_id' => $this->account->id,
+            'status' => CallStatus::Connected,
+            'caller_number' => '+447700900123',
+            'provider_call_sid' => 'CA_live_dec',
+            'min_duration_seconds' => 5,
+        ]);
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_dec',
+            'CallStatus' => 'in-progress',
+        ])->assertNoContent();
+
+        $this->post('/webhooks/twilio/voice/'.$this->account->slug.'/status', [
+            'CallSid' => 'CA_live_dec',
+            'CallStatus' => 'completed',
+            'CallDuration' => 45,
+        ])->assertNoContent();
+
+        $this->assertSame(0, $counter->countForAccount($this->account->id));
+    }
+
+    public function test_calls_dashboard_shows_live_call_count(): void
+    {
+        Cache::flush();
+        app(LiveCallCounterService::class)->markInProgress($this->account->id, 'CA_dashboard');
+
+        $this->actingAs($this->admin)
+            ->get(route('call-logic.calls.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/CallLogic/Calls/Index')
+                ->where('liveCallsCount', 1));
     }
 
     public function test_recording_webhook_downloads_and_stores_recording(): void

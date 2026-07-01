@@ -22,6 +22,8 @@ const props = defineProps({
 const editingId = ref(null);
 const expandedId = ref(null);
 const previewStepIndex = ref(0);
+const dragStepIndex = ref(null);
+const dropTargetIndex = ref(null);
 
 const defaultStep = (channel = 'email', action = 'send') => ({
     delay_minutes: 0,
@@ -84,6 +86,55 @@ const branchOptions = [
     { value: 'clicked', label: 'If clicked previous email' },
     { value: 'not_opened', label: 'If did not open' },
 ];
+
+const branchLabel = (value) => branchOptions.find((o) => o.value === value)?.label ?? '';
+
+const nodeIcon = (step) => {
+    if (step.action === 'wait') return '⏱';
+    if (step.action === 'send_template') return '📄';
+    if ((step.config?.branch ?? '') !== '') return '⑂';
+
+    return channelIcons[step.channel] ?? '✉️';
+};
+
+const nodeTone = (step) => {
+    if (step.action === 'wait') return 'slate';
+    if ((step.config?.branch ?? '') !== '') return 'amber';
+    if (step.action === 'send_template') return 'violet';
+
+    return step.channel === 'sms' ? 'emerald' : 'indigo';
+};
+
+const nodeToneClasses = (step, selected = false) => {
+    const tone = nodeTone(step);
+    const map = {
+        slate: selected
+            ? 'border-slate-500 bg-slate-100 ring-2 ring-slate-200 dark:border-slate-400 dark:bg-slate-800 dark:ring-slate-700'
+            : 'border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-900/60',
+        amber: selected
+            ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200 dark:border-amber-500 dark:bg-amber-950/40 dark:ring-amber-800'
+            : 'border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20',
+        violet: selected
+            ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200 dark:border-violet-500 dark:bg-violet-950/40 dark:ring-violet-800'
+            : 'border-violet-300 bg-violet-50/80 dark:border-violet-800 dark:bg-violet-950/20',
+        emerald: selected
+            ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 dark:border-emerald-500 dark:bg-emerald-950/40 dark:ring-emerald-800'
+            : 'border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/20',
+        indigo: selected
+            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200 dark:border-indigo-500 dark:bg-indigo-950/40 dark:ring-indigo-800'
+            : 'border-indigo-300 bg-indigo-50/80 dark:border-indigo-800 dark:bg-indigo-950/20',
+    };
+
+    return map[tone] ?? map.indigo;
+};
+
+const canvasNodeLabel = (step, index) => {
+    if (step.action === 'wait') return `Wait · ${formatDelay(step.delay_minutes)}`;
+    if (step.action === 'send_template') return templateName(step.config?.message_template_id);
+    if (step.channel === 'email') return step.config?.subject?.slice(0, 28) || `Email ${index + 1}`;
+
+    return (step.config?.body?.slice(0, 28) || `SMS ${index + 1}`);
+};
 
 const presets = [
     {
@@ -245,12 +296,58 @@ const removeStep = (index) => {
 };
 
 const moveStep = (index, direction) => {
-    const target = index + direction;
-    if (target < 0 || target >= form.steps.length) return;
+    reorderSteps(index, index + direction);
+};
+
+const reorderSteps = (from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= form.steps.length || to >= form.steps.length) {
+        return;
+    }
+
     const steps = [...form.steps];
-    [steps[index], steps[target]] = [steps[target], steps[index]];
+    const [moved] = steps.splice(from, 1);
+    steps.splice(to, 0, moved);
     form.steps = steps;
-    previewStepIndex.value = target;
+    previewStepIndex.value = to;
+};
+
+const onDragStart = (index, event) => {
+    dragStepIndex.value = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(index));
+};
+
+const onDragOver = (index, event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    dropTargetIndex.value = index;
+};
+
+const onDragLeave = () => {
+    dropTargetIndex.value = null;
+};
+
+const onDrop = (index, event) => {
+    event.preventDefault();
+    const from = dragStepIndex.value ?? Number(event.dataTransfer.getData('text/plain'));
+    dragStepIndex.value = null;
+    dropTargetIndex.value = null;
+
+    if (Number.isFinite(from)) {
+        reorderSteps(from, index);
+    }
+};
+
+const onDragEnd = () => {
+    dragStepIndex.value = null;
+    dropTargetIndex.value = null;
+};
+
+const assignStepOrder = () => {
+    form.steps = form.steps.map((step, index) => ({
+        ...step,
+        sort_order: index,
+    }));
 };
 
 const insertMergeTag = (step, field, tag) => {
@@ -283,12 +380,15 @@ const loadSequence = (sequence) => {
     form.segment_id = sequence.segment_id ?? '';
     form.trigger_event = sequence.trigger_event;
     form.status = sequence.status ?? 'active';
-    form.steps = (sequence.steps ?? []).map((step) => ({
-        delay_minutes: step.delay_minutes ?? 0,
-        action: step.action ?? 'send',
-        channel: step.channel,
-        config: { ...(step.config ?? {}) },
-    }));
+    form.steps = (sequence.steps ?? [])
+        .map((step) => ({
+            sort_order: step.sort_order ?? 0,
+            delay_minutes: step.delay_minutes ?? 0,
+            action: step.action ?? 'send',
+            channel: step.channel,
+            config: { ...(step.config ?? {}) },
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order);
     if (!form.steps.length) form.steps = [defaultStep()];
     previewStepIndex.value = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -303,6 +403,7 @@ const duplicateSequence = (sequence) => {
 const submit = () => {
     form.steps.forEach(ensureStepConfig);
     normalizeFormSteps();
+    assignStepOrder();
 
     const options = {
         preserveScroll: true,
@@ -424,7 +525,7 @@ watch(() => form.steps.length, (len) => {
 
                     <div>
                         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <InputLabel value="Sequence timeline" />
+                            <InputLabel value="Journey canvas" />
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400" @click="addStep('email')">+ Email step</button>
                                 <button type="button" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400" @click="addStep('sms')">+ SMS step</button>
@@ -433,8 +534,48 @@ watch(() => form.steps.length, (len) => {
                             </div>
                         </div>
 
+                        <div class="mb-4 overflow-x-auto rounded-xl border border-dashed border-indigo-200 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 p-4 dark:border-indigo-900 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30">
+                            <p class="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Visual flow · drag nodes below to reorder</p>
+                            <div class="flex min-w-max items-center gap-2">
+                                <div class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                    Trigger
+                                </div>
+                                <template v-for="(step, ci) in form.steps" :key="`canvas-${ci}`">
+                                    <span class="text-slate-400">→</span>
+                                    <button
+                                        type="button"
+                                        draggable="true"
+                                        :class="[
+                                            'flex max-w-[10rem] items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold shadow-sm transition',
+                                            nodeToneClasses(step, previewStepIndex === ci),
+                                            dropTargetIndex === ci ? 'scale-105' : '',
+                                            dragStepIndex === ci ? 'opacity-50' : '',
+                                        ]"
+                                        @click="previewStepIndex = ci"
+                                        @dragstart="onDragStart(ci, $event)"
+                                        @dragover="onDragOver(ci, $event)"
+                                        @dragleave="onDragLeave"
+                                        @drop="onDrop(ci, $event)"
+                                        @dragend="onDragEnd"
+                                    >
+                                        <span class="text-base leading-none">{{ nodeIcon(step) }}</span>
+                                        <span class="min-w-0">
+                                            <span class="block truncate text-slate-900 dark:text-white">{{ canvasNodeLabel(step, ci) }}</span>
+                                            <span class="block truncate text-[10px] font-medium text-slate-500">{{ actionLabels[step.action ?? 'send'] }}</span>
+                                        </span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
                         <div class="relative space-y-0">
-                            <div v-for="(step, i) in form.steps" :key="i" class="relative">
+                            <div
+                                v-for="(step, i) in form.steps"
+                                :key="`step-${i}-${step.sort_order ?? i}`"
+                                class="relative"
+                                @dragover="onDragOver(i, $event)"
+                                @drop="onDrop(i, $event)"
+                            >
                                 <div
                                     v-if="i > 0"
                                     class="ml-8 flex h-10 items-center border-l-2 border-dashed border-indigo-300 pl-5 text-xs text-slate-500 dark:border-indigo-700"
@@ -446,20 +587,34 @@ watch(() => form.steps.length, (len) => {
                                 </div>
 
                                 <div
+                                    draggable="true"
                                     :class="[
                                         'rounded-2xl border-2 p-4 shadow-sm transition',
-                                        previewStepIndex === i ? 'border-indigo-400 ring-2 ring-indigo-200 dark:ring-indigo-800' : 'border-slate-200 dark:border-slate-700',
-                                        step.action === 'wait'
-                                            ? 'border-l-4 border-l-slate-400 bg-slate-50 dark:bg-slate-900'
-                                            : step.channel === 'email' ? 'border-l-4 border-l-indigo-500 bg-white dark:bg-slate-900' : 'border-l-4 border-l-emerald-500 bg-white dark:bg-slate-900',
+                                        nodeToneClasses(step, previewStepIndex === i),
+                                        dragStepIndex === i ? 'opacity-60' : '',
+                                        dropTargetIndex === i && dragStepIndex !== i ? 'ring-2 ring-indigo-300 dark:ring-indigo-700' : '',
                                     ]"
                                     @click="previewStepIndex = i"
+                                    @dragstart="onDragStart(i, $event)"
+                                    @dragend="onDragEnd"
                                 >
                                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                class="cursor-grab rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 active:cursor-grabbing dark:border-slate-600 dark:bg-slate-800"
+                                                title="Drag to reorder"
+                                                @mousedown.stop
+                                            >
+                                                ⋮⋮
+                                            </button>
                                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">{{ i + 1 }}</span>
+                                            <span class="text-lg leading-none">{{ nodeIcon(step) }}</span>
                                             <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ stepTitle(step) }}</span>
                                             <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ actionLabels[step.action ?? 'send'] }}</span>
+                                            <span v-if="step.config?.branch" class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                                                Branch: {{ branchLabel(step.config.branch) }}
+                                            </span>
                                             <span v-if="i === 0 && !step.delay_minutes" class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">Instant</span>
                                         </div>
                                         <div class="flex items-center gap-1">

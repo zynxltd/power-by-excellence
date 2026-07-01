@@ -7,6 +7,7 @@ use App\Models\Postback;
 use App\Models\PostbackLog;
 use App\Services\Delivery\TagInterpolator;
 use App\Services\Logging\PlatformLogger;
+use App\Services\Webhooks\WebhookSignatureService;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -14,6 +15,7 @@ class PostbackDispatcher
 {
     public function __construct(
         protected TagInterpolator $interpolator,
+        protected WebhookSignatureService $signatures,
     ) {}
 
     public function dispatch(Lead $lead, string $event): void
@@ -65,8 +67,9 @@ class PostbackDispatcher
         ]);
 
         try {
-            $response = match (strtolower($postback->method ?? 'get')) {
-                'post' => Http::timeout(8)->post($url, $payload),
+            $method = strtolower($postback->method ?? 'get');
+            $response = match ($method) {
+                'post' => $this->sendPost($postback, $url, $payload),
                 default => Http::timeout(8)->get($url),
             };
 
@@ -123,5 +126,22 @@ class PostbackDispatcher
         }
 
         return $base;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function sendPost(Postback $postback, string $url, array $payload): \Illuminate\Http\Client\Response
+    {
+        $body = $this->signatures->encodePayload($payload);
+        $request = Http::timeout(8)->withHeaders(['Content-Type' => 'application/json']);
+
+        if (($postback->config['sign_payloads'] ?? false) && filled($postback->config['signing_secret'] ?? null)) {
+            $request = $request->withHeaders(
+                $this->signatures->headers((string) $postback->config['signing_secret'], $body)
+            );
+        }
+
+        return $request->withBody($body, 'application/json')->post($url);
     }
 }

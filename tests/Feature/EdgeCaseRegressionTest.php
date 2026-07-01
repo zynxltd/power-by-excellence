@@ -135,7 +135,7 @@ class EdgeCaseRegressionTest extends TestCase
 
         $billing = app(BuyerBillingService::class);
         $this->assertFalse($billing->hasCredit($buyer, 1));
-        $this->assertFalse($billing->charge($buyer, 1));
+        $this->assertNull($billing->charge($buyer, 1));
     }
 
     public function test_supplier_api_key_rejects_wrong_campaign_tenant(): void

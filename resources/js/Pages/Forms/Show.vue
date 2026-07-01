@@ -9,6 +9,7 @@ const props = defineProps({
     submitUrl: String,
     statusUrl: String,
     thankYou: Object,
+    consent: { type: Object, default: () => ({}) },
     submitted: Boolean,
     submission: Object,
     embed: { type: Boolean, default: false },
@@ -47,6 +48,12 @@ const leadForm = useForm({
     ...initialFieldData(),
     ...trackingPayload(),
     embed: props.embed ? '1' : '',
+    consent_accepted: false,
+    channel_consent: {
+        email: false,
+        sms: false,
+        phone: false,
+    },
 });
 
 onMounted(() => {
@@ -170,6 +177,14 @@ const startPolling = async () => {
 
 const showConfetti = computed(() => showThankYou.value && (props.thankYou?.confetti ?? true) && !props.embed);
 const showSubmitAnother = computed(() => props.thankYou?.show_submit_another ?? true);
+
+const consentRequired = computed(() => props.consent?.require_consent ?? false);
+const consentChannels = computed(() => props.consent?.channel_consent_channels ?? []);
+const channelLabel = (channel) => ({
+    email: 'Email',
+    sms: 'SMS',
+    phone: 'Phone calls',
+}[channel] ?? channel);
 </script>
 
 <template>
@@ -293,6 +308,33 @@ const showSubmitAnother = computed(() => props.thankYou?.show_submit_another ?? 
                                 <input v-model="leadForm[field.name]" type="checkbox" class="rounded text-indigo-600" />
                                 {{ field.options?.[0] ?? 'Yes' }}
                             </label>
+                        </div>
+
+                        <div
+                            v-if="consentRequired && isLastStep"
+                            class="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50"
+                        >
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Consent</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">{{ consent.consent_text }}</p>
+                            <p v-if="consent.lawful_basis" class="text-xs text-slate-500">
+                                Lawful basis: {{ consent.lawful_basis.replace(/_/g, ' ') }}
+                            </p>
+                            <label class="flex items-start gap-3 text-sm">
+                                <input v-model="leadForm.consent_accepted" type="checkbox" class="mt-1 rounded text-indigo-600" required />
+                                <span>I agree to the statement above<span class="text-rose-500"> *</span></span>
+                            </label>
+                            <p v-if="leadForm.errors.consent_accepted" class="text-sm text-rose-600">{{ leadForm.errors.consent_accepted }}</p>
+                            <div v-if="consentChannels.length" class="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+                                <p class="text-xs font-medium text-slate-500">Channel preferences (optional)</p>
+                                <label
+                                    v-for="channel in consentChannels"
+                                    :key="channel"
+                                    class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
+                                >
+                                    <input v-model="leadForm.channel_consent[channel]" type="checkbox" class="rounded text-indigo-600" />
+                                    {{ channelLabel(channel) }}
+                                </label>
+                            </div>
                         </div>
 
                         <p v-if="leadForm.hasErrors" class="text-sm text-rose-600">Please check your answers and try again.</p>

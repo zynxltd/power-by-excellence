@@ -31,6 +31,35 @@ const props = defineProps({
     providers: Object,
     mergeTags: Array,
     defaultPreviewData: Object,
+    sendTimeSettings: {
+        type: Object,
+        default: () => ({
+            send_time_optimization: false,
+            quiet_hours_start: '21:00',
+            quiet_hours_end: '08:00',
+            optimal_send_hour: 9,
+        }),
+    },
+    shortlinkSettings: {
+        type: Object,
+        default: () => ({ sms_shortlinks_enabled: false }),
+    },
+    shortlinkStats: {
+        type: Object,
+        default: () => ({ clicks_30d: 0, links_30d: 0, recent_sends: [] }),
+    },
+    hygieneSettings: {
+        type: Object,
+        default: () => ({
+            list_hygiene_enabled: false,
+            inactive_days_threshold: 180,
+            hygiene_auto_suppress_bounces: true,
+            hygiene_last_run: null,
+        }),
+    },
+    sendingDomainDnsHints: { type: Object, default: () => ({}) },
+    templateLibrary: { type: Array, default: () => [] },
+    verticalOptions: { type: Array, default: () => [] },
 });
 
 const metricsPeriod = ref('30d');
@@ -195,10 +224,55 @@ const templateForm = useForm({
     html_body: '',
     preview_data: { ...(props.defaultPreviewData ?? {}) },
 });
+const libraryVerticalFilter = ref('');
+const libraryChannelFilter = ref('');
+const selectedLibraryId = ref(null);
+const importLibraryForm = useForm({
+    library_template_id: null,
+    name: '',
+});
+
+const filteredLibraryTemplates = computed(() => {
+    let list = props.templateLibrary ?? [];
+
+    if (libraryVerticalFilter.value) {
+        list = list.filter((t) => t.vertical_id === libraryVerticalFilter.value);
+    }
+
+    if (libraryChannelFilter.value) {
+        list = list.filter((t) => t.channel === libraryChannelFilter.value);
+    }
+
+    return list;
+});
+
+const selectedLibraryTemplate = computed(() =>
+    (props.templateLibrary ?? []).find((t) => t.id === selectedLibraryId.value) ?? null,
+);
+
+const libraryPreview = computed(() => selectedLibraryTemplate.value?.preview ?? { subject: '', body: '', html: '' });
+
+const selectLibraryTemplate = (template) => {
+    selectedLibraryId.value = template.id;
+    importLibraryForm.library_template_id = template.id;
+    importLibraryForm.name = '';
+};
+
+const submitImportLibrary = () => {
+    importLibraryForm.post(route('e-delivery.templates.from-library'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            importLibraryForm.reset();
+            selectedLibraryId.value = null;
+        },
+    });
+};
+
 const profileForm = useForm({
     name: '',
     provider: 'smtp',
     domain_match: '',
+    sending_domain: '',
     from_name: '',
     from_email: '',
     is_default: false,
@@ -206,6 +280,20 @@ const profileForm = useForm({
     warmup_day_one_limit: 50,
     warmup_target_limit: 1000,
     warmup_ramp_days: 14,
+});
+
+const profileDnsHints = computed(() => {
+    const domain = profileForm.sending_domain?.trim().toLowerCase();
+
+    if (! domain) {
+        return null;
+    }
+
+    return {
+        spf: `TXT @${domain}: v=spf1 include:sendgrid.net ~all (adjust for your ESP)`,
+        dkim: `CNAME s1._domainkey.${domain} → your ESP DKIM target (e.g. SendGrid/Mailgun)`,
+        return_path: `CNAME em.${domain} or bounce.${domain} for return-path alignment`,
+    };
 });
 
 const warmupForm = useForm({
@@ -373,6 +461,39 @@ const submitProfile = () => profileForm.post(route('e-delivery.sending-profiles.
 const pauseSending = () => router.post(route('e-delivery.throttle.pause'), {}, { preserveScroll: true });
 const resumeSending = () => router.post(route('e-delivery.throttle.resume'), {}, { preserveScroll: true });
 
+const sendTimeForm = useForm({
+    send_time_optimization: Boolean(props.sendTimeSettings?.send_time_optimization ?? false),
+    quiet_hours_start: props.sendTimeSettings?.quiet_hours_start ?? '21:00',
+    quiet_hours_end: props.sendTimeSettings?.quiet_hours_end ?? '08:00',
+    optimal_send_hour: props.sendTimeSettings?.optimal_send_hour ?? 9,
+});
+
+const saveSendTimeSettings = () => {
+    sendTimeForm.patch(route('e-delivery.send-time-settings.update'), { preserveScroll: true });
+};
+
+const shortlinkForm = useForm({
+    sms_shortlinks_enabled: Boolean(props.shortlinkSettings?.sms_shortlinks_enabled ?? false),
+});
+
+const saveShortlinkSettings = () => {
+    shortlinkForm.patch('/e-delivery/shortlink-settings', { preserveScroll: true });
+};
+
+const hygieneForm = useForm({
+    list_hygiene_enabled: Boolean(props.hygieneSettings?.list_hygiene_enabled ?? false),
+    inactive_days_threshold: Number(props.hygieneSettings?.inactive_days_threshold ?? 180),
+    hygiene_auto_suppress_bounces: Boolean(props.hygieneSettings?.hygiene_auto_suppress_bounces ?? true),
+});
+
+const saveHygieneSettings = () => {
+    hygieneForm.patch('/e-delivery/hygiene-settings', { preserveScroll: true });
+};
+
+const runHygiene = (dryRun = false) => {
+    router.post('/e-delivery/hygiene/run', { dry_run: dryRun }, { preserveScroll: true });
+};
+
 const alertToneClass = (level) => ({
     critical: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200',
     warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200',
@@ -512,6 +633,138 @@ const healthBadgeClass = (tone) => ({
                         </span>
                     </li>
                 </ul>
+            </Panel>
+
+            <Panel title="Send-time optimization" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Queue marketing sends outside quiet hours and align delivery to each lead's local morning window (default 9:00).
+                </p>
+                <form class="space-y-4" @submit.prevent="saveSendTimeSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="sendTimeForm.send_time_optimization" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable send-time optimization by lead timezone
+                    </label>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <InputLabel value="Quiet hours start" />
+                            <TextInput v-model="sendTimeForm.quiet_hours_start" type="time" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.quiet_hours_start" />
+                        </div>
+                        <div>
+                            <InputLabel value="Quiet hours end" />
+                            <TextInput v-model="sendTimeForm.quiet_hours_end" type="time" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.quiet_hours_end" />
+                        </div>
+                        <div>
+                            <InputLabel value="Optimal send hour (local)" />
+                            <TextInput v-model.number="sendTimeForm.optimal_send_hour" type="number" min="0" max="23" class="mt-1 w-full" />
+                            <InputError class="mt-1" :message="sendTimeForm.errors.optimal_send_hour" />
+                        </div>
+                    </div>
+                    <AppButton type="submit" size="sm" :disabled="sendTimeForm.processing" :loading="sendTimeForm.processing">
+                        Save send-time settings
+                    </AppButton>
+                </form>
+            </Panel>
+
+            <Panel title="SMS short links & click tracking" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    When enabled, http(s) URLs in SMS bodies are rewritten to tracked short links. Clicks log against the parent message send and journey steps.
+                </p>
+                <form class="mb-4 space-y-3" @submit.prevent="saveShortlinkSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="shortlinkForm.sms_shortlinks_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable SMS short links
+                    </label>
+                    <AppButton type="submit" size="sm" :disabled="shortlinkForm.processing" :loading="shortlinkForm.processing">
+                        Save short link settings
+                    </AppButton>
+                </form>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Short link clicks (30d)</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ shortlinkStats?.clicks_30d ?? 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Links created (30d)</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ shortlinkStats?.links_30d ?? 0 }}</p>
+                    </div>
+                </div>
+                <div v-if="shortlinkStats?.recent_sends?.length" class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-700">
+                                <th class="py-2 pr-4">Recipient</th>
+                                <th class="py-2 pr-4">Preview</th>
+                                <th class="py-2 pr-4">Links</th>
+                                <th class="py-2">Clicks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in shortlinkStats.recent_sends" :key="row.id" class="border-b border-slate-100 dark:border-slate-800">
+                                <td class="py-2 pr-4 font-mono text-xs">{{ row.recipient }}</td>
+                                <td class="max-w-xs truncate py-2 pr-4 text-slate-600 dark:text-slate-400">{{ row.body_preview }}</td>
+                                <td class="py-2 pr-4 tabular-nums">{{ row.short_links }}</td>
+                                <td class="py-2 tabular-nums">{{ row.clicks }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p v-else class="mt-4 text-xs text-slate-500">No tracked SMS sends in the last 30 days.</p>
+            </Panel>
+
+            <Panel title="List hygiene" class="mb-6">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Scrub hard-bounced leads for suppression and mark contacts with no recent opens or clicks as inactive.
+                </p>
+                <form class="mb-4 space-y-4" @submit.prevent="saveHygieneSettings">
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="hygieneForm.list_hygiene_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Enable automated list hygiene
+                    </label>
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <input v-model="hygieneForm.hygiene_auto_suppress_bounces" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+                        Auto-tag bounced leads (suppress_marketing + bounced segment)
+                    </label>
+                    <div>
+                        <InputLabel for="inactive_days_threshold" value="Inactive threshold (days without open/click)" />
+                        <TextInput
+                            id="inactive_days_threshold"
+                            v-model.number="hygieneForm.inactive_days_threshold"
+                            type="number"
+                            min="1"
+                            max="3650"
+                            class="mt-1 block w-full max-w-xs"
+                        />
+                        <InputError class="mt-1" :message="hygieneForm.errors.inactive_days_threshold" />
+                    </div>
+                    <AppButton type="submit" size="sm" :disabled="hygieneForm.processing" :loading="hygieneForm.processing">
+                        Save hygiene settings
+                    </AppButton>
+                </form>
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <AppButton size="sm" variant="secondary" @click="runHygiene(true)">
+                        Dry-run hygiene
+                    </AppButton>
+                    <AppButton size="sm" @click="runHygiene(false)">
+                        Run hygiene now
+                    </AppButton>
+                </div>
+                <div v-if="hygieneSettings?.hygiene_last_run" class="grid gap-4 sm:grid-cols-3">
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Last run</p>
+                        <p class="mt-1 text-sm font-medium text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.ran_at }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Bounces tagged</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.bounces_tagged ?? 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Inactive tagged</p>
+                        <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">{{ hygieneSettings.hygiene_last_run.inactive_tagged ?? 0 }}</p>
+                    </div>
+                </div>
+                <p v-else class="text-sm text-slate-500">No hygiene run recorded yet.</p>
             </Panel>
 
             <Panel title="Domain warmup & reputation" class="mb-6">
@@ -754,6 +1007,75 @@ const healthBadgeClass = (tone) => ({
                     </form>
                 </Panel>
 
+                <Panel title="Template library" class="lg:col-span-2">
+                    <p class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+                        Browse premade templates by vertical. Library templates are read-only — add one to your account to edit and send.
+                    </p>
+
+                    <div class="mb-4 flex flex-wrap gap-3">
+                        <div>
+                            <InputLabel value="Vertical" />
+                            <select v-model="libraryVerticalFilter" class="form-input mt-1 text-sm">
+                                <option value="">All verticals</option>
+                                <option v-for="v in verticalOptions" :key="v.id" :value="v.id">{{ v.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value="Channel" />
+                            <select v-model="libraryChannelFilter" class="form-input mt-1 text-sm">
+                                <option value="">All channels</option>
+                                <option value="email">Email</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <ul class="mb-4 max-h-48 space-y-1 overflow-y-auto text-sm">
+                        <li
+                            v-for="t in filteredLibraryTemplates"
+                            :key="t.id"
+                            class="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            :class="selectedLibraryId === t.id ? 'bg-indigo-50 ring-1 ring-indigo-200 dark:bg-indigo-950/40 dark:ring-indigo-800' : ''"
+                            @click="selectLibraryTemplate(t)"
+                        >
+                            <span>
+                                {{ t.name }}
+                                <span class="text-slate-400">· {{ t.vertical_label }} · {{ t.channel }}</span>
+                            </span>
+                        </li>
+                        <li v-if="!filteredLibraryTemplates.length" class="text-slate-500">No library templates match your filters.</li>
+                    </ul>
+
+                    <div v-if="selectedLibraryTemplate" class="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Preview</p>
+                                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ libraryPreview.subject || '—' }}</p>
+                                <pre class="mt-2 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300">{{ libraryPreview.body }}</pre>
+                            </div>
+                            <div v-if="selectedLibraryTemplate.channel === 'email'" class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                                <p class="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">HTML preview</p>
+                                <iframe
+                                    v-if="libraryPreview.html"
+                                    class="h-48 w-full border-0 bg-white"
+                                    sandbox=""
+                                    :srcdoc="libraryPreview.html"
+                                    title="Library template HTML preview"
+                                />
+                                <p v-else class="p-3 text-xs text-slate-500">No HTML body.</p>
+                            </div>
+                        </div>
+
+                        <form class="flex flex-wrap items-end gap-3" @submit.prevent="submitImportLibrary">
+                            <div class="min-w-[12rem] flex-1">
+                                <InputLabel value="Account template name (optional)" />
+                                <TextInput v-model="importLibraryForm.name" class="mt-1 w-full" :placeholder="selectedLibraryTemplate.name" />
+                            </div>
+                            <AppButton type="submit" size="sm" :disabled="importLibraryForm.processing">Add to account</AppButton>
+                        </form>
+                    </div>
+                </Panel>
+
                 <Panel title="Templates" class="lg:col-span-2">
                     <ul class="mb-4 space-y-1 text-sm">
                         <li v-for="t in templates" :key="t.id" class="flex items-center justify-between gap-2">
@@ -821,15 +1143,42 @@ const healthBadgeClass = (tone) => ({
 
                 <Panel title="Sending profiles">
                     <ul class="mb-4 space-y-1 text-sm">
-                        <li v-for="p in sendingProfiles" :key="p.id" class="flex items-center justify-between">
-                            <span>{{ p.name }} <span v-if="p.is_default" class="text-emerald-600">default</span></span>
-                            <button type="button" class="text-xs text-rose-600" @click="router.delete(route('e-delivery.sending-profiles.destroy', p.id))">Remove</button>
+                        <li v-for="p in sendingProfiles" :key="p.id" class="flex items-center justify-between gap-2">
+                            <span>
+                                {{ p.name }}
+                                <span v-if="p.is_default" class="text-emerald-600">default</span>
+                                <span v-if="p.sending_domain || p.domain_match" class="text-slate-400">
+                                    · {{ p.sending_domain || p.domain_match }}
+                                </span>
+                            </span>
+                            <button type="button" class="shrink-0 text-xs text-rose-600" @click="router.delete(route('e-delivery.sending-profiles.destroy', p.id))">Remove</button>
                         </li>
                         <li v-if="!sendingProfiles?.length" class="text-slate-500">No sending profiles yet.</li>
                     </ul>
                     <form class="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-700" @submit.prevent="submitProfile">
                         <TextInput v-model="profileForm.name" class="w-full" placeholder="Profile name" required />
-                        <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Domain match e.g. gmail.com" />
+                        <TextInput v-model="profileForm.domain_match" class="w-full" placeholder="Recipient domain match e.g. gmail.com" />
+                        <div>
+                            <InputLabel value="Sending domain" />
+                            <TextInput v-model="profileForm.sending_domain" class="mt-1 w-full" placeholder="mail.client.com" />
+                            <p class="mt-1 text-xs text-slate-500">
+                                Optional dedicated From/reply-to domain. When set, the local part from From email is used on this hostname.
+                            </p>
+                        </div>
+                        <div
+                            v-if="profileDnsHints"
+                            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                            <p class="mb-2 font-semibold text-slate-700 dark:text-slate-200">DNS records (verify with your ESP)</p>
+                            <ul class="space-y-1 font-mono">
+                                <li>{{ profileDnsHints.spf }}</li>
+                                <li>{{ profileDnsHints.dkim }}</li>
+                                <li>{{ profileDnsHints.return_path }}</li>
+                            </ul>
+                            <p v-if="sendingDomainDnsHints?.spf" class="mt-2 text-slate-500">
+                                Example: {{ sendingDomainDnsHints.spf }}
+                            </p>
+                        </div>
                         <TextInput v-model="profileForm.from_email" class="w-full" placeholder="From email" />
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                             <input v-model="profileForm.warmup_enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600" />

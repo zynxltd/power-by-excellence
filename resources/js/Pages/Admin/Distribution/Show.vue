@@ -5,7 +5,9 @@ import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import DeliveryMethodBadge from '@/Components/UI/DeliveryMethodBadge.vue';
 import PingTreeTierTable from '@/Components/UI/PingTreeTierTable.vue';
+import PingTreeCapBadge from '@/Components/UI/PingTreeCapBadge.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
+import { useDistributionCapUsage } from '@/Composables/useDistributionCapUsage';
 import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
 import { routingModeLabel } from '@/utils/routingModes';
@@ -19,7 +21,12 @@ const props = defineProps({
     tiers: Array,
     campaign: Object,
     campaignWorkflow: { type: Object, default: null },
+    capUsage: { type: Object, default: () => ({}) },
 });
+
+const { capUsage } = useDistributionCapUsage(props.config?.id ?? null, props.capUsage ?? {});
+
+const capUsageForDelivery = (deliveryId) => capUsage.value?.[deliveryId] ?? capUsage.value?.[String(deliveryId)] ?? null;
 
 const { formatMoney } = useMoneyFormat(props.campaign?.currency);
 
@@ -183,6 +190,7 @@ const tierGroups = computed(() =>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
+                                    <PingTreeCapBadge :usage="capUsageForDelivery(d.id)" />
                                     <DeliveryMethodBadge v-if="d.method" :method="d.method" />
                                     <StatusBadge v-if="d.status" :status="d.status" />
                                 </div>

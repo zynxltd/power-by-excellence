@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller as BaseController;
 use App\Jobs\ProcessLeadJob;
 use App\Models\HostedForm;
 use App\Models\Lead;
+use App\Services\Compliance\FormConsentPolicy;
 use App\Services\Forms\HostedFormEmbedService;
 use App\Services\Forms\HostedFormSubmissionService;
 use App\Services\Leads\LeadIngestService;
@@ -43,6 +44,9 @@ class PublicFormController extends BaseController
 
         $this->embedService->assertSubmitRefererAllowed($form, $request);
 
+        $consentPolicy = FormConsentPolicy::forHostedForm($form);
+        FormConsentPolicy::validateSubmission($consentPolicy, $request);
+
         $tracking = $this->embedService->resolveTracking($form, $request, $request->only(HostedFormEmbedService::TRACKING_QUERY_PARAMS));
 
         $lead = app(LeadIngestService::class)->ingest([
@@ -50,7 +54,12 @@ class PublicFormController extends BaseController
             'source' => 'hosted_form:'.$form->slug,
             'embed' => $request->boolean('embed') || $request->query('embed') ? '1' : null,
             ...$tracking,
-            ...$request->except(['_token', ...HostedFormEmbedService::TRACKING_QUERY_PARAMS, 'embed']),
+            'consent' => FormConsentPolicy::buildLeadConsentArtifact(
+                $consentPolicy,
+                $request,
+                $request->boolean('consent_accepted'),
+            ),
+            ...$request->except(['_token', ...HostedFormEmbedService::TRACKING_QUERY_PARAMS, 'embed', 'consent_accepted', 'channel_consent']),
         ]);
 
         ProcessLeadJob::dispatch($lead->id);
@@ -123,6 +132,7 @@ class PublicFormController extends BaseController
             'form' => $form->only(['id', 'name', 'slug']),
             'steps' => $steps,
             'multiStep' => $multiStep,
+            'consent' => FormConsentPolicy::forHostedForm($form),
             'submitUrl' => route('forms.submit', $form->slug),
             'statusUrl' => route('forms.status', ['slug' => $form->slug, 'uuid' => '__UUID__']),
             'thankYou' => $this->submissions->thankYouConfig($form),

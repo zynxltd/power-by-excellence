@@ -147,6 +147,7 @@ Route::get('/i/{token}', \App\Http\Controllers\ImpressionPixelController::class)
 Route::get('/god-mode/handoff/{token}', GodModeHandoffController::class)->name('god-mode.handoff');
 Route::get('/messaging/open/{token}', [MessageTrackingController::class, 'open'])->name('messaging.track.open');
 Route::get('/messaging/click/{token}', [MessageTrackingController::class, 'click'])->name('messaging.track.click');
+Route::get('/s/{slug}', [MessageTrackingController::class, 'shortlinkRedirect'])->name('messaging.shortlink.redirect');
 Route::get('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'unsubscribe'])->name('messaging.unsubscribe');
 Route::post('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'confirmUnsubscribe'])->name('messaging.unsubscribe.confirm');
 Route::post('/webhooks/esp/sendgrid', [EspWebhookController::class, 'sendgrid'])->name('webhooks.esp.sendgrid');
@@ -168,7 +169,7 @@ Route::get('/sdk/pbe-calls.js', function () {
     ]);
 })->name('sdk.calls');
 
-Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
+Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified', SetAccountFromUser::class, 'admin.ip-allowlist', EnsureTenantAccess::class, 'billing.active', EnsurePortalRole::class.':admin', 'module.access'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/live-stats', \App\Http\Controllers\Admin\LiveStatsController::class)->name('live-stats');
     Route::get('/command-center', [CommandCenterController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('command-center.index');
@@ -182,6 +183,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::get('/logs/api', [ApiRequestLogController::class, 'index'])->name('logs.api');
     Route::get('/logs/changes', [ChangeLogController::class, 'index'])->name('logs.changes');
     Route::get('/logs/security', [SecurityLogController::class, 'index'])->name('logs.security');
+    Route::get('/logs/access/export', [AccessLogController::class, 'export'])->name('logs.access.export');
+    Route::get('/logs/changes/export', [ChangeLogController::class, 'export'])->name('logs.changes.export');
+    Route::get('/logs/security/export', [SecurityLogController::class, 'export'])->name('logs.security.export');
 
     Route::get('support/manage', [SupportTicketController::class, 'index'])->middleware(['superadmin', 'central.host'])->name('support.admin.index');
     Route::get('support/manage/{ticket}', [SupportTicketController::class, 'show'])->middleware(['superadmin', 'central.host'])->name('support.admin.show');
@@ -204,13 +208,20 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])->name('e-delivery.templates.preview');
     Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])->name('e-delivery.templates.update');
     Route::delete('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroyTemplate'])->name('e-delivery.templates.destroy');
+    Route::get('e-delivery/template-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'templateLibraryIndex'])->name('e-delivery.template-library.index');
+    Route::post('e-delivery/templates/from-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'importTemplateFromLibrary'])->name('e-delivery.templates.from-library');
     Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])->name('e-delivery.journeys.process');
     Route::post('e-delivery/throttle/pause', [\App\Http\Controllers\Admin\EDeliveryController::class, 'pauseSending'])->name('e-delivery.throttle.pause');
     Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])->name('e-delivery.throttle.resume');
     Route::post('e-delivery/bulk-campaigns', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeBulkCampaign'])->name('e-delivery.bulk-campaigns.store');
     Route::post('e-delivery/bulk-campaigns/{bulkSms}/send', [\App\Http\Controllers\Admin\EDeliveryController::class, 'sendBulkCampaign'])->name('e-delivery.bulk-campaigns.send');
     Route::post('e-delivery/sending-profiles', [\App\Http\Controllers\Admin\EDeliveryController::class, 'storeSendingProfile'])->name('e-delivery.sending-profiles.store');
+    Route::patch('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfile'])->name('e-delivery.sending-profiles.update');
     Route::patch('e-delivery/sending-profiles/{profile}/warmup', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendingProfileWarmup'])->name('e-delivery.sending-profiles.warmup');
+    Route::patch('e-delivery/send-time-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateSendTimeSettings'])->name('e-delivery.send-time-settings.update');
+    Route::patch('e-delivery/shortlink-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateShortlinkSettings'])->name('e-delivery.shortlink-settings.update');
+    Route::patch('e-delivery/hygiene-settings', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateHygieneSettings'])->name('e-delivery.hygiene-settings.update');
+    Route::post('e-delivery/hygiene/run', [\App\Http\Controllers\Admin\EDeliveryController::class, 'runHygiene'])->name('e-delivery.hygiene.run');
     Route::delete('e-delivery/sending-profiles/{profile}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroySendingProfile'])->name('e-delivery.sending-profiles.destroy');
     Route::post('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'tagLead'])->name('leads.tags.store');
     Route::delete('leads/{lead}/tags', [\App\Http\Controllers\Admin\EDeliveryController::class, 'untagLead'])->name('leads.tags.destroy');
@@ -267,6 +278,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::prefix('call-logic')->name('call-logic.')->middleware('product.enabled:call_logic')->group(function () {
         Route::get('calls', [\App\Http\Controllers\Admin\CallSessionController::class, 'index'])->name('calls.index');
         Route::get('calls/{call}', [\App\Http\Controllers\Admin\CallSessionController::class, 'show'])->name('calls.show');
+        Route::post('calls/{call}/returns/{return}/approve', [\App\Http\Controllers\Admin\CallSessionController::class, 'approveReturn'])->name('calls.returns.approve');
+        Route::post('calls/{call}/returns/{return}/reject', [\App\Http\Controllers\Admin\CallSessionController::class, 'rejectReturn'])->name('calls.returns.reject');
         Route::get('recordings/{recording}/play', [CallRecordingController::class, 'play'])->name('recordings.play');
         Route::get('tracking-numbers', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'index'])->name('tracking-numbers.index');
         Route::post('tracking-numbers/search', [\App\Http\Controllers\Admin\TrackingNumberController::class, 'search'])->name('tracking-numbers.search');
@@ -298,6 +311,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::get('vertical-field-templates', [VerticalFieldTemplateController::class, 'index'])->name('vertical-field-templates.index');
     Route::post('vertical-field-templates', [VerticalFieldTemplateController::class, 'store'])->name('vertical-field-templates.store');
     Route::post('vertical-field-templates/{verticalFieldTemplate}/apply', [VerticalFieldTemplateController::class, 'apply'])->name('vertical-field-templates.apply');
+    require __DIR__.'/leadbyte-phase-3.php';
 
     Route::get('verify-batches', [VerifyBatchController::class, 'index'])->name('verify-batches.index');
     Route::post('verify-batches', [VerifyBatchController::class, 'store'])->name('verify-batches.store');
@@ -360,6 +374,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('leads/{lead}/quarantine/release', [LeadAdminController::class, 'releaseQuarantine'])->name('leads.quarantine.release');
     Route::post('leads/{lead}/quarantine/reject', [LeadAdminController::class, 'rejectQuarantine'])->name('leads.quarantine.reject');
     Route::post('leads/{lead}/repost', [LeadAdminController::class, 'repost'])->name('leads.repost');
+    require __DIR__.'/compliance-phase-3.php';
+    registerCompliancePhase3LeadErasureRoutes();
 
     Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
     Route::post('imports', [ImportController::class, 'store'])->name('imports.store');
@@ -372,6 +388,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('webhooks/{webhook}/approve-deletion', [WebhookController::class, 'approveDeletion'])->name('webhooks.approve-deletion');
     Route::post('webhooks/{webhook}/reject-deletion', [WebhookController::class, 'rejectDeletion'])->name('webhooks.reject-deletion');
     Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+    Route::post('webhooks/generate-signing-secret', [WebhookController::class, 'generateSigningSecret'])->name('webhooks.generate-signing-secret');
 
     Route::get('postbacks', [PostbackController::class, 'index'])->name('postbacks.index');
     Route::post('postbacks', [PostbackController::class, 'store'])->name('postbacks.store');
@@ -474,6 +491,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/returns/bulk', [BuyerPortalController::class, 'bulkReturn'])->name('returns.bulk');
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
+        registerCompliancePhase3BuyerInvoiceRoutes();
         Route::post('/stripe/checkout', [BuyerStripeCheckoutController::class, 'checkout'])->name('stripe.checkout');
         Route::post('/stripe/subscribe', [BuyerStripeCheckoutController::class, 'subscribe'])->name('stripe.subscribe');
         Route::post('/stripe/subscription/cancel', [BuyerStripeCheckoutController::class, 'cancelSubscription'])->name('stripe.subscription.cancel');
@@ -485,8 +503,9 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/webhooks/{webhook}/submit', [BuyerPortalController::class, 'submitWebhook'])->name('webhooks.submit');
         Route::delete('/webhooks/{webhook}', [BuyerPortalController::class, 'destroyWebhook'])->name('webhooks.destroy');
         Route::post('/webhooks/{webhook}/request-deletion', [BuyerPortalController::class, 'requestWebhookDeletion'])->name('webhooks.request-deletion');
-        Route::get('/calls', [BuyerCallPortalController::class, 'index'])->name('calls');
+        Route::get('calls', [BuyerCallPortalController::class, 'index'])->name('calls');
         Route::get('/calls/{call:uuid}', [BuyerCallPortalController::class, 'show'])->name('calls.show');
+        Route::post('/calls/{call:uuid}/return', [BuyerCallPortalController::class, 'submitReturn'])->name('calls.return');
         Route::get('/calls-export', [BuyerCallPortalController::class, 'export'])->name('calls.export');
     });
 
@@ -499,6 +518,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::get('/leads/download', [SupplierPortalController::class, 'downloadLeads'])->name('leads.download');
         Route::get('/leads/import', [SupplierPortalController::class, 'importLeads'])->name('leads.import');
         Route::post('/leads/import', [SupplierPortalController::class, 'storeImport'])->name('leads.import.store');
+        Route::get('/leads/import/{import}/errors', [SupplierPortalController::class, 'downloadImportErrors'])->name('leads.import.errors');
         Route::get('/payouts/download', [SupplierPortalController::class, 'downloadPayouts'])->name('payouts.download');
         Route::get('/leads/{uuid}', [SupplierPortalController::class, 'showLead'])->name('leads.show');
         Route::get('/embeds', [SupplierPortalController::class, 'embeds'])->name('embeds');

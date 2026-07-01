@@ -31,8 +31,8 @@ class BuyerBillingTest extends TestCase
         $billing = app(BuyerBillingService::class);
 
         $this->assertTrue($billing->hasCredit($buyer, 50));
-        $this->assertTrue($billing->charge($buyer, 20));
+        $this->assertNotNull($billing->charge($buyer, 20));
         $this->assertEquals(80, (float) $buyer->fresh()->credit_balance);
-        $this->assertFalse($billing->charge($buyer, 100));
+        $this->assertNull($billing->charge($buyer, 100));
     }
 }

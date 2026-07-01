@@ -7,6 +7,8 @@ import Pagination from '@/Components/UI/Pagination.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({ flows: Object, campaigns: Array });
+
+const stepCount = (flow) => Object.keys(flow.nodes ?? {}).length;
 </script>
 
 <template>
@@ -22,7 +24,7 @@ defineProps({ flows: Object, campaigns: Array });
                 <li v-for="flow in flows.data" :key="flow.id" class="flex items-center justify-between py-3">
                     <div>
                         <Link :href="route('call-logic.ivr.edit', flow.id)" class="font-medium text-indigo-600 hover:underline">{{ flow.name }}</Link>
-                        <p class="text-sm text-slate-500">{{ flow.campaign?.name || 'No campaign' }} · {{ flow.is_active ? 'Active' : 'Inactive' }}</p>
+                        <p class="text-sm text-slate-500">{{ flow.campaign?.name || 'No campaign' }} · {{ stepCount(flow) }} steps · {{ flow.is_active ? 'Active' : 'Inactive' }}</p>
                     </div>
                     <AppButton variant="secondary" size="sm" :href="route('call-logic.ivr.edit', flow.id)">Edit</AppButton>
                 </li>

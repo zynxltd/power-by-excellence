@@ -14,6 +14,15 @@
  * Schedule in bootstrap/app.php:
  *   $schedule->command('bulk:process-scheduled')->everyMinute()->withoutOverlapping();
  *   $schedule->command('automation:process-sequences')->everyMinute()->withoutOverlapping();
+ *   $schedule->command('messaging:process-scheduled')->everyMinute()->withoutOverlapping();
+ *
+ * F6 — dedicated sending domain per profile:
+ *   POST  e-delivery/sending-profiles              → e-delivery.sending-profiles.store
+ *   PATCH e-delivery/sending-profiles/{profile}    → e-delivery.sending-profiles.update
+ *
+ * F7 — premade vertical template library:
+ *   GET  e-delivery/template-library               → e-delivery.template-library.index
+ *   POST e-delivery/templates/from-library         → e-delivery.templates.from-library
  */
 
 use App\Http\Controllers\Admin\AutomationController;
@@ -25,6 +34,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/messaging/open/{token}', [MessageTrackingController::class, 'open'])->name('messaging.track.open');
 Route::get('/messaging/click/{token}', [MessageTrackingController::class, 'click'])->name('messaging.track.click');
+Route::get('/s/{slug}', [MessageTrackingController::class, 'shortlinkRedirect'])->name('messaging.shortlink.redirect');
 Route::get('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'unsubscribe'])->name('messaging.unsubscribe');
 Route::post('/messaging/unsubscribe/{token}', [MessageTrackingController::class, 'confirmUnsubscribe'])->name('messaging.unsubscribe.confirm');
 
@@ -67,6 +77,41 @@ function registerEDeliveryAdminRoutes(): void
     if (! Route::has('e-delivery.sending-profiles.warmup')) {
         Route::patch('e-delivery/sending-profiles/{profile}/warmup', [EDeliveryController::class, 'updateSendingProfileWarmup'])
             ->name('e-delivery.sending-profiles.warmup');
+    }
+
+    if (! Route::has('e-delivery.send-time-settings.update')) {
+        Route::patch('e-delivery/send-time-settings', [EDeliveryController::class, 'updateSendTimeSettings'])
+            ->name('e-delivery.send-time-settings.update');
+    }
+
+    if (! Route::has('e-delivery.shortlink-settings.update')) {
+        Route::patch('e-delivery/shortlink-settings', [EDeliveryController::class, 'updateShortlinkSettings'])
+            ->name('e-delivery.shortlink-settings.update');
+    }
+
+    if (! Route::has('e-delivery.hygiene-settings.update')) {
+        Route::patch('e-delivery/hygiene-settings', [EDeliveryController::class, 'updateHygieneSettings'])
+            ->name('e-delivery.hygiene-settings.update');
+    }
+
+    if (! Route::has('e-delivery.hygiene.run')) {
+        Route::post('e-delivery/hygiene/run', [EDeliveryController::class, 'runHygiene'])
+            ->name('e-delivery.hygiene.run');
+    }
+
+    if (! Route::has('e-delivery.sending-profiles.update')) {
+        Route::patch('e-delivery/sending-profiles/{profile}', [EDeliveryController::class, 'updateSendingProfile'])
+            ->name('e-delivery.sending-profiles.update');
+    }
+
+    if (! Route::has('e-delivery.template-library.index')) {
+        Route::get('e-delivery/template-library', [EDeliveryController::class, 'templateLibraryIndex'])
+            ->name('e-delivery.template-library.index');
+    }
+
+    if (! Route::has('e-delivery.templates.from-library')) {
+        Route::post('e-delivery/templates/from-library', [EDeliveryController::class, 'importTemplateFromLibrary'])
+            ->name('e-delivery.templates.from-library');
     }
 
     if (Route::has('e-delivery.index')) {

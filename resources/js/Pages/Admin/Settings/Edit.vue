@@ -18,6 +18,7 @@ const props = defineProps({
     currencies: Array,
     countries: Object,
     buyerPortalLanguages: Object,
+    clientIp: { type: String, default: '' },
 });
 
 const form = useForm({
@@ -41,6 +42,12 @@ const form = useForm({
         logs_retention_days: props.account.data_retention?.logs_retention_days ?? 90,
         purge_message_events: props.account.data_retention?.purge_message_events ?? false,
         message_events_retention_days: props.account.data_retention?.message_events_retention_days ?? 90,
+    },
+    security: {
+        admin_ip_allowlist_enabled: props.account.security?.admin_ip_allowlist_enabled ?? false,
+        admin_ip_allowlist_text: props.account.security?.admin_ip_allowlist_text ?? '',
+        admin_geo_block_enabled: props.account.security?.admin_geo_block_enabled ?? false,
+        blocked_country_codes_text: props.account.security?.blocked_country_codes_text ?? '',
     },
 });
 
@@ -239,6 +246,49 @@ const verifyPortalDomain = () => {
                             <input v-model="form.two_factor_grace_days" type="number" min="0" max="90" step="1" class="form-input mt-1 w-full" />
                             <p class="mt-1 text-xs text-slate-500">Days after enabling a policy before access is blocked. Set to 0 for immediate enforcement.</p>
                             <InputError class="mt-1" :message="form.errors.two_factor_grace_days" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <h4 class="text-sm font-semibold text-slate-900 dark:text-white">Admin IP allowlist</h4>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Restrict staff admin access to approved office or VPN IP addresses. When enabled, requests from other IPs receive HTTP 403 and are logged under Security.
+                    </p>
+
+                    <div class="mt-4 space-y-4">
+                        <label class="flex items-start gap-3">
+                            <input v-model="form.security.admin_ip_allowlist_enabled" type="checkbox" class="mt-1 rounded border-slate-300 text-indigo-600" />
+                            <span>
+                                <span class="block text-sm font-medium text-slate-900 dark:text-white">Enforce admin IP allowlist</span>
+                                <span class="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">
+                                    Applies to authenticated admin routes on this platform. Add your current IP before enabling.
+                                </span>
+                            </span>
+                        </label>
+                        <InputError class="mt-1" :message="form.errors['security.admin_ip_allowlist_enabled']" />
+
+                        <div>
+                            <InputLabel value="Allowed IPs and CIDR ranges" />
+                            <textarea
+                                v-model="form.security.admin_ip_allowlist_text"
+                                rows="5"
+                                class="form-input mt-1 w-full font-mono text-sm"
+                                placeholder="203.0.113.10&#10;198.51.100.0/24"
+                            />
+                            <p v-if="clientIp" class="mt-2 text-xs text-slate-500">
+                                Your current IP:
+                                <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">{{ clientIp }}</code>
+                                <button
+                                    type="button"
+                                    class="ml-2 font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                                    @click="form.security.admin_ip_allowlist_text = [form.security.admin_ip_allowlist_text, clientIp].filter(Boolean).join('\n')"
+                                >
+                                    Add my IP
+                                </button>
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">One IP or CIDR per line. IPv4 only in v1.</p>
+                            <InputError class="mt-1" :message="form.errors['security.admin_ip_allowlist_text']" />
                         </div>
                     </div>
                 </div>

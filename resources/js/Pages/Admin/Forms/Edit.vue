@@ -58,6 +58,12 @@ const f = useForm({
         default_sid: props.form.config?.default_sid ?? '',
         embed_height: props.form.config?.embed_height ?? 720,
         thank_you: defaultThankYou(),
+        consent: {
+            require_consent: props.form.config?.consent?.require_consent ?? props.form.campaign?.validation_config?.require_consent ?? false,
+            consent_text: props.form.config?.consent?.consent_text ?? props.form.campaign?.validation_config?.consent_text ?? '',
+            lawful_basis: props.form.config?.consent?.lawful_basis ?? props.form.campaign?.validation_config?.lawful_basis ?? 'consent',
+            channel_consent_channels: props.form.config?.consent?.channel_consent_channels ?? props.form.campaign?.validation_config?.channel_consent_channels ?? [],
+        },
     },
 });
 
@@ -304,6 +310,56 @@ const addFieldFromSpec = (step, specName) => {
                         <input v-model="f.config.multi_step" type="checkbox" class="rounded" />
                         Multi-step flow (progress bar + Next/Back)
                     </label>
+                </div>
+            </Panel>
+
+            <Panel title="GDPR consent">
+                <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                    Configure consent capture for this hosted form. Settings are synced to the campaign validation config for API ingest on the same campaign.
+                </p>
+                <div class="space-y-4">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input v-model="f.config.consent.require_consent" type="checkbox" class="rounded" />
+                        Require explicit consent checkbox before submit
+                    </label>
+                    <div>
+                        <label class="text-sm font-medium">Consent text shown to consumers</label>
+                        <textarea
+                            v-model="f.config.consent.consent_text"
+                            rows="4"
+                            class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                            placeholder="I agree to be contacted about my enquiry..."
+                        />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Lawful basis</label>
+                        <select v-model="f.config.consent.lawful_basis" class="mt-1 w-full max-w-md rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">
+                            <option value="consent">Consent</option>
+                            <option value="legitimate_interest">Legitimate interest</option>
+                            <option value="contract">Contract</option>
+                        </select>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium">Optional channel consent checkboxes</p>
+                        <div class="mt-2 flex flex-wrap gap-4 text-sm">
+                            <label v-for="channel in ['email', 'sms', 'phone']" :key="channel" class="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    :checked="f.config.consent.channel_consent_channels.includes(channel)"
+                                    @change="(e) => {
+                                        const channels = f.config.consent.channel_consent_channels;
+                                        if (e.target.checked) {
+                                            if (!channels.includes(channel)) channels.push(channel);
+                                        } else {
+                                            const idx = channels.indexOf(channel);
+                                            if (idx >= 0) channels.splice(idx, 1);
+                                        }
+                                    }"
+                                />
+                                {{ channel }}
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </Panel>
 

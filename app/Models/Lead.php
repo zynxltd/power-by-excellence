@@ -142,4 +142,14 @@ class Lead extends Model
             'received_at' => $this->received_at?->toIso8601String(),
         ]);
     }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function consentArtifact(): ?array
+    {
+        $artifact = $this->metadata['consent'] ?? null;
+
+        return is_array($artifact) ? $artifact : null;
+    }
 }

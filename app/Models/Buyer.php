@@ -52,6 +52,11 @@ class Buyer extends Model
         return $this->hasMany(BuyerTransaction::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(BuyerInvoice::class);
+    }
+
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class, 'sold_to_buyer_id');
@@ -60,6 +65,20 @@ class Buyer extends Model
     public function portalUsers(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * @return array{logo_url: ?string, primary_color: ?string, welcome_text: ?string}
+     */
+    public function portalBranding(): array
+    {
+        $settings = $this->settings ?? [];
+
+        return [
+            'logo_url' => filled($settings['portal_logo_url'] ?? null) ? (string) $settings['portal_logo_url'] : null,
+            'primary_color' => filled($settings['portal_primary_color'] ?? null) ? (string) $settings['portal_primary_color'] : null,
+            'welcome_text' => filled($settings['portal_welcome_text'] ?? null) ? (string) $settings['portal_welcome_text'] : null,
+        ];
     }
 
     public function resolvedCurrency(): string

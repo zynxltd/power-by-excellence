@@ -8,6 +8,7 @@ import TextInput from '@/Components/TextInput.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
+import WebhookFormFields from '@/Pages/Admin/Webhooks/Form.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { useApprovalHighlight } from '@/Composables/useApprovalHighlight';
@@ -30,6 +31,8 @@ const editForm = useForm({
     events: [],
     buyer_id: '',
     is_active: true,
+    sign_payloads: false,
+    secret: '',
 });
 
 const openEdit = (webhook) => {
@@ -40,6 +43,8 @@ const openEdit = (webhook) => {
     editForm.events = [...(webhook.events ?? [])];
     editForm.buyer_id = webhook.buyer_id ?? '';
     editForm.is_active = webhook.is_active ?? true;
+    editForm.sign_payloads = webhook.sign_payloads ?? false;
+    editForm.secret = '';
 };
 
 const submitEdit = () => {
@@ -82,6 +87,8 @@ const form = useForm({
     events: ['lead.sold'],
     buyer_id: '',
     is_active: true,
+    sign_payloads: false,
+    secret: '',
 });
 
 const submit = () => form.post(route('webhooks.store'), {
@@ -223,6 +230,7 @@ useApprovalHighlight();
                             Active — fire on matching events
                         </label>
                     </div>
+                    <WebhookFormFields :form="form" />
                     <div class="flex items-end md:col-span-2">
                         <PrimaryButton :disabled="form.processing || !form.events.length">Add Webhook</PrimaryButton>
                     </div>
@@ -265,6 +273,10 @@ useApprovalHighlight();
                             Active — fire on matching events
                         </label>
                     </div>
+                    <WebhookFormFields
+                        :form="editForm"
+                        :has-existing-secret="webhooks.find((w) => w.id === editingWebhook)?.has_signing_secret"
+                    />
                     <div class="flex items-end gap-2 md:col-span-2">
                         <PrimaryButton :disabled="editForm.processing || !editForm.events.length">Save changes</PrimaryButton>
                         <AppButton type="button" variant="secondary" @click="editingWebhook = null">Cancel</AppButton>
@@ -280,6 +292,7 @@ useApprovalHighlight();
                             <p class="font-medium text-slate-900 dark:text-white">{{ w.name }}</p>
                             <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ scopeLabel(w) }}</span>
                             <span v-if="isManaged(w)" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Buyer form</span>
+                            <span v-if="w.sign_payloads" class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200">Signed</span>
                             <StatusBadge
                                 v-if="approvalBadge(w)"
                                 :label="approvalBadge(w)"

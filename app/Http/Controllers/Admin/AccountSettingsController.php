@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\PlatformFeatureParity\PortalDomain;
 use App\PlatformFeatureParity\PortalDomainVerification;
 use App\Services\Compliance\DataRetentionPolicy;
+use App\Services\Security\AdminIpAllowlistPolicy;
 use App\Services\Security\TwoFactorService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\BuyerPortal\BuyerPortalLocale;
@@ -40,8 +41,10 @@ class AccountSettingsController extends Controller
                     'require_2fa_for_portal' => $account->settings['require_2fa_for_portal'] ?? false,
                     'two_factor_grace_days' => (int) ($account->settings['two_factor_grace_days'] ?? 7),
                     'data_retention' => DataRetentionPolicy::forInertia($account),
+                    'security' => AdminIpAllowlistPolicy::forInertia($account),
                 ]
             ),
+            'clientIp' => $request->ip(),
             'portalDomain' => $this->portalDomainVerification->statusForAccount($account),
             'timezones' => timezone_identifiers_list(),
             'currencies' => $this->currencies(),
@@ -75,6 +78,11 @@ class AccountSettingsController extends Controller
             'data_retention.logs_retention_days' => 'nullable|integer|min:7|max:3650',
             'data_retention.purge_message_events' => 'nullable|boolean',
             'data_retention.message_events_retention_days' => 'nullable|integer|min:7|max:3650',
+            'security' => 'nullable|array',
+            'security.admin_ip_allowlist_enabled' => 'boolean',
+            'security.admin_ip_allowlist_text' => 'nullable|string|max:5000',
+            'security.admin_geo_block_enabled' => 'boolean',
+            'security.blocked_country_codes_text' => 'nullable|string|max:500',
         ], $this->messages());
 
         $settings = $account->settings ?? [];
@@ -104,6 +112,12 @@ class AccountSettingsController extends Controller
         if (array_key_exists('data_retention', $validated)) {
             $settings[DataRetentionPolicy::SETTINGS_KEY] = DataRetentionPolicy::normalize(
                 $validated['data_retention'] ?? []
+            );
+        }
+
+        if (array_key_exists('security', $validated)) {
+            $settings[AdminIpAllowlistPolicy::SETTINGS_KEY] = AdminIpAllowlistPolicy::normalizeInput(
+                $validated['security'] ?? []
             );
         }
 

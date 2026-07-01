@@ -131,7 +131,7 @@ class CallRouter
 
         $buyer = $delivery->buyer;
 
-        if ($buyer && ! $this->billingService->chargeForCall($session, $buyer, $revenue)) {
+        if ($buyer && ! $this->billingService->canChargeForCall($session, $delivery, $revenue)) {
             return CallRoutingResult::failed('insufficient_credit');
         }
 
@@ -142,6 +142,10 @@ class CallRouter
             'revenue' => $revenue,
             'transferred_at' => now(),
         ]);
+
+        if ($buyer) {
+            $this->billingService->billSoldCall($session->fresh(), $delivery, $revenue);
+        }
 
         $this->logger->log($session, CallEventType::Transfer, 'Transferring call', [
             'destination' => $destination,
@@ -246,6 +250,17 @@ class CallRouter
     public function buildTwiml(CallSession $session, string $webhookBase): string
     {
         $ivrResult = $this->ivrEngine->processStep($session);
+
+        if ($ivrResult['hangup'] ?? false) {
+            return $this->telephony->gateway($session->trackingNumber?->provider)->buildInboundTwiml(
+                new CallTwimlContext(
+                    session: $session,
+                    actionUrl: $webhookBase.'/status',
+                    message: $ivrResult['message'],
+                    hangup: true,
+                ),
+            );
+        }
 
         if ($ivrResult['route']) {
             $routing = $this->route($session);

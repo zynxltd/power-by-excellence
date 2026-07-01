@@ -73,6 +73,8 @@ class LogTelephonyGateway implements TelephonyGateway
             } else {
                 $lines[] = '<Dial>'.htmlspecialchars($context->transferNumber).'</Dial>';
             }
+        } elseif ($context->hangup) {
+            $lines[] = '<Hangup/>';
         } elseif (! $context->gatherUrl) {
             $lines[] = '<Say>Thank you for calling. Goodbye.</Say>';
         }

@@ -14,5 +14,6 @@ class CallTwimlContext
         public ?string $transferNumber = null,
         public bool $record = false,
         public ?string $whisperUrl = null,
+        public bool $hangup = false,
     ) {}
 }
