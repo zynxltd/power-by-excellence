@@ -192,6 +192,28 @@ class CampaignController extends Controller
         return back()->with('success', 'Validation rules updated.');
     }
 
+    public function updateRepostRules(Request $request, Campaign $campaign): RedirectResponse
+    {
+        $validated = $request->validate([
+            'repost_config' => 'nullable|array',
+            'repost_config.enabled' => 'boolean',
+            'repost_config.max_attempts' => 'nullable|integer|min:1|max:100',
+            'repost_config.min_age_minutes' => 'nullable|integer|min:0|max:10080',
+            'repost_config.cooldown_minutes' => 'nullable|integer|min:0|max:10080',
+        ]);
+
+        $incoming = $validated['repost_config'] ?? [];
+        $merged = array_merge($campaign->repost_config ?? [], $incoming);
+
+        if (array_key_exists('max_attempts', $merged) && ($merged['max_attempts'] === '' || $merged['max_attempts'] === null)) {
+            $merged['max_attempts'] = null;
+        }
+
+        $campaign->update(['repost_config' => $merged]);
+
+        return back()->with('success', 'Repost rules updated.');
+    }
+
     protected function validateCampaign(Request $request, ?Campaign $campaign = null): array
     {
         $geoCountries = $request->input('geo_countries');
