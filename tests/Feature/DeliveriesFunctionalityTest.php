@@ -259,14 +259,15 @@ class DeliveriesFunctionalityTest extends TestCase
         $this->ukHost()
             ->actingAs($this->ukAdmin)
             ->post(route('deliveries.test', $delivery))
-            ->assertRedirect(route('deliveries.show', ['delivery' => $delivery, 'tab' => 'logs']))
+            ->assertRedirect(route('deliveries.show', ['delivery' => $delivery, 'tab' => 'test']))
             ->assertSessionHas('success')
-            ->assertSessionHas('test_lead_uuid');
+            ->assertSessionHas('test_lead_uuid')
+            ->assertSessionHas('test_result');
 
         $this->assertGreaterThan($before, DeliveryLog::where('delivery_id', $delivery->id)->count());
     }
 
-    public function test_test_delivery_errors_when_no_leads_exist(): void
+    public function test_test_delivery_uses_synthetic_lead_when_campaign_has_no_leads(): void
     {
         $campaign = Campaign::create([
             'account_id' => $this->ukAccount->id,
@@ -289,8 +290,9 @@ class DeliveriesFunctionalityTest extends TestCase
         $this->ukHost()
             ->actingAs($this->ukAdmin)
             ->post(route('deliveries.test', $delivery))
-            ->assertRedirect()
-            ->assertSessionHas('error');
+            ->assertRedirect(route('deliveries.show', ['delivery' => $delivery, 'tab' => 'test']))
+            ->assertSessionHas('success')
+            ->assertSessionHas('test_result');
     }
 
     public function test_rule_based_revenue_strips_incomplete_rules(): void

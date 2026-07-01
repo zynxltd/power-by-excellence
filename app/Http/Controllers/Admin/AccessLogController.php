@@ -2,28 +2,72 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ResolvesLogDateRange;
 use App\Http\Controllers\Controller;
 use App\Models\AccessLog;
+use App\Support\CsvExport;
 use App\Support\Tenancy\AccountContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
 
 class AccessLogController extends Controller
 {
-    public function index(Request $request): Response
+    use ResolvesLogDateRange;
+
+    public function index(Request $request): InertiaResponse
     {
-        $days = (int) $request->input('days', 7);
-        $days = in_array($days, [1, 7, 14, 28], true) ? $days : 7;
-        $since = $request->filled('date_from')
-            ? \Carbon\Carbon::parse($request->input('date_from'))->startOfDay()
-            : now()->subDays($days)->startOfDay();
-        $until = $request->filled('date_to')
-            ? \Carbon\Carbon::parse($request->input('date_to'))->endOfDay()
-            : now()->endOfDay();
+        [$since, $until, $days] = $this->logDateRange($request);
+
+        $logs = $this->filteredQuery($request, $since, $until)
+            ->paginate(30)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Logs/AccessLogs', [
+            'logs' => $logs,
+            'filters' => [
+                'days' => $days,
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
+                'action' => $request->input('action'),
+                'q' => $request->input('q'),
+            ],
+            'actionOptions' => ['login', 'logout', 'failed'],
+        ]);
+    }
+
+    public function export(Request $request): Response
+    {
+        [$since, $until] = $this->logDateRange($request);
+
+        $rows = $this->filteredQuery($request, $since, $until)
+            ->limit(10000)
+            ->get()
+            ->map(fn (AccessLog $log) => [
+                $log->created_at?->toDateTimeString(),
+                $log->user?->name ?? '',
+                $log->user?->email ?? '',
+                $log->action,
+                $log->ip_address ?? '',
+                $log->path ?? '',
+            ]);
+
+        $csv = CsvExport::escapeRow(['created_at', 'user_name', 'user_email', 'action', 'ip_address', 'path'])."\n";
+        foreach ($rows as $row) {
+            $csv .= CsvExport::escapeRow($row)."\n";
+        }
+
+        return CsvExport::download($csv, 'access-logs-'.now()->format('Y-m-d-His').'.csv');
+    }
+
+    protected function filteredQuery(Request $request, $since, $until): Builder
+    {
+        $accountId = AccountContext::id() ?? $request->user()?->account_id;
 
         $query = AccessLog::with('user:id,name,email,role')
-            ->when(AccountContext::id(), fn ($q, $id) => $q->where('account_id', $id))
+            ->when($accountId, fn ($q) => $q->where('account_id', $accountId))
             ->whereBetween('created_at', [$since, $until])
             ->orderByDesc('created_at');
 
@@ -39,18 +83,6 @@ class AccessLogController extends Controller
             });
         }
 
-        $logs = $query->paginate(30)->withQueryString();
-
-        return Inertia::render('Admin/Logs/AccessLogs', [
-            'logs' => $logs,
-            'filters' => [
-                'days' => $days,
-                'date_from' => $request->input('date_from'),
-                'date_to' => $request->input('date_to'),
-                'action' => $request->input('action'),
-                'q' => $request->input('q'),
-            ],
-            'actionOptions' => ['login', 'logout', 'failed'],
-        ]);
+        return $query;
     }
 }

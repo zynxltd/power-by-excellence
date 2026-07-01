@@ -65,6 +65,11 @@ class BuyerPortalLocale
             'locale' => $locale,
             'strings' => static::translations($locale),
             'languages' => static::options(),
+            'branding' => $buyer?->portalBranding() ?? [
+                'logo_url' => null,
+                'primary_color' => null,
+                'welcome_text' => null,
+            ],
         ];
     }
 }

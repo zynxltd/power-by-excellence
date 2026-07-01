@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
@@ -17,7 +17,7 @@ const { formatMoney } = useMoneyFormat(currency);
 
 <template>
     <Head title="Payment successful" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader title="Payment successful" description="Your credit top-up has been processed." />
 
         <Panel class="mx-auto max-w-lg text-center">
@@ -38,5 +38,5 @@ const { formatMoney } = useMoneyFormat(currency);
                 <AppButton variant="secondary" :href="route('portal.buyer.dashboard')">Dashboard</AppButton>
             </div>
         </Panel>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

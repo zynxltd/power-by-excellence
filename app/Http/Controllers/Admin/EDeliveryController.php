@@ -11,7 +11,11 @@ use App\Models\MessageTemplate;
 use App\Models\Segment;
 use App\Models\SendingProfile;
 use App\Services\Messaging\DeliverabilityReportService;
+use App\Services\Messaging\ListHygieneService;
+use App\Services\Messaging\MessagingCredentialsResolver;
 use App\Services\Messaging\SegmentService;
+use App\Services\Messaging\SendTimeOptimizer;
+use App\Services\Messaging\SmsShortlinkService;
 use App\Services\Messaging\TemplateRenderService;
 use App\Services\Messaging\WarmupGovernor;
 use App\Services\Messaging\ThrottleGovernor;
@@ -20,6 +24,7 @@ use App\Support\Tenancy\AccountContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,6 +39,8 @@ class EDeliveryController extends Controller
         $accountId = $account->id;
         $reports = app(DeliverabilityReportService::class);
         $opsCenter = $reports->opsCenter($accountId, $account);
+        $sendTimeOptimizer = app(SendTimeOptimizer::class);
+        $shortlinks = app(SmsShortlinkService::class);
         $campaignStats = $reports->campaignStats($accountId);
         $campaignLookup = BulkSmsCampaign::query()
             ->whereIn('id', $campaignStats->pluck('bulk_sms_campaign_id'))
@@ -66,7 +73,81 @@ class EDeliveryController extends Controller
             ],
             'mergeTags' => TemplateRenderService::availableTags(),
             'defaultPreviewData' => app(TemplateRenderService::class)->defaultPreviewData(),
+            'sendTimeSettings' => $sendTimeOptimizer->settings($account),
+            'shortlinkSettings' => $shortlinks->settings($account),
+            'shortlinkStats' => $shortlinks->stats($accountId),
+            'hygieneSettings' => app(ListHygieneService::class)->settings($account),
+            'sendingDomainDnsHints' => app(MessagingCredentialsResolver::class)->dnsHintsForSendingDomain('mail.example.com'),
         ]);
+    }
+
+    public function updateSendTimeSettings(Request $request, SendTimeOptimizer $optimizer): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'send_time_optimization' => 'required|boolean',
+            'quiet_hours_start' => 'required|date_format:H:i',
+            'quiet_hours_end' => 'required|date_format:H:i',
+            'optimal_send_hour' => 'required|integer|min:0|max:23',
+        ]);
+
+        $validated['quiet_hours_start'] = substr((string) $validated['quiet_hours_start'], 0, 5);
+        $validated['quiet_hours_end'] = substr((string) $validated['quiet_hours_end'], 0, 5);
+
+        $account->update([
+            'settings' => $optimizer->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'Send-time optimization settings saved.');
+    }
+
+    public function updateShortlinkSettings(Request $request, SmsShortlinkService $shortlinks): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'sms_shortlinks_enabled' => 'required|boolean',
+        ]);
+
+        $account->update([
+            'settings' => $shortlinks->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'SMS short link settings saved.');
+    }
+
+    public function updateHygieneSettings(Request $request, ListHygieneService $hygiene): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+
+        $validated = $request->validate([
+            'list_hygiene_enabled' => 'required|boolean',
+            'inactive_days_threshold' => 'required|integer|min:1|max:3650',
+            'hygiene_auto_suppress_bounces' => 'required|boolean',
+        ]);
+
+        $account->update([
+            'settings' => $hygiene->mergeSettingsIntoAccount($account, $validated),
+        ]);
+
+        return back()->with('success', 'List hygiene settings saved.');
+    }
+
+    public function runHygiene(Request $request, ListHygieneService $hygiene): RedirectResponse
+    {
+        $account = AccountContext::get() ?? $this->resolveAdminAccount($request);
+        $dryRun = $request->boolean('dry_run');
+        $result = $hygiene->run($account, $dryRun, force: true);
+
+        $prefix = $dryRun ? 'Dry-run: ' : '';
+
+        return back()->with('success', sprintf(
+            '%sTagged %d bounced and %d inactive lead(s).',
+            $prefix,
+            $result['bounces_tagged'],
+            $result['inactive_tagged'],
+        ));
     }
 
     public function pauseSending(Request $request, ThrottleGovernor $throttle): RedirectResponse
@@ -263,22 +344,11 @@ class EDeliveryController extends Controller
 
     public function storeSendingProfile(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'provider' => 'required|string|max:32',
-            'domain_match' => 'nullable|string|max:255',
-            'from_name' => 'nullable|string|max:255',
-            'from_email' => 'nullable|email|max:255',
-            'reply_to' => 'nullable|email|max:255',
-            'is_default' => 'nullable|boolean',
-            'warmup_enabled' => 'nullable|boolean',
-            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
-            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
-            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
-        ]);
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $validated = $request->validate($this->sendingProfileRules($accountId));
 
         if (! empty($validated['is_default'])) {
-            SendingProfile::query()->update(['is_default' => false]);
+            SendingProfile::query()->where('account_id', $accountId)->update(['is_default' => false]);
         }
 
         if (! empty($validated['warmup_enabled'])) {
@@ -288,6 +358,90 @@ class EDeliveryController extends Controller
         SendingProfile::create($validated);
 
         return back()->with('success', 'Sending profile created.');
+    }
+
+    public function updateSendingProfile(Request $request, SendingProfile $profile): RedirectResponse
+    {
+        $accountId = AccountContext::id() ?? $this->resolveAdminAccount($request)->id;
+        $validated = $request->validate($this->sendingProfileUpdateRules($accountId, $profile));
+
+        if (array_key_exists('is_default', $validated) && $validated['is_default']) {
+            SendingProfile::query()
+                ->where('account_id', $accountId)
+                ->where('id', '!=', $profile->id)
+                ->update(['is_default' => false]);
+        }
+
+        if (array_key_exists('warmup_enabled', $validated)) {
+            $wasEnabled = (bool) $profile->warmup_enabled;
+            $enabling = $validated['warmup_enabled'] && ! $wasEnabled;
+
+            if ($enabling) {
+                $validated['warmup_started_at'] = now();
+            } elseif (! $validated['warmup_enabled']) {
+                $validated['warmup_started_at'] = null;
+            }
+        }
+
+        $profile->update($validated);
+
+        return back()->with('success', 'Sending profile updated.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function sendingProfileRules(int $accountId): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'provider' => 'required|string|max:32',
+            'domain_match' => 'nullable|string|max:255',
+            'sending_domain' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i',
+                Rule::unique('sending_profiles', 'sending_domain')->where(fn ($query) => $query->where('account_id', $accountId)),
+            ],
+            'from_name' => 'nullable|string|max:255',
+            'from_email' => 'nullable|email|max:255',
+            'reply_to' => 'nullable|email|max:255',
+            'is_default' => 'nullable|boolean',
+            'warmup_enabled' => 'nullable|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function sendingProfileUpdateRules(int $accountId, SendingProfile $profile): array
+    {
+        return [
+            'name' => 'sometimes|required|string|max:255',
+            'provider' => 'sometimes|required|string|max:32',
+            'domain_match' => 'nullable|string|max:255',
+            'sending_domain' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i',
+                Rule::unique('sending_profiles', 'sending_domain')
+                    ->where(fn ($query) => $query->where('account_id', $accountId))
+                    ->ignore($profile->id),
+            ],
+            'from_name' => 'nullable|string|max:255',
+            'from_email' => 'nullable|email|max:255',
+            'reply_to' => 'nullable|email|max:255',
+            'is_default' => 'nullable|boolean',
+            'warmup_enabled' => 'nullable|boolean',
+            'warmup_day_one_limit' => 'nullable|integer|min:1|max:100000',
+            'warmup_target_limit' => 'nullable|integer|min:1|max:1000000',
+            'warmup_ramp_days' => 'nullable|integer|min:1|max:90',
+        ];
     }
 
     public function updateSendingProfileWarmup(Request $request, SendingProfile $profile): RedirectResponse

@@ -1,18 +1,66 @@
 <?php
 
 /**
- * Compliance Phase 3 — data retention (F1).
+ * Compliance Phase 3 route manifests.
  *
- * HTTP routes: none new. Retention policy is saved via existing platform settings:
+ * F1 — Data retention: no new HTTP routes (settings.edit / settings.update).
+ * Schedule: $schedule->command('data-retention:purge')->dailyAt('02:30')->withoutOverlapping();
  *
- *   GET  settings.edit   → AccountSettingsController@edit
- *   PUT  settings.update → AccountSettingsController@update
+ * F2 — Audit log CSV export:
+ *   registerCompliancePhase3LogExportRoutes();
  *
- * Integration Lead — schedule in bootstrap/app.php (inside withSchedule):
+ * F3 — Outbound webhook HMAC signing:
+ *   registerCompliancePhase3WebhookSigningRoutes();
  *
- *   $schedule->command('data-retention:purge')->dailyAt('02:30')->withoutOverlapping();
+ * F4 — Admin IP allowlist: no new HTTP routes (middleware in bootstrap/app.php).
  *
- * Manual purge for a single tenant:
+ * F5 — Hosted form GDPR consent: no new HTTP routes (forms.show / forms.submit).
  *
- *   php artisan data-retention:purge --account={id}
+ * F6 — Right-to-erasure:
+ *   registerCompliancePhase3LeadErasureRoutes();
+ *   POST leads/{lead}/erasure → leads.erasure
  */
+
+use App\Http\Controllers\Admin\AccessLogController;
+use App\Http\Controllers\Admin\ChangeLogController;
+use App\Http\Controllers\Admin\LeadAdminController;
+use App\Http\Controllers\Admin\SecurityLogController;
+use App\Http\Controllers\Admin\WebhookController;
+use Illuminate\Support\Facades\Route;
+
+if (! function_exists('registerCompliancePhase3LogExportRoutes')) {
+    function registerCompliancePhase3LogExportRoutes(): void
+    {
+        if (! Route::has('logs.access.export')) {
+            Route::get('logs/access/export', [AccessLogController::class, 'export'])->name('logs.access.export');
+        }
+
+        if (! Route::has('logs.changes.export')) {
+            Route::get('logs/changes/export', [ChangeLogController::class, 'export'])->name('logs.changes.export');
+        }
+
+        if (! Route::has('logs.security.export')) {
+            Route::get('logs.security/export', [SecurityLogController::class, 'export'])->name('logs.security.export');
+        }
+    }
+}
+
+if (! function_exists('registerCompliancePhase3WebhookSigningRoutes')) {
+    function registerCompliancePhase3WebhookSigningRoutes(): void
+    {
+        if (! Route::has('webhooks.generate-signing-secret')) {
+            Route::post('webhooks/generate-signing-secret', [WebhookController::class, 'generateSigningSecret'])
+                ->name('webhooks.generate-signing-secret');
+        }
+    }
+}
+
+if (! function_exists('registerCompliancePhase3LeadErasureRoutes')) {
+    function registerCompliancePhase3LeadErasureRoutes(): void
+    {
+        if (! Route::has('leads.erasure')) {
+            Route::post('leads/{lead}/erasure', [LeadAdminController::class, 'requestErasure'])
+                ->name('leads.erasure');
+        }
+    }
+}

@@ -9,6 +9,7 @@ use App\Support\LeadQueueMetrics;
 use App\Support\Queue\LeadJobDispatcher;
 use App\Models\Campaign;
 use App\Models\Lead;
+use App\Services\Compliance\LeadErasureService;
 use App\Services\Leads\LeadQualityService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\CsvExport;
@@ -113,7 +114,29 @@ class LeadAdminController extends Controller
                 'prev_id' => $prevId,
                 'next_id' => $nextId,
             ],
+            'erasureBlockedReason' => app(LeadErasureService::class)->blockingReason($lead),
         ]);
+    }
+
+    public function requestErasure(Request $request, Lead $lead): RedirectResponse
+    {
+        $this->ensureLeadAccessible($lead);
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+
+        $result = app(LeadErasureService::class)->requestErasure(
+            $lead,
+            $request->user(),
+            $validated['reason'],
+        );
+
+        if ($result['status'] === 'blocked') {
+            return back()->with('error', $result['message'] ?? 'Erasure is blocked.');
+        }
+
+        return back()->with('success', $result['message'] ?? 'Lead PII has been erased.');
     }
 
     public function releaseQuarantine(Lead $lead): RedirectResponse

@@ -6,7 +6,6 @@ use App\Models\Account;
 use App\Models\Lead;
 use App\Models\MessageEvent;
 use App\Models\MessageSend;
-use App\Models\SendingProfile;
 use App\Services\Logging\PlatformLogger;
 
 class MessageSendService
@@ -18,6 +17,8 @@ class MessageSendService
         protected EmailTrackingService $tracking,
         protected ThrottleGovernor $throttle,
         protected TemplateRenderService $templateRender,
+        protected SendTimeOptimizer $sendTimeOptimizer,
+        protected SmsShortlinkService $shortlinks,
     ) {}
 
     /**
@@ -36,6 +37,8 @@ class MessageSendService
      *     ab_variant?: string|null,
      *     sending_profile_id?: int|null,
      *     track?: bool,
+     *     skip_send_time_optimization?: bool,
+     *     existing_send_id?: int|null,
      * }  $payload
      */
     public function send(array $payload): bool
@@ -55,6 +58,10 @@ class MessageSendService
         }
 
         $account = Account::find($accountId);
+        if (! $account) {
+            return false;
+        }
+
         $profile = $this->credentials->resolveSendingProfile(
             $accountId,
             $payload['sending_profile_id'] ?? null,
@@ -77,6 +84,7 @@ class MessageSendService
         $subject = $payload['subject'] ?? null;
         $body = $payload['body'];
         $htmlBody = $payload['html_body'] ?? null;
+        $lead = null;
 
         if (! empty($payload['lead_id'])) {
             $lead = Lead::find($payload['lead_id']);
@@ -92,27 +100,74 @@ class MessageSendService
             }
         }
 
+        if (empty($payload['skip_send_time_optimization']) && empty($payload['existing_send_id'])) {
+            $scheduledAt = $this->sendTimeOptimizer->computeSendAt($account, $lead);
+
+            if ($scheduledAt && $scheduledAt->isFuture()) {
+                MessageSend::create([
+                    'account_id' => $accountId,
+                    'lead_id' => $payload['lead_id'] ?? null,
+                    'bulk_sms_campaign_id' => $payload['bulk_sms_campaign_id'] ?? null,
+                    'sending_profile_id' => $profile?->id,
+                    'channel' => $channel,
+                    'provider' => $payload['provider'] ?? $profile?->provider,
+                    'source_type' => $payload['source_type'] ?? null,
+                    'source_id' => $payload['source_id'] ?? null,
+                    'recipient' => $recipient,
+                    'subject' => $subject,
+                    'body' => $body,
+                    'ab_variant' => $payload['ab_variant'] ?? null,
+                    'status' => 'scheduled',
+                    'scheduled_at' => $scheduledAt,
+                ]);
+
+                PlatformLogger::info('Marketing send queued for send-time optimization', [
+                    'account_id' => $accountId,
+                    'lead_id' => $payload['lead_id'] ?? null,
+                    'scheduled_at' => $scheduledAt->toIso8601String(),
+                ]);
+
+                return true;
+            }
+        }
+
         $resolved = $this->credentials->resolveForAccount(
             $account,
             $payload['provider'] ?? $profile?->provider,
             $profile,
         );
 
-        $send = MessageSend::create([
-            'account_id' => $accountId,
-            'lead_id' => $payload['lead_id'] ?? null,
-            'bulk_sms_campaign_id' => $payload['bulk_sms_campaign_id'] ?? null,
-            'sending_profile_id' => $profile?->id,
-            'channel' => $channel,
-            'provider' => $resolved['provider'],
-            'source_type' => $payload['source_type'] ?? null,
-            'source_id' => $payload['source_id'] ?? null,
-            'recipient' => $recipient,
-            'subject' => $subject,
-            'body' => $body,
-            'ab_variant' => $payload['ab_variant'] ?? null,
-            'status' => 'pending',
-        ]);
+        if (! empty($payload['existing_send_id'])) {
+            $send = MessageSend::withoutGlobalScopes()->find($payload['existing_send_id']);
+            if (! $send) {
+                return false;
+            }
+
+            $send->update([
+                'sending_profile_id' => $profile?->id,
+                'provider' => $resolved['provider'],
+                'subject' => $subject,
+                'body' => $body,
+                'status' => 'pending',
+                'scheduled_at' => null,
+            ]);
+        } else {
+            $send = MessageSend::create([
+                'account_id' => $accountId,
+                'lead_id' => $payload['lead_id'] ?? null,
+                'bulk_sms_campaign_id' => $payload['bulk_sms_campaign_id'] ?? null,
+                'sending_profile_id' => $profile?->id,
+                'channel' => $channel,
+                'provider' => $resolved['provider'],
+                'source_type' => $payload['source_type'] ?? null,
+                'source_id' => $payload['source_id'] ?? null,
+                'recipient' => $recipient,
+                'subject' => $subject,
+                'body' => $body,
+                'ab_variant' => $payload['ab_variant'] ?? null,
+                'status' => 'pending',
+            ]);
+        }
 
         $options = [
             'provider' => $resolved['provider'],
@@ -138,7 +193,19 @@ class MessageSendService
                 $options,
             );
         } else {
-            $ok = $this->messaging->sendSms($recipient, $payload['body'], $options);
+            $smsBody = $body;
+            $stepId = ($payload['source_type'] ?? '') === 'automation_sequence_step'
+                ? ($payload['source_id'] ?? null)
+                : null;
+
+            if ($account && $channel === 'sms') {
+                $smsBody = $this->shortlinks->rewriteSmsBody($account, $body, $send, $stepId);
+                if ($smsBody !== $body) {
+                    $send->update(['body' => $smsBody]);
+                }
+            }
+
+            $ok = $this->messaging->sendSms($recipient, $smsBody, $options);
         }
 
         $send->update([
@@ -156,6 +223,31 @@ class MessageSendService
         }
 
         return $ok;
+    }
+
+    public function processScheduled(MessageSend $send): bool
+    {
+        if ($send->status !== 'scheduled' || ! $send->scheduled_at || $send->scheduled_at->isFuture()) {
+            return false;
+        }
+
+        return $this->send([
+            'account_id' => $send->account_id,
+            'lead_id' => $send->lead_id,
+            'bulk_sms_campaign_id' => $send->bulk_sms_campaign_id,
+            'channel' => $send->channel,
+            'recipient' => $send->recipient,
+            'subject' => $send->subject,
+            'body' => $send->body ?? '',
+            'provider' => $send->provider,
+            'source_type' => $send->source_type,
+            'source_id' => $send->source_id,
+            'sending_profile_id' => $send->sending_profile_id,
+            'ab_variant' => $send->ab_variant,
+            'track' => $send->channel === 'email',
+            'skip_send_time_optimization' => true,
+            'existing_send_id' => $send->id,
+        ]);
     }
 
     public function recordEvent(MessageSend $send, string $type, ?string $url = null, ?array $meta = null): void

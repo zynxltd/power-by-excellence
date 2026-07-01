@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -24,6 +24,7 @@ const props = defineProps({
     stripeSubscription: { type: Object, default: null },
     currency: String,
     transactions: Object,
+    pendingCallReturns: { type: Number, default: 0 },
 });
 
 const page = usePage();
@@ -36,6 +37,7 @@ const billingStrip = computed(() => [
     { label: t('billing.balance'), value: formatMoney(props.buyer.credit_balance), accent: props.account?.is_low_credit ? 'rose' : 'emerald' },
     { label: t('billing.spend_30d'), value: formatMoney(props.stats?.spend_30d ?? 0), accent: 'indigo' },
     { label: t('billing.prepay'), value: props.requirePrepay ? t('common.required') : t('common.optional'), accent: 'amber' },
+    ...(props.pendingCallReturns > 0 ? [{ label: 'Pending call returns', value: String(props.pendingCallReturns), accent: 'amber' }] : []),
 ]);
 
 const presetAmounts = computed(() => props.stripeTopUp?.presets ?? [50, 100, 250, 500, 1000]);
@@ -91,7 +93,7 @@ const reactivateSubscription = () => {
 
 <template>
     <Head :title="t('nav.billing')" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader
             :title="t('billing.title')"
             :description="t('billing.description')"
@@ -221,7 +223,10 @@ const reactivateSubscription = () => {
                                 {{ formatMoney(row.amount) }}
                             </td>
                             <td class="px-6 py-4 text-slate-900 dark:text-white">{{ formatMoney(row.balance_after) }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.description }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {{ row.description }}
+                                <span v-if="row.meta?.call_session_uuid" class="block text-xs text-slate-400">Call {{ row.meta.call_session_uuid }}</span>
+                            </td>
                         </tr>
                     </DataTable>
                     <Pagination :links="transactions.links" />
@@ -230,5 +235,5 @@ const reactivateSubscription = () => {
 
             <BuyerAccountPanel :account="account" :currency="currency" />
         </div>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

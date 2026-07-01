@@ -6,11 +6,16 @@ use App\Models\Account;
 use App\Models\Lead;
 use App\Models\Webhook;
 use App\Services\Logging\PlatformLogger;
+use App\Services\Webhooks\WebhookSignatureService;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
 class WebhookDispatcher
 {
+    public function __construct(
+        protected WebhookSignatureService $signatures,
+    ) {}
+
     public function dispatch(Account $account, string $event, Lead $lead): void
     {
         $lead->loadMissing(['financials', 'soldToBuyer:id,name,reference']);
@@ -24,7 +29,15 @@ class WebhookDispatcher
 
         foreach ($webhooks as $webhook) {
             try {
-                Http::timeout(5)->post($webhook->url, $this->payload($event, $lead));
+                $payload = $this->payload($event, $lead);
+                $body = $this->signatures->encodePayload($payload);
+                $request = Http::timeout(5)->withHeaders(['Content-Type' => 'application/json']);
+
+                if ($webhook->signsPayloads() && ($secret = $webhook->signingSecret())) {
+                    $request = $request->withHeaders($this->signatures->headers($secret, $body));
+                }
+
+                $request->withBody($body, 'application/json')->post($webhook->url);
             } catch (Throwable $e) {
                 PlatformLogger::error('Webhook dispatch failed', [
                     'webhook_id' => $webhook->id,

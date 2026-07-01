@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import CompactStatStrip from '@/Components/UI/CompactStatStrip.vue';
@@ -65,7 +65,7 @@ const conversionLabel = computed(() => {
 
 <template>
     <Head :title="`Lead ${lead.uuid?.slice(0, 8)}`" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader
             :title="`${lead.field_data?.firstname ?? ''} ${lead.field_data?.lastname ?? ''}`.trim() || 'Lead detail'"
             :description="lead.uuid"
@@ -198,5 +198,5 @@ const conversionLabel = computed(() => {
                 </Panel>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

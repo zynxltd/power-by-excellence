@@ -21,12 +21,14 @@ class LeadImport extends Model
         'success_rows',
         'failed_rows',
         'errors',
+        'column_mapping',
     ];
 
     protected function casts(): array
     {
         return [
             'errors' => 'array',
+            'column_mapping' => 'array',
         ];
     }
 

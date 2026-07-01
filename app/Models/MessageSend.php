@@ -14,12 +14,13 @@ class MessageSend extends Model
 
     protected $fillable = [
         'account_id', 'lead_id', 'bulk_sms_campaign_id', 'sending_profile_id', 'token', 'channel', 'provider',
-        'source_type', 'source_id', 'recipient', 'subject', 'body', 'ab_variant', 'status', 'sent_at',
+        'source_type', 'source_id', 'recipient', 'subject', 'body', 'ab_variant', 'status', 'scheduled_at', 'sent_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'scheduled_at' => 'datetime',
             'sent_at' => 'datetime',
         ];
     }
@@ -51,5 +52,10 @@ class MessageSend extends Model
     public function events(): HasMany
     {
         return $this->hasMany(MessageEvent::class);
+    }
+
+    public function shortLinks(): HasMany
+    {
+        return $this->hasMany(MessageShortLink::class);
     }
 }

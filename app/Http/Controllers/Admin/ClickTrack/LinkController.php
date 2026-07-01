@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\TrackingLink;
 use App\Services\ClickTrack\ClickCapService;
 use App\Services\ClickTrack\ClickTrackEntitlementService;
+use App\Services\ClickTrack\ConversionTrackingService;
 use App\Support\Admin\ResolvesAdminAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,8 @@ class LinkController extends Controller
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'reference']),
             'buyers' => Buyer::orderBy('name')->get(['id', 'name', 'reference']),
             'goalOptions' => config('click_track.goal_options', []),
+            'postbackMacros' => ConversionTrackingService::POSTBACK_MACROS,
+            'postbackMacroSamples' => app(ConversionTrackingService::class)->sampleMacroFields(),
         ]);
     }
 
@@ -60,6 +63,8 @@ class LinkController extends Controller
             'cap_monthly' => 'nullable|integer|min:0',
             'conversion_cap_daily' => 'nullable|integer|min:0',
             'auto_approve_conversions' => 'boolean',
+            'conversion_postback_url' => 'nullable|string|max:2000',
+            'conversion_postback_method' => 'nullable|in:get,post',
         ]);
 
         TrackingLink::create([
@@ -80,6 +85,8 @@ class LinkController extends Controller
                 'conversion_cap_daily' => $validated['conversion_cap_daily'] ?? null,
                 'auto_approve_conversions' => $request->boolean('auto_approve_conversions', true),
             ], fn ($v) => $v !== null && $v !== ''),
+            'conversion_postback_url' => $validated['conversion_postback_url'] ?? null,
+            'conversion_postback_macros' => $this->postbackMacrosFromRequest($request),
         ]);
 
         return back()->with('success', 'Tracking link created.');
@@ -101,6 +108,8 @@ class LinkController extends Controller
             'cap_monthly' => 'nullable|integer|min:0',
             'conversion_cap_daily' => 'nullable|integer|min:0',
             'auto_approve_conversions' => 'boolean',
+            'conversion_postback_url' => 'nullable|string|max:2000',
+            'conversion_postback_method' => 'nullable|in:get,post',
         ]);
 
         $trackingLink->update([
@@ -117,9 +126,21 @@ class LinkController extends Controller
                 'conversion_cap_daily' => $validated['conversion_cap_daily'] ?? null,
                 'auto_approve_conversions' => $request->boolean('auto_approve_conversions', true),
             ], fn ($v) => $v !== null && $v !== '')),
+            'conversion_postback_url' => $validated['conversion_postback_url'] ?? null,
+            'conversion_postback_macros' => $this->postbackMacrosFromRequest($request),
         ]);
 
         return back()->with('success', 'Tracking link updated.');
+    }
+
+    /**
+     * @return array{method: string}
+     */
+    protected function postbackMacrosFromRequest(Request $request): array
+    {
+        $method = $request->input('conversion_postback_method', 'get');
+
+        return ['method' => in_array($method, ['get', 'post'], true) ? $method : 'get'];
     }
 
     public function destroy(Request $request, TrackingLink $trackingLink): RedirectResponse

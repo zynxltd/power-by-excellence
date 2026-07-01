@@ -28,6 +28,16 @@ class SupplierImportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        if (! \Illuminate\Support\Facades\Route::has('portal.supplier.leads.import.errors')) {
+            \Illuminate\Support\Facades\Route::get(
+                '/portal/supplier/leads/import/{import}/errors',
+                [\App\Http\Controllers\Portal\SupplierPortalController::class, 'downloadImportErrors'],
+            )
+                ->middleware(['web', 'auth', 'verified'])
+                ->name('portal.supplier.leads.import.errors');
+        }
+
         $this->seed(\Database\Seeders\PlatformSeeder::class);
         $this->withoutVite();
 
@@ -54,12 +64,13 @@ class SupplierImportTest extends TestCase
                 ->component('Portal/Supplier/ImportLeads')
                 ->where('supplier.id', $this->supplier->id)
                 ->has('campaigns')
+                ->where('campaigns', fn ($campaigns) => collect($campaigns)->contains('reference', 'auto-insurance-uk'))
                 ->has('recentImports'));
     }
 
-    public function test_supplier_csv_import_attributes_leads_to_supplier(): void
+    public function test_supplier_mapped_csv_import_attributes_leads_to_supplier(): void
     {
-        $csv = "email,phone1\nsupplier-import-1@test.test,07700900123\n";
+        $csv = "Email Address,Mobile\nsupplier-import-1@test.test,07700900123\n";
         $file = UploadedFile::fake()->createWithContent('leads.csv', $csv);
 
         $this->ukHost()
@@ -67,13 +78,22 @@ class SupplierImportTest extends TestCase
             ->post(route('portal.supplier.leads.import.store'), [
                 'campaign_id' => $this->campaign->id,
                 'file' => $file,
+                'column_mapping' => [
+                    'Email Address' => 'email',
+                    'Mobile' => 'phone1',
+                ],
             ])
             ->assertRedirect(route('portal.supplier.leads.import'))
-            ->assertSessionHas('success');
+            ->assertSessionHas('success')
+            ->assertSessionHas('importResult');
 
         $import = LeadImport::where('user_id', $this->supplierUser->id)->latest('id')->first();
         $this->assertNotNull($import);
         $this->assertSame(1, $import->success_rows);
+        $this->assertSame([
+            'Email Address' => 'email',
+            'Mobile' => 'phone1',
+        ], $import->column_mapping);
 
         $lead = Lead::where('campaign_id', $this->campaign->id)
             ->where('supplier_id', $this->supplier->id)
@@ -81,6 +101,36 @@ class SupplierImportTest extends TestCase
             ->first();
 
         $this->assertNotNull($lead);
+    }
+
+    public function test_supplier_import_reports_partial_failures_and_downloadable_error_csv(): void
+    {
+        $csv = "email,phone1\nvalid@example.com,07700900123\n,bad-row\n";
+        $file = UploadedFile::fake()->createWithContent('leads.csv', $csv);
+
+        $this->ukHost()
+            ->actingAs($this->supplierUser)
+            ->post(route('portal.supplier.leads.import.store'), [
+                'campaign_id' => $this->campaign->id,
+                'file' => $file,
+                'column_mapping' => [
+                    'email' => 'email',
+                    'phone1' => 'phone1',
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('importResult', fn (array $result) => $result['success_rows'] === 1 && $result['failed_rows'] === 1);
+
+        $import = LeadImport::where('user_id', $this->supplierUser->id)->latest('id')->first();
+        $this->assertNotNull($import);
+        $this->assertSame(1, $import->failed_rows);
+        $this->assertNotEmpty($import->errors);
+
+        $this->ukHost()
+            ->actingAs($this->supplierUser)
+            ->get('/portal/supplier/leads/import/'.$import->id.'/errors')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
     public function test_supplier_cannot_import_for_unlinked_campaign(): void
@@ -99,7 +149,23 @@ class SupplierImportTest extends TestCase
             ->post(route('portal.supplier.leads.import.store'), [
                 'campaign_id' => $otherCampaign->id,
                 'file' => $file,
+                'column_mapping' => ['email' => 'email', 'phone1' => 'phone1'],
             ])
             ->assertForbidden();
+    }
+
+    public function test_supplier_import_requires_column_mapping(): void
+    {
+        $csv = "email,phone1\nblocked@test.test,07700900999\n";
+        $file = UploadedFile::fake()->createWithContent('leads.csv', $csv);
+
+        $this->ukHost()
+            ->actingAs($this->supplierUser)
+            ->post(route('portal.supplier.leads.import.store'), [
+                'campaign_id' => $this->campaign->id,
+                'file' => $file,
+                'column_mapping' => [],
+            ])
+            ->assertSessionHasErrors('column_mapping');
     }
 }

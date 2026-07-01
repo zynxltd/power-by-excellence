@@ -5,9 +5,22 @@ import Panel from '@/Components/UI/Panel.vue';
 import StatusBadge from '@/Components/UI/StatusBadge.vue';
 import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
-defineProps({ call: Object });
+const props = defineProps({ call: Object });
+
+const approveForm = useForm({});
+const rejectForm = useForm({});
+
+const approveReturn = () => {
+    if (! props.call.call_return) return;
+    approveForm.post(route('call-logic.calls.returns.approve', [props.call.uuid, props.call.call_return.id]));
+};
+
+const rejectReturn = () => {
+    if (! props.call.call_return) return;
+    rejectForm.post(route('call-logic.calls.returns.reject', [props.call.uuid, props.call.call_return.id]));
+};
 </script>
 
 <template>
@@ -27,6 +40,13 @@ defineProps({ call: Object });
                     <dt class="text-slate-500">Buyer</dt><dd>{{ call.sold_to_buyer?.name || '—' }}</dd>
                     <dt class="text-slate-500">Duration</dt><dd>{{ call.duration_seconds }}s (billable: {{ call.billable_seconds }}s)</dd>
                     <dt class="text-slate-500">Revenue</dt><dd>{{ call.revenue ?? '—' }}</dd>
+                    <dt class="text-slate-500">Billing</dt>
+                    <dd>
+                        <span v-if="call.refunded_at" class="text-emerald-600">Refunded {{ call.billed_amount }} · <FormattedDate :value="call.refunded_at" /></span>
+                        <span v-else-if="call.billed_at" class="text-emerald-600">Billed {{ call.billed_amount }} · <FormattedDate :value="call.billed_at" /></span>
+                        <span v-else-if="call.sold_to_buyer_id" class="text-amber-600">Pending / not billed</span>
+                        <span v-else>—</span>
+                    </dd>
                     <dt class="text-slate-500">Disposition</dt><dd>{{ call.disposition || '—' }}</dd>
                     <dt class="text-slate-500">Tracking #</dt><dd>{{ call.tracking_number?.phone_number || '—' }}</dd>
                     <dt class="text-slate-500">Received</dt><dd><FormattedDate :value="call.created_at" /></dd>
@@ -68,6 +88,15 @@ defineProps({ call: Object });
                         <a v-if="rec.playback_url" :href="rec.playback_url" target="_blank" rel="noopener" class="mt-1 inline-block text-xs text-indigo-600 hover:underline">Open recording</a>
                     </li>
                 </ul>
+            </Panel>
+
+            <Panel v-if="call.call_return" title="Buyer return" class="lg:col-span-2">
+                <p class="text-sm"><span class="font-medium capitalize">{{ call.call_return.status }}</span> — {{ call.call_return.reason }}</p>
+                <p class="mt-1 text-xs text-slate-500">Buyer: {{ call.call_return.buyer?.name || call.sold_to_buyer?.name }}</p>
+                <div v-if="call.call_return.status === 'pending'" class="mt-3 flex gap-2">
+                    <AppButton :disabled="approveForm.processing" @click="approveReturn">Approve &amp; credit</AppButton>
+                    <AppButton variant="secondary" :disabled="rejectForm.processing" @click="rejectReturn">Reject</AppButton>
+                </div>
             </Panel>
 
             <Panel v-if="call.lead" title="Hybrid lead" class="lg:col-span-2">

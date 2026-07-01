@@ -31,11 +31,12 @@ class IvrFlowController extends Controller
 
     public function create(Request $request): Response
     {
-        return Inertia::render('Admin/CallLogic/Ivr/Form', [
+        return Inertia::render('Admin/CallLogic/Ivr/Edit', [
             'flow' => null,
             'campaigns' => Campaign::whereIn('channel', ['call', 'hybrid'])
                 ->orderBy('name')
                 ->get(['id', 'name', 'reference']),
+            'stepTypes' => IvrFlow::STEP_TYPES,
         ]);
     }
 
@@ -56,11 +57,12 @@ class IvrFlowController extends Controller
 
     public function edit(IvrFlow $ivrFlow): Response
     {
-        return Inertia::render('Admin/CallLogic/Ivr/Form', [
+        return Inertia::render('Admin/CallLogic/Ivr/Edit', [
             'flow' => $ivrFlow,
             'campaigns' => Campaign::whereIn('channel', ['call', 'hybrid'])
                 ->orderBy('name')
                 ->get(['id', 'name', 'reference']),
+            'stepTypes' => IvrFlow::STEP_TYPES,
         ]);
     }
 
@@ -81,12 +83,26 @@ class IvrFlowController extends Controller
 
     protected function validateFlow(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'campaign_id' => 'nullable|exists:campaigns,id',
             'entry_node' => 'required|string|max:64',
-            'nodes' => 'nullable|array',
+            'nodes' => 'required|array|min:1',
+            'nodes.*.type' => 'required|string|in:say,gather,redirect,hangup,route,play',
+            'nodes.*.message' => 'nullable|string|max:1000',
+            'nodes.*.prompt' => 'nullable|string|max:1000',
+            'nodes.*.next' => 'nullable|string|max:64',
+            'nodes.*.default_next' => 'nullable|string|max:64',
+            'nodes.*.store_as' => 'nullable|string|max:64',
+            'nodes.*.branches' => 'nullable|array',
+            'nodes.*.branches.*' => 'nullable|string|max:64',
             'is_active' => 'boolean',
         ]);
+
+        $nodes = IvrFlow::normalizeNodes($validated['nodes']);
+        IvrFlow::assertValidGraph($validated['entry_node'], $nodes);
+        $validated['nodes'] = $nodes;
+
+        return $validated;
     }
 }

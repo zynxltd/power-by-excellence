@@ -10,7 +10,7 @@ class SendingProfile extends Model
     use BelongsToAccount;
 
     protected $fillable = [
-        'account_id', 'name', 'provider', 'domain_match', 'from_name',
+        'account_id', 'name', 'provider', 'domain_match', 'sending_domain', 'from_name',
         'from_email', 'reply_to', 'config', 'is_default',
         'warmup_enabled', 'warmup_started_at', 'warmup_day_one_limit',
         'warmup_target_limit', 'warmup_ramp_days',

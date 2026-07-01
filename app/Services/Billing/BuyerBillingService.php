@@ -29,36 +29,37 @@ class BuyerBillingService
         return (float) $buyer->credit_balance >= $amount;
     }
 
-    public function charge(Buyer $buyer, float $amount, ?Lead $lead = null, string $description = 'Lead purchase'): bool
+    public function charge(Buyer $buyer, float $amount, ?Lead $lead = null, string $description = 'Lead purchase', array $meta = []): ?BuyerTransaction
     {
         if (($buyer->status ?? 'active') !== 'active') {
-            return false;
+            return null;
         }
 
         $requirePrepay = $buyer->account?->settings['require_buyer_prepay'] ?? false;
 
         if (! $requirePrepay) {
-            return true;
+            return null;
         }
 
         if ((float) $buyer->credit_balance < $amount) {
-            return false;
+            return null;
         }
 
         $buyer->decrement('credit_balance', $amount);
 
-        BuyerTransaction::create([
+        $transaction = BuyerTransaction::create([
             'buyer_id' => $buyer->id,
             'lead_id' => $lead?->id,
             'type' => 'debit',
             'amount' => -$amount,
             'balance_after' => $buyer->fresh()->credit_balance,
             'description' => $description,
+            'meta' => $meta !== [] ? $meta : null,
         ]);
 
         app(BuyerCreditAlertService::class)->checkAfterDebit($buyer);
 
-        return true;
+        return $transaction;
     }
 
     public function credit(Buyer $buyer, float $amount, string $description = 'Top-up', array $meta = []): BuyerTransaction

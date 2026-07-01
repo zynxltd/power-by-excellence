@@ -158,6 +158,12 @@ class CallDeliveryHandoff
 
     protected function assignSession(CallSession $session, Delivery $delivery, float $revenue, ?string $destination): void
     {
+        $billing = app(\App\Services\Calls\CallBillingService::class);
+
+        if (! $billing->canChargeForCall($session, $delivery, $revenue)) {
+            return;
+        }
+
         $session->update([
             'sold_to_buyer_id' => $delivery->buyer_id,
             'winning_delivery_id' => $delivery->id,
@@ -167,6 +173,8 @@ class CallDeliveryHandoff
                 'delivery_id' => $delivery->id,
             ])),
         ]);
+
+        $billing->billSoldCall($session->fresh(), $delivery, $revenue);
     }
 
     protected function resolveSession(Lead $lead): ?CallSession

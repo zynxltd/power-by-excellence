@@ -132,6 +132,7 @@ class LeadIngestService
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
             'embed', '_embed_parent',
             'ip_address', 'user_agent', 'sync', 'queue_id', 'test', 'field_mapping',
+            'consent_accepted', 'channel_consent', 'consent',
         ];
 
         $fieldMapping = $data['field_mapping'] ?? null;
@@ -145,9 +146,16 @@ class LeadIngestService
         $fieldData = $this->applyLeadSourceFieldMapping($fieldData, is_array($fieldMapping) ? $fieldMapping : []);
         $isTest = filter_var($data['test'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $trackingMeta = app(HostedFormEmbedService::class)->trackingMetadata($data);
+
+        $consentArtifact = is_array($data['consent'] ?? null) ? $data['consent'] : null;
+        if ($consentArtifact) {
+            $fieldData['consent_text'] = $consentArtifact['consent_text'] ?? null;
+        }
+
         $metadata = array_filter(array_merge(
             $isTest ? ['test_mode' => true] : [],
             $trackingMeta,
+            $consentArtifact ? ['consent' => $consentArtifact] : [],
         )) ?: null;
 
         $lead = Lead::create([

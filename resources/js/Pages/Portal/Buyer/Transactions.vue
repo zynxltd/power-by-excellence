@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -14,7 +14,7 @@ const { formatMoney } = useMoneyFormat(props.currency);
 
 <template>
     <Head title="Transactions" />
-    <AuthenticatedLayout>
+    <BuyerPortalLayout>
         <PageHeader title="Credit Transactions" :description="`Current balance: ${formatMoney(buyer.credit_balance)}`" />
 
         <CompactStatStrip
@@ -41,5 +41,5 @@ const { formatMoney } = useMoneyFormat(props.currency);
                 </tr>
             </DataTable>
         </Panel>
-    </AuthenticatedLayout>
+    </BuyerPortalLayout>
 </template>

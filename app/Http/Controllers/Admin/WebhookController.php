@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer;
 use App\Models\Webhook;
 use App\Services\Webhooks\BuyerWebhookService;
+use App\Services\Webhooks\WebhookSignatureService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +22,11 @@ class WebhookController extends Controller
         return Inertia::render('Admin/Webhooks/Index', [
             'webhooks' => Webhook::with('buyer:id,name,reference')
                 ->orderBy('name')
-                ->get(),
+                ->get()
+                ->map(fn (Webhook $webhook) => array_merge($webhook->toArray(), [
+                    'sign_payloads' => $webhook->signsPayloads(),
+                    'has_signing_secret' => $webhook->hasSigningSecret(),
+                ])),
             'buyers' => Buyer::orderBy('name')->get(['id', 'name', 'reference']),
             'eventOptions' => BuyerWebhookService::eventOptions(),
             'pendingApprovals' => $buyerWebhooks->pendingForAdmin()
@@ -40,14 +46,7 @@ class WebhookController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Webhook::create($request->validate([
-            'name' => 'required|string|max:255',
-            'url' => 'required|url|max:2000',
-            'events' => 'required|array|min:1',
-            'events.*' => 'string',
-            'buyer_id' => 'nullable|exists:buyers,id',
-            'is_active' => 'boolean',
-        ]));
+        Webhook::create($this->validatedWebhookAttributes($request));
 
         return back()->with('success', 'Webhook created.');
     }
@@ -58,16 +57,55 @@ class WebhookController extends Controller
             return back()->with('error', 'This webhook is managed from the buyer form.');
         }
 
-        $webhook->update($request->validate([
+        $webhook->update($this->validatedWebhookAttributes($request, $webhook));
+
+        return back()->with('success', 'Webhook updated.');
+    }
+
+    public function generateSigningSecret(): JsonResponse
+    {
+        return response()->json([
+            'secret' => WebhookSignatureService::generateSecret(),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedWebhookAttributes(Request $request, ?Webhook $existing = null): array
+    {
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'url' => 'required|url|max:2000',
             'events' => 'required|array|min:1',
             'events.*' => 'string',
             'buyer_id' => 'nullable|exists:buyers,id',
             'is_active' => 'boolean',
-        ]));
+            'sign_payloads' => 'boolean',
+            'secret' => 'nullable|string|max:255',
+        ]);
 
-        return back()->with('success', 'Webhook updated.');
+        $config = array_merge($existing?->config ?? [], [
+            'sign_payloads' => (bool) ($validated['sign_payloads'] ?? false),
+        ]);
+
+        $secret = filled($validated['secret'] ?? null)
+            ? $validated['secret']
+            : $existing?->signingSecret();
+
+        if ($config['sign_payloads'] && ! filled($secret)) {
+            $secret = WebhookSignatureService::generateSecret();
+        }
+
+        return [
+            'name' => $validated['name'],
+            'url' => $validated['url'],
+            'events' => $validated['events'],
+            'buyer_id' => $validated['buyer_id'] ?: null,
+            'is_active' => $validated['is_active'] ?? true,
+            'config' => $config,
+            'secret' => $secret,
+        ];
     }
 
     public function destroy(Webhook $webhook): RedirectResponse
