@@ -9,8 +9,9 @@ import FormattedDate from '@/Components/UI/FormattedDate.vue';
 import ClickableTableRow from '@/Components/UI/ClickableTableRow.vue';
 import AppButton from '@/Components/UI/AppButton.vue';
 import ManagementHubNav from '@/Components/UI/ManagementHubNav.vue';
+import LineChart from '@/Components/UI/LineChart.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -18,9 +19,32 @@ const props = defineProps({
     recentLeads: Array,
     leadStats: Object,
     portalUser: Object,
+    qualityScorecard: { type: Object, default: null },
+    scorecardDays: { type: Number, default: 30 },
 });
 
 const { formatMoney } = useMoneyFormat();
+
+const scorecard = computed(() => props.qualityScorecard ?? {});
+const sparkline = computed(() => scorecard.value.sparkline ?? {});
+
+const scorecardStrip = computed(() => [
+    { label: 'Submitted', value: scorecard.value.submitted ?? 0, accent: 'indigo' },
+    { label: 'Sold rate', value: scorecard.value.sold_rate_pct != null ? `${scorecard.value.sold_rate_pct}%` : '—', accent: 'emerald' },
+    { label: 'Reject rate', value: scorecard.value.reject_rate_pct != null ? `${scorecard.value.reject_rate_pct}%` : '—', accent: 'amber' },
+    { label: 'EPL', value: scorecard.value.epl != null ? formatMoney(scorecard.value.epl) : '—', accent: 'cyan' },
+    { label: 'Grade', value: scorecard.value.quality_grade ?? '—', accent: 'violet' },
+]);
+
+const chartDatasets = computed(() => [
+    { label: 'Submitted', data: sparkline.value.submitted ?? [], color: '#6366f1' },
+    { label: 'Sold', data: sparkline.value.sold ?? [], color: '#10b981' },
+    {
+        label: 'Reject %',
+        data: (sparkline.value.reject_rate_pct ?? []).map((v) => v ?? 0),
+        color: '#f59e0b',
+    },
+]);
 
 const supplierStatStrip = computed(() => [
     { label: 'Reference', value: props.supplier.reference, accent: 'indigo' },
@@ -28,6 +52,10 @@ const supplierStatStrip = computed(() => [
     { label: 'Sold', value: props.leadStats.sold, accent: 'emerald' },
     { label: 'Status', value: props.supplier.status, accent: 'amber' },
 ]);
+
+const applyScorecardDays = (days) => {
+    router.get(route('suppliers.show', props.supplier.id), { days }, { preserveState: true, preserveScroll: true });
+};
 </script>
 
 <template>
@@ -46,6 +74,69 @@ const supplierStatStrip = computed(() => [
         <ManagementHubNav type="supplier" :entity="supplier" />
 
         <CompactStatStrip :items="supplierStatStrip" :columns="4" class="mb-6" />
+
+        <Panel title="Quality scorecard" class="mt-6">
+            <template #header>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-slate-500">
+                        {{ scorecard.from }} → {{ scorecard.to }}
+                    </span>
+                    <div class="flex rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+                        <button
+                            v-for="d in [7, 30, 90]"
+                            :key="d"
+                            type="button"
+                            :class="[
+                                'rounded-md px-2.5 py-1 text-xs font-semibold transition',
+                                scorecardDays === d
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
+                            ]"
+                            @click="applyScorecardDays(d)"
+                        >
+                            {{ d }}d
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <div
+                v-if="scorecard.warnings?.length"
+                class="mb-4 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200"
+            >
+                <p v-for="(warning, i) in scorecard.warnings" :key="i">{{ warning }}</p>
+            </div>
+
+            <CompactStatStrip :items="scorecardStrip" :columns="5" class="mb-6" />
+
+            <div class="mb-4 grid gap-4 text-sm sm:grid-cols-3">
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Outcomes</p>
+                    <p class="mt-1 text-slate-700 dark:text-slate-300">
+                        Rejected {{ scorecard.rejected ?? 0 }} · Quarantined {{ scorecard.quarantined ?? 0 }} · Duplicate {{ scorecard.duplicate ?? 0 }}
+                    </p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Supplier payout</p>
+                    <p class="mt-1 font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(scorecard.total_supplier_payout ?? 0) }}</p>
+                </div>
+                <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Revenue / sold</p>
+                    <p class="mt-1 font-medium text-slate-900 dark:text-white">
+                        {{ scorecard.revenue_per_sold != null ? formatMoney(scorecard.revenue_per_sold) : '—' }}
+                    </p>
+                </div>
+            </div>
+
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">7-day trend</p>
+            <LineChart
+                :labels="sparkline.labels ?? []"
+                :datasets="chartDatasets"
+                :height="180"
+                :max-x-ticks="7"
+                :value-formatter="(v) => v"
+            />
+        </Panel>
 
         <Panel v-if="portalUser" title="Supplier portal" class="mt-6">
             <div class="flex flex-wrap items-center justify-between gap-3">

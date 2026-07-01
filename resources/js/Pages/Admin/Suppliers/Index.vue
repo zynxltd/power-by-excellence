@@ -26,7 +26,29 @@ const applyFilters = () => {
     router.get(route('suppliers.index'), {
         search: search.value || undefined,
         status: status.value || undefined,
+        sort: props.filters?.sort || undefined,
+        direction: props.filters?.direction || undefined,
     }, { preserveState: true, replace: true });
+};
+
+const toggleSort = (column) => {
+    const currentSort = props.filters?.sort;
+    const currentDirection = props.filters?.direction ?? 'desc';
+    const direction = currentSort === column && currentDirection === 'desc' ? 'asc' : 'desc';
+
+    router.get(route('suppliers.index'), {
+        search: search.value || undefined,
+        status: status.value || undefined,
+        sort: column,
+        direction,
+    }, { preserveState: true, replace: true });
+};
+
+const gradeClass = (grade) => {
+    if (!grade) return 'text-slate-400';
+    if (grade === 'A' || grade === 'B') return 'text-emerald-600 dark:text-emerald-400';
+    if (grade === 'C') return 'text-amber-600 dark:text-amber-400';
+    return 'text-rose-600 dark:text-rose-400';
 };
 
 const suppliersStrip = computed(() => [
@@ -67,6 +89,16 @@ const suppliersStrip = computed(() => [
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Reference</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">SIDs</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Leads</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <button type="button" class="hover:text-indigo-600" @click="toggleSort('reject_rate_30d')">
+                            Reject 30d {{ filters?.sort === 'reject_rate_30d' ? (filters?.direction === 'asc' ? '↑' : '↓') : '' }}
+                        </button>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <button type="button" class="hover:text-indigo-600" @click="toggleSort('quality_grade')">
+                            Grade {{ filters?.sort === 'quality_grade' ? (filters?.direction === 'asc' ? '↑' : '↓') : '' }}
+                        </button>
+                    </th>
                     <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                     <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                 </template>
@@ -75,6 +107,12 @@ const suppliersStrip = computed(() => [
                     <td class="px-6 py-4 font-mono text-xs text-slate-500">{{ s.reference }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ s.sources?.map((x) => x.sid).join(', ') || '-' }}</td>
                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ s.leads_count ?? 0 }}</td>
+                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400">
+                        {{ s.reject_rate_30d != null ? `${s.reject_rate_30d}%` : '—' }}
+                    </td>
+                    <td class="px-6 py-4 font-semibold" :class="gradeClass(s.quality_grade)">
+                        {{ s.quality_grade ?? '—' }}
+                    </td>
                     <td class="px-6 py-4"><StatusBadge :status="s.status" /></td>
                     <td class="px-6 py-4 text-right space-x-3" @click.stop>
                         <Link :href="route('api-keys.index')" class="text-sm text-slate-500 hover:text-indigo-600">API</Link>

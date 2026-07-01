@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\DistributionController;
+use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\VerticalFieldTemplateController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,3 +58,11 @@ Route::post('campaigns/{campaign}/clone', [CampaignController::class, 'clone'])
  */
 Route::patch('campaigns/{campaign}/repost-rules', [CampaignController::class, 'updateRepostRules'])
     ->name('campaigns.repost-rules.update');
+
+/**
+ * Leadbyte Phase 3 F9 supplier quality scorecard.
+ *
+ *   GET suppliers/{supplier}/quality-scorecard → suppliers.quality-scorecard
+ */
+Route::get('suppliers/{supplier}/quality-scorecard', [SupplierController::class, 'qualityScorecard'])
+    ->name('suppliers.quality-scorecard');

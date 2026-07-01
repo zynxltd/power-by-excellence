@@ -9,8 +9,10 @@ use App\Models\Source;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Integrations\SupplierPostbackSync;
+use App\Services\Suppliers\SupplierQualityScorecardService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Tenancy\AccountContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -28,8 +30,7 @@ class SupplierController extends Controller
 
         $query = Supplier::query()
             ->with('sources')
-            ->withCount('sources')
-            ->orderBy('name');
+            ->withCount('sources');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -44,24 +45,59 @@ class SupplierController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        $sort = $request->input('sort');
+        if (! in_array($sort, ['reject_rate_30d', 'quality_grade'], true)) {
+            $query->orderBy('name');
+        }
+
         $suppliers = $query->paginate(25)->withQueryString();
 
-        $supplierIds = $suppliers->getCollection()->pluck('id');
+        $supplierIds = $suppliers->getCollection()->pluck('id')->all();
         $leadCounts = Lead::query()
             ->whereIn('supplier_id', $supplierIds)
             ->selectRaw('supplier_id, count(*) as total')
             ->groupBy('supplier_id')
             ->pluck('total', 'supplier_id');
 
-        $suppliers->getCollection()->transform(function (Supplier $supplier) use ($leadCounts) {
+        $account = AccountContext::get();
+        $qualitySummaries = app(SupplierQualityScorecardService::class)
+            ->indexSummaries($supplierIds, 30, $account);
+
+        $suppliers->getCollection()->transform(function (Supplier $supplier) use ($leadCounts, $qualitySummaries) {
             $supplier->leads_count = (int) ($leadCounts[$supplier->id] ?? 0);
+            $summary = $qualitySummaries[$supplier->id] ?? [
+                'submitted' => 0,
+                'reject_rate_pct' => null,
+                'quality_grade' => null,
+            ];
+            $supplier->reject_rate_30d = $summary['reject_rate_pct'];
+            $supplier->quality_grade = $summary['quality_grade'];
 
             return $supplier;
         });
 
+        if ($sort === 'reject_rate_30d') {
+            $suppliers->setCollection(
+                $suppliers->getCollection()->sortBy(
+                    fn (Supplier $s) => $s->reject_rate_30d ?? -1,
+                    SORT_REGULAR,
+                    $request->input('direction', 'desc') === 'desc',
+                )->values()
+            );
+        } elseif ($sort === 'quality_grade') {
+            $gradeOrder = ['F' => 1, 'D' => 2, 'C' => 3, 'B' => 4, 'A' => 5];
+            $suppliers->setCollection(
+                $suppliers->getCollection()->sortBy(
+                    fn (Supplier $s) => $gradeOrder[$s->quality_grade] ?? 0,
+                    SORT_REGULAR,
+                    $request->input('direction', 'asc') === 'asc',
+                )->values()
+            );
+        }
+
         return Inertia::render('Admin/Suppliers/Index', [
             'suppliers' => $suppliers,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'sort', 'direction']),
             'stats' => [
                 'total' => Supplier::count(),
                 'active' => Supplier::where('status', 'active')->count(),
@@ -70,11 +106,15 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function show(Request $request, Supplier $supplier): Response
+    public function show(Request $request, Supplier $supplier, SupplierQualityScorecardService $scorecard): Response
     {
         $this->resolveAdminAccountForTenant($request, $supplier->account_id);
 
-        $supplier->load(['sources', 'sources.subSuppliers']);
+        $supplier->load(['sources', 'sources.subSuppliers', 'account']);
+
+        $days = in_array((int) $request->input('days'), [7, 30, 90], true)
+            ? (int) $request->input('days')
+            : 30;
 
         $recentLeads = Lead::where('supplier_id', $supplier->id)
             ->with(['campaign:id,name', 'financials'])
@@ -98,6 +138,22 @@ class SupplierController extends Controller
             'recentLeads' => $recentLeads,
             'leadStats' => $leadStats,
             'portalUser' => $portalUser,
+            'qualityScorecard' => $scorecard->scorecard($supplier, $days, $supplier->account),
+            'scorecardDays' => $days,
+        ]);
+    }
+
+    public function qualityScorecard(Request $request, Supplier $supplier, SupplierQualityScorecardService $scorecard): JsonResponse
+    {
+        $this->resolveAdminAccountForTenant($request, $supplier->account_id);
+
+        $supplier->loadMissing('account');
+        $days = in_array((int) $request->input('days'), [7, 30, 90], true)
+            ? (int) $request->input('days')
+            : 30;
+
+        return response()->json([
+            'scorecard' => $scorecard->scorecard($supplier, $days, $supplier->account),
         ]);
     }
 
