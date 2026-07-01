@@ -58,6 +58,8 @@ const props = defineProps({
         }),
     },
     sendingDomainDnsHints: { type: Object, default: () => ({}) },
+    templateLibrary: { type: Array, default: () => [] },
+    verticalOptions: { type: Array, default: () => [] },
 });
 
 const metricsPeriod = ref('30d');
@@ -222,6 +224,50 @@ const templateForm = useForm({
     html_body: '',
     preview_data: { ...(props.defaultPreviewData ?? {}) },
 });
+const libraryVerticalFilter = ref('');
+const libraryChannelFilter = ref('');
+const selectedLibraryId = ref(null);
+const importLibraryForm = useForm({
+    library_template_id: null,
+    name: '',
+});
+
+const filteredLibraryTemplates = computed(() => {
+    let list = props.templateLibrary ?? [];
+
+    if (libraryVerticalFilter.value) {
+        list = list.filter((t) => t.vertical_id === libraryVerticalFilter.value);
+    }
+
+    if (libraryChannelFilter.value) {
+        list = list.filter((t) => t.channel === libraryChannelFilter.value);
+    }
+
+    return list;
+});
+
+const selectedLibraryTemplate = computed(() =>
+    (props.templateLibrary ?? []).find((t) => t.id === selectedLibraryId.value) ?? null,
+);
+
+const libraryPreview = computed(() => selectedLibraryTemplate.value?.preview ?? { subject: '', body: '', html: '' });
+
+const selectLibraryTemplate = (template) => {
+    selectedLibraryId.value = template.id;
+    importLibraryForm.library_template_id = template.id;
+    importLibraryForm.name = '';
+};
+
+const submitImportLibrary = () => {
+    importLibraryForm.post(route('e-delivery.templates.from-library'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            importLibraryForm.reset();
+            selectedLibraryId.value = null;
+        },
+    });
+};
+
 const profileForm = useForm({
     name: '',
     provider: 'smtp',
@@ -959,6 +1005,75 @@ const healthBadgeClass = (tone) => ({
                         <TextInput v-model="segmentForm.name" class="w-full" placeholder="Engaged — opened 7d" required />
                         <AppButton type="submit" size="sm" :disabled="segmentForm.processing">Add</AppButton>
                     </form>
+                </Panel>
+
+                <Panel title="Template library" class="lg:col-span-2">
+                    <p class="mb-3 text-sm text-slate-600 dark:text-slate-400">
+                        Browse premade templates by vertical. Library templates are read-only — add one to your account to edit and send.
+                    </p>
+
+                    <div class="mb-4 flex flex-wrap gap-3">
+                        <div>
+                            <InputLabel value="Vertical" />
+                            <select v-model="libraryVerticalFilter" class="form-input mt-1 text-sm">
+                                <option value="">All verticals</option>
+                                <option v-for="v in verticalOptions" :key="v.id" :value="v.id">{{ v.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value="Channel" />
+                            <select v-model="libraryChannelFilter" class="form-input mt-1 text-sm">
+                                <option value="">All channels</option>
+                                <option value="email">Email</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <ul class="mb-4 max-h-48 space-y-1 overflow-y-auto text-sm">
+                        <li
+                            v-for="t in filteredLibraryTemplates"
+                            :key="t.id"
+                            class="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            :class="selectedLibraryId === t.id ? 'bg-indigo-50 ring-1 ring-indigo-200 dark:bg-indigo-950/40 dark:ring-indigo-800' : ''"
+                            @click="selectLibraryTemplate(t)"
+                        >
+                            <span>
+                                {{ t.name }}
+                                <span class="text-slate-400">· {{ t.vertical_label }} · {{ t.channel }}</span>
+                            </span>
+                        </li>
+                        <li v-if="!filteredLibraryTemplates.length" class="text-slate-500">No library templates match your filters.</li>
+                    </ul>
+
+                    <div v-if="selectedLibraryTemplate" class="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Preview</p>
+                                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ libraryPreview.subject || '—' }}</p>
+                                <pre class="mt-2 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300">{{ libraryPreview.body }}</pre>
+                            </div>
+                            <div v-if="selectedLibraryTemplate.channel === 'email'" class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                                <p class="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">HTML preview</p>
+                                <iframe
+                                    v-if="libraryPreview.html"
+                                    class="h-48 w-full border-0 bg-white"
+                                    sandbox=""
+                                    :srcdoc="libraryPreview.html"
+                                    title="Library template HTML preview"
+                                />
+                                <p v-else class="p-3 text-xs text-slate-500">No HTML body.</p>
+                            </div>
+                        </div>
+
+                        <form class="flex flex-wrap items-end gap-3" @submit.prevent="submitImportLibrary">
+                            <div class="min-w-[12rem] flex-1">
+                                <InputLabel value="Account template name (optional)" />
+                                <TextInput v-model="importLibraryForm.name" class="mt-1 w-full" :placeholder="selectedLibraryTemplate.name" />
+                            </div>
+                            <AppButton type="submit" size="sm" :disabled="importLibraryForm.processing">Add to account</AppButton>
+                        </form>
+                    </div>
                 </Panel>
 
                 <Panel title="Templates" class="lg:col-span-2">

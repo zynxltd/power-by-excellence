@@ -208,6 +208,8 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
     Route::post('e-delivery/templates/preview', [\App\Http\Controllers\Admin\EDeliveryController::class, 'previewTemplate'])->name('e-delivery.templates.preview');
     Route::put('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'updateTemplate'])->name('e-delivery.templates.update');
     Route::delete('e-delivery/templates/{template}', [\App\Http\Controllers\Admin\EDeliveryController::class, 'destroyTemplate'])->name('e-delivery.templates.destroy');
+    Route::get('e-delivery/template-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'templateLibraryIndex'])->name('e-delivery.template-library.index');
+    Route::post('e-delivery/templates/from-library', [\App\Http\Controllers\Admin\EDeliveryController::class, 'importTemplateFromLibrary'])->name('e-delivery.templates.from-library');
     Route::post('e-delivery/journeys/process', [AutomationController::class, 'processJourneys'])->name('e-delivery.journeys.process');
     Route::post('e-delivery/throttle/pause', [\App\Http\Controllers\Admin\EDeliveryController::class, 'pauseSending'])->name('e-delivery.throttle.pause');
     Route::post('e-delivery/throttle/resume', [\App\Http\Controllers\Admin\EDeliveryController::class, 'resumeSending'])->name('e-delivery.throttle.resume');
