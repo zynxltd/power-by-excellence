@@ -41,6 +41,7 @@
 
 use App\Http\Controllers\Admin\LeadAdminController;
 use App\Http\Controllers\Admin\WebhookController;
+use App\Http\Controllers\Portal\BuyerPortalController;
 use Illuminate\Support\Facades\Route;
 
 if (! function_exists('registerCompliancePhase3WebhookSigningRoutes')) {
@@ -60,5 +61,26 @@ if (! function_exists('registerCompliancePhase3LeadErasureRoutes')) {
             Route::post('leads/{lead}/erasure', [LeadAdminController::class, 'requestErasure'])
                 ->name('leads.erasure');
         }
+    }
+}
+
+/**
+ * F7 — Stripe buyer invoice PDF email (register inside portal.buyer middleware group):
+ *   registerCompliancePhase3BuyerInvoiceRoutes();
+ *   POST invoices/{invoice}/resend → portal.buyer.invoices.resend
+ *
+ * Webhook: invoice.finalized → BuyerInvoiceService::syncFromStripeInvoice (queues email).
+ * invoice.paid syncs invoice record then applies subscription credit logic.
+ */
+
+if (! function_exists('registerCompliancePhase3BuyerInvoiceRoutes')) {
+    function registerCompliancePhase3BuyerInvoiceRoutes(): void
+    {
+        if (Route::has('portal.buyer.invoices.resend')) {
+            return;
+        }
+
+        Route::post('invoices/{invoice}/resend', [BuyerPortalController::class, 'resendInvoice'])
+            ->name('invoices.resend');
     }
 }

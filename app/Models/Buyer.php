@@ -52,6 +52,11 @@ class Buyer extends Model
         return $this->hasMany(BuyerTransaction::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(BuyerInvoice::class);
+    }
+
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class, 'sold_to_buyer_id');

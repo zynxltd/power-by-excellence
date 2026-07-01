@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\BuyerInvoice;
 use App\Models\BuyerFeedback;
 use App\Models\Lead;
 use App\Models\LeadReturn;
 use App\Models\Webhook;
+use App\Services\Billing\BuyerInvoiceService;
 use App\Services\Buyers\BuyerPortalService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Portal\PortalIntegrationsService;
 use App\Services\Webhooks\BuyerWebhookService;
 use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -323,7 +326,22 @@ class BuyerPortalController extends Controller
             'stripeSubscription' => $stripe->subscriptionStatus($buyer),
             'currency' => $buyer->resolvedCurrency(),
             'transactions' => $buyer->transactions()->orderByDesc('created_at')->paginate(25),
+            'invoices' => $buyer->invoices()->orderByDesc('created_at')->paginate(25),
+            'invoiceResendEnabled' => Route::has('portal.buyer.invoices.resend'),
         ]);
+    }
+
+    public function resendInvoice(Request $request, BuyerInvoice $invoice): RedirectResponse
+    {
+        $buyer = $this->resolveBuyer($request);
+
+        if ($invoice->buyer_id !== $buyer->id) {
+            abort(404);
+        }
+
+        app(BuyerInvoiceService::class)->resendInvoiceEmail($invoice);
+
+        return back()->with('success', 'Invoice email queued for delivery.');
     }
 
     public function integrations(Request $request): Response

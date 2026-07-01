@@ -291,12 +291,19 @@ class StripeCheckoutService
         );
     }
 
+    public function handleInvoiceFinalized(object $invoice): void
+    {
+        app(BuyerInvoiceService::class)->syncFromStripeInvoice($invoice);
+    }
+
     public function handleInvoicePaid(object $invoice): ?BuyerTransaction
     {
         $invoiceId = $invoice->id ?? null;
         if (! $invoiceId) {
             return null;
         }
+
+        app(BuyerInvoiceService::class)->syncFromStripeInvoice($invoice);
 
         $billingReason = $invoice->billing_reason ?? null;
         if (! in_array($billingReason, ['subscription_create', 'subscription_cycle', 'subscription_update'], true)) {

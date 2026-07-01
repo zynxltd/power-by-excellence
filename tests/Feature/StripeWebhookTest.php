@@ -59,6 +59,28 @@ class StripeWebhookTest extends TestCase
             ->assertSee('OK');
     }
 
+
+    public function test_webhook_dispatches_invoice_finalized_handler(): void
+    {
+        $invoice = (object) ['id' => 'in_dispatch_finalized'];
+
+        $this->mock(StripeCheckoutService::class, function ($mock) use ($invoice) {
+            $mock->shouldReceive('constructWebhookEvent')
+                ->once()
+                ->andReturn((object) [
+                    'type' => 'invoice.finalized',
+                    'data' => (object) ['object' => $invoice],
+                ]);
+            $mock->shouldReceive('handleInvoiceFinalized')
+                ->once()
+                ->with($invoice);
+        });
+
+        $this->post('/stripe/webhook', ['id' => 'evt_finalized'], ['Stripe-Signature' => 'sig_test'])
+            ->assertOk()
+            ->assertSee('OK');
+    }
+
     public function test_webhook_dispatches_subscription_lifecycle_handlers(): void
     {
         $subscription = (object) ['id' => 'sub_dispatch_1'];
