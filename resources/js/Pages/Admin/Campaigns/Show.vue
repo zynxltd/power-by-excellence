@@ -15,7 +15,7 @@ import CampaignWorkflowNav from '@/Components/UI/CampaignWorkflowNav.vue';
 import GoLiveChecklist from '@/Components/Campaign/GoLiveChecklist.vue';
 import TenantContextBanner from '@/Components/UI/TenantContextBanner.vue';
 import { useMoneyFormat } from '@/Composables/useMoneyFormat';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -28,6 +28,26 @@ const props = defineProps({
 });
 
 const { formatMoney } = useMoneyFormat(props.campaign?.currency);
+
+const repostDefaults = {
+    enabled: true,
+    max_attempts: null,
+    min_age_minutes: 0,
+    cooldown_minutes: 0,
+};
+
+const repostForm = useForm({
+    repost_config: {
+        ...repostDefaults,
+        ...(props.campaign?.repost_config ?? {}),
+    },
+});
+
+const saveRepostRules = () => {
+    repostForm.patch(route('campaigns.repost-rules.update', props.campaign.id), {
+        preserveScroll: true,
+    });
+};
 
 const fieldCount = computed(() => props.campaign?.fields?.length ?? 0);
 const pingFieldCount = computed(() => props.campaign?.fields?.filter((f) => f.ping_field)?.length ?? 0);
@@ -99,6 +119,53 @@ const campaignStatStrip = computed(() => [
             <AppButton class="mt-4" :href="route('distribution.create') + '?campaign_id=' + campaign.id">
                 Create ping tree
             </AppButton>
+        </Panel>
+
+        <Panel title="Repost rules" class="mt-6">
+            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                Control manual admin reposts for unsold or quarantined leads on this campaign.
+            </p>
+            <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="saveRepostRules">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 sm:col-span-2">
+                    <input v-model="repostForm.repost_config.enabled" type="checkbox" class="rounded border-slate-300 text-indigo-600 dark:border-slate-600" />
+                    Allow repost
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Max attempts</span>
+                    <span class="mt-1 block text-xs text-slate-500">Leave blank for platform default (3)</span>
+                    <input
+                        v-model.number="repostForm.repost_config.max_attempts"
+                        type="number"
+                        min="1"
+                        max="100"
+                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        placeholder="Platform default"
+                    />
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Min lead age (minutes)</span>
+                    <input
+                        v-model.number="repostForm.repost_config.min_age_minutes"
+                        type="number"
+                        min="0"
+                        max="10080"
+                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                    />
+                </label>
+                <label class="block text-sm sm:col-span-2">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Cooldown between attempts (minutes)</span>
+                    <input
+                        v-model.number="repostForm.repost_config.cooldown_minutes"
+                        type="number"
+                        min="0"
+                        max="10080"
+                        class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                    />
+                </label>
+                <div class="sm:col-span-2">
+                    <AppButton type="submit" :disabled="repostForm.processing">Save repost rules</AppButton>
+                </div>
+            </form>
         </Panel>
 
         <Panel title="Deliveries" class="mt-6" :padding="false">

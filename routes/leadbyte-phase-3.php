@@ -49,3 +49,11 @@ Route::get('distribution/{distribution}/cap-usage', [DistributionController::cla
  */
 Route::post('campaigns/{campaign}/clone', [CampaignController::class, 'clone'])
     ->name('campaigns.clone');
+
+/**
+ * Leadbyte Phase 3 F8 lead repost rules.
+ *
+ *   PATCH campaigns/{campaign}/repost-rules → campaigns.repost-rules.update
+ */
+Route::patch('campaigns/{campaign}/repost-rules', [CampaignController::class, 'updateRepostRules'])
+    ->name('campaigns.repost-rules.update');

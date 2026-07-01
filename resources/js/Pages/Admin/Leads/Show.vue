@@ -21,6 +21,17 @@ const props = defineProps({
     campaignWorkflow: { type: Object, default: null },
     leadQuality: { type: Object, default: null },
     erasureBlockedReason: { type: String, default: null },
+    repostEligibility: {
+        type: Object,
+        default: () => ({
+            eligible: false,
+            reason: null,
+            attempts: 0,
+            max_attempts: 3,
+            next_eligible_at: null,
+            enabled: true,
+        }),
+    },
 });
 
 const activeTab = ref('overview');
@@ -48,6 +59,8 @@ const fieldRows = computed(() => {
 const consentArtifact = computed(() => props.lead?.metadata?.consent ?? null);
 const erasureMeta = computed(() => props.lead?.metadata?.erasure ?? null);
 const isAnonymized = computed(() => !!props.lead?.metadata?.anonymized_at);
+const canRepost = computed(() => props.repostEligibility?.eligible === true);
+const showRepostButton = computed(() => ['unsold', 'quarantined'].includes(props.lead?.status) && props.repostEligibility?.enabled !== false);
 
 const submitErasure = () => {
     if (!window.confirm('Permanently erase all PII for this lead? This cannot be undone.')) {
@@ -186,10 +199,40 @@ const stageLabel = (stage) => {
                     <AppButton :href="route('leads.quarantine.release', lead.id)" method="post">Release & repost</AppButton>
                     <AppButton variant="danger" :href="route('leads.quarantine.reject', lead.id)" method="post">Reject</AppButton>
                 </template>
-                <AppButton v-if="['unsold', 'quarantined'].includes(lead.status)" :href="route('leads.repost', lead.id)" method="post" variant="secondary">Repost to ping tree</AppButton>
+                <AppButton
+                    v-if="showRepostButton && canRepost"
+                    :href="route('leads.repost', lead.id)"
+                    method="post"
+                    variant="secondary"
+                >
+                    Repost to ping tree
+                </AppButton>
                 <AppButton v-if="!isAnonymized && !erasureBlockedReason" variant="danger" @click="showErasureDialog = true">Request erasure</AppButton>
             </template>
         </PageHeader>
+
+        <div
+            v-if="showRepostButton && !canRepost && repostEligibility?.reason"
+            class="mb-6 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200"
+        >
+            <p class="font-medium">Repost blocked</p>
+            <p class="mt-1">{{ repostEligibility.reason }}</p>
+            <p class="mt-2 text-xs text-amber-800 dark:text-amber-300">
+                Attempts: {{ repostEligibility.attempts }} / {{ repostEligibility.max_attempts }}
+                <span v-if="repostEligibility.next_eligible_at">
+                    · Eligible after <FormattedDate :value="repostEligibility.next_eligible_at" />
+                </span>
+            </p>
+        </div>
+        <div
+            v-else-if="showRepostButton && canRepost"
+            class="mb-6 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300"
+        >
+            Repost attempts: {{ repostEligibility.attempts }} / {{ repostEligibility.max_attempts }}
+            <span v-if="repostEligibility.next_eligible_at">
+                · Next window <FormattedDate :value="repostEligibility.next_eligible_at" />
+            </span>
+        </div>
 
         <div v-if="showErasureDialog" class="mb-6 rounded-xl border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/20">
             <p class="text-sm font-semibold text-rose-900 dark:text-rose-200">Request right-to-erasure</p>

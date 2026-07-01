@@ -11,6 +11,7 @@ use App\Models\Campaign;
 use App\Models\Lead;
 use App\Services\Compliance\LeadErasureService;
 use App\Services\Leads\LeadQualityService;
+use App\Services\Leads\LeadRepostService;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\CsvExport;
 use App\Support\Tenancy\AccountContext;
@@ -115,6 +116,7 @@ class LeadAdminController extends Controller
                 'next_id' => $nextId,
             ],
             'erasureBlockedReason' => app(LeadErasureService::class)->blockingReason($lead),
+            'repostEligibility' => app(LeadRepostService::class)->eligibility($lead),
         ]);
     }
 
@@ -171,42 +173,17 @@ class LeadAdminController extends Controller
         return back()->with('success', 'Quarantined lead rejected.');
     }
 
-    public function repost(Lead $lead): RedirectResponse
+    public function repost(Lead $lead, LeadRepostService $repostService): RedirectResponse
     {
         $this->ensureLeadAccessible($lead);
 
-        if (! in_array($lead->status, [LeadStatus::Unsold, LeadStatus::Quarantined], true)) {
-            return back()->with('error', 'Only unsold or quarantined leads can be reposted.');
+        $result = $repostService->repost($lead);
+
+        if (! $result['success']) {
+            return back()->with('error', $result['message']);
         }
 
-        if ($lead->status === LeadStatus::Quarantined) {
-            $reason = $lead->metadata['quarantine_reason'] ?? null;
-            if ($reason === 'validation') {
-                return back()->with('error', 'Validation holds must be released or rejected - not reposted.');
-            }
-        }
-
-        $attempts = (int) ($lead->metadata['repost_attempts'] ?? 0);
-        $max = (int) config('platform.max_repost_attempts', 3);
-        if ($attempts >= $max) {
-            return back()->with('error', "Maximum repost attempts ({$max}) reached.");
-        }
-
-        $lead->update([
-            'status' => LeadStatus::Accepted,
-            'quarantined_until' => null,
-            'reject_reason' => null,
-            'sold_to_buyer_id' => null,
-            'distributed_at' => null,
-            'metadata' => array_merge($lead->metadata ?? [], [
-                'repost_attempts' => $attempts + 1,
-                'last_reposted_at' => now()->toIso8601String(),
-            ]),
-        ]);
-
-        LeadJobDispatcher::dispatch($lead->id);
-
-        return back()->with('success', 'Lead queued for repost through the ping tree.');
+        return back()->with('success', $result['message']);
     }
 
     public function export(Request $request, \App\Services\Exports\LeadExportService $exportService)
