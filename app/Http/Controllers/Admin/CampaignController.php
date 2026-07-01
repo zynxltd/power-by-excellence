@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignField;
+use App\Services\Campaigns\CampaignCloneService;
 use App\Support\Admin\ResolvesAdminAccount;
 use App\Support\Admin\CampaignWorkflow;
 use App\Support\Admin\TenantHub;
@@ -135,6 +136,35 @@ class CampaignController extends Controller
         $campaign->delete();
 
         return redirect()->route('campaigns.index')->with('success', 'Campaign deleted.');
+    }
+
+    public function clone(Request $request, Campaign $campaign, CampaignCloneService $cloner): RedirectResponse
+    {
+        $this->resolveAdminAccountForTenant($request, $campaign->account_id);
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'reference' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9_-]+$/',
+                Rule::unique('campaigns', 'reference')->where(fn ($q) => $q->where('account_id', $campaign->account_id)),
+            ],
+        ], [
+            'reference.regex' => 'Reference may only contain letters, numbers, hyphens and underscores.',
+            'reference.unique' => 'This reference is already used on your platform.',
+        ]);
+
+        $copy = $cloner->clone(
+            $campaign,
+            $validated['name'] ?? null,
+            $validated['reference'] ?? null,
+        );
+
+        return redirect()
+            ->route('campaigns.show', $copy)
+            ->with('success', 'Campaign cloned as a saved draft. Review settings and activate when ready.');
     }
 
     public function updateValidation(Request $request, Campaign $campaign): RedirectResponse

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\DistributionController;
 use App\Http\Controllers\Admin\VerticalFieldTemplateController;
 use Illuminate\Support\Facades\Route;
@@ -40,3 +41,11 @@ Route::get('distribution/{distribution}/cap-usage', [DistributionController::cla
  * Runs DeliveryTestHarnessService with mock buyer modes: accept | reject | timeout | custom.
  * Logs test runs in delivery_logs with _meta.is_test = true.
  */
+
+/**
+ * Leadbyte Phase 3 F7 campaign clone.
+ *
+ *   POST campaigns/{campaign}/clone → campaigns.clone
+ */
+Route::post('campaigns/{campaign}/clone', [CampaignController::class, 'clone'])
+    ->name('campaigns.clone');
