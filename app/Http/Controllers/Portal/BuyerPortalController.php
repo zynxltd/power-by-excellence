@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\BuyerInvoice;
 use App\Models\BuyerFeedback;
 use App\Models\Lead;
 use App\Models\LeadReturn;
 use App\Models\Webhook;
+use App\Services\Billing\BuyerInvoiceService;
 use App\Services\Buyers\BuyerPortalService;
-use App\Services\Calls\CallReturnService;
 use App\Services\Platform\PlatformNotificationService;
 use App\Services\Portal\PortalIntegrationsService;
 use App\Services\Webhooks\BuyerWebhookService;
 use App\Support\CsvExport;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -38,7 +40,7 @@ class BuyerPortalController extends Controller
             ->get()
             ->map(fn (Lead $lead) => $this->portal->formatLeadRow($lead));
 
-        return Inertia::render('Portal/Buyer/Dashboard', $this->withPortalBranding($buyer, [
+        return Inertia::render('Portal/Buyer/Dashboard', [
             'buyer' => $buyer->only(['id', 'name', 'credit_balance', 'status']),
             'stats' => $this->portal->dashboardStats($buyer),
             'account' => $this->portal->accountSummary($buyer),
@@ -46,7 +48,7 @@ class BuyerPortalController extends Controller
             'recentActivity' => $this->portal->recentActivity($buyer->id, 8),
             'charts' => $this->portal->charts($buyer->id),
             'currency' => $buyer->resolvedCurrency(),
-        ]));
+        ]);
     }
 
     public function leads(Request $request): Response
@@ -83,7 +85,7 @@ class BuyerPortalController extends Controller
             ->orderBy('sid')
             ->pluck('sid');
 
-        return Inertia::render('Portal/Buyer/Leads', $this->withPortalBranding($buyer, [
+        return Inertia::render('Portal/Buyer/Leads', [
             'leads' => $leads,
             'filters' => $request->only(['status', 'campaign_id', 'supplier_id', 'sid', 'search', 'from_date', 'to_date', 'feedback', 'return']),
             'campaigns' => $campaigns,
@@ -94,7 +96,7 @@ class BuyerPortalController extends Controller
             'recentActivity' => $this->portal->recentActivity($buyer->id, 10),
             'actionLeads' => $this->portal->actionLeadOptions($buyer->id),
             'currency' => $buyer->resolvedCurrency(),
-        ]));
+        ]);
     }
 
     public function showLead(Request $request, string $uuid): Response
@@ -107,10 +109,10 @@ class BuyerPortalController extends Controller
             ->with(['campaign', 'financials'])
             ->firstOrFail();
 
-        return Inertia::render('Portal/Buyer/Show', $this->withPortalBranding($buyer, [
+        return Inertia::render('Portal/Buyer/Show', [
             'lead' => $this->portal->formatLeadDetail($lead, $buyer),
             'currency' => $buyer->resolvedCurrency(),
-        ]));
+        ]);
     }
 
     public function downloadLeads(Request $request)
@@ -309,7 +311,7 @@ class BuyerPortalController extends Controller
 
         $stripe = app(\App\Services\Billing\StripeCheckoutService::class);
 
-        return Inertia::render('Portal/Buyer/Billing', $this->withPortalBranding($buyer, [
+        return Inertia::render('Portal/Buyer/Billing', [
             'buyer' => $buyer->only(['id', 'name', 'credit_balance', 'status']),
             'account' => $this->portal->accountSummary($buyer),
             'stats' => $this->portal->dashboardStats($buyer),
@@ -324,15 +326,31 @@ class BuyerPortalController extends Controller
             'stripeSubscription' => $stripe->subscriptionStatus($buyer),
             'currency' => $buyer->resolvedCurrency(),
             'transactions' => $buyer->transactions()->orderByDesc('created_at')->paginate(25),
-            'pendingCallReturns' => app(CallReturnService::class)->pendingCountForBuyer($buyer->id),
-        ]));
+            'invoices' => $buyer->invoices()->orderByDesc('created_at')->paginate(25),
+            'invoiceResendEnabled' => Route::has('portal.buyer.invoices.resend'),
+        ]);
+    }
+
+    public function resendInvoice(Request $request, BuyerInvoice $invoice): RedirectResponse
+    {
+        $buyer = $this->resolveBuyer($request);
+
+        if ($invoice->buyer_id !== $buyer->id) {
+            abort(404);
+        }
+
+        app(BuyerInvoiceService::class)->resendInvoiceEmail($invoice);
+
+        return back()->with('success', 'Invoice email queued for delivery.');
     }
 
     public function integrations(Request $request): Response
     {
         $buyer = $this->resolveBuyer($request);
 
-        return Inertia::render('Portal/Buyer/Integrations', $this->withPortalBranding($buyer, $this->integrations->forBuyer($buyer)));
+        return Inertia::render('Portal/Buyer/Integrations', [
+            ...$this->integrations->forBuyer($buyer),
+        ]);
     }
 
     public function storeWebhook(Request $request): RedirectResponse
@@ -416,18 +434,6 @@ class BuyerPortalController extends Controller
         abort_unless($buyer, 403, 'Buyer account not linked to this user.');
 
         return $buyer;
-    }
-
-    /**
-     * @param  array<string, mixed>  $props
-     * @return array<string, mixed>
-     */
-    protected function withPortalBranding(\App\Models\Buyer $buyer, array $props = []): array
-    {
-        return [
-            ...$props,
-            'portalBranding' => $buyer->portalBranding(),
-        ];
     }
 
     protected function resolveLeadForBuyer(\App\Models\Buyer $buyer, string $uuid): Lead

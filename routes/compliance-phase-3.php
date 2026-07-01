@@ -19,6 +19,10 @@
  * F6 — Right-to-erasure:
  *   registerCompliancePhase3LeadErasureRoutes();
  *   POST leads/{lead}/erasure → leads.erasure
+ *
+ * F7 — Stripe buyer invoice PDF email (register inside portal.buyer middleware group):
+ *   registerCompliancePhase3BuyerInvoiceRoutes();
+ *   POST invoices/{invoice}/resend → portal.buyer.invoices.resend
  */
 
 use App\Http\Controllers\Admin\AccessLogController;
@@ -26,6 +30,7 @@ use App\Http\Controllers\Admin\ChangeLogController;
 use App\Http\Controllers\Admin\LeadAdminController;
 use App\Http\Controllers\Admin\SecurityLogController;
 use App\Http\Controllers\Admin\WebhookController;
+use App\Http\Controllers\Portal\BuyerPortalController;
 use Illuminate\Support\Facades\Route;
 
 if (! function_exists('registerCompliancePhase3LogExportRoutes')) {
@@ -62,5 +67,17 @@ if (! function_exists('registerCompliancePhase3LeadErasureRoutes')) {
             Route::post('leads/{lead}/erasure', [LeadAdminController::class, 'requestErasure'])
                 ->name('leads.erasure');
         }
+    }
+}
+
+if (! function_exists('registerCompliancePhase3BuyerInvoiceRoutes')) {
+    function registerCompliancePhase3BuyerInvoiceRoutes(): void
+    {
+        if (Route::has('portal.buyer.invoices.resend')) {
+            return;
+        }
+
+        Route::post('invoices/{invoice}/resend', [BuyerPortalController::class, 'resendInvoice'])
+            ->name('invoices.resend');
     }
 }

@@ -52,6 +52,11 @@ class Buyer extends Model
         return $this->hasMany(BuyerTransaction::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(BuyerInvoice::class);
+    }
+
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class, 'sold_to_buyer_id');
@@ -60,11 +65,6 @@ class Buyer extends Model
     public function portalUsers(): HasMany
     {
         return $this->hasMany(User::class);
-    }
-
-    public function resolvedCurrency(): string
-    {
-        return strtoupper($this->currency ?: $this->account?->default_currency ?: 'GBP');
     }
 
     /**
@@ -79,5 +79,10 @@ class Buyer extends Model
             'primary_color' => filled($settings['portal_primary_color'] ?? null) ? (string) $settings['portal_primary_color'] : null,
             'welcome_text' => filled($settings['portal_welcome_text'] ?? null) ? (string) $settings['portal_welcome_text'] : null,
         ];
+    }
+
+    public function resolvedCurrency(): string
+    {
+        return strtoupper($this->currency ?: $this->account?->default_currency ?: 'GBP');
     }
 }

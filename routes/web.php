@@ -491,6 +491,7 @@ Route::middleware(['auth', 'verified', 'signup.complete', 'two-factor.verified',
         Route::post('/returns/bulk', [BuyerPortalController::class, 'bulkReturn'])->name('returns.bulk');
         Route::get('/transactions', [BuyerPortalController::class, 'transactions'])->name('transactions');
         Route::get('/billing', [BuyerPortalController::class, 'billing'])->name('billing');
+        registerCompliancePhase3BuyerInvoiceRoutes();
         Route::post('/stripe/checkout', [BuyerStripeCheckoutController::class, 'checkout'])->name('stripe.checkout');
         Route::post('/stripe/subscribe', [BuyerStripeCheckoutController::class, 'subscribe'])->name('stripe.subscribe');
         Route::post('/stripe/subscription/cancel', [BuyerStripeCheckoutController::class, 'cancelSubscription'])->name('stripe.subscription.cancel');

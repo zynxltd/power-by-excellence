@@ -1,5 +1,5 @@
 <script setup>
-import BuyerPortalLayout from '@/Layouts/BuyerPortalLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/UI/PageHeader.vue';
 import Panel from '@/Components/UI/Panel.vue';
 import DataTable from '@/Components/UI/DataTable.vue';
@@ -24,7 +24,8 @@ const props = defineProps({
     stripeSubscription: { type: Object, default: null },
     currency: String,
     transactions: Object,
-    pendingCallReturns: { type: Number, default: 0 },
+    invoices: { type: Object, default: () => ({ data: [] }) },
+    invoiceResendEnabled: { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -37,7 +38,6 @@ const billingStrip = computed(() => [
     { label: t('billing.balance'), value: formatMoney(props.buyer.credit_balance), accent: props.account?.is_low_credit ? 'rose' : 'emerald' },
     { label: t('billing.spend_30d'), value: formatMoney(props.stats?.spend_30d ?? 0), accent: 'indigo' },
     { label: t('billing.prepay'), value: props.requirePrepay ? t('common.required') : t('common.optional'), accent: 'amber' },
-    ...(props.pendingCallReturns > 0 ? [{ label: 'Pending call returns', value: String(props.pendingCallReturns), accent: 'amber' }] : []),
 ]);
 
 const presetAmounts = computed(() => props.stripeTopUp?.presets ?? [50, 100, 250, 500, 1000]);
@@ -48,6 +48,7 @@ const customAmount = ref('');
 const subscribeForm = useForm({ price_id: '' });
 const cancelForm = useForm({});
 const reactivateForm = useForm({});
+const resendInvoiceForm = useForm({});
 
 const subscriptionPeriodEnd = computed(() => {
     const ts = props.stripeSubscription?.current_period_end;
@@ -89,11 +90,15 @@ const cancelSubscription = () => {
 const reactivateSubscription = () => {
     reactivateForm.post(route('portal.buyer.stripe.subscription.reactivate'));
 };
+
+const resendInvoiceEmail = (invoiceId) => {
+    resendInvoiceForm.post(route('portal.buyer.invoices.resend', invoiceId));
+};
 </script>
 
 <template>
     <Head :title="t('nav.billing')" />
-    <BuyerPortalLayout>
+    <AuthenticatedLayout>
         <PageHeader
             :title="t('billing.title')"
             :description="t('billing.description')"
@@ -204,6 +209,46 @@ const reactivateSubscription = () => {
                     </p>
                 </Panel>
 
+                <Panel title="Invoices" :padding="false">
+                    <DataTable :empty="!invoices.data?.length">
+                        <template #head>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('common.date') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('common.amount') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ t('common.status') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                        </template>
+                        <tr v-for="row in invoices.data" :key="row.id" class="transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td class="px-6 py-4"><FormattedDate :value="row.created_at" /></td>
+                            <td class="px-6 py-4 font-medium text-slate-900 dark:text-white">{{ formatMoney(row.amount) }}</td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-400">{{ row.status }}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <a
+                                        v-if="row.pdf_url"
+                                        :href="row.pdf_url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                                    >
+                                        View PDF
+                                    </a>
+                                    <button
+                                        v-if="invoiceResendEnabled"
+                                        type="button"
+                                        class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white disabled:opacity-60"
+                                        :disabled="resendInvoiceForm.processing"
+                                        @click="resendInvoiceEmail(row.id)"
+                                    >
+                                        Resend email
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </DataTable>
+                    <Pagination :links="invoices.links" />
+                </Panel>
+
+
                 <Panel :title="t('billing.transactions')" :padding="false">
                     <DataTable :empty="!transactions.data?.length">
                         <template #head>
@@ -223,10 +268,7 @@ const reactivateSubscription = () => {
                                 {{ formatMoney(row.amount) }}
                             </td>
                             <td class="px-6 py-4 text-slate-900 dark:text-white">{{ formatMoney(row.balance_after) }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                                {{ row.description }}
-                                <span v-if="row.meta?.call_session_uuid" class="block text-xs text-slate-400">Call {{ row.meta.call_session_uuid }}</span>
-                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ row.description }}</td>
                         </tr>
                     </DataTable>
                     <Pagination :links="transactions.links" />
@@ -235,5 +277,5 @@ const reactivateSubscription = () => {
 
             <BuyerAccountPanel :account="account" :currency="currency" />
         </div>
-    </BuyerPortalLayout>
+    </AuthenticatedLayout>
 </template>
